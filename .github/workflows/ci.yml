@@ -2,9 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
   pull_request:
-    branches: [ master ]
 
 jobs:
   unit-tests:
@@ -38,7 +36,7 @@ jobs:
     env:
       PLAYWRIGHT_BASE_URL: http://127.0.0.1:4000
       MONGOMS_VERSION: 7.0.4
-      MONGODB_URI: mongodb://localhost:27017/finatech_e2e
+      MONGODB_URI: mongodb://127.0.0.1:27017/finatech_e2e
     steps:
       - name: Checkout
         uses: actions/checkout@v4
