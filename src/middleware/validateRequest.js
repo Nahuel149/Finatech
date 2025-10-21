@@ -13,7 +13,7 @@ const validateRequest = (req, _res, next) => {
     message: error.msg,
   }));
 
-  next(new AppError('Validation failed', 422, formatted));
+  next(new AppError('Validación fallida', 422, formatted));
 };
 
 module.exports = { validateRequest };

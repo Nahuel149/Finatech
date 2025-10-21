@@ -35,7 +35,7 @@ const getDraft = async (req, res, next) => {
     const { id } = req.params;
     const transaction = await getTransactionDraft(id);
     if (!transaction) {
-      throw new AppError('Transaction not found', 404);
+      throw new AppError('Transacción no encontrada', 404);
     }
     const payload = await buildWizardDraftResponse(transaction);
     res.json(payload);

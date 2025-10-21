@@ -19,7 +19,7 @@ const findClient = async (req, res, next) => {
     const { id } = req.params;
     const client = await getClientById(id);
     if (!client) {
-      res.status(404).json({ message: 'Client not found' });
+      res.status(404).json({ message: 'Cliente no encontrado' });
       return;
     }
     res.json(client);
@@ -47,7 +47,7 @@ const createClientHandler = async (req, res, next) => {
   } catch (error) {
     if (error.code === 11000) {
       res.status(409).json({
-        message: 'Client already exists',
+        message: 'El cliente ya existe',
         errors: [
           {
             field: Object.keys(error.keyPattern || {})[0] || 'cuit',

@@ -78,7 +78,7 @@ const verifyEmail = async (req, res, next) => {
 <body>
   <div class="container">
     <h1>¡Cuenta verificada!</h1>
-    <p>${result.message}</p>
+    <p>Tu cuenta ha sido verificada. Ahora puedes iniciar sesión.</p>
     <a href="/login">Ir a iniciar sesión</a>
   </div>
 </body>

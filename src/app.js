@@ -99,7 +99,7 @@ app.get('/dashboard/operations/transfer-ars', (_req, res) => {
 });
 
 app.use((_req, res) => {
-  res.status(404).json({ message: 'Not found' });
+  res.status(404).json({ message: 'No encontrado' });
 });
 
 app.use(errorHandler);
