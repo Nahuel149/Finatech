@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .chip-removable { animation: slideIn 0.2s ease-out; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+        .positive-amount { color: #198754; }
+        .negative-amount { color: #dc3545; }
+        .neutral-amount { color: #6c757d; }
+        .incoming { color: #28a745; }
+        .outgoing { color: #dc3545; }
+        .table-row:nth-child(even) { background-color: #f8f9fa; }
+        .table-row:hover { background-color: #e3f2fd; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Mobile Header -->
+<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="mobile-back" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden sm:block"></div>
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Navigation -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
+                Operaciones
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 text-primary bg-primary bg-opacity-10 rounded-lg">
+                <i class="fa-solid fa-vault mr-3"></i>
+                Tesorería
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </a>
+        </div>
+    </div>
+</nav>
+
+
+<!-- Desktop navbar -->
+<nav id="desktop-navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/dashboard" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div class="flex space-x-8">
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
+            </div>
+            <div class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Desktop balance stripe -->
+<section id="desktop-balance-cards" class="hidden lg:block fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline" type="button">Reintentar</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- Main content -->
+<main id="contact-detail-container" class="pt-[280px] px-4 pb-28 lg:pt-[220px] lg:px-6">
+    <section class="mb-4 lg:mb-8">
+        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-3 lg:mb-4">
+            <a href="/saldos" class="text-primary hover:text-blue-700">Saldos</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span id="breadcrumb-contact-name" class="text-text-primary font-medium">—</span>
+        </nav>
+        <div>
+            <h1 class="text-xl font-bold text-text-primary mb-1 lg:text-2xl" id="page-title">Detalle de cuenta</h1>
+            <p class="text-sm text-gray-600 lg:text-base">Visualizá todas las operaciones que impactan en su saldo</p>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-6 lg:p-8">
+        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <article class="flex items-center space-x-4">
+                <div id="contact-avatar" class="w-14 h-14 bg-primary rounded-full flex items-center justify-center text-white text-lg">--</div>
+                <div class="space-y-1">
+                    <div id="contact-name" class="text-lg font-semibold text-text-primary lg:text-xl">—</div>
+                    <div class="flex items-center space-x-2">
+                        <span id="contact-type-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">—</span>
+                        <span id="contact-cuit" class="text-sm text-gray-600">—</span>
+                    </div>
+                    <div id="contact-updated" class="text-xs text-gray-500">Actualizado —</div>
+                </div>
+            </article>
+            <article class="text-center">
+                <div class="text-sm text-gray-600 mb-1">Saldo total actual</div>
+                <div id="contact-total-balance" class="text-3xl font-bold text-text-primary lg:text-4xl">--</div>
+                <div id="contact-total-meta" class="text-xs text-gray-500 mt-1">Actualizado —</div>
+            </article>
+            <article class="space-y-3 text-sm">
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Operaciones entrantes</span>
+                    <div class="text-right">
+                        <div id="contact-incoming-amount" class="font-semibold text-success">—</div>
+                        <div id="contact-incoming-count" class="text-xs text-gray-500">—</div>
+                    </div>
+                </div>
+                <div class="flex justify-between items-center">
+                    <span class="text-gray-600">Operaciones salientes</span>
+                    <div class="text-right">
+                        <div id="contact-outgoing-amount" class="font-semibold text-danger">—</div>
+                        <div id="contact-outgoing-count" class="text-xs text-gray-500">—</div>
+                    </div>
+                </div>
+                <div class="border-t pt-3 flex justify-between items-center">
+                    <span class="text-sm font-medium text-gray-700">Saldo neto</span>
+                    <div id="contact-net-amount" class="font-bold text-text-primary">—</div>
+                </div>
+            </article>
+        </div>
+        <div class="mt-6 pt-6 border-t border-gray-200 flex justify-end">
+            <button id="view-related-accounts" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base">
+                <i class="fa-solid fa-external-link mr-2"></i>
+                Ver en Cuentas Corrientes
+            </button>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 mb-6 lg:p-6 lg:mb-8">
+        <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <h3 class="text-base font-semibold text-text-primary lg:text-lg">Filtros de operaciones</h3>
+            <button id="clear-filters" class="text-primary hover:text-blue-700 text-sm font-medium">
+                <i class="fa-solid fa-times mr-1"></i>
+                Limpiar filtros
+            </button>
+        </div>
+        <div class="grid grid-cols-1 gap-3 mt-4 lg:grid-cols-5 lg:gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo de operación</label>
+                <select id="operation-type-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                    <option value="">Todos los tipos</option>
+                    <option value="buy">Compra</option>
+                    <option value="sell">Venta</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="cash">Movimiento de caja</option>
+                    <option value="settlement">Compensación</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Estado</label>
+                <select id="status-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                    <option value="">Todos los estados</option>
+                    <option value="registrada">Registrada</option>
+                    <option value="compensada">Compensada</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
+                <select id="currency-filter" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                    <option value="USD">USD</option>
+                    <option value="ARS">ARS</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Desde</label>
+                <input type="date" id="date-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Buscar</label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" id="search-filter" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="ID o monto…">
+                </div>
+            </div>
+        </div>
+        <div id="active-filters" class="flex flex-wrap gap-2 mt-4"></div>
+    </section>
+
+    <section class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+        <header class="p-4 border-b border-gray-200 lg:p-6">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-text-primary lg:text-xl">Historial de operaciones</h2>
+                    <p id="table-range" class="text-xs text-gray-600 mt-1 lg:text-sm">Mostrando 0 operaciones</p>
+                </div>
+                <div class="flex items-center space-x-2 text-sm text-gray-600">
+                    <span>Ordenar por:</span>
+                    <select id="sort-select" class="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                        <option value="date-desc">Fecha (más reciente)</option>
+                        <option value="date-asc">Fecha (más antigua)</option>
+                        <option value="amount-desc">Monto (mayor a menor)</option>
+                        <option value="amount-asc">Monto (menor a mayor)</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                        <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo de operación</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                        <th class="px-6 py-4 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">ID operación</th>
+                        <th class="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="desktop-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+
+        <div id="mobile-table" class="divide-y divide-gray-200 lg:hidden"></div>
+
+        <footer class="px-4 py-4 border-t border-gray-200 text-sm text-gray-600 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:px-6">
+            <span id="table-summary">Mostrando 0 resultados</span>
+            <div class="flex items-center space-x-2">
+                <button id="prev-page" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-chevron-left"></i>
+                </button>
+                <button id="next-page" class="px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </footer>
+    </section>
+</main>
+
+<div id="summary-footer" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="px-4 py-3 lg:px-6">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <span class="text-sm text-gray-600">Totales de operaciones filtradas:</span>
+            <div class="flex items-center justify-between sm:justify-end sm:space-x-6">
+                <div class="text-center">
+                    <div class="text-xs text-gray-500">Entrantes</div>
+                    <div id="summary-incoming" class="font-semibold incoming">--</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs text-gray-500">Salientes</div>
+                    <div id="summary-outgoing" class="font-semibold outgoing">--</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-xs text-gray-500">Saldo neto visible</div>
+                    <div id="summary-net" class="text-lg font-bold positive-amount">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div>
+
+<div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50"></div>
+
+<script src="/js/saldos-contacto.js"></script>
+<script src="/js/balance-widget.js"></script>
+</body>
+</html>

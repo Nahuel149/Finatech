@@ -1,0 +1,1417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .radio-card {
+            transition: all 0.2s ease;
+        }
+        .radio-card:hover {
+            transform: translateY(-1px);
+        }
+        .radio-card.selected {
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+        }
+        .amount-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .suggestions-panel {
+            max-height: 220px;
+            overflow-y: auto;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- MOBILE HEADER -->
+<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button onclick="backToOperations()" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- MOBILE MENU -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <a href="/dashboard" class="flex items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg">
+                <i class="fa-solid fa-exchange-alt text-primary mr-3"></i>
+                <span class="text-primary font-medium">Operaciones</span>
+            </a>
+            <span class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                Tesorería
+            </span>
+            <span class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </span>
+            <span class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </span>
+        </div>
+    </div>
+</nav>
+
+<!-- MOBILE BALANCES -->
+<div id="balance-mobile" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30 overflow-x-auto lg:hidden">
+    <div class="px-4 py-4">
+        <div class="flex space-x-4 min-w-max">
+            <div class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance-card="transfers">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1"><span data-balance-amount>$0,00</span></div>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Actualizado <span data-balance-updated>--:--</span></span>
+                    <button class="text-primary hover:underline" type="button" data-balance-retry>Reintentar</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance-card="cash">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1"><span data-balance-amount>$0,00</span></div>
+                <div class="text-xs text-gray-500">Actualizado <span data-balance-updated>--:--</span></div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance-card="usd">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1"><span data-balance-amount>USD 0,00</span></div>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Actualizado <span data-balance-updated>--:--</span></span>
+                    <button class="text-primary hover:underline" type="button" data-balance-retry>Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- DESKTOP NAVBAR -->
+<nav id="navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </div>
+                <div class="flex space-x-8">
+                    <a href="/dashboard" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+            <div class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- DESKTOP BALANCES -->
+<div id="balance-desktop" class="hidden lg:block fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance-card="transfers">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1"><span data-balance-amount>$0,00</span></div>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Actualizado <span data-balance-updated>--:--</span></span>
+                    <button class="text-primary hover:underline" type="button" data-balance-retry>Reintentar</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance-card="cash">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1"><span data-balance-amount>$0,00</span></div>
+                <div class="text-xs text-gray-500">Actualizado <span data-balance-updated>--:--</span></div>
+            </div>
+            <div class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance-card="usd">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1"><span data-balance-amount>USD 0,00</span></div>
+                <div class="flex items-center justify-between text-xs text-gray-500">
+                    <span>Actualizado <span data-balance-updated>--:--</span></span>
+                    <button class="text-primary hover:underline" type="button" data-balance-retry>Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MAIN -->
+<main id="transfer-container" class="max-w-6xl mx-auto px-4 sm:px-6 pb-32 pt-[190px] lg:pt-[200px]">
+    <section id="page-header" class="mb-6">
+        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <a href="/dashboard" class="hover:text-primary transition-colors">Operaciones</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Transferencia en Pesos</span>
+        </nav>
+        <div class="flex items-center">
+            <button onclick="backToOperations()" class="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+                <i class="fa-solid fa-arrow-left text-gray-600"></i>
+            </button>
+            <div>
+                <h1 class="text-xl lg:text-2xl font-bold text-text-primary">Nueva transferencia en ARS</h1>
+                <p class="text-sm text-gray-600">Registra un movimiento de efectivo o transferencia bancaria</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="configuration-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-8 mb-6 lg:mb-8">
+        <div class="flex items-center mb-4 lg:mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">1</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Configuración</h2>
+        </div>
+        <div class="mb-6 lg:mb-8">
+            <h3 class="text-sm font-medium text-gray-700 mb-3 lg:mb-4">Tipo de movimiento</h3>
+            <div class="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4">
+                <div id="cash-card" class="radio-card border-2 border-gray-200 rounded-lg p-3 lg:p-4 cursor-pointer hover:border-primary transition-all" onclick="selectMovementType('cash')">
+                    <div class="flex items-center">
+                        <input type="radio" id="cash" name="movement-type" value="cash" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1 lg:mb-2">
+                                <i class="fa-solid fa-money-bills text-primary mr-2"></i>
+                                <span class="font-medium text-text-primary">Efectivo</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Movimiento de dinero en efectivo</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="transfer-card" class="radio-card border-2 border-gray-200 rounded-lg p-3 lg:p-4 cursor-pointer hover:border-primary transition-all" onclick="selectMovementType('transfer')">
+                    <div class="flex items-center">
+                        <input type="radio" id="transfer" name="movement-type" value="transfer" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1 lg:mb-2">
+                                <i class="fa-solid fa-building-columns text-primary mr-2"></i>
+                                <span class="font-medium text-text-primary">Transferencia</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Transferencia bancaria</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-6 lg:mb-8">
+            <h3 class="text-sm font-medium text-gray-700 mb-3 lg:mb-4">Dirección</h3>
+            <div class="space-y-3 lg:grid lg:grid-cols-2 lg:gap-4">
+                <div id="incoming-card" class="radio-card border-2 border-gray-200 rounded-lg p-3 lg:p-4 cursor-pointer hover:border-primary transition-all" onclick="selectDirection('incoming')">
+                    <div class="flex items-center">
+                        <input type="radio" id="incoming" name="direction" value="incoming" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1 lg:mb-2">
+                                <i class="fa-solid fa-arrow-down text-success mr-2"></i>
+                                <span class="font-medium text-text-primary">Entrante</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Aumenta el saldo de tesorería</p>
+                        </div>
+                    </div>
+                </div>
+                <div id="outgoing-card" class="radio-card border-2 border-gray-200 rounded-lg p-3 lg:p-4 cursor-pointer hover:border-primary transition-all" onclick="selectDirection('outgoing')">
+                    <div class="flex items-center">
+                        <input type="radio" id="outgoing" name="direction" value="outgoing" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-1 lg:mb-2">
+                                <i class="fa-solid fa-arrow-up text-danger mr-2"></i>
+                                <span class="font-medium text-text-primary">Saliente</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Disminuye el saldo de tesorería</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 lg:p-4 mb-4 lg:mb-6">
+            <div class="flex items-start">
+                <i class="fa-solid fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
+                <p class="text-sm text-blue-800">Esta configuración define el impacto en saldos de Tesorería.</p>
+            </div>
+        </div>
+        <div class="flex justify-end">
+            <button id="continue-config-btn" class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed" disabled onclick="proceedToAmount()">
+                <i class="fa-solid fa-arrow-right mr-2"></i>
+                Continuar
+            </button>
+        </div>
+    </section>
+
+    <section id="amount-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-8 mb-6 lg:mb-8 hidden">
+        <div class="flex items-center mb-4 lg:mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">2</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Monto total</h2>
+        </div>
+        <div class="max-w-md">
+            <label for="total-amount" class="block text-sm font-medium text-gray-700 mb-2">Monto total (ARS)</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500 text-lg">$</span>
+                </div>
+                <input type="text" id="total-amount" class="amount-input w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-lg" placeholder="0,00" oninput="formatAmountInput(this)" onblur="validateTotalAmount()">
+            </div>
+            <div id="amount-error" class="text-danger text-sm mt-2 hidden">
+                <i class="fa-solid fa-exclamation-circle mr-1"></i>
+                <span id="amount-error-text">El monto debe ser mayor a 0</span>
+            </div>
+        </div>
+    </section>
+
+    <section id="distribution-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-8 mb-24 hidden">
+        <div class="flex items-center mb-4 lg:mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">3</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Distribución por contactos</h2>
+        </div>
+        <div id="progress-container" class="mb-4 lg:mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                <span id="progress-text" class="text-sm text-gray-600">$0,00 de $0,00</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="progress-bar bg-gray-400 h-3 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="progress-message" class="text-sm text-gray-600 mt-2">Agrega contactos para comenzar la distribución</div>
+        </div>
+        <div class="hidden lg:block overflow-x-auto mb-6">
+            <table class="w-full border border-gray-200 rounded-lg">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Contacto</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Método</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Monto asignado</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-table-body">
+                    <tr>
+                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                            <i class="fa-solid fa-users text-2xl mb-2 block"></i>
+                            No hay contactos agregados
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="lg:hidden space-y-3 mb-6" id="distribution-cards">
+            <div class="text-center py-8 text-gray-500">
+                <i class="fa-solid fa-users text-2xl mb-2 block"></i>
+                No hay contactos agregados
+            </div>
+        </div>
+        <button id="add-line-btn" class="w-full lg:w-auto flex items-center justify-center px-4 py-3 text-primary hover:bg-blue-50 rounded-lg transition-colors border border-primary" type="button" onclick="addDistributionLine()">
+            <i class="fa-solid fa-plus mr-2"></i>
+            Agregar línea
+        </button>
+    </section>
+</main>
+
+<!-- FOOTER ACTIONS -->
+<div id="footer-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 py-3">
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+            <div class="flex flex-col-reverse lg:flex-row lg:items-center gap-2 lg:gap-4">
+                <div class="flex gap-2">
+                    <button onclick="cancelTransfer()" class="flex-1 lg:flex-none px-4 py-2 text-gray-700 hover:text-text-primary transition-colors text-sm lg:text-base" type="button">
+                        <i class="fa-solid fa-times mr-2"></i>
+                        Cancelar
+                    </button>
+                    <button onclick="saveDraft()" class="flex-1 lg:flex-none px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm lg:text-base" type="button">
+                        <i class="fa-solid fa-save mr-2"></i>
+                        Guardar borrador
+                    </button>
+                </div>
+            </div>
+            <button id="confirm-transfer-btn" class="w-full lg:w-auto px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed" disabled type="button" onclick="confirmTransfer()">
+                <i class="fa-solid fa-check mr-2"></i>
+                Confirmar operación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- SUCCESS STATE -->
+<div id="success-state" class="hidden fixed inset-0 bg-white z-50 overflow-y-auto">
+    <div class="flex items-center justify-center min-h-screen p-4 lg:p-8">
+        <div class="max-w-2xl w-full text-center">
+            <div class="w-16 lg:w-20 h-16 lg:h-20 bg-success rounded-full flex items-center justify-center mx-auto mb-4 lg:mb-6">
+                <i class="fa-solid fa-check text-white text-2xl lg:text-3xl"></i>
+            </div>
+            <h1 class="text-2xl lg:text-3xl font-bold text-text-primary mb-2 lg:mb-3">Transferencia registrada</h1>
+            <p class="text-gray-600 mb-4 lg:mb-6">La transferencia ha sido procesada correctamente</p>
+            <div class="inline-flex items-center px-4 lg:px-6 py-2 lg:py-3 bg-primary bg-opacity-10 rounded-full mb-6 lg:mb-8">
+                <i class="fa-solid fa-hashtag text-primary mr-2"></i>
+                <span id="transfer-id" class="text-xl lg:text-2xl font-bold text-primary">FT-TRF-000000</span>
+            </div>
+            <div class="space-y-3 lg:flex lg:items-center lg:justify-center lg:space-y-0 lg:space-x-4">
+                <button onclick="viewTransferDetail()" class="w-full lg:w-auto px-6 lg:px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium" type="button">
+                    <i class="fa-solid fa-eye mr-2"></i>
+                    Ver detalle
+                </button>
+                <button onclick="newTransfer()" class="w-full lg:w-auto px-6 lg:px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium" type="button">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Nueva transferencia
+                </button>
+                <button onclick="backToOperations()" class="w-full lg:w-auto px-6 lg:px-8 py-3 text-primary hover:text-blue-700 transition-colors font-medium" type="button">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CLIENT MODAL -->
+<div id="client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="p-4 lg:p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary">Nuevo contacto</h3>
+                <button onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600" type="button">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-3 lg:space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="client-name">Nombre</label>
+                    <input type="text" id="client-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="client-lastname">Apellido</label>
+                    <input type="text" id="client-lastname" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="client-type">Tipo</label>
+                    <select id="client-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="client">Cliente</option>
+                        <option value="provider">Proveedor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1" for="client-responsible">Responsable</label>
+                    <input type="text" id="client-responsible" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div id="client-modal-error" class="hidden text-sm text-danger">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                    <span>Completá todos los campos obligatorios.</span>
+                </div>
+            </div>
+            <div class="flex items-center justify-end space-x-3 mt-4 lg:mt-6">
+                <button onclick="closeClientModal()" class="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors" type="button">Cancelar</button>
+                <button onclick="saveNewClient()" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" type="button">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const BALANCE_ENDPOINT = '/api/dashboard/balances';
+const TRANSFER_ENDPOINT = '/api/transfers/pesos';
+const CLIENTS_ENDPOINT = '/api/clients';
+
+const state = {
+    movementType: null,
+    direction: null,
+    currency: 'ARS',
+    totalAmount: 0,
+    distributionLines: [],
+    nextLineId: 1,
+    isSubmitting: false,
+};
+
+let lastRegisteredOperation = null;
+let cachedClients = [];
+const clientCache = new Map();
+const clientCacheById = new Map();
+const contactSearchTimeouts = new Map();
+
+const statusClassMap = {
+    ok: 'bg-success',
+    warning: 'bg-warning',
+    danger: 'bg-danger',
+};
+
+const balanceMobile = document.getElementById('balance-mobile');
+const balanceDesktop = document.getElementById('balance-desktop');
+
+const disableBalanceWidget = () => {
+    if (balanceMobile) balanceMobile.classList.add('hidden');
+    if (balanceDesktop) balanceDesktop.classList.add('hidden');
+};
+
+const formatAmount = (amount) => {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric)) return '0,00';
+    return numeric.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+};
+
+const parseAmount = (rawValue) => {
+    if (typeof rawValue !== 'string') return NaN;
+    const normalized = rawValue.replace(/\./g, '').replace(',', '.');
+    const numeric = Number(normalized);
+    if (!Number.isFinite(numeric)) return NaN;
+    return Math.round(numeric * 100) / 100;
+};
+
+const findLineById = (lineId) => state.distributionLines.find((line) => line.id === lineId);
+
+const getLineWrappers = (lineId) => Array.from(document.querySelectorAll(`[data-line-wrapper="${lineId}"]`));
+const getLineInputs = (lineId) => Array.from(document.querySelectorAll(`[data-line-input="${lineId}"]`));
+const getSuggestionContainers = (lineId) => Array.from(document.querySelectorAll(`[data-line-suggestions="${lineId}"]`));
+const getAmountInputs = (lineId) => Array.from(document.querySelectorAll(`[data-line-amount-input="${lineId}"]`));
+
+const hideSuggestions = (lineId, element) => {
+    const targets = element ? [element.closest('[data-line-wrapper]')] : getLineWrappers(lineId);
+    targets.forEach((wrapper) => {
+        const container = wrapper?.querySelector('[data-line-suggestions]');
+        if (container) {
+            container.classList.add('hidden');
+        }
+    });
+};
+
+const registerClientsInCache = (clients) => {
+    clients.forEach((client) => {
+        if (client && client.id) {
+            clientCacheById.set(client.id, client);
+        }
+    });
+};
+
+const fetchClients = async (query = '') => {
+    const normalizedQuery = query.trim().toLowerCase();
+    if (clientCache.has(normalizedQuery)) {
+        return clientCache.get(normalizedQuery);
+    }
+    const url = new URL(CLIENTS_ENDPOINT, window.location.origin);
+    if (normalizedQuery) {
+        url.searchParams.set('q', query.trim());
+    }
+    url.searchParams.set('limit', '10');
+
+    try {
+        const response = await fetch(url.toString(), { credentials: 'include' });
+        if (!response.ok) {
+            throw new Error('No se pudieron cargar los contactos.');
+        }
+        const body = await response.json();
+        const items = Array.isArray(body.items) ? body.items : [];
+        clientCache.set(normalizedQuery, items);
+        registerClientsInCache(items);
+        return items;
+    } catch (error) {
+        console.error(error);
+        return [];
+    }
+};
+
+const showContactSuggestions = (lineId, clients, element) => {
+    const targets = element ? [element.closest('[data-line-wrapper]')] : getLineWrappers(lineId);
+    targets.forEach((wrapper) => {
+        if (!wrapper) return;
+        const container = wrapper.querySelector('[data-line-suggestions]');
+        if (!container) return;
+
+        if (!clients.length) {
+            container.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">No se encontraron contactos.</div>';
+            container.classList.remove('hidden');
+            return;
+        }
+
+        container.innerHTML = clients
+            .map((client) => {
+                const label = client.shortName || client.fullName || 'Sin nombre';
+                const typeLabel = client.contactType === 'provider' ? 'Proveedor' : 'Cliente';
+                return `
+                    <button type="button" class="w-full text-left px-3 py-2 hover:bg-blue-50 transition-colors" data-client-option data-client-id="${client.id}" data-line-id="${lineId}">
+                        <div class="text-sm font-medium text-text-primary">${label}</div>
+                        <div class="text-xs text-gray-500">${typeLabel}${client.cuit ? ` • ${client.cuit}` : ''}</div>
+                    </button>
+                `;
+            })
+            .join('');
+
+        container.querySelectorAll('[data-client-option]').forEach((button) => {
+            button.addEventListener('mousedown', (event) => {
+                event.preventDefault();
+                const clientId = button.getAttribute('data-client-id');
+                selectContactSuggestion(Number(lineId), clientId);
+            });
+        });
+
+        container.classList.remove('hidden');
+    });
+};
+
+const triggerContactSearch = (lineId, query, element) => {
+    if (contactSearchTimeouts.has(lineId)) {
+        clearTimeout(contactSearchTimeouts.get(lineId));
+    }
+    const timeout = setTimeout(async () => {
+        const clients = await fetchClients(query || '');
+        showContactSuggestions(lineId, clients, element);
+    }, 250);
+    contactSearchTimeouts.set(lineId, timeout);
+};
+
+const handleContactInput = (lineId, value, inputElement) => {
+    const line = findLineById(lineId);
+    if (!line) return;
+    line.contactName = value;
+    line.contactId = null;
+    checkConfirmationReady();
+    if (!value.trim()) {
+        hideSuggestions(lineId, inputElement);
+        return;
+    }
+    triggerContactSearch(lineId, value, inputElement);
+};
+
+const handleContactFocus = (lineId, inputElement) => {
+    const line = findLineById(lineId);
+    if (!line) return;
+    const query = line.contactName && line.contactName.trim().length > 0 ? line.contactName : '';
+    if (query) {
+        triggerContactSearch(lineId, query, inputElement);
+    } else if (cachedClients.length) {
+        showContactSuggestions(lineId, cachedClients, inputElement);
+    } else {
+        triggerContactSearch(lineId, '', inputElement);
+    }
+};
+
+const handleContactBlur = (lineId, inputElement) => {
+    setTimeout(() => hideSuggestions(lineId, inputElement), 150);
+};
+
+const selectContactSuggestion = (lineId, clientId) => {
+    const client = clientCacheById.get(clientId);
+    const line = findLineById(lineId);
+    if (!client || !line) return;
+
+    line.contactId = client.id;
+    line.contactName = client.shortName || client.fullName || '';
+    line.contactType = client.contactType || 'client';
+
+    renderDistributionTable();
+    renderDistributionCards();
+    checkConfirmationReady();
+};
+
+const selectMovementType = (type) => {
+    state.movementType = type === 'cash' ? 'cash' : 'transfer';
+
+    document.getElementById('cash-card').classList.remove('selected', 'border-primary');
+    document.getElementById('transfer-card').classList.remove('selected', 'border-primary');
+    document.getElementById('cash').checked = false;
+    document.getElementById('transfer').checked = false;
+
+    const selectedCard = document.getElementById(`${state.movementType}-card`);
+    const selectedInput = document.getElementById(state.movementType);
+    if (selectedCard && selectedInput) {
+        selectedCard.classList.add('selected', 'border-primary');
+        selectedInput.checked = true;
+    }
+
+    checkConfigurationComplete();
+    checkConfirmationReady();
+};
+
+const selectDirection = (direction) => {
+    state.direction = direction === 'outgoing' ? 'outgoing' : 'incoming';
+
+    document.getElementById('incoming-card').classList.remove('selected', 'border-primary');
+    document.getElementById('outgoing-card').classList.remove('selected', 'border-primary');
+    document.getElementById('incoming').checked = false;
+    document.getElementById('outgoing').checked = false;
+
+    const selectedCard = document.getElementById(`${state.direction}-card`);
+    const selectedInput = document.getElementById(state.direction);
+    if (selectedCard && selectedInput) {
+        selectedCard.classList.add('selected', 'border-primary');
+        selectedInput.checked = true;
+    }
+
+    checkConfigurationComplete();
+    checkConfirmationReady();
+};
+
+const checkConfigurationComplete = () => {
+    const continueBtn = document.getElementById('continue-config-btn');
+    if (!continueBtn) return;
+
+    if (state.movementType && state.direction) {
+        continueBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        continueBtn.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+        continueBtn.disabled = false;
+    } else {
+        continueBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        continueBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+        continueBtn.disabled = true;
+    }
+};
+
+const proceedToAmount = () => {
+    if (!state.movementType || !state.direction) return;
+    document.getElementById('amount-section').classList.remove('hidden');
+    document.getElementById('total-amount').focus();
+};
+
+const formatAmountInput = (input) => {
+    const raw = input.value;
+    const sanitized = raw.replace(/[^\d,]/g, '');
+    const parts = sanitized.split(',');
+    if (parts.length > 2) {
+        parts.splice(2);
+    }
+    if (parts[1] && parts[1].length > 2) {
+        parts[1] = parts[1].slice(0, 2);
+    }
+    parts[0] = parts[0].replace(/^0+(\d)/, '$1');
+    const withThousand = parts[0]
+        ? parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+        : '';
+    input.value = parts.length > 1 ? `${withThousand},${parts[1] || ''}` : withThousand;
+
+    const numericValue = parseAmount(input.value);
+    if (Number.isFinite(numericValue) && numericValue > 0) {
+        state.totalAmount = numericValue;
+        hideAmountError();
+    } else {
+        state.totalAmount = 0;
+    }
+    updateProgressDisplay();
+    checkConfirmationReady();
+};
+
+const validateTotalAmount = () => {
+    const input = document.getElementById('total-amount');
+    if (!input) return false;
+    const numericValue = parseAmount(input.value);
+
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+        showAmountError('El monto debe ser mayor a 0');
+        state.totalAmount = 0;
+        updateProgressDisplay();
+        checkConfirmationReady();
+        return false;
+    }
+
+    state.totalAmount = numericValue;
+    hideAmountError();
+    showDistributionSection();
+    updateProgressDisplay();
+    checkConfirmationReady();
+    return true;
+};
+
+const showAmountError = (message) => {
+    const errorDiv = document.getElementById('amount-error');
+    const errorText = document.getElementById('amount-error-text');
+    const input = document.getElementById('total-amount');
+    if (errorDiv && errorText) {
+        errorText.textContent = message;
+        errorDiv.classList.remove('hidden');
+    }
+    if (input) {
+        input.classList.add('border-danger', 'focus:ring-danger');
+        input.classList.remove('border-gray-300', 'focus:ring-primary');
+    }
+};
+
+const hideAmountError = () => {
+    const errorDiv = document.getElementById('amount-error');
+    const input = document.getElementById('total-amount');
+    if (errorDiv) {
+        errorDiv.classList.add('hidden');
+    }
+    if (input) {
+        input.classList.remove('border-danger', 'focus:ring-danger');
+        input.classList.add('border-gray-300', 'focus:ring-primary');
+    }
+};
+
+const showDistributionSection = () => {
+    document.getElementById('distribution-section').classList.remove('hidden');
+    if (state.distributionLines.length === 0) {
+        addDistributionLine();
+    }
+};
+
+const addDistributionLine = () => {
+    const line = {
+        id: state.nextLineId++,
+        contactId: null,
+        contactName: '',
+        contactType: null,
+        method: 'ARS',
+        amount: 0,
+    };
+    state.distributionLines.push(line);
+    renderDistributionTable();
+    renderDistributionCards();
+    updateProgressDisplay();
+    checkConfirmationReady();
+};
+
+const removeDistributionLine = (lineId) => {
+    state.distributionLines = state.distributionLines.filter((line) => line.id !== lineId);
+    renderDistributionTable();
+    renderDistributionCards();
+    updateProgressDisplay();
+    checkConfirmationReady();
+};
+
+const updateLineMethod = (lineId, value) => {
+    const line = findLineById(lineId);
+    if (!line) return;
+    line.method = value === 'USD' ? 'USD' : 'ARS';
+    renderDistributionTable();
+    renderDistributionCards();
+    updateProgressDisplay();
+    checkConfirmationReady();
+};
+
+const setLineAmount = (lineId, rawValue, element) => {
+    const line = findLineById(lineId);
+    if (!line) return;
+    const numericValue = parseAmount(rawValue);
+    line.amount = Number.isFinite(numericValue) && numericValue > 0 ? numericValue : 0;
+    getAmountInputs(lineId).forEach((input) => {
+        if (input !== element) {
+            input.value = line.amount > 0 ? formatAmount(line.amount) : '';
+        }
+    });
+    updateProgressDisplay();
+    checkConfirmationReady();
+};
+
+const formatLineAmount = (lineId) => {
+    const line = findLineById(lineId);
+    if (!line) return;
+    getAmountInputs(lineId).forEach((input) => {
+        input.value = line.amount > 0 ? formatAmount(line.amount) : '';
+    });
+};
+
+const renderDistributionTable = () => {
+    const tbody = document.getElementById('distribution-table-body');
+    if (!tbody) return;
+
+    if (state.distributionLines.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                    <i class="fa-solid fa-users text-2xl mb-2 block"></i>
+                    No hay contactos agregados
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    tbody.innerHTML = state.distributionLines
+        .map((line) => `
+            <tr class="border-t border-gray-200" data-line-id="${line.id}">
+                <td class="px-4 py-3 align-top">
+                    <div class="relative" data-line-wrapper="${line.id}" data-line-context="desktop">
+                        <input type="text"
+                               value="${line.contactName || ''}"
+                               placeholder="Buscar contacto..."
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                               data-line-input="${line.id}"
+                               oninput="handleContactInput(${line.id}, this.value, this)"
+                               onfocus="handleContactFocus(${line.id}, this)"
+                               onblur="handleContactBlur(${line.id}, this)">
+                        <button onclick="openClientModal(${line.id})" class="absolute right-2 top-2 text-primary hover:text-blue-700 text-sm" type="button">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <div class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden z-20 suggestions-panel" data-line-suggestions="${line.id}"></div>
+                    </div>
+                </td>
+                <td class="px-4 py-3">
+                    <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            onchange="updateLineMethod(${line.id}, this.value)">
+                        <option value="ARS" ${line.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                        <option value="USD" ${line.method === 'USD' ? 'selected' : ''}>USD</option>
+                    </select>
+                </td>
+                <td class="px-4 py-3">
+                    <div class="relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span class="text-gray-500">${line.method === 'USD' ? 'US$' : '$'}</span>
+                        </div>
+                        <input type="text"
+                               value="${line.amount > 0 ? formatAmount(line.amount) : ''}"
+                               class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                               data-line-amount-input="${line.id}"
+                               oninput="updateLineAmount(${line.id}, this.value, this)"
+                               onblur="formatLineAmount(${line.id})">
+                    </div>
+                </td>
+                <td class="px-4 py-3 text-center">
+                    <button onclick="removeDistributionLine(${line.id})" class="text-danger hover:text-red-700 p-1" type="button">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `)
+        .join('');
+};
+
+const renderDistributionCards = () => {
+    const container = document.getElementById('distribution-cards');
+    if (!container) return;
+
+    if (state.distributionLines.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-8 text-gray-500">
+                <i class="fa-solid fa-users text-2xl mb-2 block"></i>
+                No hay contactos agregados
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = state.distributionLines
+        .map((line) => `
+            <div class="bg-gray-50 rounded-lg p-3 space-y-3" data-line-card="${line.id}">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium text-gray-700">Contacto #${line.id}</span>
+                    <button onclick="removeDistributionLine(${line.id})" class="text-danger hover:text-red-700 p-1" type="button">
+                        <i class="fa-solid fa-trash text-sm"></i>
+                    </button>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 mb-1">Cliente</label>
+                    <div class="relative" data-line-wrapper="${line.id}" data-line-context="mobile">
+                        <input type="text"
+                               value="${line.contactName || ''}"
+                               placeholder="Buscar contacto..."
+                               class="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                               data-line-input="${line.id}"
+                               oninput="handleContactInput(${line.id}, this.value, this)"
+                               onfocus="handleContactFocus(${line.id}, this)"
+                               onblur="handleContactBlur(${line.id}, this)">
+                        <button onclick="openClientModal(${line.id})" class="absolute right-2 top-2 text-primary hover:text-blue-700 text-sm" type="button">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                        <div class="absolute left-0 right-0 mt-2 bg-white border border-gray-200 rounded-lg shadow-lg hidden z-20 suggestions-panel" data-line-suggestions="${line.id}"></div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Método</label>
+                        <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                onchange="updateLineMethod(${line.id}, this.value)">
+                            <option value="ARS" ${line.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                            <option value="USD" ${line.method === 'USD' ? 'selected' : ''}>USD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Monto</label>
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-sm">${line.method === 'USD' ? 'US$' : '$'}</span>
+                            </div>
+                            <input type="text"
+                                   value="${line.amount > 0 ? formatAmount(line.amount) : ''}"
+                                   class="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
+                                   data-line-amount-input="${line.id}"
+                                   oninput="updateLineAmount(${line.id}, this.value, this)"
+                                   onblur="formatLineAmount(${line.id})">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `)
+        .join('');
+};
+
+const updateProgressDisplay = () => {
+    const totalAssigned = state.distributionLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+    const totalAmount = state.totalAmount || 0;
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressMessage = document.getElementById('progress-message');
+
+    const percentage = totalAmount > 0 ? Math.min((totalAssigned / totalAmount) * 100, 100) : 0;
+    const difference = totalAmount - totalAssigned;
+
+    if (progressBar) {
+        progressBar.style.width = `${percentage}%`;
+    }
+    if (progressText) {
+        progressText.textContent = `$${formatAmount(totalAssigned)} de $${formatAmount(totalAmount)}`;
+    }
+    if (!progressMessage) return;
+
+    if (totalAmount === 0 && totalAssigned === 0) {
+        progressBar.className = 'progress-bar bg-gray-400 h-3 rounded-full';
+        progressMessage.className = 'text-sm text-gray-600 mt-2';
+        progressMessage.textContent = 'Agrega contactos para comenzar la distribución';
+        return;
+    }
+
+    if (Math.abs(difference) < 0.01) {
+        progressBar.className = 'progress-bar bg-success h-3 rounded-full';
+        progressMessage.className = 'text-sm text-success mt-2';
+        progressMessage.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Total asignado correctamente';
+        return;
+    }
+
+    if (difference < 0) {
+        progressBar.className = 'progress-bar bg-danger h-3 rounded-full';
+        progressMessage.className = 'text-sm text-danger mt-2';
+        progressMessage.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-1"></i>Excede por $${formatAmount(Math.abs(difference))}`;
+        return;
+    }
+
+    progressBar.className = 'progress-bar bg-warning h-3 rounded-full';
+    progressMessage.className = 'text-sm text-warning mt-2';
+    progressMessage.innerHTML = `<i class="fa-solid fa-clock mr-1"></i>Faltan $${formatAmount(difference)}`;
+};
+
+const checkConfirmationReady = () => {
+    const confirmBtn = document.getElementById('confirm-transfer-btn');
+    if (!confirmBtn) return;
+
+    const hasConfig = Boolean(state.movementType && state.direction);
+    const totalValid = Number.isFinite(state.totalAmount) && state.totalAmount > 0;
+    const hasLines = state.distributionLines.length > 0;
+    const contactsValid = state.distributionLines.every((line) => Boolean(line.contactId));
+    const amountsValid = state.distributionLines.every((line) => Number.isFinite(line.amount) && line.amount > 0);
+    const totalAssigned = state.distributionLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+    const totalsMatch = Math.abs(totalAssigned - state.totalAmount) < 0.01;
+
+    const ready = hasConfig && totalValid && hasLines && contactsValid && amountsValid && totalsMatch && !state.isSubmitting;
+
+    if (ready) {
+        confirmBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+        confirmBtn.disabled = false;
+    } else {
+        confirmBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+        confirmBtn.disabled = true;
+    }
+};
+
+const setConfirmButtonLoading = (isLoading) => {
+    const confirmBtn = document.getElementById('confirm-transfer-btn');
+    if (!confirmBtn) return;
+    if (isLoading) {
+        confirmBtn.dataset.originalLabel = confirmBtn.innerHTML;
+        confirmBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Registrando...';
+        confirmBtn.disabled = true;
+    } else {
+        confirmBtn.innerHTML = confirmBtn.dataset.originalLabel || '<i class="fa-solid fa-check mr-2"></i>Confirmar operación';
+    }
+};
+
+const cancelTransfer = () => {
+    if (confirm('¿Querés cancelar esta operación? Se perderán los cambios.')) {
+        backToOperations();
+    }
+};
+
+const saveDraft = () => {
+    alert('Guardado en borradores no disponible para esta operación.');
+};
+
+const openClientModal = (lineId) => {
+    const modal = document.getElementById('client-modal');
+    if (!modal) return;
+    modal.dataset.lineId = lineId;
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-lastname').value = '';
+    document.getElementById('client-responsible').value = '';
+    document.getElementById('client-type').value = 'client';
+    document.getElementById('client-modal-error').classList.add('hidden');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    document.getElementById('client-name').focus();
+};
+
+const closeClientModal = () => {
+    const modal = document.getElementById('client-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.classList.remove('flex');
+};
+
+const saveNewClient = async () => {
+    const modal = document.getElementById('client-modal');
+    const errorBox = document.getElementById('client-modal-error');
+    if (!modal) return;
+    const lineId = Number(modal.dataset.lineId);
+    const firstName = document.getElementById('client-name').value.trim();
+    const lastName = document.getElementById('client-lastname').value.trim();
+    const type = document.getElementById('client-type').value;
+    const responsible = document.getElementById('client-responsible').value.trim();
+
+    if (!firstName || !lastName || !responsible) {
+        errorBox.classList.remove('hidden');
+        return;
+    }
+
+    errorBox.classList.add('hidden');
+
+    const payload = {
+        firstName,
+        lastName,
+        internalOwner: responsible,
+        contactType: type === 'provider' ? 'provider' : 'client',
+    };
+
+    try {
+        const response = await fetch(CLIENTS_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || 'No se pudo crear el contacto.');
+        }
+
+        const client = await response.json();
+        registerClientsInCache([client]);
+        cachedClients.unshift(client);
+        selectContactSuggestion(lineId, client.id);
+        closeClientModal();
+    } catch (error) {
+        errorBox.classList.remove('hidden');
+        errorBox.querySelector('span').textContent = error.message || 'No se pudo crear el contacto.';
+    }
+};
+
+const showSuccessState = (operation) => {
+    const successState = document.getElementById('success-state');
+    if (!successState) return;
+    document.getElementById('transfer-id').textContent = operation.operationCode || operation.id;
+    successState.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+};
+
+const confirmTransfer = async () => {
+    if (state.isSubmitting) return;
+
+    const hasConfig = Boolean(state.movementType && state.direction);
+    const totalValid = Number.isFinite(state.totalAmount) && state.totalAmount > 0;
+    const hasLines = state.distributionLines.length > 0;
+    const contactsValid = state.distributionLines.every((line) => Boolean(line.contactId));
+    const amountsValid = state.distributionLines.every((line) => Number.isFinite(line.amount) && line.amount > 0);
+    const totalAssigned = state.distributionLines.reduce((sum, line) => sum + (line.amount || 0), 0);
+    const totalsMatch = Math.abs(totalAssigned - state.totalAmount) < 0.01;
+
+    if (!hasConfig || !totalValid || !hasLines || !contactsValid || !amountsValid || !totalsMatch) {
+        alert('Revisá que la configuración, montos y contactos estén completos y coincidan con el total.');
+        return;
+    }
+
+    state.isSubmitting = true;
+    setConfirmButtonLoading(true);
+
+    try {
+        const payload = {
+            movementType: state.movementType,
+            direction: state.direction,
+            totalAmount: state.totalAmount,
+            distributionLines: state.distributionLines.map((line) => ({
+                contactId: line.contactId,
+                method: line.method,
+                amount: line.amount,
+            })),
+        };
+
+        const response = await fetch(TRANSFER_ENDPOINT, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+            const body = await response.json().catch(() => ({}));
+            throw new Error(body.message || 'No se pudo registrar la transferencia.');
+        }
+
+        const result = await response.json();
+        lastRegisteredOperation = result.operation;
+        await loadBalances();
+        showSuccessState(result.operation);
+    } catch (error) {
+        alert(error.message || 'Ocurrió un error al confirmar la transferencia.');
+    } finally {
+        state.isSubmitting = false;
+        setConfirmButtonLoading(false);
+        checkConfirmationReady();
+    }
+};
+
+const loadBalances = async () => {
+    try {
+        const response = await fetch(BALANCE_ENDPOINT, { credentials: 'include' });
+        if (response.status === 401 || response.status === 403) {
+            disableBalanceWidget();
+            return false;
+        }
+        if (!response.ok) {
+            throw new Error('Error al cargar balances');
+        }
+        const data = await response.json();
+        const balances = Array.isArray(data.balances) ? data.balances : [];
+        balances.forEach((balance) => {
+            const cards = document.querySelectorAll(`[data-balance-card="${balance.id}"]`);
+            cards.forEach((card) => {
+                const label = card.querySelector('[data-balance-label]');
+                const amount = card.querySelector('[data-balance-amount]');
+                const statusDot = card.querySelector('[data-balance-status]');
+                const updated = card.querySelector('[data-balance-updated]');
+
+                if (label) label.textContent = balance.label || label.textContent;
+                if (amount) {
+                    const prefix = balance.currency === 'USD' ? 'USD ' : '$';
+                    amount.textContent = `${prefix}${formatAmount(balance.amount)}`;
+                }
+                if (statusDot) {
+                    statusDot.classList.remove('bg-success', 'bg-warning', 'bg-danger');
+                    statusDot.classList.add(statusClassMap[balance.status] || 'bg-success');
+                }
+                if (updated) {
+                    try {
+                        const timestamp = balance.updatedAt ? new Date(balance.updatedAt) : new Date();
+                        updated.textContent = timestamp.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+                    } catch (error) {
+                        updated.textContent = '--:--';
+                    }
+                }
+            });
+        });
+        return true;
+    } catch (error) {
+        console.error(error);
+        return false;
+    }
+};
+
+const viewTransferDetail = () => {
+    if (!lastRegisteredOperation) return;
+    const detailUrl = `/api/transfers/pesos/${encodeURIComponent(lastRegisteredOperation.id)}`;
+    window.open(detailUrl, '_blank');
+};
+
+const newTransfer = () => {
+    window.location.reload();
+};
+
+const backToOperations = () => {
+    window.location.href = '/dashboard';
+};
+
+const prefetchClients = async () => {
+    cachedClients = await fetchClients('');
+};
+
+const bindRetryBalance = () => {
+    const buttons = document.querySelectorAll('[data-balance-retry]');
+    buttons.forEach((button) => {
+        button.addEventListener('click', () => loadBalances());
+    });
+};
+
+const initializeMobileMenu = () => {
+    const toggle = document.getElementById('menu-toggle');
+    const menu = document.getElementById('mobile-menu');
+    if (!toggle || !menu) return;
+
+    const openMenu = () => {
+        menu.classList.remove('hidden');
+        const icon = toggle.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-times text-lg';
+    };
+
+    const closeMenu = () => {
+        menu.classList.add('hidden');
+        const icon = toggle.querySelector('i');
+        if (icon) icon.className = 'fa-solid fa-bars text-lg';
+    };
+
+    toggle.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (menu.classList.contains('hidden')) {
+            openMenu();
+        } else {
+            closeMenu();
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!menu.contains(event.target) && event.target !== toggle && !toggle.contains(event.target)) {
+            closeMenu();
+        }
+    });
+};
+
+window.selectMovementType = selectMovementType;
+window.selectDirection = selectDirection;
+window.proceedToAmount = proceedToAmount;
+window.formatAmountInput = formatAmountInput;
+window.validateTotalAmount = validateTotalAmount;
+window.addDistributionLine = addDistributionLine;
+window.removeDistributionLine = removeDistributionLine;
+window.updateLineMethod = updateLineMethod;
+window.updateLineAmount = setLineAmount;
+window.formatLineAmount = formatLineAmount;
+window.openClientModal = openClientModal;
+window.closeClientModal = closeClientModal;
+window.saveNewClient = saveNewClient;
+window.cancelTransfer = cancelTransfer;
+window.saveDraft = saveDraft;
+window.confirmTransfer = confirmTransfer;
+window.viewTransferDetail = viewTransferDetail;
+window.newTransfer = newTransfer;
+window.backToOperations = backToOperations;
+window.handleContactInput = handleContactInput;
+window.handleContactFocus = handleContactFocus;
+window.handleContactBlur = handleContactBlur;
+
+window.addEventListener('DOMContentLoaded', async () => {
+    document.body.style.paddingBottom = '120px';
+    initializeMobileMenu();
+    await Promise.all([loadBalances(), prefetchClients()]);
+    bindRetryBalance();
+});
+</script>
+
+</body>
+</html>

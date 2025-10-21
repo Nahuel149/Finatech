@@ -1,0 +1,121 @@
+const { Router } = require('express');
+const { body } = require('express-validator');
+const {
+  register,
+  verifyEmail,
+  googleAuth,
+  login,
+  verifyTwoFactor,
+  resendTwoFactor,
+  resendVerification,
+  recoverPassword,
+  validateResetToken,
+  resetPassword,
+  profile,
+  logout,
+} = require('../controllers/auth.controller');
+const { validateRequest } = require('../middleware/validateRequest');
+const { authLimiter } = require('../middleware/rateLimiter');
+const { requireAuth } = require('../middleware/requireAuth');
+
+const router = Router();
+
+const passwordValidator = (value) => {
+  const hasMinLength = value.length >= 8;
+  const hasUppercase = /[A-Z]/.test(value);
+  const hasLowercase = /[a-z]/.test(value);
+  const hasNumber = /\d/.test(value);
+  if (hasMinLength && hasUppercase && hasLowercase && hasNumber) {
+    return true;
+  }
+  throw new Error('Password does not meet the required complexity.');
+};
+
+const registerValidators = [
+  body('fullName').trim().notEmpty().withMessage('Full name is required.'),
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('password').isString().custom(passwordValidator),
+  body('confirmPassword')
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage('Passwords do not match.'),
+  body('acceptTerms')
+    .toBoolean()
+    .isBoolean()
+    .withMessage('Terms and conditions must be accepted.')
+    .custom((value) => value === true)
+    .withMessage('Terms and conditions must be accepted.'),
+];
+
+const googleValidators = [body('idToken').isString().withMessage('Google ID token is required.')];
+
+const loginValidators = [
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('password').notEmpty().withMessage('Password is required.'),
+  body('rememberMe').optional().isBoolean().withMessage('Remember me must be a boolean.').toBoolean(),
+];
+
+const twoFactorValidators = [
+  body('challengeToken').isString().withMessage('Two-factor challenge token is required.'),
+  body('code')
+    .isString()
+    .matches(/^\d{6}$/)
+    .withMessage('Enter a valid 6-digit code.'),
+];
+
+const twoFactorResendValidators = [
+  body('challengeToken').isString().withMessage('Two-factor challenge token is required.'),
+];
+
+const resendVerificationValidators = [
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+];
+
+const recoverValidators = [
+  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+];
+
+const resetPasswordValidators = [
+  body('token').isString().withMessage('Password reset token is required.'),
+  body('password').isString().custom(passwordValidator),
+  body('confirmPassword')
+    .custom((value, { req }) => value === req.body.password)
+    .withMessage('Passwords do not match.'),
+];
+
+router.post('/register', authLimiter, ...registerValidators, validateRequest, register);
+
+router.get('/verify-email', verifyEmail);
+
+router.post('/google', authLimiter, ...googleValidators, validateRequest, googleAuth);
+
+router.post('/login', authLimiter, ...loginValidators, validateRequest, login);
+
+router.post('/login/2fa', authLimiter, ...twoFactorValidators, validateRequest, verifyTwoFactor);
+
+router.post(
+  '/login/2fa/resend',
+  authLimiter,
+  ...twoFactorResendValidators,
+  validateRequest,
+  resendTwoFactor
+);
+
+router.post(
+  '/resend-verification',
+  authLimiter,
+  ...resendVerificationValidators,
+  validateRequest,
+  resendVerification
+);
+
+router.get('/me', requireAuth, profile);
+
+router.post('/logout', requireAuth, logout);
+
+router.post('/recover', authLimiter, ...recoverValidators, validateRequest, recoverPassword);
+
+router.get('/reset/validate', authLimiter, validateResetToken);
+
+router.post('/reset', authLimiter, ...resetPasswordValidators, validateRequest, resetPassword);
+
+module.exports = router;

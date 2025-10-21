@@ -1,0 +1,2061 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .amount-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .amount-input.error {
+            border-color: #DC3545;
+            box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1);
+        }
+        .contact-row {
+            transition: background-color 0.2s ease;
+        }
+        .contact-row:hover {
+            background-color: #f8fafc;
+        }
+        .validation-indicator {
+            transition: all 0.3s ease;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Mobile Header -->
+<header id="header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-40">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="back-header-button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex-1 text-center">
+                <h1 class="text-lg font-bold text-text-primary">Liquidación</h1>
+            </div>
+            <div class="flex items-center gap-3 justify-end">
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden sm:block"></div>
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- COMPONENT: Mobile Navigation Menu -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30 hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <button class="flex w-full items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg text-primary font-medium" type="button">
+                <i class="fa-solid fa-exchange-alt mr-3"></i>
+                Operaciones
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                Tesorería
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Cards -->
+<section id="balance-cards" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-20 overflow-x-auto">
+    <div class="px-4 py-4">
+        <div class="flex space-x-4 min-w-max">
+            <article id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="transfers">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>$2.847.950,00</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:32</div>
+            </article>
+            <article id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="cash">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>$456.780,50</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:30</div>
+            </article>
+            <article id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="usd">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 rounded-full bg-danger" data-balance-status></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500" data-balance-time>Error conexión</div>
+                    <button class="text-xs text-primary hover:underline" data-balance-retry>Reintentar</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- STEP: Distribution -->
+<section id="distribution-step" class="hidden pt-[220px] px-6 pb-24 max-w-6xl mx-auto">
+    <section class="mb-8">
+        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <a href="/dashboard" class="hover:text-primary transition-colors">Operaciones</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <a href="/dashboard/operations/new" class="hover:text-primary transition-colors">Nueva operación</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Distribución</span>
+        </nav>
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div class="flex items-start gap-3">
+                <button id="distribution-back-button" class="p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-text-primary">Distribución de montos entre contactos</h1>
+                    <p class="text-gray-600">Asigná el monto total entre uno o varios clientes o proveedores</p>
+                </div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="text-sm text-blue-700 font-medium">Monto total</div>
+                <div class="text-2xl font-bold text-blue-900" id="distribution-total-amount">$0,00</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                    <span id="distribution-progress-percentage" class="text-sm font-medium text-gray-700">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="distribution-progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="distribution-status" class="validation-indicator p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-info-circle text-gray-500 mr-2"></i>
+                    <span class="text-sm text-gray-700">Agregá contactos para comenzar la distribución</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="px-4 lg:px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-text-primary">Distribución por contactos</h3>
+                <button id="distribution-add-row" class="hidden lg:inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" type="button">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Agregar línea
+                </button>
+            </div>
+            <button class="distribution-add-inline mt-3 inline-flex lg:hidden items-center px-3 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm" type="button">
+                <i class="fa-solid fa-plus mr-2"></i>
+                Agregar contacto
+            </button>
+        </div>
+        <div class="hidden lg:block overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método de liquidación</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto asignado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+            </table>
+        </div>
+        <div id="distribution-card-container" class="lg:hidden space-y-4 px-4 py-4"></div>
+    </section>
+
+    <div id="distribution-footer" class="mt-6 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <button id="distribution-save-button" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium" type="button">
+                <i class="fa-solid fa-save mr-2"></i>
+                Guardar borrador
+            </button>
+            <button id="distribution-cancel-button" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium" type="button">
+                <i class="fa-solid fa-times mr-2"></i>
+                Cancelar
+            </button>
+        </div>
+        <button id="distribution-continue-button" class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium" type="button" disabled>
+            Continuar
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+</section>
+
+<div id="distribution-client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+            <h3 class="text-lg font-semibold text-text-primary">Nuevo contacto</h3>
+            <button id="distribution-close-modal" class="text-gray-400 hover:text-gray-600" type="button">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        <div class="px-6 py-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Nombre / Razón social</label>
+                <input type="text" id="distribution-client-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">CUIT / DNI</label>
+                <input type="text" id="distribution-client-id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                <select id="distribution-client-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    <option value="">Seleccionar tipo</option>
+                    <option value="client">Cliente</option>
+                    <option value="provider">Proveedor</option>
+                </select>
+            </div>
+            <p id="distribution-modal-error" class="hidden text-sm text-danger flex items-center gap-2">
+                <i class="fa-solid fa-circle-exclamation"></i>
+                Completá todos los campos obligatorios.
+            </p>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end gap-3">
+            <button id="distribution-cancel-modal" class="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors" type="button">
+                Cancelar
+            </button>
+            <button id="distribution-save-modal" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" type="button">
+                Guardar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Progress Bar -->
+<section id="step-progress" class="fixed top-[185px] left-0 right-0 bg-white border-b border-gray-200 z-10">
+    <div class="px-4 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-success text-white rounded-full flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-check"></i>
+                </div>
+                <div class="ml-2">
+                    <div class="font-medium text-text-primary text-xs">Datos</div>
+                    <div class="text-xs text-gray-500">Información</div>
+                </div>
+            </div>
+            <div class="flex-1 mx-3 h-px bg-primary"></div>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs">2</div>
+                <div class="ml-2">
+                    <div class="font-medium text-text-primary text-xs">Liquidación</div>
+                    <div class="text-xs text-gray-500">Pago</div>
+                </div>
+            </div>
+            <div class="flex-1 mx-3 h-px bg-gray-300"></div>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-xs">3</div>
+                <div class="ml-2">
+                    <div class="font-medium text-gray-400 text-xs">Resumen</div>
+                    <div class="text-xs text-gray-400">Confirmar</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- STEP: Amount -->
+<section id="amount-step" class="pt-[240px] px-6 pb-24 max-w-4xl mx-auto">
+    <div class="mb-8">
+        <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <a href="/dashboard" class="hover:text-primary transition-colors">Operaciones</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <a href="/dashboard/operations/new" class="hover:text-primary transition-colors">Nueva operación</a>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Monto total</span>
+        </nav>
+        <div class="flex items-center">
+            <button id="amount-back-button" class="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors" type="button">
+                <i class="fa-solid fa-arrow-left text-gray-600"></i>
+            </button>
+            <div>
+                <h1 class="text-2xl font-bold text-text-primary">Monto total de la operación</h1>
+                <p class="text-gray-600">Definí el valor a distribuir en los pasos siguientes</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 max-w-xl">
+        <div class="space-y-6">
+            <div>
+                <label for="total-amount" class="block text-sm font-semibold text-text-primary mb-3">
+                    Monto total (ARS)
+                </label>
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <span class="text-gray-500 text-xl font-medium">$</span>
+                    </div>
+                    <input type="text" id="total-amount" class="amount-input w-full pl-12 pr-4 py-4 text-xl font-medium border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-all" placeholder="0,00" autocomplete="off">
+                </div>
+                <div id="amount-error" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div class="flex items-start">
+                        <i class="fa-solid fa-exclamation-circle text-danger mr-2 mt-0.5"></i>
+                        <div>
+                            <p class="text-sm font-medium text-danger">Error en el monto</p>
+                            <p id="amount-error-text" class="text-sm text-red-700">Ingresá un monto válido en pesos argentinos.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="flex items-start">
+                    <i class="fa-solid fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
+                    <p class="text-sm text-blue-800">Este monto se utilizará como base para la distribución y la liquidación.</p>
+                </div>
+            </div>
+            <p class="text-xs text-gray-500 text-center">Ejemplo de formato válido: $150.000,50</p>
+        </div>
+    </div>
+
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3 max-w-4xl">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <button id="amount-save-button" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium" type="button">
+                <i class="fa-solid fa-save mr-2"></i>
+                Guardar borrador
+            </button>
+            <button id="amount-cancel-button" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium" type="button">
+                <i class="fa-solid fa-times mr-2"></i>
+                Cancelar
+            </button>
+        </div>
+        <button id="amount-continue-button" class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium" type="button" disabled>
+            Continuar
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+    </div>
+
+    <div id="amount-toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
+</section>
+
+<main id="main-container" class="hidden pt-[245px] px-4 pb-20 max-w-3xl mx-auto">
+    <div id="feedback-box" class="hidden mb-6 border rounded-lg px-4 py-3 text-sm"></div>
+
+    <!-- Operation summary -->
+    <section id="operation-summary" class="mb-6">
+        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
+            <div class="flex items-center justify-between">
+                <div>
+                    <div class="text-xs text-gray-600">Cliente</div>
+                    <div id="summary-client" class="font-medium text-text-primary text-sm">—</div>
+                </div>
+                <button id="edit-step-1" class="text-primary hover:text-blue-700 text-xs">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div class="h-px bg-gray-200"></div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <div class="text-xs text-gray-600">Operación</div>
+                    <div id="summary-operation" class="font-medium text-text-primary text-sm">—</div>
+                </div>
+                <div>
+                    <div class="text-xs text-gray-600">Monto total</div>
+                    <div id="summary-amount" class="font-medium text-text-primary text-sm">—</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Settlement type -->
+    <section id="settlement-type" class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <label class="block text-sm font-semibold text-text-primary">Tipo de liquidación</label>
+            <button id="simple-settlement" type="button" class="w-full p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg text-left space-y-2">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-circle-dot mr-3"></i>
+                    <span class="font-semibold">Simple</span>
+                </div>
+                <p class="text-xs text-text-primary opacity-80">Un solo método de pago para el 100% de la operación.</p>
+            </button>
+            <button id="compound-settlement" type="button" class="w-full p-4 border-2 border-gray-300 text-gray-600 rounded-lg text-left space-y-2 hover:border-primary hover:text-primary transition-colors">
+                <div class="flex items-center">
+                    <i class="fa-regular fa-circle mr-3"></i>
+                    <span class="font-semibold">Compuesta</span>
+                </div>
+                <p class="text-xs text-text-primary opacity-80">Múltiples métodos de pago combinados.</p>
+            </button>
+        </div>
+    </section>
+
+    <!-- Simple settlement -->
+    <section id="simple-form" class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-text-primary mb-2" for="simple-method-select">Método de liquidación</label>
+                <select id="simple-method-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                    <option value="cash">Efectivo</option>
+                    <option value="wire_transfer">Transferencia</option>
+                    <option value="bank_deposit">Depósito en banco</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-text-primary mb-2">Monto</label>
+                <input id="simple-total-amount" type="text" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm" readonly value="—">
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 flex items-start">
+                <i class="fa-solid fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
+                Este método aplicará al 100% de la operación.
+            </div>
+        </div>
+    </section>
+
+    <!-- Compound settlement -->
+    <section id="compound-form" class="mb-6 hidden">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
+                <div class="grid grid-cols-12 gap-2 text-xs font-medium text-text-primary">
+                    <div class="col-span-6">Método</div>
+                    <div class="col-span-5">Monto / %</div>
+                    <div class="col-span-1 text-center">-</div>
+                </div>
+            </div>
+            <div id="settlement-rows" class="divide-y divide-gray-200"></div>
+            <div class="px-4 py-3 border-t border-gray-200">
+                <button id="add-settlement-row" type="button" class="flex items-center text-primary hover:text-blue-700 text-sm">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Agregar línea
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Progress -->
+    <section id="settlement-progress" class="mb-6 hidden">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <div class="flex items-center justify-between">
+                <span class="text-sm font-medium text-text-primary">Progreso de liquidación</span>
+                <span id="progress-percentage" class="text-sm font-semibold text-text-primary">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar-fill" class="bg-primary h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="validation-message" class="text-sm text-gray-600">
+                <i class="fa-solid fa-info-circle mr-1"></i>
+                Ingresá los métodos para completar el 100%.
+            </div>
+        </div>
+    </section>
+
+    <!-- Actions -->
+    <section id="action-buttons" class="space-y-3">
+        <button id="continue-button" type="button" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+            Continuar
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+        <div class="grid grid-cols-3 gap-2">
+            <button id="back-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                <i class="fa-solid fa-arrow-left mr-1"></i>
+                Atrás
+            </button>
+            <button id="save-draft-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                <i class="fa-solid fa-save mr-1"></i>
+                Guardar
+            </button>
+            <button id="cancel-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                <i class="fa-solid fa-times mr-1"></i>
+                Cancelar
+            </button>
+        </div>
+    </section>
+</main>
+
+<footer id="settlement-footer" class="hidden bg-white border-t border-gray-200 py-4 px-4">
+    <div class="text-center space-y-3">
+        <div class="grid grid-cols-2 gap-3 text-xs">
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Términos de uso</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Política de privacidad</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Centro de ayuda</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Soporte técnico</span>
+        </div>
+        <div class="text-center space-y-2">
+            <span class="text-xs text-gray-500 block">© 2024 FinaTech - Versión 2.1.4</span>
+            <div class="flex items-center justify-center space-x-2">
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <span class="text-xs text-gray-600">Sistema operativo</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const BALANCE_ENDPOINT = '/api/dashboard/balances';
+    const BALANCE_REFRESH_MS = 60000;
+
+    const amountStepSection = document.getElementById('amount-step');
+    const amountInput = document.getElementById('total-amount');
+    const amountErrorBox = document.getElementById('amount-error');
+    const amountErrorText = document.getElementById('amount-error-text');
+    const amountContinueButton = document.getElementById('amount-continue-button');
+    const amountSaveButton = document.getElementById('amount-save-button');
+    const amountCancelButton = document.getElementById('amount-cancel-button');
+    const amountBackButton = document.getElementById('amount-back-button');
+    const amountToastContainer = document.getElementById('amount-toast-container');
+
+    const distributionStepSection = document.getElementById('distribution-step');
+    const distributionBackButton = document.getElementById('distribution-back-button');
+    const distributionAddRowButton = document.getElementById('distribution-add-row');
+    const distributionTableBody = document.getElementById('distribution-table-body');
+    const distributionCardContainer = document.getElementById('distribution-card-container');
+    const distributionProgressBar = document.getElementById('distribution-progress-bar');
+    const distributionProgressPercentage = document.getElementById('distribution-progress-percentage');
+    const distributionStatus = document.getElementById('distribution-status');
+    const distributionTotalAmountEl = document.getElementById('distribution-total-amount');
+    const distributionSaveButton = document.getElementById('distribution-save-button');
+    const distributionCancelButton = document.getElementById('distribution-cancel-button');
+    const distributionContinueButton = document.getElementById('distribution-continue-button');
+    const distributionClientModal = document.getElementById('distribution-client-modal');
+    const distributionClientNameInput = document.getElementById('distribution-client-name');
+    const distributionClientIdInput = document.getElementById('distribution-client-id');
+    const distributionClientTypeSelect = document.getElementById('distribution-client-type');
+    const distributionModalError = document.getElementById('distribution-modal-error');
+    const distributionCloseModalButton = document.getElementById('distribution-close-modal');
+    const distributionCancelModalButton = document.getElementById('distribution-cancel-modal');
+    const distributionSaveModalButton = document.getElementById('distribution-save-modal');
+    const distributionFooter = document.getElementById('distribution-footer');
+
+    const mainContainer = document.getElementById('main-container');
+    const settlementFooter = document.getElementById('settlement-footer');
+
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const headerBackButton = document.getElementById('back-header-button');
+    const backButton = document.getElementById('back-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const saveDraftButton = document.getElementById('save-draft-button');
+    const continueButton = document.getElementById('continue-button');
+    const editStep1Button = document.getElementById('edit-step-1');
+    const feedbackBox = document.getElementById('feedback-box');
+
+    const summaryClient = document.getElementById('summary-client');
+    const summaryOperation = document.getElementById('summary-operation');
+    const summaryAmount = document.getElementById('summary-amount');
+
+    const simpleButton = document.getElementById('simple-settlement');
+    const compoundButton = document.getElementById('compound-settlement');
+    const simpleForm = document.getElementById('simple-form');
+    const compoundForm = document.getElementById('compound-form');
+    const settlementProgressSection = document.getElementById('settlement-progress');
+    const simpleMethodSelect = document.getElementById('simple-method-select');
+    const simpleTotalAmount = document.getElementById('simple-total-amount');
+    const settlementRows = document.getElementById('settlement-rows');
+    const addSettlementRowButton = document.getElementById('add-settlement-row');
+    const progressBarFill = document.getElementById('progress-bar-fill');
+    const progressPercentageLabel = document.getElementById('progress-percentage');
+    const validationMessage = document.getElementById('validation-message');
+
+    const balanceSection = document.getElementById('balance-cards');
+    const balanceEntries = new Map();
+    document.querySelectorAll('[data-balance]').forEach((card) => {
+        balanceEntries.set(card.dataset.balance, {
+            card,
+            amountEl: card.querySelector('[data-balance-amount]'),
+            timeEl: card.querySelector('[data-balance-time]'),
+            statusEl: card.querySelector('[data-balance-status]'),
+            labelEl: card.querySelector('[data-balance-label]'),
+            retryButton: card.querySelector('[data-balance-retry]')
+        });
+    });
+
+    const balanceStatusClassMap = {
+        ok: 'bg-success',
+        warning: 'bg-warning',
+        error: 'bg-danger',
+        offline: 'bg-gray-300'
+    };
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const draftId = urlParams.get('draftId');
+
+    const settlementMethods = [
+        { value: 'cash', label: 'Efectivo' },
+        { value: 'wire_transfer', label: 'Transferencia' },
+        { value: 'bank_deposit', label: 'Depósito en banco' },
+        { value: 'check', label: 'Cheque' },
+        { value: 'crypto', label: 'Cripto' }
+    ];
+
+    let currentDraft = null;
+    let currentSettlementMode = 'simple';
+    let currentStage = 'amount';
+    let baseAmount = null;
+    let baseAssetLabel = '';
+    let baseAssetCode = '';
+    let baseAmountField = 'incoming';
+    let amountConversionRatio = null;
+    let amountStepCompleted = false;
+    let amountToastTimeoutId = null;
+    let isSaving = false;
+    let balanceIntervalId = null;
+    let balanceAbortController = null;
+    const disableBalanceWidget = () => {
+        if (balanceAbortController) {
+            balanceAbortController.abort();
+            balanceAbortController = null;
+        }
+        if (balanceIntervalId) {
+            clearInterval(balanceIntervalId);
+            balanceIntervalId = null;
+        }
+        if (balanceSection) {
+            balanceSection.classList.add('hidden');
+        }
+    };
+
+    const distributionRows = [];
+    let distributionCounter = 0;
+    const distributionStorageKey = draftId ? `transaction-distribution-${draftId}` : null;
+
+    const formatCurrency = (amount, assetLabel) => {
+        const numeric = Number(amount);
+        if (!Number.isFinite(numeric)) {
+            return '—';
+        }
+        const formatted = new Intl.NumberFormat('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        }).format(numeric);
+        return `${formatted}${assetLabel ? ` ${assetLabel}` : ''}`.trim();
+    };
+
+    const formatPercentage = (value) => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '—';
+        }
+        return `${numeric.toFixed(2)}%`;
+    };
+
+    const navigateToStep1 = () => {
+        if (draftId) {
+            window.location.href = `/dashboard/operations/new?draftId=${encodeURIComponent(draftId)}`;
+        } else {
+            window.location.href = '/dashboard/operations/new';
+        }
+    };
+
+    const formatAmountForInput = (value) => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) {
+            return '';
+        }
+        const fixed = numeric.toFixed(2);
+        const [integerPart, decimalPart] = fixed.split('.');
+        const formattedInteger = integerPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        return `${formattedInteger},${decimalPart}`;
+    };
+
+    const parseAmountInputValue = (value) => {
+        if (typeof value !== 'string') {
+            return NaN;
+        }
+        const sanitized = value.replace(/\./g, '').replace(',', '.');
+        return Number(sanitized);
+    };
+
+    const setAmountButtonState = (enabled) => {
+        if (!amountContinueButton) return;
+        if (enabled) {
+            amountContinueButton.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            amountContinueButton.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+            amountContinueButton.disabled = false;
+        } else {
+            amountContinueButton.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            amountContinueButton.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+            amountContinueButton.disabled = true;
+        }
+    };
+
+    const showAmountError = (message) => {
+        if (amountErrorText) {
+            amountErrorText.textContent = message;
+        }
+        amountErrorBox?.classList.remove('hidden');
+        amountInput?.classList.add('error');
+        setAmountButtonState(false);
+    };
+
+    const hideAmountErrorState = () => {
+        amountErrorBox?.classList.add('hidden');
+        amountInput?.classList.remove('error');
+    };
+
+    const showAmountToast = (message, type = 'success') => {
+        if (!amountToastContainer) return;
+        const toast = document.createElement('div');
+        const baseClasses = 'px-4 py-3 rounded-lg shadow-lg text-sm flex items-center gap-2';
+        let typeClasses = 'bg-gray-900 text-white';
+        let icon = 'fa-circle-info';
+        if (type === 'success') {
+            typeClasses = 'bg-success text-white';
+            icon = 'fa-check';
+        } else if (type === 'warning') {
+            typeClasses = 'bg-warning text-gray-900';
+            icon = 'fa-exclamation-triangle';
+        } else if (type === 'error') {
+            typeClasses = 'bg-danger text-white';
+            icon = 'fa-exclamation-circle';
+        }
+        toast.className = `${baseClasses} ${typeClasses}`;
+        toast.innerHTML = `<i class="fa-solid ${icon}"></i><span>${message}</span>`;
+        amountToastContainer.appendChild(toast);
+        if (amountToastTimeoutId) {
+            clearTimeout(amountToastTimeoutId);
+        }
+        amountToastTimeoutId = setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    };
+
+    const showAmountStep = () => {
+        currentStage = 'amount';
+        amountStepSection?.classList.remove('hidden');
+        distributionStepSection?.classList.add('hidden');
+        mainContainer?.classList.add('hidden');
+        distributionFooter?.classList.add('hidden');
+        settlementFooter?.classList.add('hidden');
+    };
+
+    const showDistributionStep = () => {
+        currentStage = 'distribution';
+        amountStepSection?.classList.add('hidden');
+        distributionStepSection?.classList.remove('hidden');
+        mainContainer?.classList.add('hidden');
+        distributionFooter?.classList.remove('hidden');
+        settlementFooter?.classList.add('hidden');
+        if (distributionTotalAmountEl) {
+            distributionTotalAmountEl.textContent = formatAmountWithSymbol(baseAmount, baseAssetLabel);
+        }
+        renderDistributionRows();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const showSettlementStep = () => {
+        currentStage = 'settlement';
+        amountStepSection?.classList.add('hidden');
+        distributionStepSection?.classList.add('hidden');
+        mainContainer?.classList.remove('hidden');
+        distributionFooter?.classList.add('hidden');
+        settlementFooter?.classList.remove('hidden');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    const formatAmountWithSymbol = (amount, assetLabel) => {
+        if (!Number.isFinite(amount)) {
+            return '$0,00';
+        }
+        const formatted = formatAmountForInput(amount);
+        const label = (assetLabel || '').toUpperCase();
+        if (label.includes('USD')) {
+            return `USD ${formatted}`;
+        }
+        return `$${formatted}`;
+    };
+
+    const formatDistributionAmountDisplay = (value) => {
+        if (!Number.isFinite(value) || value <= 0) {
+            return '';
+        }
+        return formatAmountForInput(value);
+    };
+
+    const normalizeDistributionInputValue = (value) => {
+        if (typeof value !== 'string') {
+            return '';
+        }
+        let sanitized = value.replace(/[^\\d,]/g, '');
+        const parts = sanitized.split(',');
+        if (parts.length > 2) {
+            sanitized = `${parts[0]},${parts.slice(1).join('')}`;
+        }
+        const [integerPartRaw, decimalPartRaw] = sanitized.split(',');
+        const integerPart = (integerPartRaw || '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        const limitedDecimal = decimalPartRaw ? decimalPartRaw.slice(0, 2) : '';
+        return limitedDecimal ? `${integerPart},${limitedDecimal}` : integerPart;
+    };
+
+    const persistDistributionRows = () => {
+        if (!distributionStorageKey) return;
+        const payload = {
+            counter: distributionCounter,
+            rows: distributionRows.map((row) => ({
+                id: row.id,
+                contactName: row.contactName,
+                method: row.method,
+                amount: row.amount,
+            })),
+        };
+        sessionStorage.setItem(distributionStorageKey, JSON.stringify(payload));
+    };
+
+    const loadDistributionRows = () => {
+        if (!distributionStorageKey) return false;
+        const stored = sessionStorage.getItem(distributionStorageKey);
+        if (!stored) return false;
+        try {
+            const payload = JSON.parse(stored);
+            distributionRows.length = 0;
+            (payload?.rows || []).forEach((row) => {
+                distributionRows.push({
+                    id: row.id || `row-${distributionCounter + 1}`,
+                    contactName: row.contactName || '',
+                    method: row.method === 'USD' ? 'USD' : 'ARS',
+                    amount: Number(row.amount) || 0,
+                });
+            });
+            distributionCounter = Number(payload?.counter) || distributionRows.length;
+            return distributionRows.length > 0;
+        } catch (error) {
+            console.error('No se pudo cargar la distribución almacenada', error);
+            return false;
+        }
+    };
+
+    const createDistributionRow = (initial = {}) => {
+        distributionCounter += 1;
+        return {
+            id: initial.id || `row-${distributionCounter}`,
+            contactName: initial.contactName || '',
+            method: initial.method === 'USD' ? 'USD' : 'ARS',
+            amount: Number(initial.amount) || 0,
+        };
+    };
+
+    const addDistributionRow = (initial = {}) => {
+        const newRow = createDistributionRow(initial);
+        distributionRows.push(newRow);
+        renderDistributionRows();
+        updateDistributionProgress();
+        persistDistributionRows();
+        setTimeout(() => {
+            const input = document.querySelector(`.distribution-contact-input[data-row-id="${newRow.id}"]`);
+            input?.focus();
+        }, 0);
+    };
+
+    const removeDistributionRow = (rowId) => {
+        const index = distributionRows.findIndex((row) => row.id === rowId);
+        if (index >= 0) {
+            distributionRows.splice(index, 1);
+            renderDistributionRows();
+            updateDistributionProgress();
+            persistDistributionRows();
+        }
+    };
+
+    const renderDistributionRows = () => {
+        if (!distributionTableBody || !distributionCardContainer) return;
+
+        if (distributionRows.length === 0) {
+            distributionTableBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="px-6 py-10 text-center">
+                        <div class="flex flex-col items-center space-y-3">
+                            <i class="fa-solid fa-users text-gray-300 text-3xl"></i>
+                            <p class="text-gray-500 text-base font-medium">No hay contactos agregados</p>
+                            <p class="text-gray-400 text-sm">Comenzá agregando un contacto para distribuir el monto</p>
+                            <button class="distribution-add-inline flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" type="button">
+                                <i class="fa-solid fa-plus mr-2"></i>
+                                Agregar primer contacto
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            distributionCardContainer.innerHTML = `
+                <div class="text-center py-10 px-4">
+                    <div class="flex flex-col items-center space-y-3">
+                        <i class="fa-solid fa-users text-gray-300 text-3xl"></i>
+                        <p class="text-gray-500 text-base font-medium">No hay contactos agregados</p>
+                        <p class="text-gray-400 text-sm">Comenzá agregando un contacto para distribuir el monto</p>
+                        <button class="distribution-add-inline flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" type="button">
+                            <i class="fa-solid fa-plus mr-2"></i>
+                            Agregar primer contacto
+                        </button>
+                    </div>
+                </div>
+            `;
+            updateDistributionProgress();
+            return;
+        }
+
+        distributionTableBody.innerHTML = distributionRows
+            .map(
+                (row) => `
+                <tr class="contact-row" data-row-id="${row.id}">
+                    <td class="px-6 py-4">
+                        <div class="relative">
+                            <input
+                                type="text"
+                                class="distribution-contact-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="Ingresá un nombre o razón social"
+                                data-row-id="${row.id}"
+                                value="${row.contactName.replace(/"/g, '&quot;')}"
+                            >
+                            <button
+                                class="distribution-new-client absolute right-2 top-2 text-primary hover:text-blue-700 transition-colors"
+                                type="button"
+                                data-row-id="${row.id}"
+                            >
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <select
+                            class="distribution-method-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            data-row-id="${row.id}"
+                        >
+                            <option value="ARS" ${row.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                            <option value="USD" ${row.method === 'USD' ? 'selected' : ''}>USD</option>
+                        </select>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <span class="text-gray-500">${row.method === 'USD' ? 'USD' : '$'}</span>
+                            </div>
+                            <input
+                                type="text"
+                                class="distribution-amount-input w-full ${row.method === 'USD' ? 'pl-14' : 'pl-9'} pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="0,00"
+                                data-row-id="${row.id}"
+                                value="${formatDistributionAmountDisplay(row.amount)}"
+                            >
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button
+                            class="distribution-delete-button text-danger hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                            type="button"
+                            data-row-id="${row.id}"
+                        >
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `
+            )
+            .join('');
+
+        distributionCardContainer.innerHTML = distributionRows
+            .map(
+                (row) => `
+                <div class="contact-row bg-gray-50 rounded-lg border border-gray-200 p-4 space-y-4" data-row-id="${row.id}">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Contacto</label>
+                        <div class="relative">
+                            <input
+                                type="text"
+                                class="distribution-contact-input w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                placeholder="Ingresá un nombre o razón social"
+                                data-row-id="${row.id}"
+                                value="${row.contactName.replace(/"/g, '&quot;')}"
+                            >
+                            <button
+                                class="distribution-new-client absolute right-2 top-2 text-primary hover:text-blue-700 transition-colors"
+                                type="button"
+                                data-row-id="${row.id}"
+                            >
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Método de liquidación</label>
+                        <select
+                            class="distribution-method-select w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            data-row-id="${row.id}"
+                        >
+                            <option value="ARS" ${row.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                            <option value="USD" ${row.method === 'USD' ? 'selected' : ''}>USD</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Monto asignado</label>
+                        <div class="flex items-center gap-2">
+                            <div class="relative flex-1">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <span class="text-gray-500">${row.method === 'USD' ? 'USD' : '$'}</span>
+                                </div>
+                                <input
+                                    type="text"
+                                    class="distribution-amount-input w-full ${row.method === 'USD' ? 'pl-14' : 'pl-9'} pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                                    placeholder="0,00"
+                                    data-row-id="${row.id}"
+                                    value="${formatDistributionAmountDisplay(row.amount)}"
+                                >
+                            </div>
+                            <button
+                                class="distribution-delete-button text-danger hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                                type="button"
+                                data-row-id="${row.id}"
+                            >
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `
+            )
+            .join('');
+
+        updateDistributionProgress();
+    };
+
+    const updateDistributionProgress = () => {
+        if (!distributionProgressBar || !distributionProgressPercentage || !distributionStatus) return;
+        const totalAssigned = distributionRows.reduce((sum, row) => sum + (row.amount || 0), 0);
+        const percentage = baseAmount > 0 ? Math.min((totalAssigned / baseAmount) * 100, 100) : 0;
+        const remaining = (baseAmount || 0) - totalAssigned;
+
+        distributionProgressBar.style.width = `${percentage}%`;
+        distributionProgressPercentage.textContent = `${Math.round(percentage)}%`;
+
+        let statusClass = 'bg-gray-50 border-gray-200 text-gray-700';
+        let statusIcon = 'fa-info-circle text-gray-500';
+        let statusText = 'Agregá contactos para comenzar la distribución';
+        let continueEnabled = false;
+
+        if (distributionRows.length === 0) {
+            statusClass = 'bg-gray-50 border-gray-200 text-gray-700';
+            statusIcon = 'fa-info-circle text-gray-500';
+            statusText = 'Agregá contactos para comenzar la distribución';
+            distributionProgressBar.className = 'progress-bar bg-primary h-3 rounded-full';
+        } else if (remaining > 0.01) {
+            statusClass = 'bg-yellow-50 border-yellow-200 text-yellow-700';
+            statusIcon = 'fa-exclamation-triangle text-yellow-600';
+            statusText = `Faltan ${formatAmountWithSymbol(Math.abs(remaining), baseAssetLabel)}`;
+            distributionProgressBar.className = 'progress-bar bg-primary h-3 rounded-full';
+        } else if (remaining < -0.01) {
+            statusClass = 'bg-red-50 border-red-200 text-danger';
+            statusIcon = 'fa-exclamation-circle text-danger';
+            statusText = `Excede ${formatAmountWithSymbol(Math.abs(remaining), baseAssetLabel)}`;
+            distributionProgressBar.className = 'progress-bar bg-danger h-3 rounded-full';
+        } else {
+            statusClass = 'bg-green-50 border-green-200 text-success';
+            statusIcon = 'fa-check-circle text-success';
+            statusText = 'Total asignado correctamente';
+            distributionProgressBar.className = 'progress-bar bg-success h-3 rounded-full';
+            continueEnabled =
+                distributionRows.length > 0 &&
+                distributionRows.every((row) => row.contactName.trim() !== '' && row.amount > 0);
+        }
+
+        distributionStatus.className = `validation-indicator p-3 rounded-lg ${statusClass}`;
+        distributionStatus.innerHTML = `
+            <div class="flex items-center">
+                <i class="fa-solid ${statusIcon} mr-2"></i>
+                <span class="text-sm font-medium">${statusText}</span>
+            </div>
+        `;
+
+        if (continueEnabled) {
+            distributionContinueButton?.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            distributionContinueButton?.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+            distributionContinueButton.disabled = false;
+        } else {
+            distributionContinueButton?.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+            distributionContinueButton?.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+            distributionContinueButton.disabled = true;
+        }
+    };
+
+    if (distributionStepSection) {
+        distributionStepSection.addEventListener('input', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            if (target.classList.contains('distribution-contact-input')) {
+                const rowId = target.getAttribute('data-row-id');
+                if (!rowId) return;
+                const row = distributionRows.find((item) => item.id === rowId);
+                if (!row) return;
+                row.contactName = target.value;
+                persistDistributionRows();
+                updateDistributionProgress();
+                return;
+            }
+
+            if (target.classList.contains('distribution-amount-input')) {
+                const rowId = target.getAttribute('data-row-id');
+                if (!rowId) return;
+                const row = distributionRows.find((item) => item.id === rowId);
+                if (!row) return;
+                const formatted = normalizeDistributionInputValue(target.value);
+                target.value = formatted;
+                const numericValue = parseAmountInputValue(formatted);
+                row.amount = Number.isFinite(numericValue) ? numericValue : 0;
+                persistDistributionRows();
+                updateDistributionProgress();
+            }
+        });
+
+        distributionStepSection.addEventListener('change', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+            if (!target.classList.contains('distribution-method-select')) {
+                return;
+            }
+            const rowId = target.getAttribute('data-row-id');
+            if (!rowId) return;
+            const row = distributionRows.find((item) => item.id === rowId);
+            if (!row) return;
+            row.method = target.value === 'USD' ? 'USD' : 'ARS';
+            persistDistributionRows();
+            renderDistributionRows();
+        });
+
+        distributionStepSection.addEventListener('click', (event) => {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+
+            const addButton = target.closest('.distribution-add-inline');
+            if (addButton) {
+                event.preventDefault();
+                addDistributionRow();
+                return;
+            }
+
+            const newClientButton = target.closest('.distribution-new-client');
+            if (newClientButton) {
+                event.preventDefault();
+                const rowId = newClientButton.getAttribute('data-row-id') || '';
+                openDistributionModal(rowId);
+                return;
+            }
+
+            const deleteButton = target.closest('.distribution-delete-button');
+            if (deleteButton) {
+                event.preventDefault();
+                const rowId = deleteButton.getAttribute('data-row-id');
+                if (rowId) {
+                    removeDistributionRow(rowId);
+                }
+            }
+        });
+    }
+
+    const resetDistributionModal = () => {
+        distributionClientNameInput.value = '';
+        distributionClientIdInput.value = '';
+        distributionClientTypeSelect.value = '';
+        distributionClientModal.dataset.rowId = '';
+        distributionModalError?.classList.add('hidden');
+    };
+
+    const openDistributionModal = (rowId) => {
+        resetDistributionModal();
+        distributionClientModal.dataset.rowId = rowId || '';
+        distributionClientModal.classList.remove('hidden');
+        distributionClientNameInput.focus();
+    };
+
+    const closeDistributionModal = () => {
+        distributionClientModal.classList.add('hidden');
+        resetDistributionModal();
+    };
+
+    const saveDistributionModal = () => {
+        const name = distributionClientNameInput.value.trim();
+        const identifier = distributionClientIdInput.value.trim();
+        const type = distributionClientTypeSelect.value;
+        if (!name || !identifier || !type) {
+            distributionModalError?.classList.remove('hidden');
+            return;
+        }
+        const rowId = distributionClientModal.dataset.rowId;
+        if (rowId) {
+            const row = distributionRows.find((item) => item.id === rowId);
+            if (row) {
+                row.contactName = name;
+                persistDistributionRows();
+                renderDistributionRows();
+                updateDistributionProgress();
+            }
+        }
+        closeDistributionModal();
+        showAmountToast('Contacto agregado correctamente', 'success');
+    };
+
+    const populateDistributionStep = () => {
+        if (!distributionStepSection) return;
+        if (distributionTotalAmountEl) {
+            distributionTotalAmountEl.textContent = formatAmountWithSymbol(baseAmount, baseAssetLabel);
+        }
+        distributionRows.length = 0;
+        if (!loadDistributionRows()) {
+            addDistributionRow();
+        } else {
+            renderDistributionRows();
+        }
+        updateDistributionProgress();
+    };
+
+
+    const determineBaseField = (draft) => {
+        const incomingAmount = Number(draft?.incomingAmount);
+        const outgoingAmount = Number(draft?.outgoingAmount);
+        if (Number.isFinite(incomingAmount) && incomingAmount > 0) {
+            return 'incoming';
+        }
+        if (Number.isFinite(outgoingAmount) && outgoingAmount > 0) {
+            return 'outgoing';
+        }
+        return 'incoming';
+    };
+
+    const populateAmountStep = (draft) => {
+        if (!amountStepSection) return;
+        baseAmountField = determineBaseField(draft);
+        const { amount, assetLabel, assetCode } = getBaseAmountFromDraft(draft);
+        baseAmount = Number.isFinite(Number(amount)) ? Number(amount) : null;
+        baseAssetLabel = assetLabel;
+        baseAssetCode = assetCode;
+
+        const incomingAmount = Number(draft?.incomingAmount);
+        const outgoingAmount = Number(draft?.outgoingAmount);
+        amountConversionRatio = null;
+
+        if (
+            Number.isFinite(incomingAmount) &&
+            Number.isFinite(outgoingAmount) &&
+            incomingAmount > 0 &&
+            outgoingAmount > 0
+        ) {
+            amountConversionRatio =
+                baseAmountField === 'incoming'
+                    ? outgoingAmount / incomingAmount
+                    : incomingAmount / outgoingAmount;
+        }
+
+        if (amountInput) {
+            amountInput.value = baseAmount ? formatAmountForInput(baseAmount) : '';
+        }
+
+        hideAmountErrorState();
+        setAmountButtonState(Number.isFinite(baseAmount) && baseAmount > 0);
+    };
+
+    const handleAmountInputChange = () => {
+        if (!amountInput) return;
+        let sanitized = amountInput.value.replace(/[^\d,]/g, '');
+        const parts = sanitized.split(',');
+        if (parts.length > 2) {
+            sanitized = `${parts[0]},${parts.slice(1).join('')}`;
+        }
+        const [integerPartRaw, decimalPartRaw] = sanitized.split(',');
+        const limitedDecimal = decimalPartRaw ? decimalPartRaw.slice(0, 2) : undefined;
+        const integerPart = (integerPartRaw || '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        amountInput.value =
+            limitedDecimal !== undefined && limitedDecimal.length > 0
+                ? `${integerPart},${limitedDecimal}`
+                : integerPart;
+
+        const numericValue = parseAmountInputValue(amountInput.value);
+        if (Number.isFinite(numericValue) && numericValue > 0) {
+            hideAmountErrorState();
+            setAmountButtonState(true);
+        } else {
+            setAmountButtonState(false);
+        }
+    };
+
+    const validateAmountInput = () => {
+        if (!amountInput) {
+            return { isValid: false, value: null };
+        }
+        const raw = amountInput.value.trim();
+        if (!raw) {
+            showAmountError('Este campo es obligatorio.');
+            return { isValid: false, value: null };
+        }
+        const numericValue = parseAmountInputValue(raw);
+        if (!Number.isFinite(numericValue) || numericValue <= 0) {
+            showAmountError('Ingresá un monto válido en pesos argentinos.');
+            return { isValid: false, value: null };
+        }
+        if (numericValue > 999999999.99) {
+            showAmountError('El monto ingresado es demasiado alto.');
+            return { isValid: false, value: null };
+        }
+        hideAmountErrorState();
+        setAmountButtonState(true);
+        return { isValid: true, value: Number(numericValue.toFixed(2)) };
+    };
+
+    const calculateAdjustedAmounts = (newAmount) => {
+        let incoming = Number(currentDraft?.incomingAmount) || 0;
+        let outgoing = Number(currentDraft?.outgoingAmount) || 0;
+
+        if (baseAmountField === 'incoming') {
+            incoming = newAmount;
+            if (Number.isFinite(amountConversionRatio) && amountConversionRatio > 0) {
+                outgoing = Number((newAmount * amountConversionRatio).toFixed(2));
+            }
+        } else {
+            outgoing = newAmount;
+            if (Number.isFinite(amountConversionRatio) && amountConversionRatio > 0) {
+                incoming = Number((newAmount * amountConversionRatio).toFixed(2));
+            }
+        }
+
+        return { incoming, outgoing };
+    };
+
+    const persistAmountChange = async (newAmount, { showToast: shouldShowToast = false } = {}) => {
+        if (!draftId || !currentDraft) {
+            baseAmount = newAmount;
+            if (shouldShowToast) {
+                showAmountToast('Borrador guardado correctamente', 'success');
+            }
+            return true;
+        }
+        setAmountButtonState(false);
+        amountContinueButton?.classList.add('opacity-75');
+        try {
+            const { incoming, outgoing } = calculateAdjustedAmounts(newAmount);
+            const payload = {
+                clientId: currentDraft.client?.id || currentDraft.clientId,
+                type: currentDraft.type,
+                incomingAsset: currentDraft.incomingAsset,
+                outgoingAsset: currentDraft.outgoingAsset,
+                subtype: currentDraft.subtype,
+                apr: currentDraft.apr,
+                marketApr: currentDraft.marketApr,
+                incomingAmount: incoming,
+                outgoingAmount: outgoing,
+                notes: currentDraft.notes || null
+            };
+
+            const response = await fetch(`/api/transactions/draft/${encodeURIComponent(draftId)}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body?.message || 'No se pudo actualizar el monto.');
+            }
+            const data = await response.json();
+            currentDraft = data;
+            const baseInfo = getBaseAmountFromDraft(data);
+            baseAmount = Number(baseInfo.amount) || newAmount;
+            baseAssetLabel = baseInfo.assetLabel;
+            baseAssetCode = baseInfo.assetCode;
+            baseAmountField = determineBaseField(data);
+
+            const incomingAmount = Number(data?.incomingAmount);
+            const outgoingAmount = Number(data?.outgoingAmount);
+            amountConversionRatio = null;
+            if (Number.isFinite(incomingAmount) && Number.isFinite(outgoingAmount) && incomingAmount > 0 && outgoingAmount > 0) {
+                amountConversionRatio =
+                    baseAmountField === 'incoming'
+                        ? outgoingAmount / incomingAmount
+                        : incomingAmount / outgoingAmount;
+            }
+
+            if (amountInput) {
+                amountInput.value = formatAmountForInput(baseAmount);
+            }
+
+            updateSummary(data);
+            hydrateSettlement(data);
+            hideAmountErrorState();
+            setAmountButtonState(true);
+
+            if (shouldShowToast) {
+                showAmountToast('Borrador guardado correctamente', 'success');
+            }
+            return true;
+        } catch (error) {
+            showAmountError(error.message || 'No se pudo actualizar el monto.');
+            if (shouldShowToast) {
+                showAmountToast(error.message || 'No se pudo actualizar el monto.', 'error');
+            }
+            return false;
+        } finally {
+            amountContinueButton?.classList.remove('opacity-75');
+        }
+    };
+
+    const enterSettlementStep = () => {
+        amountStepCompleted = true;
+        showSettlementStep();
+    };
+
+    const handleAmountContinue = async () => {
+        const { isValid, value } = validateAmountInput();
+        if (!isValid || !Number.isFinite(value)) {
+            return;
+        }
+        const hasChanged = !Number.isFinite(baseAmount) || Math.abs(value - baseAmount) >= 0.01;
+        if (hasChanged) {
+            const success = await persistAmountChange(value);
+            if (!success) {
+                return;
+            }
+        }
+        populateDistributionStep();
+        showDistributionStep();
+    };
+
+    const showFeedback = (message, type = 'info') => {
+        if (!feedbackBox) return;
+        feedbackBox.textContent = message;
+        feedbackBox.className = 'mb-6 border rounded-lg px-4 py-3 text-sm';
+        if (type === 'success') {
+            feedbackBox.classList.add('border-success', 'bg-green-50', 'text-success');
+        } else if (type === 'error') {
+            feedbackBox.classList.add('border-danger', 'bg-red-50', 'text-danger');
+        } else {
+            feedbackBox.classList.add('border-blue-200', 'bg-blue-50', 'text-blue-700');
+        }
+    };
+
+    const hideFeedback = () => {
+        if (!feedbackBox) return;
+        feedbackBox.classList.add('hidden');
+    };
+
+    const populateMethodSelect = (select, selectedValue) => {
+        if (!select) return;
+        select.innerHTML = settlementMethods
+            .map(({ value, label }) => `<option value="${value}">${label}</option>`)
+            .join('');
+        if (selectedValue) {
+            select.value = selectedValue;
+        }
+    };
+
+    populateMethodSelect(simpleMethodSelect);
+
+    const toggleMobileMenu = () => {
+        if (!mobileMenu) return;
+        mobileMenu.classList.toggle('hidden');
+        const icon = menuToggle?.querySelector('i');
+        if (icon) {
+            icon.className = mobileMenu.classList.contains('hidden') ? 'fa-solid fa-bars text-lg' : 'fa-solid fa-times text-lg';
+        }
+    };
+
+    menuToggle?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleMobileMenu();
+    });
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (
+            mobileMenu &&
+            !mobileMenu.classList.contains('hidden') &&
+            menuToggle &&
+            !mobileMenu.contains(target) &&
+            !menuToggle.contains(target)
+        ) {
+            toggleMobileMenu();
+        }
+    });
+
+    const handleStageBackNavigation = () => {
+        if (currentStage === 'settlement') {
+            showDistributionStep();
+        } else if (currentStage === 'distribution') {
+            showAmountStep();
+        } else {
+            navigateToStep1();
+        }
+    };
+
+    headerBackButton?.addEventListener('click', handleStageBackNavigation);
+    backButton?.addEventListener('click', handleStageBackNavigation);
+    editStep1Button?.addEventListener('click', navigateToStep1);
+    amountBackButton?.addEventListener('click', navigateToStep1);
+    distributionBackButton?.addEventListener('click', () => {
+        showAmountStep();
+    });
+
+    cancelButton?.addEventListener('click', () => {
+        if (confirm('Estás por cancelar la operación. Los cambios no guardados se perderán. ¿Querés continuar?')) {
+            window.location.href = '/dashboard';
+        }
+    });
+
+    distributionCancelButton?.addEventListener('click', () => {
+        if (confirm('Estás por cancelar la operación. Los cambios no guardados se perderán. ¿Querés continuar?')) {
+            window.location.href = '/dashboard';
+        }
+    });
+
+    amountCancelButton?.addEventListener('click', () => {
+        if (confirm('Estás por cancelar la operación. Los cambios no guardados se perderán. ¿Querés continuar?')) {
+            window.location.href = '/dashboard';
+        }
+    });
+
+    distributionAddRowButton?.addEventListener('click', () => addDistributionRow());
+
+    distributionSaveButton?.addEventListener('click', () => {
+        persistDistributionRows();
+        showAmountToast('Borrador guardado correctamente', 'success');
+    });
+
+    const handleDistributionContinue = () => {
+        if (distributionContinueButton?.disabled) {
+            showAmountToast('Completá la distribución antes de continuar', 'warning');
+            return;
+        }
+        const totalAssigned = distributionRows.reduce((sum, row) => sum + (row.amount || 0), 0);
+        const difference = Math.abs((baseAmount || 0) - totalAssigned);
+        const hasEmpty = distributionRows.some(
+            (row) => row.contactName.trim() === '' || !Number.isFinite(row.amount) || row.amount <= 0
+        );
+        if (hasEmpty || difference > 0.01) {
+            showAmountToast('Revisá la distribución antes de continuar', 'warning');
+            return;
+        }
+        persistDistributionRows();
+        enterSettlementStep();
+    };
+
+    distributionContinueButton?.addEventListener('click', handleDistributionContinue);
+
+    distributionSaveModalButton?.addEventListener('click', saveDistributionModal);
+    distributionCloseModalButton?.addEventListener('click', closeDistributionModal);
+    distributionCancelModalButton?.addEventListener('click', closeDistributionModal);
+
+    const setCardStatus = (entry, status) => {
+        if (!entry || !entry.statusEl) return;
+        entry.statusEl.className = `w-2 h-2 rounded-full ${balanceStatusClassMap[status] || 'bg-success'}`;
+    };
+
+    const applyBalancePayload = (payload) => {
+        if (!payload || !Array.isArray(payload.balances)) return;
+        const map = new Map(payload.balances.map((item) => [item.id, item]));
+        balanceEntries.forEach((entry, key) => {
+            const balance = map.get(key);
+            if (!balance) return;
+            if (entry.amountEl && Number.isFinite(Number(balance.amount))) {
+                entry.amountEl.textContent = formatCurrency(balance.amount, balance.currency);
+            }
+            if (entry.timeEl && balance.updatedAt) {
+                const date = new Date(balance.updatedAt);
+                if (Number.isFinite(date.getTime())) {
+                    entry.timeEl.textContent = `Actualizado ${date.toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    })}`;
+                }
+            }
+            setCardStatus(entry, balance.status || 'ok');
+        });
+    };
+
+    const loadBalances = async ({ showFallback = false } = {}) => {
+        if (balanceAbortController) {
+            balanceAbortController.abort();
+        }
+        balanceAbortController = new AbortController();
+        const { signal } = balanceAbortController;
+        if (showFallback) {
+            balanceEntries.forEach((entry) => {
+                entry.card.classList.add('skeleton');
+            });
+        }
+        try {
+            const response = await fetch(BALANCE_ENDPOINT, {
+                credentials: 'include',
+                signal
+            });
+            if (response.status === 401 || response.status === 403) {
+                disableBalanceWidget();
+                return false;
+            }
+            if (!response.ok) throw new Error('No se pudieron obtener los balances.');
+            const data = await response.json();
+            applyBalancePayload(data);
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        } finally {
+            balanceEntries.forEach((entry) => entry.card.classList.remove('skeleton'));
+            balanceAbortController = null;
+        }
+    };
+
+    balanceEntries.forEach((entry) => {
+        entry.retryButton?.addEventListener('click', () => {
+            loadBalances({ showFallback: true }).then((canPoll) => {
+                if (canPoll) {
+                    startBalancePolling();
+                }
+            });
+        });
+    });
+
+    const startBalancePolling = () => {
+        if (balanceSection && balanceSection.classList.contains('hidden')) return;
+        if (balanceIntervalId) clearInterval(balanceIntervalId);
+        balanceIntervalId = setInterval(() => {
+            if (!document.hidden && !(balanceSection && balanceSection.classList.contains('hidden'))) {
+                loadBalances();
+            }
+        }, BALANCE_REFRESH_MS);
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !(balanceSection && balanceSection.classList.contains('hidden'))) {
+            loadBalances();
+        }
+    });
+
+    const getBaseAmountFromDraft = (draft) => {
+        const incoming = Number(draft?.incomingAmount);
+        const outgoing = Number(draft?.outgoingAmount);
+        if (Number.isFinite(incoming) && incoming > 0) {
+            return {
+                amount: incoming,
+                assetCode: draft?.incomingAsset?.code || '',
+                assetLabel: draft?.incomingAsset?.label || draft?.incomingAsset?.code || ''
+            };
+        }
+        if (Number.isFinite(outgoing) && outgoing > 0) {
+            return {
+                amount: outgoing,
+                assetCode: draft?.outgoingAsset?.code || '',
+                assetLabel: draft?.outgoingAsset?.label || draft?.outgoingAsset?.code || ''
+            };
+        }
+        return { amount: null, assetCode: '', assetLabel: '' };
+    };
+
+    const setSettlementMode = (mode) => {
+        currentSettlementMode = mode === 'compound' ? 'compound' : 'simple';
+        const isCompound = currentSettlementMode === 'compound';
+
+        if (isCompound) {
+            if (settlementRows.childElementCount === 0) {
+                settlementRows.appendChild(createCompoundRow());
+            }
+            simpleButton.className = 'w-full p-4 border-2 border-gray-300 text-gray-600 rounded-lg text-left space-y-2 hover:border-primary hover:text-primary transition-colors';
+            compoundButton.className = 'w-full p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg text-left space-y-2';
+            simpleButton.querySelector('i').className = 'fa-regular fa-circle mr-3';
+            compoundButton.querySelector('i').className = 'fa-solid fa-circle-dot mr-3';
+            simpleForm.classList.add('hidden');
+            compoundForm.classList.remove('hidden');
+            settlementProgressSection.classList.remove('hidden');
+            calculateCompoundProgress();
+        } else {
+            compoundButton.className = 'w-full p-4 border-2 border-gray-300 text-gray-600 rounded-lg text-left space-y-2 hover:border-primary hover:text-primary transition-colors';
+            simpleButton.className = 'w-full p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg text-left space-y-2';
+            compoundButton.querySelector('i').className = 'fa-regular fa-circle mr-3';
+            simpleButton.querySelector('i').className = 'fa-solid fa-circle-dot mr-3';
+            compoundForm.classList.add('hidden');
+            settlementProgressSection.classList.add('hidden');
+            simpleForm.classList.remove('hidden');
+            continueButton.disabled = false;
+            continueButton.className = 'w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium';
+        }
+    };
+
+    simpleButton?.addEventListener('click', () => {
+        hideFeedback();
+        setSettlementMode('simple');
+    });
+
+    compoundButton?.addEventListener('click', () => {
+        hideFeedback();
+        setSettlementMode('compound');
+    });
+
+    const createCompoundRow = (line = {}) => {
+        const row = document.createElement('div');
+        row.className = 'settlement-row px-4 py-3';
+        row.innerHTML = `
+            <div class="grid grid-cols-12 gap-2 items-center">
+                <div class="col-span-6">
+                    <select class="settlement-method w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"></select>
+                </div>
+                <div class="col-span-5">
+                    <div class="flex">
+                        <input type="number" class="settlement-value flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="0" min="0" step="0.0001">
+                        <button type="button" class="settlement-toggle px-2 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-xs hover:bg-gray-200 transition-colors"></button>
+                    </div>
+                </div>
+                <div class="col-span-1 text-center">
+                    <button type="button" class="settlement-remove text-danger hover:text-red-700 p-1">
+                        <i class="fa-solid fa-trash text-xs"></i>
+                    </button>
+                </div>
+            </div>`;
+
+        const methodSelect = row.querySelector('.settlement-method');
+        const valueInput = row.querySelector('.settlement-value');
+        const toggleButton = row.querySelector('.settlement-toggle');
+        const removeButton = row.querySelector('.settlement-remove');
+
+        populateMethodSelect(methodSelect, line.method || settlementMethods[0].value);
+        valueInput.value = Number.isFinite(Number(line.value)) ? Number(line.value) : '';
+        toggleButton.dataset.allocationType = line.allocationType === 'amount' ? 'amount' : 'percentage';
+        toggleButton.textContent = toggleButton.dataset.allocationType === 'amount' ? '$' : '%';
+
+        toggleButton.addEventListener('click', () => {
+            toggleButton.dataset.allocationType = toggleButton.dataset.allocationType === 'amount' ? 'percentage' : 'amount';
+            toggleButton.textContent = toggleButton.dataset.allocationType === 'amount' ? '$' : '%';
+            valueInput.value = '';
+            calculateCompoundProgress();
+        });
+
+        valueInput.addEventListener('input', calculateCompoundProgress);
+        methodSelect.addEventListener('change', hideFeedback);
+
+        removeButton.addEventListener('click', () => {
+            if (settlementRows.childElementCount > 1) {
+                row.remove();
+                calculateCompoundProgress();
+            }
+        });
+
+        return row;
+    };
+
+    addSettlementRowButton?.addEventListener('click', () => {
+        settlementRows.appendChild(createCompoundRow());
+        calculateCompoundProgress();
+    });
+
+    const ensureCompoundRows = (lines = []) => {
+        settlementRows.innerHTML = '';
+        if (!Array.isArray(lines) || lines.length === 0) {
+            settlementRows.appendChild(createCompoundRow());
+        } else {
+            lines.forEach((line) => settlementRows.appendChild(createCompoundRow(line)));
+        }
+        calculateCompoundProgress();
+    };
+
+    const calculateCompoundProgress = () => {
+        if (currentSettlementMode !== 'compound') {
+            return { totalPercentage: 100, hasInvalid: false };
+        }
+        let totalPercentage = 0;
+        let hasInvalid = false;
+        settlementRows.querySelectorAll('.settlement-row').forEach((row) => {
+            row.classList.remove('bg-red-50');
+            const valueInput = row.querySelector('.settlement-value');
+            const toggleButton = row.querySelector('.settlement-toggle');
+            const rawValue = Number(valueInput.value);
+            if (!Number.isFinite(rawValue) || rawValue <= 0) {
+                hasInvalid = true;
+                row.classList.add('bg-red-50');
+                return;
+            }
+            if (toggleButton.dataset.allocationType === 'percentage') {
+                totalPercentage += rawValue;
+            } else if (Number.isFinite(Number(baseAmount)) && baseAmount > 0) {
+                totalPercentage += (rawValue / baseAmount) * 100;
+            } else {
+                hasInvalid = true;
+                row.classList.add('bg-red-50');
+            }
+        });
+
+        const capped = Math.max(0, Math.min(totalPercentage, 100));
+        progressBarFill.style.width = `${capped}%`;
+        progressPercentageLabel.textContent = `${totalPercentage.toFixed(1)}%`;
+
+        if (hasInvalid) {
+            progressBarFill.className = 'bg-danger h-3 rounded-full transition-all duration-300';
+            validationMessage.innerHTML = '<i class="fa-solid fa-circle-exclamation mr-1 text-danger"></i><span class="text-danger">Revisá los valores ingresados.</span>';
+            continueButton.disabled = true;
+            continueButton.className = 'w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium';
+            return { totalPercentage, hasInvalid };
+        }
+
+        const difference = totalPercentage - 100;
+        if (difference < -0.1) {
+            progressBarFill.className = 'bg-primary h-3 rounded-full transition-all duration-300';
+            validationMessage.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1 text-orange-500"></i><span class="text-orange-600">Faltan ${Math.abs(difference).toFixed(1)}% para completar.</span>`;
+            continueButton.disabled = true;
+            continueButton.className = 'w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium';
+        } else if (difference > 0.1) {
+            progressBarFill.className = 'bg-danger h-3 rounded-full transition-all duration-300';
+            validationMessage.innerHTML = `<i class="fa-solid fa-circle-exclamation mr-1 text-danger"></i><span class="text-danger">Excede el 100% en ${difference.toFixed(1)}%.</span>`;
+            continueButton.disabled = true;
+            continueButton.className = 'w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium';
+        } else {
+            progressBarFill.className = 'bg-success h-3 rounded-full transition-all duration-300';
+            validationMessage.innerHTML = '<i class="fa-solid fa-check-circle mr-1 text-success"></i><span class="text-success">Liquidación completa y válida.</span>';
+            continueButton.disabled = false;
+            continueButton.className = 'w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium';
+        }
+        return { totalPercentage, hasInvalid };
+    };
+
+    const buildSettlementPayload = () => {
+        if (currentSettlementMode === 'simple') {
+            const method = simpleMethodSelect?.value;
+            if (!method) {
+                showFeedback('Seleccioná un método de liquidación.', 'error');
+                continueButton.disabled = true;
+                continueButton.className = 'w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium';
+                return null;
+            }
+            return { mode: 'simple', simpleMethod: method };
+        }
+
+        const rows = Array.from(settlementRows.querySelectorAll('.settlement-row'));
+        if (rows.length === 0) {
+            showFeedback('Agregá al menos una línea de liquidación.', 'error');
+            return null;
+        }
+        const lines = [];
+        for (const row of rows) {
+            const methodSelect = row.querySelector('.settlement-method');
+            const valueInput = row.querySelector('.settlement-value');
+            const toggleButton = row.querySelector('.settlement-toggle');
+            const method = methodSelect.value;
+            const allocationType = toggleButton.dataset.allocationType === 'amount' ? 'amount' : 'percentage';
+            const value = Number(valueInput.value);
+            if (!method || !Number.isFinite(value) || value <= 0) {
+                showFeedback('Completá todos los métodos con valores válidos.', 'error');
+                row.classList.add('bg-red-50');
+                return null;
+            }
+            lines.push({ method, allocationType, value });
+        }
+        const { totalPercentage, hasInvalid } = calculateCompoundProgress();
+        if (hasInvalid || Math.abs(totalPercentage - 100) > 0.1) {
+            showFeedback('La liquidación debe completar exactamente el 100%.', 'error');
+            return null;
+        }
+        return { mode: 'compound', lines };
+    };
+
+    const updateSummary = (draft) => {
+        if (!draft) return;
+        summaryClient.textContent = draft.client?.fullName || '—';
+        const operationLabel = draft.type === 'sell' ? 'Venta' : 'Compra';
+        summaryOperation.textContent = `${operationLabel} ${draft.outgoingAsset?.label || draft.outgoingAsset?.code || ''}`.trim();
+        const { amount: totalAmount, assetLabel } = getBaseAmountFromDraft(draft);
+        summaryAmount.textContent = formatCurrency(totalAmount, assetLabel);
+    };
+
+    const hydrateSettlement = (draft) => {
+        const { amount, assetLabel, assetCode } = getBaseAmountFromDraft(draft);
+        baseAmount = Number(amount) || null;
+        baseAssetLabel = assetLabel || '';
+        baseAssetCode = assetCode || '';
+        baseAmountField = determineBaseField(draft);
+
+        const incomingAmount = Number(draft?.incomingAmount);
+        const outgoingAmount = Number(draft?.outgoingAmount);
+        amountConversionRatio = null;
+        if (Number.isFinite(incomingAmount) && Number.isFinite(outgoingAmount) && incomingAmount > 0 && outgoingAmount > 0) {
+            amountConversionRatio =
+                baseAmountField === 'incoming'
+                    ? outgoingAmount / incomingAmount
+                    : incomingAmount / outgoingAmount;
+        }
+
+        simpleTotalAmount.value = formatCurrency(baseAmount, baseAssetLabel);
+
+        if (!draft.settlement || draft.settlement.mode !== 'compound') {
+            setSettlementMode('simple');
+            populateMethodSelect(simpleMethodSelect, draft.settlement?.simpleMethod);
+        } else {
+            setSettlementMode('compound');
+            ensureCompoundRows(draft.settlement.lines);
+        }
+    };
+
+    const gatherAndSubmitSettlement = async ({ navigate = false, showSuccess = false } = {}) => {
+        if (!draftId || isSaving) return null;
+        const payload = buildSettlementPayload();
+        if (!payload) return null;
+        hideFeedback();
+        isSaving = true;
+        try {
+            const response = await fetch(`/api/transactions/draft/${encodeURIComponent(draftId)}/settlement`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body?.message || 'No se pudo guardar la liquidación.');
+            }
+            const data = await response.json();
+            currentDraft = data;
+            hydrateSettlement(data);
+            if (showSuccess) {
+                showFeedback('Liquidación guardada correctamente.', 'success');
+            } else {
+                hideFeedback();
+            }
+            if (navigate) {
+                window.location.href = `/dashboard/operations/new/summary?draftId=${encodeURIComponent(draftId)}`;
+            }
+            return data;
+        } catch (error) {
+            showFeedback(error.message || 'No se pudo guardar la liquidación.', 'error');
+            return null;
+        } finally {
+            isSaving = false;
+        }
+    };
+
+    amountSaveButton?.addEventListener('click', async () => {
+        const { isValid, value } = validateAmountInput();
+        if (!isValid || !Number.isFinite(value)) {
+            return;
+        }
+        await persistAmountChange(value, { showToast: true });
+    });
+
+    amountContinueButton?.addEventListener('click', handleAmountContinue);
+
+    amountInput?.addEventListener('input', handleAmountInputChange);
+    amountInput?.addEventListener('blur', validateAmountInput);
+
+    continueButton?.addEventListener('click', async () => {
+        await gatherAndSubmitSettlement({ navigate: true });
+    });
+
+    saveDraftButton?.addEventListener('click', async () => {
+        await gatherAndSubmitSettlement({ showSuccess: true });
+    });
+
+    const hydrateFromDraft = (draft) => {
+        currentDraft = draft;
+        populateAmountStep(draft);
+        amountStepCompleted = false;
+        populateDistributionStep();
+        showAmountStep();
+        updateSummary(draft);
+        hydrateSettlement(draft);
+    };
+
+    const fetchDraft = async () => {
+        if (!draftId) {
+            window.location.replace('/dashboard/operations/new');
+            return;
+        }
+        try {
+            const response = await fetch(`/api/transactions/${encodeURIComponent(draftId)}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    window.location.replace('/dashboard/operations/new');
+                    return;
+                }
+                throw new Error('No se pudo obtener la operación.');
+            }
+            const data = await response.json();
+            hydrateFromDraft(data);
+            if ((data.currentStep || 1) < 2) {
+                await fetch(`/api/transactions/draft/${encodeURIComponent(draftId)}/step`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ step: 2 })
+                }).catch(() => {});
+            }
+        } catch (error) {
+            showFeedback(error.message || 'No se pudo cargar la operación.', 'error');
+        }
+    };
+
+    loadBalances({ showFallback: true }).then((canPoll) => {
+        if (canPoll) {
+            startBalancePolling();
+        }
+    });
+
+    setSettlementMode('simple');
+
+    simpleMethodSelect?.addEventListener('change', hideFeedback);
+
+    fetchDraft();
+});
+</script>
+<script src="/js/balance-widget.js"></script>
+
+</body>
+</html>

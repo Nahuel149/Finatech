@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in-right { animation: slideInRight 0.3s ease-out; }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .detail-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .detail-panel.open {
+            transform: translateX(0);
+        }
+        .filter-panel {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .filter-panel.open {
+            transform: translateX(0);
+        }
+        .timeline-item {
+            position: relative;
+        }
+        .timeline-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            width: 2px;
+            height: 40px;
+            background-color: #E5E7EB;
+        }
+        .timeline-item.completed::after {
+            background-color: #22C55E;
+        }
+        .timeline-item.current::after {
+            background-color: #0066CC;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0.25rem 0.65rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            line-height: 1;
+        }
+        .status-pendiente { background-color: #FEF3C7; color: #92400E; }
+        .status-en-curso { background-color: #DBEAFE; color: #1D4ED8; }
+        .status-completado { background-color: #DCFCE7; color: #15803D; }
+        .status-anulado { background-color: #FEE2E2; color: #B91C1C; }
+        .type-entrega { background-color: #DBEAFE; color: #1D4ED8; }
+        .type-transferencia { background-color: #DCFCE7; color: #15803D; }
+        .type-retiro { background-color: #EDE9FE; color: #6D28D9; }
+        .type-custodia { background-color: #FFE7D9; color: #C2410C; }
+        .toast-enter {
+            transform: translateX(100%);
+        }
+        .toast-enter-active {
+            transform: translateX(0);
+            transition: transform 0.3s ease;
+        }
+        .toast-leave-active {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        @media (min-width: 1024px) {
+            #filter-panel { width: 420px; }
+            #operation-detail-panel { width: 520px; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Mobile Navbar -->
+<nav id="mobile-navbar" class="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button type="button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden sm:block"></div>
+                <button id="menu-toggle" type="button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-expanded="false" aria-controls="mobile-menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu" class="lg:hidden fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+    <div class="px-4 py-3 space-y-4">
+        <div class="flex items-center pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <a href="operations-summary.html" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
+                <span>Operaciones</span>
+            </a>
+            <a href="tesoreria-saldos.html" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                <span>Tesorería</span>
+            </a>
+            <span class="flex items-center px-3 py-2 rounded-lg text-primary bg-blue-50">
+                <i class="fa-solid fa-truck text-primary mr-3"></i>
+                <span>Logística</span>
+            </span>
+            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                <span>Liquidaciones</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Desktop Navbar -->
+<nav id="desktop-navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-10">
+                <a href="dashboard.html" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div class="hidden lg:flex space-x-8">
+                    <a href="operations-summary.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <a href="tesoreria-saldos.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </a>
+                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
+            </div>
+            <div class="flex-1 max-w-lg mx-12">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input id="global-search" type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar operación logística…" aria-label="Buscar operación logística">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors" type="button" aria-label="Notificaciones">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors" type="button">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<main id="main-content" class="pt-[120px] pb-16 lg:pt-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="page-header" class="mb-8 mt-4 lg:mt-0">
+            <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
+                <span class="text-primary font-medium cursor-pointer">Logística</span>
+                <i class="fa-solid fa-chevron-right text-xs" aria-hidden="true"></i>
+                <span>Panel principal</span>
+            </nav>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h1 class="text-xl font-bold text-text-primary mb-2 sm:text-2xl">Panel de Logística</h1>
+                    <p class="text-sm text-gray-600 sm:text-base">Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes.</p>
+                </div>
+                <button id="register-action" type="button" class="order-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 lg:order-none lg:text-base">
+                    <i class="fa-solid fa-plus"></i>
+                    Registrar nuevo movimiento logístico
+                </button>
+            </div>
+        </section>
+
+        <section id="general-summary-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Resumen general</h2>
+            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-clipboard-list text-primary text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Operaciones activas</div>
+                                <div id="summary-active" class="text-2xl font-bold text-text-primary">0</div>
+                            </div>
+                        </div>
+                        <div id="summary-active-variation" class="text-right text-sm font-medium text-success">
+                            <i class="fa-solid fa-arrow-up mr-1"></i>
+                            +0%
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">En curso actualmente</div>
+                </article>
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-truck text-warning text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Entregas pendientes</div>
+                                <div id="summary-pending" class="text-2xl font-bold text-text-primary">0</div>
+                            </div>
+                        </div>
+                        <div id="summary-pending-variation" class="text-right text-sm font-medium text-danger">
+                            <i class="fa-solid fa-arrow-down mr-1"></i>
+                            0%
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">A la espera de confirmación</div>
+                </article>
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-sync text-success text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Transferencias internas</div>
+                                <div id="summary-transfers" class="text-2xl font-bold text-text-primary">0</div>
+                            </div>
+                        </div>
+                        <div id="summary-transfers-variation" class="text-right text-sm font-medium text-success">
+                            <i class="fa-solid fa-arrow-up mr-1"></i>
+                            +0%
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">Movimientos físicos registrados</div>
+                </article>
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-check-circle text-success text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Operaciones completadas hoy</div>
+                                <div id="summary-completed-today" class="text-2xl font-bold text-text-primary">0</div>
+                            </div>
+                        </div>
+                        <div id="summary-completed-variation" class="text-right text-sm font-medium text-success">
+                            <i class="fa-solid fa-arrow-up mr-1"></i>
+                            +0%
+                        </div>
+                    </div>
+                    <div class="text-xs text-gray-500">Últimas 24h</div>
+                </article>
+            </div>
+        </section>
+
+        <section id="logistics-operations-section" class="mb-10">
+            <div class="flex flex-col gap-4 mb-4 lg:flex-row lg:items-center lg:justify-between">
+                <h2 class="text-lg font-semibold text-text-primary">Operaciones logísticas</h2>
+                <div class="flex flex-wrap gap-3">
+                    <button id="filter-toggle" type="button" class="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50">
+                        <i class="fa-solid fa-filter"></i>
+                        Filtros
+                    </button>
+                    <button id="bulk-actions" type="button" class="flex items-center gap-2 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50">
+                        <i class="fa-solid fa-tasks"></i>
+                        Acciones masivas
+                    </button>
+                </div>
+            </div>
+
+            <div id="banner-container" class="mb-4 hidden"></div>
+
+            <div class="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full min-w-[960px]" aria-label="Listado de operaciones logísticas">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left">
+                                    <input id="select-all" type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary" aria-label="Seleccionar todas las operaciones visibles">
+                                </th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">ID Operación</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Fecha y hora</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Tipo</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Contacto/Destinatario</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Origen/Destino</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Estado</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Monto</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Responsable</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="operations-tbody" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+                <div id="empty-state" class="hidden px-6 py-16 text-center">
+                    <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-primary mb-4">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                    </div>
+                    <h3 class="text-lg font-semibold text-text-primary mb-2">No encontramos operaciones</h3>
+                    <p class="text-sm text-gray-600 mb-4">Ajustá los filtros o limpiá la búsqueda para ver resultados.</p>
+                    <button type="button" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary hover:bg-gray-50" id="clear-filters-empty">
+                        <i class="fa-solid fa-rotate"></i>
+                        Limpiar filtros
+                    </button>
+                </div>
+                <div id="pagination" class="flex flex-col gap-3 border-t border-gray-200 bg-gray-50 px-6 py-4 text-sm text-gray-700 md:flex-row md:items-center md:justify-between">
+                    <div id="pagination-info">Mostrando 0 operaciones</div>
+                    <div class="flex items-center gap-2">
+                        <button id="prev-page" type="button" class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" disabled>Anterior</button>
+                        <div id="page-indicators" class="flex items-center gap-1"></div>
+                        <button id="next-page" type="button" class="px-3 py-1 rounded border border-gray-300 hover:bg-gray-100 disabled:opacity-50" disabled>Siguiente</button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="treasury-integration-section" class="mb-12">
+            <div class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div class="flex items-start">
+                        <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fa-solid fa-link text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-text-primary">Integración con Tesorería</h3>
+                            <p class="text-sm text-gray-600">Las operaciones completadas generan actualizaciones automáticas en Tesorería y Cuentas Corrientes.</p>
+                        </div>
+                    </div>
+                    <button id="view-treasury" type="button" class="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50">
+                        <i class="fa-solid fa-external-link-alt"></i>
+                        Ver en Tesorería
+                    </button>
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Filter Panel -->
+<aside id="filter-panel" class="fixed inset-y-0 left-0 z-50 w-full max-w-full bg-white shadow-xl border-r border-gray-200 filter-panel lg:max-w-lg" aria-hidden="true">
+    <div class="flex h-full flex-col">
+        <header class="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6">
+            <div>
+                <h3 class="text-lg font-semibold text-text-primary">Filtros avanzados</h3>
+                <p class="text-sm text-gray-600 mt-1">Configurá los criterios de búsqueda</p>
+            </div>
+            <button type="button" class="text-gray-400 hover:text-gray-600" id="filter-close" aria-label="Cerrar filtros">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+            <form id="filter-form" class="space-y-6">
+                <div>
+                    <label for="filter-search" class="block text-sm font-medium text-text-primary mb-2">Búsqueda rápida</label>
+                    <input id="filter-search" name="search" type="text" placeholder="ID, contacto, usuario..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label for="filter-type" class="block text-sm font-medium text-text-primary mb-2">Tipo de operación</label>
+                    <select id="filter-type" name="type" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Todos los tipos</option>
+                        <option value="Entrega">Entrega</option>
+                        <option value="Transferencia">Transferencia</option>
+                        <option value="Retiro">Retiro</option>
+                        <option value="Custodia">Custodia</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="filter-status" class="block text-sm font-medium text-text-primary mb-2">Estado</label>
+                    <select id="filter-status" name="status" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Todos los estados</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="en-curso">En curso</option>
+                        <option value="completado">Completado</option>
+                        <option value="anulado">Anulado</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-2">Rango de fechas</label>
+                    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <input id="filter-date-from" name="dateFrom" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <input id="filter-date-to" name="dateTo" type="date" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                </div>
+                <div>
+                    <label for="filter-contact" class="block text-sm font-medium text-text-primary mb-2">Contacto</label>
+                    <input id="filter-contact" name="contact" type="text" placeholder="Buscar contacto..." class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label for="filter-user" class="block text-sm font-medium text-text-primary mb-2">Usuario responsable</label>
+                    <select id="filter-user" name="responsible" class="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Todos los usuarios</option>
+                        <option value="Juan Pérez">Juan Pérez</option>
+                        <option value="Ana López">Ana López</option>
+                        <option value="Luis García">Luis García</option>
+                        <option value="María Torres">María Torres</option>
+                        <option value="Laura Fernández">Laura Fernández</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <footer class="border-t border-gray-200 p-4 sm:p-6">
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <button id="filter-clear" type="button" class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50">Limpiar filtros</button>
+                <button id="filter-apply" type="button" class="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700">Aplicar filtros</button>
+            </div>
+        </footer>
+    </div>
+</aside>
+
+<!-- Operation Detail Panel -->
+<aside id="operation-detail-panel" class="fixed inset-0 z-50 w-full max-w-full bg-white shadow-xl border border-gray-200 detail-panel lg:inset-y-0 lg:right-0 lg:w-[520px] lg:max-w-[520px] lg:border-l" aria-hidden="true">
+    <div class="flex h-full flex-col">
+        <header class="flex items-center justify-between border-b border-gray-200 p-4 sm:p-6">
+            <div>
+                <h3 class="text-lg font-semibold text-text-primary">Detalle de operación logística</h3>
+                <p id="detail-operation-id" class="text-sm text-gray-600 mt-1">#FT-LOG-000000</p>
+            </div>
+            <button type="button" id="detail-close" class="text-gray-400 hover:text-gray-600" aria-label="Cerrar detalle">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 sm:p-6">
+            <section class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="grid grid-cols-1 gap-4 text-sm md:grid-cols-2">
+                    <div>
+                        <div class="text-gray-500">Tipo</div>
+                        <div id="detail-type" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Estado actual</div>
+                        <div id="detail-status" class="mt-1"></div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Origen</div>
+                        <div id="detail-origin" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Destino</div>
+                        <div id="detail-destination" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Contacto / Destinatario</div>
+                        <div id="detail-contact" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Monto</div>
+                        <div id="detail-amount" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Fecha y hora de registro</div>
+                        <div id="detail-date" class="font-medium text-text-primary">—</div>
+                    </div>
+                    <div>
+                        <div class="text-gray-500">Usuario responsable</div>
+                        <div id="detail-responsible" class="font-medium text-text-primary">—</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="mb-6">
+                <h4 class="text-sm font-medium text-text-primary mb-4">Timeline de la operación</h4>
+                <div id="detail-timeline" class="space-y-4"></div>
+            </section>
+
+            <section>
+                <h4 class="text-sm font-medium text-text-primary mb-3">Adjuntos</h4>
+                <div id="detail-attachments" class="space-y-3"></div>
+                <div id="detail-attachments-loading" class="space-y-3 hidden">
+                    <div class="h-16 rounded-lg skeleton"></div>
+                    <div class="h-16 rounded-lg skeleton"></div>
+                </div>
+            </section>
+        </div>
+        <footer class="border-t border-gray-200 p-4 sm:p-6">
+            <div class="flex flex-col gap-3 sm:flex-row">
+                <button id="detail-edit" type="button" class="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-50">Editar operación</button>
+                <button id="detail-complete" type="button" class="flex-1 rounded-lg bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600">Marcar como completada</button>
+                <button id="detail-cancel" type="button" class="rounded-lg bg-danger px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600" aria-label="Cancelar operación">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </footer>
+    </div>
+</aside>
+
+<div id="sr-announce" class="sr-only" aria-live="polite"></div>
+
+<script>
+const API_BASE = '/api/logistics';
+const pageSize = 20;
+
+const STATE_CONFIG = {
+  'pendiente': { label: 'Pendiente', badgeClass: 'status-pendiente' },
+  'en-curso': { label: 'En curso', badgeClass: 'status-en-curso' },
+  'completado': { label: 'Completado', badgeClass: 'status-completado' },
+  'anulado': { label: 'Anulado', badgeClass: 'status-anulado' },
+};
+
+const TYPE_CONFIG = {
+  Entrega: 'type-entrega',
+  Transferencia: 'type-transferencia',
+  Retiro: 'type-retiro',
+  Custodia: 'type-custodia',
+};
+
+let operations = [];
+let pagination = { page: 1, limit: pageSize, totalItems: 0, totalPages: 1 };
+let summaryMetrics = { active: 0, pendingDeliveries: 0, internalTransfers: 0, completedToday: 0, trends: {} };
+let filterState = { search: '', type: '', state: '', contact: '', responsible: '', dateFrom: '', dateTo: '' };
+let selectedOperations = new Set();
+let currentPage = 1;
+let detailOperation = null;
+let autoRefreshTimer = null;
+let menuToggleButton;
+let mobileMenuPanel;
+let detailLoadingTimer = null;
+let isFetchingOperations = false;
+
+const formatDateTime = (iso) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return new Intl.DateTimeFormat('es-AR', {
+    dateStyle: 'short',
+    timeStyle: 'short',
+  }).format(date);
+};
+
+const formatAmount = (amount) => {
+  if (!amount || typeof amount.value !== 'number') return '—';
+  const formatter = new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: amount.currency || 'ARS',
+  });
+  return formatter.format(amount.value);
+};
+
+const createStatusBadge = (state) => {
+  const config = STATE_CONFIG[state] || STATE_CONFIG['pendiente'];
+  return `<span class="badge ${config.badgeClass}">${config.label}</span>`;
+};
+
+const createTypeBadge = (type) => {
+  const klass = TYPE_CONFIG[type] || 'type-entrega';
+  return `<span class="badge ${klass}">${type}</span>`;
+};
+
+const setVariation = (elementId, value) => {
+  const element = document.getElementById(elementId);
+  if (!element) return;
+  element.classList.remove('text-success', 'text-danger', 'text-gray-500');
+
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    element.classList.add('text-gray-500');
+    element.innerHTML = '<i class="fa-solid fa-minus mr-1"></i>—';
+    return;
+  }
+
+  const icon = value > 0 ? 'fa-arrow-up' : value < 0 ? 'fa-arrow-down' : 'fa-minus';
+  const colorClass = value > 0 ? 'text-success' : value < 0 ? 'text-danger' : 'text-gray-500';
+  const prefix = value > 0 ? '+' : '';
+
+  element.classList.add(colorClass);
+  element.innerHTML = `<i class="fa-solid ${icon} mr-1"></i>${prefix}${value}%`;
+};
+
+const renderSummary = () => {
+  document.getElementById('summary-active').textContent = summaryMetrics.active ?? 0;
+  document.getElementById('summary-pending').textContent = summaryMetrics.pendingDeliveries ?? 0;
+  document.getElementById('summary-transfers').textContent = summaryMetrics.internalTransfers ?? 0;
+  document.getElementById('summary-completed-today').textContent = summaryMetrics.completedToday ?? 0;
+
+  const trends = summaryMetrics.trends || {};
+  setVariation('summary-active-variation', trends.active);
+  setVariation('summary-pending-variation', trends.pendingDeliveries);
+  setVariation('summary-transfers-variation', trends.internalTransfers);
+  setVariation('summary-completed-variation', trends.completedToday);
+};
+
+const renderPagination = () => {
+  const info = document.getElementById('pagination-info');
+  const prevBtn = document.getElementById('prev-page');
+  const nextBtn = document.getElementById('next-page');
+  const indicators = document.getElementById('page-indicators');
+
+  const { totalItems, totalPages, limit } = pagination;
+  const start = totalItems === 0 ? 0 : (currentPage - 1) * limit + 1;
+  const end = Math.min(currentPage * limit, totalItems);
+
+  info.textContent = totalItems === 0 ? 'No hay operaciones para mostrar' : `Mostrando ${start}-${end} de ${totalItems} operaciones`;
+  prevBtn.disabled = currentPage <= 1;
+  nextBtn.disabled = currentPage >= totalPages;
+
+  indicators.innerHTML = '';
+  const maxPagesToShow = 5;
+  const pages = [];
+  const startPage = Math.max(1, currentPage - Math.floor(maxPagesToShow / 2));
+  const endPage = Math.min(totalPages, startPage + maxPagesToShow - 1);
+
+  for (let page = startPage; page <= endPage; page += 1) {
+    pages.push(page);
+  }
+
+  pages.forEach((page) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = page;
+    button.className = `px-3 py-1 rounded border ${page === currentPage ? 'bg-primary text-white border-primary' : 'border-gray-300 hover:bg-gray-100'}`;
+    button.addEventListener('click', () => {
+      if (page === currentPage) return;
+      currentPage = page;
+      fetchOperations({ page, silent: true });
+    });
+    indicators.appendChild(button);
+  });
+};
+
+const renderOperationsTable = () => {
+  const tbody = document.getElementById('operations-tbody');
+  const emptyState = document.getElementById('empty-state');
+  const paginationFooter = document.getElementById('pagination');
+
+  tbody.innerHTML = '';
+
+  if (operations.length === 0) {
+    emptyState.classList.remove('hidden');
+    paginationFooter.classList.add('hidden');
+    return;
+  }
+
+  emptyState.classList.add('hidden');
+  paginationFooter.classList.remove('hidden');
+
+  operations.forEach((operation) => {
+    const row = document.createElement('tr');
+    row.className = 'hover:bg-gray-50 transition-colors';
+    row.innerHTML = `
+      <td class="px-6 py-4">
+        <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary row-checkbox" data-operation-id="${operation.id}">
+      </td>
+      <td class="px-6 py-4 text-sm font-medium text-primary cursor-pointer" data-operation-link="${operation.id}">#${operation.operationCode || operation.id}</td>
+      <td class="px-6 py-4 text-sm text-text-primary">${formatDateTime(operation.datetime)}</td>
+      <td class="px-6 py-4">${createTypeBadge(operation.type)}</td>
+      <td class="px-6 py-4 text-sm text-text-primary">${operation.contact || '—'}</td>
+      <td class="px-6 py-4 text-sm text-text-primary">${operation.route || '—'}</td>
+      <td class="px-6 py-4">${createStatusBadge(operation.state)}</td>
+      <td class="px-6 py-4 text-sm text-text-primary">${formatAmount(operation.amount)}</td>
+      <td class="px-6 py-4 text-sm text-text-primary">${operation.responsible || '—'}</td>
+      <td class="px-6 py-4">
+        <button type="button" class="text-primary hover:text-blue-700 text-sm detail-trigger" data-operation-id="${operation.id}" aria-label="Ver detalle de ${operation.operationCode || operation.id}">
+          <i class="fa-solid fa-eye"></i>
+        </button>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+
+  restoreSelections();
+  renderPagination();
+};
+
+const restoreSelections = () => {
+  const selectAll = document.getElementById('select-all');
+  const checkboxes = document.querySelectorAll('.row-checkbox');
+  let checkedCount = 0;
+
+  checkboxes.forEach((checkbox) => {
+    const id = checkbox.dataset.operationId;
+    const isChecked = selectedOperations.has(id);
+    checkbox.checked = isChecked;
+    if (isChecked) checkedCount += 1;
+  });
+
+  if (checkboxes.length === 0) {
+    selectAll.checked = false;
+    selectAll.indeterminate = false;
+    return;
+  }
+
+  selectAll.checked = checkedCount === checkboxes.length;
+  selectAll.indeterminate = checkedCount > 0 && checkedCount < checkboxes.length;
+};
+
+const applyFilters = () => {
+  const form = document.getElementById('filter-form');
+  const formData = new FormData(form);
+  filterState = {
+    search: (formData.get('search') || '').trim(),
+    type: formData.get('type') || '',
+    state: formData.get('status') || '',
+    contact: (formData.get('contact') || '').trim(),
+    responsible: formData.get('responsible') || '',
+    dateFrom: formData.get('dateFrom') || '',
+    dateTo: formData.get('dateTo') || '',
+  };
+  selectedOperations.clear();
+  fetchOperations({ page: 1 });
+};
+
+const clearFilters = () => {
+  filterState = { search: '', type: '', state: '', contact: '', responsible: '', dateFrom: '', dateTo: '' };
+  document.getElementById('filter-form').reset();
+  selectedOperations.clear();
+  fetchOperations({ page: 1 });
+};
+
+const prefillFilterForm = () => {
+  const form = document.getElementById('filter-form');
+  if (!form) return;
+  const { elements } = form;
+  if (elements.search) elements.search.value = filterState.search;
+  if (elements.type) elements.type.value = filterState.type;
+  if (elements.status) elements.status.value = filterState.state;
+  if (elements.contact) elements.contact.value = filterState.contact;
+  if (elements.responsible) elements.responsible.value = filterState.responsible;
+  if (elements.dateFrom) elements.dateFrom.value = filterState.dateFrom;
+  if (elements.dateTo) elements.dateTo.value = filterState.dateTo;
+};
+
+const setMobileMenuState = (shouldOpen) => {
+  if (!menuToggleButton || !mobileMenuPanel) return;
+  if (shouldOpen) {
+    mobileMenuPanel.classList.remove('hidden');
+    menuToggleButton.setAttribute('aria-expanded', 'true');
+    menuToggleButton.innerHTML = '<i class="fa-solid fa-times text-lg"></i>';
+  } else {
+    mobileMenuPanel.classList.add('hidden');
+    menuToggleButton.setAttribute('aria-expanded', 'false');
+    menuToggleButton.innerHTML = '<i class="fa-solid fa-bars text-lg"></i>';
+  }
+};
+
+const openFilterPanel = () => {
+  const panel = document.getElementById('filter-panel');
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+  prefillFilterForm();
+  setTimeout(() => {
+    const searchInput = document.getElementById('filter-search');
+    if (searchInput) searchInput.focus({ preventScroll: false });
+  }, 220);
+};
+
+const closeFilterPanel = () => {
+  const panel = document.getElementById('filter-panel');
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
+};
+
+const showDetailLoading = () => {
+  document.getElementById('detail-operation-id').textContent = 'Cargando…';
+  document.getElementById('detail-type').textContent = '—';
+  document.getElementById('detail-origin').textContent = '—';
+  document.getElementById('detail-destination').textContent = '—';
+  document.getElementById('detail-contact').textContent = '—';
+  document.getElementById('detail-amount').textContent = '—';
+  document.getElementById('detail-date').textContent = '—';
+  document.getElementById('detail-responsible').textContent = '—';
+  document.getElementById('detail-status').innerHTML = createStatusBadge('pendiente');
+
+  const timelineContainer = document.getElementById('detail-timeline');
+  const attachmentsContainer = document.getElementById('detail-attachments');
+  const attachmentsSkeleton = document.getElementById('detail-attachments-loading');
+
+  timelineContainer.innerHTML = '<div class="h-20 rounded-lg skeleton"></div>';
+  attachmentsContainer.innerHTML = '';
+  attachmentsSkeleton.classList.remove('hidden');
+};
+
+const populateDetail = (operation) => {
+  document.getElementById('detail-operation-id').textContent = `#${operation.operationCode || operation.id}`;
+  document.getElementById('detail-type').textContent = operation.type;
+  document.getElementById('detail-origin').textContent = operation.origin || '—';
+  document.getElementById('detail-destination').textContent = operation.destination || '—';
+  document.getElementById('detail-contact').textContent = operation.contact || '—';
+  document.getElementById('detail-amount').textContent = formatAmount(operation.amount);
+  document.getElementById('detail-date').textContent = formatDateTime(operation.datetime);
+  document.getElementById('detail-responsible').textContent = operation.responsible || '—';
+  document.getElementById('detail-status').innerHTML = createStatusBadge(operation.state);
+
+  const timelineContainer = document.getElementById('detail-timeline');
+  timelineContainer.innerHTML = '';
+  (operation.timeline || []).forEach((step) => {
+    const item = document.createElement('div');
+    item.className = `timeline-item flex items-start ${step.status}`;
+    if (step.status === 'completed') item.classList.add('completed');
+    if (step.status === 'current') item.classList.add('current');
+
+    const iconClass = step.status === 'completed' ? 'fa-check text-white' : step.status === 'current' ? 'fa-truck text-white' : 'fa-circle text-gray-400';
+    const bgClass = step.status === 'completed' ? 'bg-success' : step.status === 'current' ? 'bg-primary' : 'bg-gray-200';
+    const dateText = step.timestamp ? formatDateTime(step.timestamp) : 'Pendiente';
+    const authorText = step.author ? ` por ${step.author}` : '';
+
+    item.innerHTML = `
+      <div class="mr-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${bgClass}">
+        <i class="fa-solid ${iconClass} text-xs"></i>
+      </div>
+      <div class="flex-1">
+        <div class="text-sm font-medium ${step.status === 'pending' ? 'text-gray-400' : 'text-text-primary'}">${step.label}</div>
+        <div class="text-xs ${step.status === 'pending' ? 'text-gray-400' : 'text-gray-500'}">${dateText}${authorText}</div>
+      </div>
+    `;
+    timelineContainer.appendChild(item);
+  });
+
+  const attachmentsContainer = document.getElementById('detail-attachments');
+  const attachmentsSkeleton = document.getElementById('detail-attachments-loading');
+  attachmentsContainer.innerHTML = '';
+  attachmentsSkeleton.classList.remove('hidden');
+
+  if (detailLoadingTimer) clearTimeout(detailLoadingTimer);
+  detailLoadingTimer = setTimeout(() => {
+    attachmentsSkeleton.classList.add('hidden');
+    if (!operation.attachments || operation.attachments.length === 0) {
+      attachmentsContainer.innerHTML = '<p class="text-sm text-gray-500">No hay adjuntos disponibles.</p>';
+      return;
+    }
+    operation.attachments.forEach((attachment) => {
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between rounded-lg bg-gray-50 p-3';
+      row.innerHTML = `
+        <div class="flex items-center">
+          <i class="fa-solid ${attachment.icon || 'fa-file'} ${attachment.color || 'text-primary'} mr-3"></i>
+          <div>
+            <div class="text-sm font-medium text-text-primary">${attachment.name}</div>
+            <div class="text-xs text-gray-500">${attachment.size || ''}</div>
+          </div>
+        </div>
+        <button type="button" class="text-primary hover:text-blue-700 text-sm">Ver archivo</button>
+      `;
+      attachmentsContainer.appendChild(row);
+    });
+  }, 350);
+
+  updateDetailActions(operation);
+};
+
+const toggleButtonState = (button, isEnabled) => {
+  if (!button) return;
+  if (isEnabled) {
+    button.classList.remove('opacity-50', 'cursor-not-allowed');
+    button.disabled = false;
+    button.setAttribute('aria-disabled', 'false');
+  } else {
+    button.classList.add('opacity-50', 'cursor-not-allowed');
+    button.disabled = true;
+    button.setAttribute('aria-disabled', 'true');
+  }
+};
+
+const updateDetailActions = (operation) => {
+  const editBtn = document.getElementById('detail-edit');
+  const completeBtn = document.getElementById('detail-complete');
+  const cancelBtn = document.getElementById('detail-cancel');
+
+  const isCompleted = operation.state === 'completado';
+  const isCanceled = operation.state === 'anulado';
+
+  toggleButtonState(editBtn, !isCompleted);
+  toggleButtonState(completeBtn, !(isCompleted || isCanceled));
+  toggleButtonState(cancelBtn, !isCompleted);
+};
+
+const announce = (message) => {
+  const region = document.getElementById('sr-announce');
+  if (region) {
+    region.textContent = message;
+  }
+};
+
+const showToast = (message, type = 'info') => {
+  const toast = document.createElement('div');
+  const colorClass = type === 'success' ? 'bg-success' : type === 'warning' ? 'bg-warning text-black' : type === 'error' ? 'bg-danger' : 'bg-primary';
+  toast.className = `fixed top-24 right-6 z-[60] min-w-[260px] max-w-sm rounded-lg px-6 py-4 text-sm text-white shadow-lg toast-enter ${colorClass}`;
+  toast.setAttribute('role', 'status');
+  toast.setAttribute('aria-live', 'polite');
+  toast.innerHTML = `
+    <div class="flex items-center gap-3">
+      <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'warning' ? 'fa-exclamation-triangle' : type === 'error' ? 'fa-times-circle' : 'fa-info-circle'}"></i>
+      <span>${message}</span>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  requestAnimationFrame(() => toast.classList.add('toast-enter-active'));
+  setTimeout(() => {
+    toast.classList.remove('toast-enter-active');
+    toast.classList.add('toast-leave-active');
+    setTimeout(() => toast.remove(), 320);
+  }, 3200);
+};
+
+const showBanner = (type, message) => {
+  const container = document.getElementById('banner-container');
+  const color = type === 'error' ? 'bg-red-50 text-red-700 border-red-200' : 'bg-yellow-50 text-yellow-700 border-yellow-200';
+  container.innerHTML = `
+    <div class="flex items-start justify-between gap-3 rounded-lg border px-4 py-3 text-sm ${color}" role="alert" aria-live="assertive">
+      <div class="flex items-start gap-3">
+        <i class="fa-solid ${type === 'error' ? 'fa-circle-exclamation' : 'fa-info-circle'} mt-1"></i>
+        <span>${message}</span>
+      </div>
+      <button type="button" class="text-xs font-semibold uppercase tracking-wide" id="banner-dismiss">Cerrar</button>
+    </div>
+  `;
+  container.classList.remove('hidden');
+  const dismiss = document.getElementById('banner-dismiss');
+  if (dismiss) {
+    dismiss.addEventListener('click', () => {
+      container.classList.add('hidden');
+      container.innerHTML = '';
+    });
+  }
+};
+
+const hideBanner = () => {
+  const container = document.getElementById('banner-container');
+  container.classList.add('hidden');
+  container.innerHTML = '';
+};
+
+const selectAllOperations = (checked) => {
+  const checkboxes = document.querySelectorAll('.row-checkbox');
+  checkboxes.forEach((checkbox) => {
+    const id = checkbox.dataset.operationId;
+    checkbox.checked = checked;
+    if (checked) {
+      selectedOperations.add(id);
+    } else {
+      selectedOperations.delete(id);
+    }
+  });
+  restoreSelections();
+};
+
+const performBulkActions = () => {
+  if (selectedOperations.size === 0) {
+    showToast('Seleccioná al menos una operación', 'warning');
+    return;
+  }
+  showToast(`${selectedOperations.size} operaciones seleccionadas. Elegí la acción que querés realizar.`, 'info');
+};
+
+const registerNewLogisticsMovement = () => {
+  showToast('Abriendo formulario para nuevo movimiento logístico', 'info');
+};
+
+const viewInTreasury = () => {
+  window.location.href = '/tesoreria-saldos.html?from=logistica';
+};
+
+const updateDetailState = async (state, successMessage) => {
+  if (!detailOperation) return;
+  try {
+    const response = await fetch(`${API_BASE}/operations/${detailOperation.id}/state`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state }),
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      const message = errorPayload.message || 'No se pudo actualizar el estado. Intentá nuevamente.';
+      showBanner('error', message);
+      showToast(message, 'error');
+      return;
+    }
+
+    const updatedOperation = await response.json();
+    detailOperation = updatedOperation;
+    populateDetail(detailOperation);
+    await fetchOperations({ page: currentPage, silent: true });
+    showToast(successMessage.replace('%ID%', detailOperation.operationCode || detailOperation.id), 'success');
+    announce(successMessage.replace('%ID%', detailOperation.operationCode || detailOperation.id));
+  } catch (error) {
+    console.error(error);
+    showBanner('error', 'No se pudo actualizar el estado. Intentá nuevamente.');
+    showToast('No se pudo actualizar el estado. Intentá nuevamente.', 'error');
+  }
+};
+
+const fetchDetail = async (operationId) => {
+  try {
+    showDetailLoading();
+    const response = await fetch(`${API_BASE}/operations/${operationId}`);
+    if (!response.ok) {
+      throw new Error('Detalle no disponible');
+    }
+    detailOperation = await response.json();
+    populateDetail(detailOperation);
+  } catch (error) {
+    console.error(error);
+    showToast('No se pudo cargar el detalle de la operación.', 'error');
+    closeDetailPanel();
+  }
+};
+
+const openDetailPanel = (operationId) => {
+  const panel = document.getElementById('operation-detail-panel');
+  panel.classList.add('open');
+  panel.setAttribute('aria-hidden', 'false');
+  fetchDetail(operationId);
+};
+
+const closeDetailPanel = () => {
+  const panel = document.getElementById('operation-detail-panel');
+  panel.classList.remove('open');
+  panel.setAttribute('aria-hidden', 'true');
+  detailOperation = null;
+  if (detailLoadingTimer) {
+    clearTimeout(detailLoadingTimer);
+    detailLoadingTimer = null;
+  }
+};
+
+const fetchOperations = async ({ page = currentPage, silent = false } = {}) => {
+  if (isFetchingOperations) return;
+  isFetchingOperations = true;
+  currentPage = page;
+
+  const params = new URLSearchParams();
+  params.set('page', page);
+  params.set('limit', pageSize);
+  Object.entries(filterState).forEach(([key, value]) => {
+    if (value) params.set(key, value);
+  });
+
+  try {
+    const response = await fetch(`${API_BASE}/operations?${params.toString()}`);
+    if (!response.ok) {
+      throw new Error('Error en la respuesta del servidor');
+    }
+    const payload = await response.json();
+    operations = (payload.data || []).map((operation) => ({
+      ...operation,
+      datetime: operation.datetime,
+    }));
+    pagination = payload.pagination || pagination;
+    summaryMetrics = payload.metrics || summaryMetrics;
+    hideBanner();
+    renderSummary();
+    renderOperationsTable();
+    if (!silent) {
+      showToast('Operaciones actualizadas.', 'success');
+    }
+  } catch (error) {
+    console.error(error);
+    showBanner('error', 'No se pudo obtener la información logística. Intentá nuevamente.');
+    if (!silent) {
+      showToast('No se pudo cargar la información logística.', 'error');
+    }
+  } finally {
+    isFetchingOperations = false;
+  }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+  menuToggleButton = document.getElementById('menu-toggle');
+  mobileMenuPanel = document.getElementById('mobile-menu');
+
+  if (menuToggleButton && mobileMenuPanel) {
+    menuToggleButton.addEventListener('click', () => {
+      const isHidden = mobileMenuPanel.classList.contains('hidden');
+      setMobileMenuState(isHidden);
+    });
+
+    document.addEventListener('click', (event) => {
+      if (!mobileMenuPanel || mobileMenuPanel.classList.contains('hidden')) return;
+      if (menuToggleButton.contains(event.target) || mobileMenuPanel.contains(event.target)) return;
+      setMobileMenuState(false);
+    });
+
+    const lgBreakpoint = window.matchMedia('(min-width: 1024px)');
+    const handleBreakpointChange = (event) => {
+      if (event.matches) {
+        setMobileMenuState(false);
+      }
+    };
+    handleBreakpointChange(lgBreakpoint);
+    if (typeof lgBreakpoint.addEventListener === 'function') {
+      lgBreakpoint.addEventListener('change', handleBreakpointChange);
+    } else if (typeof lgBreakpoint.addListener === 'function') {
+      lgBreakpoint.addListener(handleBreakpointChange);
+    }
+  }
+
+  document.getElementById('filter-toggle').addEventListener('click', openFilterPanel);
+  document.getElementById('filter-close').addEventListener('click', closeFilterPanel);
+  document.getElementById('filter-apply').addEventListener('click', () => {
+    applyFilters();
+    closeFilterPanel();
+  });
+  document.getElementById('filter-clear').addEventListener('click', clearFilters);
+  document.getElementById('clear-filters-empty').addEventListener('click', () => {
+    clearFilters();
+    closeFilterPanel();
+  });
+
+  document.getElementById('register-action').addEventListener('click', registerNewLogisticsMovement);
+  document.getElementById('view-treasury').addEventListener('click', viewInTreasury);
+  document.getElementById('bulk-actions').addEventListener('click', performBulkActions);
+  document.getElementById('select-all').addEventListener('change', (event) => selectAllOperations(event.target.checked));
+
+  document.getElementById('prev-page').addEventListener('click', () => {
+    if (currentPage > 1) {
+      fetchOperations({ page: currentPage - 1 });
+    }
+  });
+  document.getElementById('next-page').addEventListener('click', () => {
+    if (currentPage < pagination.totalPages) {
+      fetchOperations({ page: currentPage + 1 });
+    }
+  });
+
+  document.getElementById('operations-tbody').addEventListener('click', (event) => {
+    const detailTrigger = event.target.closest('.detail-trigger');
+    if (detailTrigger) {
+      openDetailPanel(detailTrigger.dataset.operationId);
+      return;
+    }
+    const linkTrigger = event.target.closest('[data-operation-link]');
+    if (linkTrigger) {
+      openDetailPanel(linkTrigger.dataset.operationLink);
+    }
+  });
+
+  document.getElementById('operations-tbody').addEventListener('change', (event) => {
+    if (!event.target.matches('.row-checkbox')) return;
+    const id = event.target.dataset.operationId;
+    if (event.target.checked) {
+      selectedOperations.add(id);
+    } else {
+      selectedOperations.delete(id);
+    }
+    restoreSelections();
+  });
+
+  document.getElementById('detail-close').addEventListener('click', closeDetailPanel);
+  document.getElementById('detail-edit').addEventListener('click', () => {
+    if (!detailOperation) return;
+    if (detailOperation.state === 'completado') {
+      showToast('Las operaciones completadas no pueden editarse.', 'warning');
+      return;
+    }
+    showToast('Abriendo formulario de edición', 'info');
+  });
+  document.getElementById('detail-complete').addEventListener('click', () => {
+    updateDetailState('completado', 'Operación logística #%ID% marcada como completada.');
+  });
+  document.getElementById('detail-cancel').addEventListener('click', () => {
+    const confirmed = confirm('¿Estás seguro de que querés cancelar esta operación?');
+    if (!confirmed) return;
+    updateDetailState('anulado', 'Operación logística #%ID% marcada como anulada.');
+  });
+
+  autoRefreshTimer = setInterval(() => fetchOperations({ page: currentPage, silent: true }), 60000);
+
+  fetchOperations({ page: 1, silent: true });
+});
+
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    closeFilterPanel();
+    closeDetailPanel();
+    if (mobileMenuPanel && !mobileMenuPanel.classList.contains('hidden')) {
+      setMobileMenuState(false);
+    }
+  }
+});
+</script>
+
+<script src="/js/balance-widget.js"></script>
+
+</body>
+</html>

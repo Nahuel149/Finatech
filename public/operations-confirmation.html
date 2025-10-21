@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        @keyframes checkAnimation {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .check-animation {
+            animation: checkAnimation 0.6s ease-out;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Mobile Header -->
+<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <!-- Back Button -->
+            <button id="mobile-back-button" class="p-2 text-text-primary hover:text-primary transition-colors">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            
+            <!-- Logo -->
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            
+            <!-- Menu Toggle -->
+            <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- COMPONENT: Mobile Navigation Menu -->
+<div id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden lg:hidden">
+    <div class="px-4 py-3">
+        <!-- User Info -->
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        
+        <!-- Navigation Items -->
+        <div class="space-y-2">
+            <div class="flex items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg">
+                <i class="fa-solid fa-exchange-alt text-primary mr-3"></i>
+                <span class="text-primary font-medium">Operaciones</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                <span>Tesorería</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                <span>Logística</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                <span>Liquidaciones</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 hidden lg:block">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <a href="/dashboard" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="hidden lg:flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="hidden lg:block flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed left-0 right-0 bg-white border-b border-gray-200 z-40 top-[61px] lg:top-[73px]">
+    <div class="px-4 lg:px-6 py-4">
+        <div class="flex space-x-4 overflow-x-auto lg:overflow-visible lg:space-x-0 lg:grid lg:grid-cols-3 lg:gap-6">
+            <!-- Transferencias ARS -->
+            <div id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-3 lg:p-4 shadow-sm min-w-[200px] lg:min-w-0" data-balance="transfers">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm lg:text-base"></i>
+                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>$ —</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
+            </div>
+
+            <!-- Efectivo ARS -->
+            <div id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-3 lg:p-4 shadow-sm min-w-[200px] lg:min-w-0" data-balance="cash">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm lg:text-base"></i>
+                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>$ —</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
+            </div>
+
+            <!-- Caja USD -->
+            <div id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-3 lg:p-4 shadow-sm min-w-[200px] lg:min-w-0" data-balance="usd">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm lg:text-base"></i>
+                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full" data-balance-status></div>
+                </div>
+                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>USD —</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
+                    <button class="text-xs text-primary hover:underline hidden" data-balance-retry>Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Success Screen Container -->
+<main id="success-container" class="pt-[185px] lg:pt-[240px] px-4 lg:px-6 pb-8 max-w-4xl mx-auto">
+    
+    <!-- SECTION: Success Card -->
+    <section id="success-card" class="bg-white rounded-lg border border-gray-200 shadow-lg">
+        
+        <!-- Success Header -->
+        <div id="success-header" class="text-center py-8 lg:py-12 px-4 lg:px-8 border-b border-gray-200">
+            <div class="w-16 h-16 lg:w-20 lg:h-20 bg-success rounded-full flex items-center justify-center mx-auto mb-4 lg:mb-6 check-animation">
+                <i class="fa-solid fa-check text-white text-2xl lg:text-3xl"></i>
+            </div>
+            <h1 class="text-2xl lg:text-3xl font-bold text-text-primary mb-2 lg:mb-3">Operación registrada con éxito</h1>
+            <p class="text-gray-600 mb-4 lg:mb-6 text-base lg:text-lg">La operación ha sido guardada correctamente en el sistema</p>
+            <div class="inline-flex items-center px-4 lg:px-6 py-2 lg:py-3 bg-primary bg-opacity-10 rounded-full">
+                <i class="fa-solid fa-hashtag text-primary mr-2"></i>
+                <span id="operation-code" class="text-xl lg:text-2xl font-bold text-primary">—</span>
+            </div>
+        </div>
+
+        <!-- Brief Summary -->
+        <div id="brief-summary" class="p-4 lg:p-8">
+            <h3 class="text-lg font-semibold text-text-primary mb-4 lg:mb-6 flex items-center">
+                <i class="fa-solid fa-file-invoice mr-2 text-primary"></i>
+                Resumen de la operación
+            </h3>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Cliente</label>
+                        <div id="client-name" class="text-text-primary font-medium skeleton">—</div>
+                        <div id="client-cuit" class="text-sm text-gray-500 skeleton">—</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tipo de operación</label>
+                        <div class="flex items-center">
+                            <span id="operation-type-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                <i id="operation-type-icon" class="fa-solid fa-arrows-rotate mr-1"></i>
+                                <span id="operation-type-label">—</span>
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Tipo de liquidación</label>
+                        <div class="flex items-center">
+                            <span id="settlement-type-badge" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
+                                <i class="fa-solid fa-layer-group mr-1"></i>
+                                <span id="settlement-type-label">—</span>
+                            </span>
+                        </div>
+                        <p id="settlement-extra" class="text-sm text-gray-500 mt-1 hidden"></p>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Bien que entra</label>
+                        <div id="incoming-amount" class="text-text-primary font-medium skeleton">—</div>
+                        <div id="incoming-subtype" class="text-sm text-gray-500">—</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Bien que sale</label>
+                        <div id="outgoing-amount" class="text-text-primary font-medium skeleton">—</div>
+                        <div id="outgoing-subtype" class="text-sm text-gray-500">—</div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-600 mb-1">Monto total</label>
+                        <div id="total-amount" class="text-text-primary font-medium skeleton">—</div>
+                        <div id="exchange-rate-info" class="text-sm text-gray-500">TC: —</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Primary Actions -->
+        <div id="primary-actions" class="px-4 lg:px-8 py-4 lg:py-6 bg-gray-50 border-t border-gray-200">
+            <div class="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-center gap-3 sm:gap-4">
+                <button id="view-detail-button" class="w-full sm:w-auto px-6 lg:px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i class="fa-solid fa-eye mr-2"></i>
+                    Ver detalle de operación
+                </button>
+                <button id="back-to-operations-button" class="w-full sm:w-auto px-6 lg:px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+                <button id="new-operation-button" class="w-full sm:w-auto px-6 py-3 text-primary hover:text-blue-700 transition-colors font-medium">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Nueva operación
+                </button>
+            </div>
+        </div>
+
+        <!-- Secondary Actions -->
+        <div id="secondary-actions" class="px-4 lg:px-8 py-4 border-t border-gray-200">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:flex lg:flex-wrap lg:items-center lg:justify-center lg:gap-6">
+                <button id="export-pdf-button" class="flex items-center justify-center px-4 py-2 text-gray-600 hover:text-text-primary transition-colors text-sm lg:text-base">
+                    <i class="fa-solid fa-file-pdf mr-2"></i>
+                    Exportar a PDF
+                </button>
+                <button id="duplicate-operation-button" class="flex items-center justify-center px-4 py-2 text-gray-600 hover:text-text-primary transition-colors text-sm lg:text-base">
+                    <i class="fa-solid fa-copy mr-2"></i>
+                    Duplicar operación
+                </button>
+            </div>
+        </div>
+    </section>
+
+</main>
+
+<!-- COMPONENT: Footer -->
+<footer id="footer" class="bg-white border-t border-gray-200 py-6 px-4 lg:px-6">
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex flex-wrap gap-4">
+            <span class="text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer">Términos de uso</span>
+            <span class="text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer">Política de privacidad</span>
+            <span class="text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer">Centro de ayuda</span>
+            <span class="text-sm text-gray-600 hover:text-primary transition-colors cursor-pointer">Soporte técnico</span>
+        </div>
+        <div class="flex items-center space-x-4">
+            <span class="text-sm text-gray-500">© 2024 FinaTech - Versión 2.1.4</span>
+            <div class="flex items-center space-x-2">
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <span class="text-sm text-gray-600">Sistema operativo</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- COMPONENT: Toast Notification (Hidden initially) -->
+<div id="toast-notification" class="fixed top-4 right-4 bg-success text-white px-6 py-3 rounded-lg shadow-lg z-50 transform translate-x-full transition-transform duration-300">
+    <div class="flex items-center">
+        <i class="fa-solid fa-check-circle mr-2"></i>
+        <span id="toast-message">Operación procesada correctamente</span>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const BALANCE_ENDPOINT = '/api/dashboard/balances';
+    const BALANCE_REFRESH_MS = 60000;
+
+    const toast = document.getElementById('toast-notification');
+    const toastMessage = document.getElementById('toast-message');
+    const successCard = document.getElementById('success-card');
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const mobileBackButton = document.getElementById('mobile-back-button');
+
+    const setMenuIcon = (isOpen) => {
+        if (!menuToggle) return;
+        const icon = menuToggle.querySelector('i');
+        if (!icon) return;
+        icon.className = isOpen ? 'fa-solid fa-times text-lg' : 'fa-solid fa-bars text-lg';
+    };
+
+    const closeMobileMenu = () => {
+        if (!mobileMenu) return;
+        if (!mobileMenu.classList.contains('hidden')) {
+            mobileMenu.classList.add('hidden');
+            setMenuIcon(false);
+        }
+    };
+
+    menuToggle?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        if (!mobileMenu) return;
+        const isHidden = mobileMenu.classList.toggle('hidden');
+        setMenuIcon(!isHidden);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!mobileMenu || mobileMenu.classList.contains('hidden')) return;
+        if (mobileMenu.contains(event.target) || (menuToggle && menuToggle.contains(event.target))) {
+            return;
+        }
+        closeMobileMenu();
+    });
+
+    window.addEventListener('resize', () => {
+        if (window.innerWidth >= 1024) {
+            closeMobileMenu();
+        }
+    });
+
+    const balanceSection = document.getElementById('balance-cards');
+    const balanceEntries = new Map();
+    document.querySelectorAll('[data-balance]').forEach((card) => {
+        balanceEntries.set(card.dataset.balance, {
+            card,
+            amountEl: card.querySelector('[data-balance-amount]'),
+            timeEl: card.querySelector('[data-balance-time]'),
+            statusEl: card.querySelector('[data-balance-status]'),
+            labelEl: card.querySelector('[data-balance-label]'),
+            retryButton: card.querySelector('[data-balance-retry]')
+        });
+    });
+
+    const elements = {
+        operationCode: document.getElementById('operation-code'),
+        clientName: document.getElementById('client-name'),
+        clientCuit: document.getElementById('client-cuit'),
+        operationTypeBadge: document.getElementById('operation-type-badge'),
+        operationTypeIcon: document.getElementById('operation-type-icon'),
+        operationTypeLabel: document.getElementById('operation-type-label'),
+        settlementTypeBadge: document.getElementById('settlement-type-badge'),
+        settlementTypeLabel: document.getElementById('settlement-type-label'),
+        settlementExtra: document.getElementById('settlement-extra'),
+        incomingAmount: document.getElementById('incoming-amount'),
+        incomingSubtype: document.getElementById('incoming-subtype'),
+        outgoingAmount: document.getElementById('outgoing-amount'),
+        outgoingSubtype: document.getElementById('outgoing-subtype'),
+        totalAmount: document.getElementById('total-amount'),
+        exchangeRateInfo: document.getElementById('exchange-rate-info'),
+        viewDetailButton: document.getElementById('view-detail-button'),
+        backToOperationsButton: document.getElementById('back-to-operations-button'),
+        newOperationButton: document.getElementById('new-operation-button'),
+        exportPdfButton: document.getElementById('export-pdf-button'),
+        duplicateButton: document.getElementById('duplicate-operation-button')
+    };
+
+    let balanceIntervalId = null;
+    let balanceAbortController = null;
+    const disableBalanceWidget = () => {
+        if (balanceAbortController) {
+            balanceAbortController.abort();
+            balanceAbortController = null;
+        }
+        if (balanceIntervalId) {
+            clearInterval(balanceIntervalId);
+            balanceIntervalId = null;
+        }
+        if (balanceSection) {
+            balanceSection.classList.add('hidden');
+        }
+    };
+    let operationContext = {
+        id: null,
+        transaction: null
+    };
+
+    const showToast = (message, type = 'success') => {
+        if (!toast || !toastMessage) return;
+        toastMessage.textContent = message;
+        toast.classList.remove('translate-x-full', 'bg-success', 'bg-danger', 'bg-blue-600');
+        if (type === 'error') {
+            toast.classList.add('bg-danger');
+        } else if (type === 'info') {
+            toast.classList.add('bg-blue-600');
+        } else {
+            toast.classList.add('bg-success');
+        }
+        toast.classList.add('translate-x-0');
+        setTimeout(() => {
+            toast.classList.remove('translate-x-0');
+            toast.classList.add('translate-x-full');
+        }, 3200);
+    };
+
+    const formatCurrency = (amount, currencyLabel) => {
+        const numeric = Number(amount);
+        if (!Number.isFinite(numeric)) {
+            return '—';
+        }
+        const formatter = new Intl.NumberFormat('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        const formatted = formatter.format(numeric);
+        if (!currencyLabel) {
+            return formatted;
+        }
+        return `${currencyLabel.includes('$') || currencyLabel.includes('USD') || currencyLabel.includes('EUR') ? '' : ''}${formatted} ${currencyLabel}`.trim();
+    };
+
+    const formatAssetAmount = (amount, asset) => {
+        if (!asset) return '—';
+        const label = asset.label || asset.code || '';
+        return formatCurrency(amount, label);
+    };
+
+    const formatTime = (date) => {
+        if (!date) return null;
+        const parsed = new Date(date);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return parsed.toLocaleTimeString('es-AR', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    };
+
+    const updateBalanceCardStatus = (entry, status) => {
+        if (!entry || !entry.statusEl) return;
+        let className = 'bg-success';
+        if (status === 'warning') {
+            className = 'bg-warning';
+        } else if (status === 'error') {
+            className = 'bg-danger';
+        } else if (status === 'offline') {
+            className = 'bg-gray-300';
+        }
+        entry.statusEl.className = `w-2 h-2 rounded-full ${className}`;
+    };
+
+    const applyBalancePayload = (payload) => {
+        if (!payload || !Array.isArray(payload.balances)) return;
+        const map = new Map(payload.balances.map((item) => [item.id, item]));
+        balanceEntries.forEach((entry, key) => {
+            const balance = map.get(key);
+            if (!balance) return;
+            if (entry.amountEl && Number.isFinite(Number(balance.amount))) {
+                entry.amountEl.textContent = formatCurrency(balance.amount, balance.currency);
+            }
+            if (entry.timeEl && balance.updatedAt) {
+                const displayTime = formatTime(balance.updatedAt);
+                if (displayTime) {
+                    entry.timeEl.textContent = `Actualizado ${displayTime}`;
+                }
+            }
+            if (entry.retryButton) {
+                entry.retryButton.classList.toggle('hidden', balance.status !== 'error');
+                entry.retryButton.addEventListener('click', () => loadBalances({ force: true }));
+            }
+            updateBalanceCardStatus(entry, balance.status || 'ok');
+            entry.card.classList.remove('skeleton');
+        });
+    };
+
+    const loadBalances = async ({ force = false } = {}) => {
+        if (!force && document.hidden) return false;
+        if (balanceAbortController) {
+            balanceAbortController.abort();
+        }
+        balanceAbortController = new AbortController();
+        try {
+            const response = await fetch(BALANCE_ENDPOINT, {
+                signal: balanceAbortController.signal,
+                credentials: 'include'
+            });
+            if (response.status === 401 || response.status === 403) {
+                disableBalanceWidget();
+                return false;
+            }
+            if (!response.ok) {
+                throw new Error('No se pudo obtener balances');
+            }
+            const data = await response.json();
+            applyBalancePayload(data);
+            balanceAbortController = null;
+            return true;
+        } catch (error) {
+            console.error(error);
+            return false;
+        } finally {
+            balanceAbortController = null;
+        }
+    };
+
+    const startBalancePolling = () => {
+        if (balanceSection && balanceSection.classList.contains('hidden')) return;
+        if (balanceIntervalId) clearInterval(balanceIntervalId);
+        balanceIntervalId = setInterval(() => {
+            if (!(balanceSection && balanceSection.classList.contains('hidden'))) {
+                loadBalances();
+            }
+        }, BALANCE_REFRESH_MS);
+    };
+
+    document.addEventListener('visibilitychange', () => {
+        if (!document.hidden && !(balanceSection && balanceSection.classList.contains('hidden'))) {
+            loadBalances({ force: true });
+        }
+    });
+
+    const capitalize = (value) => {
+        if (!value) return '';
+        return value.charAt(0).toUpperCase() + value.slice(1);
+    };
+
+    const getSettlementLabel = (method) => {
+        if (!method) return 'Sin definir';
+        const map = {
+            cash: 'Efectivo',
+            wire_transfer: 'Transferencia',
+            bank_deposit: 'Depósito en banco',
+            check: 'Cheque',
+            crypto: 'Cripto'
+        };
+        return map[method] || capitalize(method.replace(/_/g, ' '));
+    };
+
+    const renderOperation = (transaction) => {
+        if (!transaction) return;
+        const client = transaction.client || {};
+        operationContext.transaction = transaction;
+
+        elements.operationCode.textContent = transaction.operationCode || transaction.id || '—';
+        elements.clientName.textContent = client.fullName || client.shortName || '—';
+        elements.clientName.classList.remove('skeleton');
+        elements.clientCuit.textContent = client.cuit || 'CUIT no informado';
+        elements.clientCuit.classList.remove('skeleton');
+
+        const isSell = transaction.type === 'sell';
+        elements.operationTypeLabel.textContent = isSell ? 'Venta' : 'Compra';
+        elements.operationTypeIcon.className = isSell ? 'fa-solid fa-arrow-up mr-1' : 'fa-solid fa-arrow-down mr-1';
+        elements.operationTypeBadge.className = isSell
+            ? 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700'
+            : 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800';
+
+        const settlement = transaction.settlement || { mode: 'simple' };
+        const isCompound = settlement.mode === 'compound';
+        elements.settlementTypeBadge.className = isCompound
+            ? 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800'
+            : 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800';
+        elements.settlementTypeLabel.textContent = isCompound ? 'Compuesta' : 'Simple';
+
+        if (isCompound) {
+            const lines = Array.isArray(settlement.lines) ? settlement.lines : [];
+            const description = lines
+                .map((line) => `${getSettlementLabel(line.method)} · ${line.computedPercentage?.toFixed?.(1) || line.value}%`)
+                .join(' · ');
+            elements.settlementExtra.textContent = description || 'Sin detalle cargado.';
+            elements.settlementExtra.classList.toggle('hidden', !description);
+        } else {
+            const label = getSettlementLabel(settlement.simpleMethod);
+            elements.settlementExtra.textContent = label !== 'Sin definir' ? `Método: ${label}` : '';
+            elements.settlementExtra.classList.toggle('hidden', !settlement.simpleMethod);
+        }
+
+        elements.incomingAmount.textContent = formatAssetAmount(transaction.incomingAmount, transaction.incomingAsset);
+        elements.incomingAmount.classList.remove('skeleton');
+        elements.incomingSubtype.textContent = transaction.subtype ? `(${transaction.subtype})` : '—';
+
+        elements.outgoingAmount.textContent = formatAssetAmount(transaction.outgoingAmount, transaction.outgoingAsset);
+        elements.outgoingAmount.classList.remove('skeleton');
+        elements.outgoingSubtype.textContent = transaction.outgoingAsset?.label || transaction.outgoingAsset?.code || '—';
+
+        const totalReference = isSell ? transaction.outgoingAmount : transaction.incomingAmount;
+        const totalAsset = isSell ? transaction.outgoingAsset : transaction.incomingAsset;
+        elements.totalAmount.textContent = formatAssetAmount(totalReference, totalAsset);
+        elements.totalAmount.classList.remove('skeleton');
+
+        const marketApr = Number(transaction.marketApr);
+        elements.exchangeRateInfo.textContent = Number.isFinite(marketApr)
+            ? `TC de mercado: ${marketApr.toLocaleString('es-AR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}`
+            : 'TC: —';
+    };
+
+    const fetchOperation = async (operationId) => {
+        try {
+            const response = await fetch(`/api/transactions/${encodeURIComponent(operationId)}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) {
+                throw new Error('No se encontró la operación');
+            }
+            return response.json();
+        } catch (error) {
+            showToast(error.message || 'No se pudo cargar la operación.', 'error');
+            setTimeout(() => {
+                window.location.replace('/dashboard');
+            }, 2000);
+            throw error;
+        }
+    };
+
+    const navigateToDetail = () => {
+        closeMobileMenu();
+        if (!operationContext.id) return;
+        showToast('Navegando al detalle de la operación...');
+        setTimeout(() => {
+            window.location.href = `/dashboard?operationId=${encodeURIComponent(operationContext.id)}`;
+        }, 400);
+    };
+
+    const navigateToOperations = () => {
+        closeMobileMenu();
+        showToast('Volviendo a la lista de operaciones...');
+        setTimeout(() => {
+            window.location.href = '/dashboard';
+        }, 400);
+    };
+
+    const startNewOperation = () => {
+        closeMobileMenu();
+        showToast('Iniciando nueva operación...');
+        setTimeout(() => {
+            window.location.href = '/dashboard/operations/new';
+        }, 400);
+    };
+
+    const exportToPDF = () => {
+        closeMobileMenu();
+        showToast('Generando PDF...');
+        setTimeout(() => {
+            window.print();
+            showToast('PDF generado. Podés guardarlo desde el diálogo del navegador.');
+        }, 600);
+    };
+
+    const duplicateOperation = async () => {
+        closeMobileMenu();
+        if (!operationContext.transaction) return;
+        const transaction = operationContext.transaction;
+        if (!transaction.client?.id) {
+            showToast('No se pudo identificar el cliente para duplicar.', 'error');
+            return;
+        }
+
+        const payload = {
+            clientId: transaction.client.id,
+            type: transaction.type,
+            incomingAsset: transaction.incomingAsset,
+            outgoingAsset: transaction.outgoingAsset,
+            subtype: transaction.subtype,
+            apr: transaction.apr,
+            marketApr: transaction.marketApr,
+            incomingAmount: transaction.incomingAmount,
+            outgoingAmount: transaction.outgoingAmount,
+            notes: null
+        };
+
+        try {
+            showToast('Creando borrador duplicado...', 'info');
+            const response = await fetch('/api/transactions/draft', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) {
+                throw new Error('No se pudo duplicar la operación.');
+            }
+            const draft = await response.json();
+            showToast('Borrador creado. Redirigiendo…');
+            setTimeout(() => {
+                window.location.href = `/dashboard/operations/new?draftId=${encodeURIComponent(draft.id)}`;
+            }, 600);
+        } catch (error) {
+            console.error(error);
+            showToast(error.message || 'No se pudo duplicar la operación.', 'error');
+        }
+    };
+
+    mobileBackButton?.addEventListener('click', (event) => {
+        event.preventDefault();
+        navigateToOperations();
+    });
+
+    elements.viewDetailButton?.addEventListener('click', navigateToDetail);
+    elements.backToOperationsButton?.addEventListener('click', navigateToOperations);
+    elements.newOperationButton?.addEventListener('click', startNewOperation);
+    elements.exportPdfButton?.addEventListener('click', exportToPDF);
+    elements.duplicateButton?.addEventListener('click', duplicateOperation);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const operationId = urlParams.get('operationId') || urlParams.get('id');
+    if (!operationId) {
+        showToast('No se indicó una operación.', 'error');
+        setTimeout(() => {
+            window.location.replace('/dashboard');
+        }, 1200);
+        return;
+    }
+    operationContext.id = operationId;
+
+    successCard.style.opacity = '0';
+    successCard.style.transform = 'translateY(20px)';
+
+    fetchOperation(operationId)
+        .then((data) => {
+            renderOperation(data);
+            showToast(`Operación ${data.operationCode || ''} registrada con éxito`);
+        })
+        .finally(() => {
+            setTimeout(() => {
+                successCard.style.transition = 'all 0.6s ease-out';
+                successCard.style.opacity = '1';
+                successCard.style.transform = 'translateY(0)';
+            }, 150);
+        });
+
+    loadBalances({ force: true }).then((canPoll) => {
+        if (canPoll) {
+            startBalancePolling();
+        }
+    });
+});
+</script>
+
+</body>
+</html>

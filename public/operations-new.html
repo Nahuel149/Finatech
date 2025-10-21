@@ -1,0 +1,1379 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Mobile Header -->
+<header id="header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-40">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="back-button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex-1 text-center">
+                <h1 class="text-lg font-bold text-text-primary">Nueva Operación</h1>
+            </div>
+            <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- COMPONENT: Mobile Navigation Menu -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30 hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <button class="flex w-full items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg text-primary font-medium" type="button">
+                <i class="fa-solid fa-exchange-alt mr-3"></i>
+                Operaciones
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                Tesorería
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </button>
+            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Progress Bar -->
+<section id="progress-bar" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-20">
+    <div class="px-4 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold text-sm">1</div>
+                <div class="ml-2">
+                    <div class="font-medium text-text-primary text-sm">Datos</div>
+                    <div class="text-xs text-gray-500">Información</div>
+                </div>
+            </div>
+            <div class="flex-1 mx-4 h-px bg-gray-300"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-semibold text-sm">2</div>
+                <div class="ml-2">
+                    <div class="font-medium text-gray-400 text-sm">Liquidación</div>
+                    <div class="text-xs text-gray-400">Pago</div>
+                </div>
+            </div>
+            <div class="flex-1 mx-4 h-px bg-gray-300"></div>
+            <div class="flex items-center">
+                <div class="w-8 h-8 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-semibold text-sm">3</div>
+                <div class="ml-2">
+                    <div class="font-medium text-gray-400 text-sm">Resumen</div>
+                    <div class="text-xs text-gray-400">Confirmar</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COMPONENT: Main Container -->
+<main id="main-container" class="pt-[150px] px-4 pb-24 max-w-3xl mx-auto">
+    <div id="draft-status" class="hidden mb-4 text-xs text-gray-500 text-center">
+        <i class="fa-solid fa-floppy-disk mr-1"></i>
+        Borrador guardado a las <span id="draft-saved-at">--:--</span>
+    </div>
+
+    <form id="transaction-data-form" class="space-y-6">
+        <!-- Client selection -->
+        <section id="client-selection" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+            <label for="client-search-input" class="block text-sm font-medium text-text-primary mb-3">Cliente</label>
+            <div class="space-y-3">
+                <div class="relative">
+                    <input id="client-search-input" type="text" autocomplete="off" placeholder="Buscar cliente por nombre o CUIT" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" aria-autocomplete="list" aria-expanded="false" aria-controls="client-search-results">
+                    <div id="client-search-loading" class="hidden absolute inset-y-0 right-3 flex items-center text-gray-400 text-xs">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                    </div>
+                </div>
+                <div id="client-search-suggestions" class="hidden border border-gray-200 rounded-lg bg-white shadow-sm" role="listbox">
+                    <ul id="client-search-results" class="max-h-60 overflow-y-auto divide-y divide-gray-200"></ul>
+                    <div id="client-search-empty" class="hidden px-4 py-3 text-sm text-gray-500">No se encontraron clientes.</div>
+                </div>
+                <button id="new-client-button" type="button" class="w-full px-4 py-3 bg-white border border-primary text-primary rounded-lg hover:bg-blue-50 transition-colors text-sm font-medium">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Nuevo cliente
+                </button>
+                <div id="client-selection-feedback" class="hidden text-sm text-danger">
+                    <i class="fa-solid fa-circle-exclamation mr-1"></i>
+                    Seleccioná un cliente para continuar.
+                </div>
+                <div id="client-margin-info" class="hidden text-sm text-gray-600">
+                    <i class="fa-solid fa-circle-info mr-2"></i>
+                    Último margen con este cliente: <span id="client-margin-value">+0,0%</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Operation type -->
+        <section id="operation-type" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+            <span class="block text-sm font-medium text-text-primary mb-3">Tipo de operación</span>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" data-value="buy" class="operation-type-option p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg font-medium text-sm">
+                    <i class="fa-solid fa-arrow-down mr-2"></i>
+                    Compra
+                </button>
+                <button type="button" data-value="sell" class="operation-type-option p-4 border-2 border-gray-300 text-gray-600 rounded-lg font-medium text-sm hover:border-primary hover:text-primary transition-colors">
+                    <i class="fa-solid fa-arrow-up mr-2"></i>
+                    Venta
+                </button>
+            </div>
+        </section>
+
+        <!-- Assets -->
+        <section id="asset-selection" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <label class="block text-sm font-medium text-text-primary">Bienes</label>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="asset-incoming">Bien que entra</label>
+                    <select id="asset-incoming" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                        <option value="ARS" selected>Pesos Argentinos (ARS)</option>
+                        <option value="USD">Dólares (USD)</option>
+                        <option value="EUR">Euros (EUR)</option>
+                        <option value="BRL">Reales (BRL)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="asset-outgoing">Bien que sale</label>
+                    <select id="asset-outgoing" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                        <option value="USD" selected>Dólares (USD)</option>
+                        <option value="ARS">Pesos Argentinos (ARS)</option>
+                        <option value="EUR">Euros (EUR)</option>
+                        <option value="BRL">Reales (BRL)</option>
+                        <option value="BTC">Bitcoin (BTC)</option>
+                    </select>
+                </div>
+            </div>
+        </section>
+
+        <!-- Subtype -->
+        <section id="subtype-selection" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4">
+            <label class="block text-sm font-medium text-text-primary mb-2" for="subtype-select">Subtipo</label>
+            <select id="subtype-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                <option value="USD Billete" selected>USD Billete</option>
+                <option value="USD Transferencia">USD Transferencia</option>
+                <option value="Cheque diferido">Cheque diferido</option>
+                <option value="Transferencia bancaria">Transferencia bancaria</option>
+            </select>
+        </section>
+
+        <!-- Exchange rates -->
+        <section id="exchange-rates" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <label class="block text-sm font-medium text-text-primary">Tipo de cambio</label>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="apr-input">TC contra USD (ARS)</label>
+                    <input type="number" id="apr-input" step="0.0001" value="833.50" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="market-apr-input">TC de mercado contra USD (ARS)</label>
+                    <input type="number" id="market-apr-input" step="0.0001" value="830.00" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm" readonly>
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="apr-btc-input">TC contra USD (BTC)</label>
+                    <input type="number" id="apr-btc-input" step="0.00000001" value="0.00002150" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="market-apr-btc-input">TC de mercado contra USD (BTC)</label>
+                    <input type="number" id="market-apr-btc-input" step="0.00000001" value="0.00002100" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm" readonly>
+                </div>
+            </div>
+        </section>
+
+        <!-- Amounts -->
+        <section id="amount-input" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+            <label class="block text-sm font-medium text-text-primary">Monto</label>
+            <div class="space-y-3">
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="incoming-amount-input">Entra</label>
+                    <input type="number" id="incoming-amount-input" step="0.01" value="125000.00" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs text-gray-500 mb-2" for="outgoing-amount-input">Sale</label>
+                    <input type="number" id="outgoing-amount-input" step="0.01" value="150.00" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-sm">
+                </div>
+            </div>
+        </section>
+
+        <!-- Margin indicator -->
+        <section id="margin-indicator" class="bg-success bg-opacity-10 border border-success rounded-lg p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-chart-line text-success mr-2"></i>
+                    <span class="font-medium text-success text-sm">Margen estimado</span>
+                </div>
+                <span id="margin-percentage" class="text-lg font-bold text-success">+0,4%</span>
+            </div>
+            <div class="text-sm text-success mt-1" id="margin-reference">(vs mercado: TC $830,00)</div>
+        </section>
+
+        <!-- Validation summary -->
+        <section id="validation-messages" class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div class="flex items-start">
+                <i class="fa-solid fa-circle-info text-blue-600 mr-2 mt-1"></i>
+                <div>
+                    <div class="font-medium text-blue-800 text-sm">Validaciones automáticas</div>
+                    <ul id="validation-list" class="text-sm text-blue-700 mt-2 space-y-1">
+                        <li>✓ TC dentro de límites establecidos</li>
+                        <li>✓ Monto dentro de límites diarios</li>
+                        <li>✓ Cliente con documentación vigente</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Feedback -->
+        <div id="form-feedback" class="hidden border rounded-lg px-4 py-3 text-sm"></div>
+
+        <!-- Action buttons -->
+        <section id="action-buttons" class="space-y-3">
+            <button id="continue-button" type="submit" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                Continuar
+                <i class="fa-solid fa-arrow-right ml-2"></i>
+            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button id="save-draft-button" type="button" class="px-4 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                    <i class="fa-solid fa-floppy-disk mr-2"></i>
+                    Guardar borrador
+                </button>
+                <button id="cancel-button" type="button" class="px-4 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                    <i class="fa-solid fa-xmark mr-2"></i>
+                    Cancelar
+                </button>
+            </div>
+        </section>
+    </form>
+</main>
+
+<!-- COMPONENT: New Client Modal -->
+<div id="new-client-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+        <div class="p-4 border-b border-gray-200 flex items-center justify-between">
+            <h2 class="text-lg font-semibold text-text-primary">Nuevo contacto</h2>
+            <button id="close-client-modal" class="text-gray-400 hover:text-gray-600" aria-label="Cerrar">
+                <i class="fa-solid fa-xmark text-xl"></i>
+            </button>
+        </div>
+        <form id="new-client-form" class="flex flex-col max-h-[calc(90vh-56px)]">
+            <div class="p-4 space-y-4 overflow-y-auto">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-first-name">Nombre *</label>
+                        <input id="new-client-first-name" name="firstName" type="text" autocomplete="off" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Ej: Juan">
+                        <p id="new-client-first-name-error" class="hidden mt-1 text-xs text-danger"></p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-last-name">Apellido *</label>
+                        <input id="new-client-last-name" name="lastName" type="text" autocomplete="off" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Ej: Pérez">
+                        <p id="new-client-last-name-error" class="hidden mt-1 text-xs text-danger"></p>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-owner">Responsable interno *</label>
+                    <input id="new-client-owner" name="internalOwner" type="text" autocomplete="off" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Ej: Ana Fernández">
+                    <p id="new-client-owner-error" class="hidden mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-type">Tipo de contacto *</label>
+                    <select id="new-client-type" name="contactType" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                        <option value="">Seleccioná una opción</option>
+                        <option value="client">Cliente</option>
+                        <option value="provider">Proveedor</option>
+                    </select>
+                    <p id="new-client-type-error" class="hidden mt-1 text-xs text-danger"></p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-primary-address">Domicilio principal</label>
+                    <div class="relative">
+                        <input id="new-client-primary-address" name="primaryAddress" type="text" autocomplete="off" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Ingresá una dirección">
+                        <div id="primary-address-suggestions" class="hidden absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <p class="mt-1 text-xs text-gray-500">Buscá una dirección y seleccioná una sugerencia.</p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-text-primary mb-2" for="new-client-secondary-address">Domicilio secundario</label>
+                    <div class="relative">
+                        <input id="new-client-secondary-address" name="secondaryAddress" type="text" autocomplete="off" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="Ingresá una dirección (opcional)">
+                        <div id="secondary-address-suggestions" class="hidden absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <p class="text-xs text-gray-500">Los campos marcados con * son obligatorios.</p>
+            </div>
+            <div class="p-4 border-t border-gray-200 space-y-3">
+                <div id="new-client-feedback" class="hidden text-sm rounded-lg px-4 py-2"></div>
+                <button id="create-client-button" type="submit" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    Guardar contacto
+                </button>
+                <button data-close-modal type="button" class="w-full px-6 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                    Cancelar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- COMPONENT: Footer -->
+<footer id="footer" class="bg-white border-t border-gray-200 py-4 px-4">
+    <div class="text-center space-y-3">
+        <div class="grid grid-cols-2 gap-3 text-xs">
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Términos de uso</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Política de privacidad</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Centro de ayuda</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Soporte técnico</span>
+        </div>
+        <div class="text-center space-y-2">
+            <span class="text-xs text-gray-500 block">© 2024 FinaTech - Versión 2.1.4</span>
+            <div class="flex items-center justify-center space-x-2">
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <span class="text-xs text-gray-600">Sistema operativo</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const backButton = document.getElementById('back-button');
+
+    const clientSearchInput = document.getElementById('client-search-input');
+    const clientSearchSuggestions = document.getElementById('client-search-suggestions');
+    const clientSearchResults = document.getElementById('client-search-results');
+    const clientSearchEmpty = document.getElementById('client-search-empty');
+    const clientSearchLoading = document.getElementById('client-search-loading');
+    const clientSelectionFeedback = document.getElementById('client-selection-feedback');
+    const clientMarginInfo = document.getElementById('client-margin-info');
+    const clientMarginValue = document.getElementById('client-margin-value');
+
+    const operationTypeButtons = Array.from(document.querySelectorAll('.operation-type-option'));
+    const assetIncomingSelect = document.getElementById('asset-incoming');
+    const assetOutgoingSelect = document.getElementById('asset-outgoing');
+    const subtypeSelect = document.getElementById('subtype-select');
+
+    const aprInput = document.getElementById('apr-input');
+    const marketAprInput = document.getElementById('market-apr-input');
+    const incomingAmountInput = document.getElementById('incoming-amount-input');
+    const outgoingAmountInput = document.getElementById('outgoing-amount-input');
+    const marginIndicator = document.getElementById('margin-indicator');
+    const marginPercentageLabel = document.getElementById('margin-percentage');
+    const marginReference = document.getElementById('margin-reference');
+
+    const continueButton = document.getElementById('continue-button');
+    const saveDraftButton = document.getElementById('save-draft-button');
+    const cancelButton = document.getElementById('cancel-button');
+    const formFeedback = document.getElementById('form-feedback');
+    const validationList = document.getElementById('validation-list');
+
+    const newClientButton = document.getElementById('new-client-button');
+    const clientModal = document.getElementById('new-client-modal');
+    const closeClientModalBtn = document.getElementById('close-client-modal');
+    const modalDismissButtons = clientModal?.querySelectorAll('[data-close-modal]');
+    const newClientForm = document.getElementById('new-client-form');
+    const createClientButton = document.getElementById('create-client-button');
+    const newClientFeedback = document.getElementById('new-client-feedback');
+    const newClientFirstName = document.getElementById('new-client-first-name');
+    const newClientLastName = document.getElementById('new-client-last-name');
+    const newClientOwner = document.getElementById('new-client-owner');
+    const newClientType = document.getElementById('new-client-type');
+    const primaryAddressInput = document.getElementById('new-client-primary-address');
+    const primaryAddressSuggestions = document.getElementById('primary-address-suggestions');
+    const secondaryAddressInput = document.getElementById('new-client-secondary-address');
+    const secondaryAddressSuggestions = document.getElementById('secondary-address-suggestions');
+
+    const draftStatus = document.getElementById('draft-status');
+    const draftSavedAt = document.getElementById('draft-saved-at');
+
+    const form = document.getElementById('transaction-data-form');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const draftIdFromParams = urlParams.get('draftId');
+
+    const assetLabels = {
+        ARS: 'Pesos Argentinos (ARS)',
+        USD: 'Dólares (USD)',
+        EUR: 'Euros (EUR)',
+        BRL: 'Reales (BRL)',
+        BTC: 'Bitcoin (BTC)'
+    };
+
+    let selectedClient = null;
+    let selectedOperationType = 'buy';
+    let clientSearchDebounce = null;
+    let isSavingDraft = false;
+    let lastDraftId = null;
+    let lastFetchedClients = [];
+    let lastEditedField = 'incoming';
+    let isCreatingClient = false;
+    const addressControllers = [];
+
+    const toggleMobileMenu = () => {
+        if (!mobileMenu) return;
+        mobileMenu.classList.toggle('hidden');
+    };
+
+    if (menuToggle) {
+        menuToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            toggleMobileMenu();
+            const icon = menuToggle.querySelector('i');
+            if (icon) {
+                icon.className = mobileMenu.classList.contains('hidden')
+                    ? 'fa-solid fa-bars text-lg'
+                    : 'fa-solid fa-times text-lg';
+            }
+        });
+    }
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (
+            mobileMenu &&
+            !mobileMenu.classList.contains('hidden') &&
+            menuToggle &&
+            !mobileMenu.contains(target) &&
+            !menuToggle.contains(target)
+        ) {
+            mobileMenu.classList.add('hidden');
+            const icon = menuToggle.querySelector('i');
+            if (icon) icon.className = 'fa-solid fa-bars text-lg';
+        }
+    });
+
+    if (backButton) {
+        backButton.addEventListener('click', () => {
+            window.location.href = '/dashboard';
+        });
+    }
+
+    const showFormFeedback = (message, type = 'success') => {
+        if (!formFeedback) return;
+        formFeedback.textContent = message;
+        formFeedback.classList.remove('hidden', 'border-success', 'bg-green-50', 'text-success', 'border-danger', 'bg-red-50', 'text-danger');
+        if (type === 'success') {
+            formFeedback.classList.add('border-success', 'bg-green-50', 'text-success');
+        } else {
+            formFeedback.classList.add('border-danger', 'bg-red-50', 'text-danger');
+        }
+    };
+
+    const hideFormFeedback = () => {
+        if (formFeedback) {
+            formFeedback.classList.add('hidden');
+        }
+    };
+
+    const toggleSuggestions = (visible) => {
+        if (!clientSearchSuggestions) return;
+        clientSearchSuggestions.classList.toggle('hidden', !visible);
+        if (clientSearchInput) {
+            clientSearchInput.setAttribute('aria-expanded', visible ? 'true' : 'false');
+        }
+    };
+
+    const toggleClientLoading = (isLoading) => {
+        if (!clientSearchLoading) return;
+        clientSearchLoading.classList.toggle('hidden', !isLoading);
+    };
+
+    const resetClientSuggestions = () => {
+        if (clientSearchResults) clientSearchResults.innerHTML = '';
+        if (clientSearchEmpty) clientSearchEmpty.classList.add('hidden');
+        toggleSuggestions(false);
+    };
+
+    const formatMargin = (value) => {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric)) return '+0,0%';
+        return `${numeric >= 0 ? '+' : ''}${numeric.toLocaleString('es-AR', {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+        })}%`;
+    };
+
+    const setSelectedClient = (client) => {
+        selectedClient = client || null;
+        if (!clientSearchInput) return;
+        if (client) {
+            clientSearchInput.value = `${client.fullName}${client.cuit ? ` - CUIT ${client.cuit}` : ''}`;
+            clientSelectionFeedback?.classList.add('hidden');
+            if (clientMarginInfo && clientMarginValue) {
+                clientMarginValue.textContent = formatMargin(client.lastMarginPercentage);
+                clientMarginInfo.classList.remove('hidden');
+            }
+        } else {
+            clientSearchInput.value = '';
+            clientMarginInfo?.classList.add('hidden');
+        }
+    };
+
+    const clientModalFields = {
+        firstName: {
+            input: newClientFirstName,
+            error: document.getElementById('new-client-first-name-error'),
+        },
+        lastName: {
+            input: newClientLastName,
+            error: document.getElementById('new-client-last-name-error'),
+        },
+        internalOwner: {
+            input: newClientOwner,
+            error: document.getElementById('new-client-owner-error'),
+        },
+        contactType: {
+            input: newClientType,
+            error: document.getElementById('new-client-type-error'),
+        },
+    };
+
+    const setClientModalFieldError = (field, message) => {
+        const config = clientModalFields[field];
+        if (!config) return;
+        if (config.error) {
+            config.error.textContent = message;
+            config.error.classList.remove('hidden');
+        }
+        if (config.input) {
+            config.input.classList.add('border-danger');
+            config.input.classList.remove('border-gray-300');
+        }
+    };
+
+    const clearClientModalFieldError = (field) => {
+        const config = clientModalFields[field];
+        if (!config) return;
+        if (config.error) {
+            config.error.textContent = '';
+            config.error.classList.add('hidden');
+        }
+        if (config.input) {
+            config.input.classList.remove('border-danger');
+            config.input.classList.add('border-gray-300');
+        }
+    };
+
+    const clearAllClientModalErrors = () => {
+        Object.keys(clientModalFields).forEach((field) => clearClientModalFieldError(field));
+    };
+
+    const showClientModalFeedback = (message, type = 'info') => {
+        if (!newClientFeedback) return;
+        newClientFeedback.textContent = message;
+        newClientFeedback.classList.remove(
+            'hidden',
+            'bg-red-50',
+            'bg-green-50',
+            'bg-blue-50',
+            'text-danger',
+            'text-success',
+            'text-blue-700',
+            'border-danger',
+            'border-success',
+            'border-blue-200'
+        );
+        newClientFeedback.classList.add('border', 'rounded-lg');
+        if (type === 'success') {
+            newClientFeedback.classList.add('bg-green-50', 'text-success', 'border-success');
+        } else if (type === 'error') {
+            newClientFeedback.classList.add('bg-red-50', 'text-danger', 'border-danger');
+        } else {
+            newClientFeedback.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-200');
+        }
+    };
+
+    const hideClientModalFeedback = () => {
+        if (!newClientFeedback) return;
+        newClientFeedback.textContent = '';
+        newClientFeedback.classList.add('hidden');
+    };
+
+    const createAddressAutocomplete = (input, container) => {
+        if (!input || !container) return null;
+        let debounceId = null;
+
+        const hide = () => {
+            container.innerHTML = '';
+            container.classList.add('hidden');
+        };
+
+        const fetchPredictions = async (query) => {
+            try {
+                const response = await fetch(`/api/geocoding/autocomplete?input=${encodeURIComponent(query)}`, {
+                    credentials: 'include',
+                });
+                if (!response.ok) {
+                    return [];
+                }
+                const data = await response.json();
+                return Array.isArray(data.predictions) ? data.predictions : [];
+            } catch (_error) {
+                return [];
+            }
+        };
+
+        const renderPredictions = (predictions) => {
+            container.innerHTML = '';
+            if (!Array.isArray(predictions) || predictions.length === 0) {
+                hide();
+                return;
+            }
+
+            predictions.slice(0, 6).forEach((prediction) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.dataset.placeId = prediction.placeId || '';
+                button.dataset.description = prediction.description || '';
+                button.className = 'w-full text-left px-4 py-2 hover:bg-blue-50 focus:outline-none focus:bg-blue-50 transition-colors';
+
+                const mainLine = document.createElement('div');
+                mainLine.className = 'text-sm text-text-primary';
+                mainLine.textContent =
+                    prediction?.structuredFormatting?.main_text || prediction.description || '';
+                button.appendChild(mainLine);
+
+                const secondaryText = prediction?.structuredFormatting?.secondary_text;
+                if (secondaryText) {
+                    const secondaryLine = document.createElement('div');
+                    secondaryLine.className = 'text-xs text-gray-500 mt-1';
+                    secondaryLine.textContent = secondaryText;
+                    button.appendChild(secondaryLine);
+                }
+
+                container.appendChild(button);
+            });
+
+            container.classList.remove('hidden');
+        };
+
+        input.addEventListener('input', (event) => {
+            const value = event.target.value.trim();
+            input.dataset.placeId = '';
+            input.dataset.description = '';
+            if (debounceId) clearTimeout(debounceId);
+
+            if (value.length < 3) {
+                hide();
+                return;
+            }
+
+            debounceId = setTimeout(async () => {
+                const predictions = await fetchPredictions(value);
+                if (value !== input.value.trim()) {
+                    return;
+                }
+                renderPredictions(predictions);
+            }, 250);
+        });
+
+        container.addEventListener('click', (event) => {
+            const button = event.target.closest('button[data-place-id]');
+            if (!button) return;
+            event.preventDefault();
+            input.value = button.dataset.description || input.value;
+            input.dataset.placeId = button.dataset.placeId || '';
+            input.dataset.description = button.dataset.description || '';
+            hide();
+        });
+
+        input.addEventListener('focus', () => {
+            if (container.childElementCount > 0) {
+                container.classList.remove('hidden');
+            }
+        });
+
+        return {
+            hide,
+            reset: () => {
+                input.value = '';
+                input.dataset.placeId = '';
+                input.dataset.description = '';
+                hide();
+            },
+            getValue: () => {
+                const value = input.value.trim();
+                if (!value) return null;
+                return {
+                    formatted: value,
+                    description: input.dataset.description || value,
+                    placeId: input.dataset.placeId || null,
+                };
+            },
+            input,
+            container,
+        };
+    };
+
+    const primaryAddressController = createAddressAutocomplete(primaryAddressInput, primaryAddressSuggestions);
+    const secondaryAddressController = createAddressAutocomplete(
+        secondaryAddressInput,
+        secondaryAddressSuggestions
+    );
+
+    if (primaryAddressController) addressControllers.push(primaryAddressController);
+    if (secondaryAddressController) addressControllers.push(secondaryAddressController);
+
+    const resetNewClientForm = () => {
+        newClientForm?.reset();
+        clearAllClientModalErrors();
+        hideClientModalFeedback();
+        if (primaryAddressController) primaryAddressController.reset();
+        if (secondaryAddressController) secondaryAddressController.reset();
+        isCreatingClient = false;
+        if (createClientButton) {
+            createClientButton.disabled = false;
+            createClientButton.innerHTML = 'Guardar contacto';
+        }
+    };
+
+    const gatherNewClientPayload = () => ({
+        firstName: newClientFirstName?.value.trim() || '',
+        lastName: newClientLastName?.value.trim() || '',
+        internalOwner: newClientOwner?.value.trim() || '',
+        contactType: newClientType?.value || '',
+        primaryAddress: primaryAddressController?.getValue(),
+        secondaryAddress: secondaryAddressController?.getValue(),
+    });
+
+    const validateNewClientForm = () => {
+        clearAllClientModalErrors();
+        let valid = true;
+
+        if (!newClientFirstName?.value.trim()) {
+            setClientModalFieldError('firstName', 'Ingresá el nombre.');
+            valid = false;
+        }
+
+        if (!newClientLastName?.value.trim()) {
+            setClientModalFieldError('lastName', 'Ingresá el apellido.');
+            valid = false;
+        }
+
+        if (!newClientOwner?.value.trim()) {
+            setClientModalFieldError('internalOwner', 'Indicá el responsable interno.');
+            valid = false;
+        }
+
+        if (!newClientType?.value) {
+            setClientModalFieldError('contactType', 'Seleccioná el tipo de contacto.');
+            valid = false;
+        }
+
+        return valid;
+    };
+
+    newClientFirstName?.addEventListener('input', () => clearClientModalFieldError('firstName'));
+    newClientLastName?.addEventListener('input', () => clearClientModalFieldError('lastName'));
+    newClientOwner?.addEventListener('input', () => clearClientModalFieldError('internalOwner'));
+    newClientType?.addEventListener('change', () => clearClientModalFieldError('contactType'));
+
+    const renderClientResults = (clients) => {
+        if (!clientSearchResults || !clientSearchEmpty) return;
+        if (!Array.isArray(clients) || clients.length === 0) {
+            clientSearchResults.innerHTML = '';
+            clientSearchEmpty.classList.remove('hidden');
+            toggleSuggestions(true);
+            return;
+        }
+        lastFetchedClients = clients;
+        clientSearchResults.innerHTML = clients
+            .map((client, index) => {
+                const margin = Number(client.lastMarginPercentage ?? 0);
+                const badgeClass = margin >= 0 ? 'text-success' : 'text-danger';
+                return `<li class="client-result-item px-4 py-3 cursor-pointer hover:bg-blue-50" role="option" tabindex="0" aria-selected="false" data-index="${index}">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm font-medium text-text-primary">${client.fullName}</p>
+                            <p class="text-xs text-gray-500">${client.cuit || 'CUIT no informado'}</p>
+                        </div>
+                        <span class="text-xs font-semibold ${badgeClass}">${formatMargin(margin)}</span>
+                    </div>
+                </li>`;
+            })
+            .join('');
+        clientSearchEmpty.classList.add('hidden');
+        toggleSuggestions(true);
+    };
+
+    const fetchClients = async (query) => {
+        try {
+            toggleClientLoading(true);
+            const response = await fetch(`/api/clients?q=${encodeURIComponent(query)}&limit=8`, {
+                credentials: 'include'
+            });
+            if (!response.ok) throw new Error('Error al obtener clientes');
+            const data = await response.json();
+            return Array.isArray(data.items) ? data.items : [];
+        } catch (error) {
+            console.error(error);
+            return [];
+        } finally {
+            toggleClientLoading(false);
+        }
+    };
+
+    if (clientSearchInput) {
+        clientSearchInput.addEventListener('input', (event) => {
+            const value = event.target.value.trim();
+            if (clientSearchDebounce) clearTimeout(clientSearchDebounce);
+            if (!value) {
+                selectedClient = null;
+                resetClientSuggestions();
+                return;
+            }
+            clientSearchDebounce = setTimeout(async () => {
+                const clients = await fetchClients(value);
+                renderClientResults(clients);
+            }, 250);
+        });
+
+        clientSearchInput.addEventListener('focus', () => {
+            if (clientSearchResults && clientSearchResults.children.length > 0) {
+                toggleSuggestions(true);
+            }
+        });
+    }
+
+    if (clientSearchResults) {
+        clientSearchResults.addEventListener('click', (event) => {
+            const item = event.target.closest('.client-result-item');
+            if (!item) return;
+            const index = Number(item.dataset.index);
+            const rawClient = lastFetchedClients[index];
+            if (!rawClient) return;
+            const client = {
+                id: rawClient.id,
+                fullName: rawClient.fullName,
+                cuit: rawClient.cuit || null,
+                lastMarginPercentage: Number(rawClient.lastMarginPercentage ?? 0)
+            };
+            Array.from(clientSearchResults.children).forEach((node) => node.setAttribute('aria-selected', 'false'));
+            item.setAttribute('aria-selected', 'true');
+            setSelectedClient(client);
+            toggleSuggestions(false);
+        });
+    }
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            toggleSuggestions(false);
+            addressControllers.forEach((controller) => controller?.hide());
+            if (clientModal && !clientModal.classList.contains('hidden')) {
+                closeClientModal();
+            }
+        }
+    });
+
+    document.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (
+            clientSearchSuggestions &&
+            !clientSearchSuggestions.classList.contains('hidden') &&
+            clientSearchInput &&
+            !clientSearchSuggestions.contains(target) &&
+            target !== clientSearchInput
+        ) {
+            toggleSuggestions(false);
+        }
+        addressControllers.forEach((controller) => {
+            if (
+                controller &&
+                controller.container &&
+                controller.input &&
+                !controller.container.contains(target) &&
+                controller.input !== target &&
+                !controller.input.contains?.(target)
+            ) {
+                controller.hide();
+            }
+        });
+    });
+
+    const updateOperationType = (type) => {
+        selectedOperationType = type === 'sell' ? 'sell' : 'buy';
+        operationTypeButtons.forEach((button) => {
+            const isActive = button.dataset.value === selectedOperationType;
+            button.className = isActive
+                ? 'operation-type-option p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg font-medium text-sm'
+                : 'operation-type-option p-4 border-2 border-gray-300 text-gray-600 rounded-lg font-medium text-sm hover:border-primary hover:text-primary transition-colors';
+        });
+
+        if (selectedOperationType === 'buy') {
+            assetIncomingSelect.value = 'ARS';
+            assetOutgoingSelect.value = 'USD';
+        } else {
+            assetIncomingSelect.value = 'USD';
+            assetOutgoingSelect.value = 'ARS';
+        }
+        lastEditedField = 'incoming';
+        recomputeAmounts();
+    };
+
+    operationTypeButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+            updateOperationType(button.dataset.value || 'buy');
+        });
+    });
+
+    const getAprValue = () => Number(aprInput?.value ?? 0);
+    const getMarketAprValue = () => Number(marketAprInput?.value ?? 0);
+    const getIncomingAmount = () => Number(incomingAmountInput?.value ?? 0);
+    const getOutgoingAmount = () => Number(outgoingAmountInput?.value ?? 0);
+
+    const updateMarginIndicator = () => {
+        if (!marginIndicator || !marginPercentageLabel) return;
+        const apr = getAprValue();
+        const marketApr = getMarketAprValue();
+        if (!Number.isFinite(apr) || !Number.isFinite(marketApr) || marketApr <= 0) {
+            marginPercentageLabel.textContent = '--';
+            return;
+        }
+        const marginValue = ((apr - marketApr) / marketApr) * 100;
+        const formattedMargin = marginValue.toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        marginPercentageLabel.textContent = `${marginValue >= 0 ? '+' : ''}${formattedMargin}%`;
+        marginReference.textContent = `(vs mercado: TC $${marketApr.toLocaleString('es-AR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })})`;
+
+        marginIndicator.classList.remove('bg-success', 'bg-danger', 'border-success', 'border-danger');
+        marginPercentageLabel.classList.remove('text-success', 'text-danger');
+        if (marginValue >= 0) {
+            marginIndicator.classList.add('bg-success', 'bg-opacity-10', 'border', 'border-success');
+            marginPercentageLabel.classList.add('text-success');
+        } else {
+            marginIndicator.classList.add('bg-danger', 'bg-opacity-10', 'border', 'border-danger');
+            marginPercentageLabel.classList.add('text-danger');
+        }
+    };
+
+    const setIncomingAmount = (value) => {
+        if (!incomingAmountInput) return;
+        incomingAmountInput.value = Number.isFinite(value) ? value.toFixed(2) : '';
+    };
+
+    const setOutgoingAmount = (value) => {
+        if (!outgoingAmountInput) return;
+        outgoingAmountInput.value = Number.isFinite(value) ? value.toFixed(2) : '';
+    };
+
+    const recomputeAmounts = () => {
+        const apr = getAprValue();
+        if (!Number.isFinite(apr) || apr <= 0) {
+            updateMarginIndicator();
+            return;
+        }
+        if (lastEditedField === 'incoming') {
+            const incoming = getIncomingAmount();
+            if (Number.isFinite(incoming)) {
+                const outgoing = incoming / apr;
+                setOutgoingAmount(outgoing);
+            }
+        } else {
+            const outgoing = getOutgoingAmount();
+            if (Number.isFinite(outgoing)) {
+                const incoming = outgoing * apr;
+                setIncomingAmount(incoming);
+            }
+        }
+        updateMarginIndicator();
+    };
+
+    incomingAmountInput?.addEventListener('input', () => {
+        lastEditedField = 'incoming';
+        recomputeAmounts();
+    });
+
+    outgoingAmountInput?.addEventListener('input', () => {
+        lastEditedField = 'outgoing';
+        recomputeAmounts();
+    });
+
+    aprInput?.addEventListener('input', () => {
+        recomputeAmounts();
+    });
+
+    marketAprInput?.addEventListener('input', () => {
+        updateMarginIndicator();
+    });
+
+    assetIncomingSelect?.addEventListener('change', () => {
+        lastEditedField = 'incoming';
+        recomputeAmounts();
+    });
+
+    assetOutgoingSelect?.addEventListener('change', () => {
+        lastEditedField = 'incoming';
+        recomputeAmounts();
+    });
+
+    const gatherFormData = () => {
+        const incomingCode = assetIncomingSelect?.value;
+        const outgoingCode = assetOutgoingSelect?.value;
+        return {
+            clientId: selectedClient?.id || null,
+            type: selectedOperationType,
+            incomingAsset: {
+                code: incomingCode,
+                label: assetLabels[incomingCode] || incomingCode
+            },
+            outgoingAsset: {
+                code: outgoingCode,
+                label: assetLabels[outgoingCode] || outgoingCode
+            },
+            subtype: subtypeSelect?.value || null,
+            apr: getAprValue(),
+            marketApr: getMarketAprValue(),
+            incomingAmount: getIncomingAmount(),
+            outgoingAmount: getOutgoingAmount(),
+            notes: null
+        };
+    };
+
+    const updateDraftStatus = (timestamp) => {
+        if (!draftStatus || !draftSavedAt) return;
+        if (!timestamp) {
+            draftStatus.classList.add('hidden');
+            return;
+        }
+        const reference = new Date(timestamp);
+        if (Number.isNaN(reference.getTime())) {
+            draftStatus.classList.add('hidden');
+            return;
+        }
+        draftSavedAt.textContent = reference.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' });
+        draftStatus.classList.remove('hidden');
+    };
+
+    const validateForm = () => {
+        hideFormFeedback();
+        let isValid = true;
+        if (!selectedClient) {
+            clientSelectionFeedback?.classList.remove('hidden');
+            isValid = false;
+        } else {
+            clientSelectionFeedback?.classList.add('hidden');
+        }
+        if (!Number.isFinite(getAprValue()) || getAprValue() <= 0) {
+            showFormFeedback('Ingresá un tipo de cambio válido.', 'error');
+            return false;
+        }
+        if (!Number.isFinite(getIncomingAmount()) || getIncomingAmount() <= 0) {
+            showFormFeedback('Ingresá un monto válido para el bien que ingresa.', 'error');
+            return false;
+        }
+        if (!Number.isFinite(getOutgoingAmount()) || getOutgoingAmount() <= 0) {
+            showFormFeedback('Ingresá un monto válido para el bien que sale.', 'error');
+            return false;
+        }
+        return isValid;
+    };
+
+    const saveDraft = async ({ silent = false } = {}) => {
+        if (isSavingDraft) return null;
+        if (!validateForm()) return null;
+
+        const payload = gatherFormData();
+        if (!payload.clientId) return null;
+
+        isSavingDraft = true;
+        try {
+            const endpoint = lastDraftId
+                ? `/api/transactions/draft/${encodeURIComponent(lastDraftId)}`
+                : '/api/transactions/draft';
+            const method = lastDraftId ? 'PUT' : 'POST';
+
+            const response = await fetch(endpoint, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                if (response.status === 401) throw new Error('Debés iniciar sesión para guardar la operación.');
+                const body = await response.json().catch(() => ({}));
+                throw new Error(body?.message || 'No se pudo guardar el borrador.');
+            }
+
+            const data = await response.json();
+            lastDraftId = data?.id || data?._id || lastDraftId;
+
+            if (data?.client) {
+                setSelectedClient({
+                    id: data.client.id,
+                    fullName: data.client.fullName,
+                    cuit: data.client.cuit,
+                    lastMarginPercentage: data.client.lastMarginPercentage
+                });
+            }
+
+            if (lastDraftId) {
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('draftId', lastDraftId);
+                window.history.replaceState({}, '', currentUrl);
+            }
+
+            updateDraftStatus(data?.updatedAt || new Date().toISOString());
+            if (!silent) showFormFeedback('Borrador guardado correctamente.', 'success');
+            return data;
+        } catch (error) {
+            if (!silent) showFormFeedback(error.message || 'No se pudo guardar el borrador.', 'error');
+            return null;
+        } finally {
+            isSavingDraft = false;
+        }
+    };
+
+    const ensureOption = (select, value, label) => {
+        if (!select || !value) return;
+        if (!Array.from(select.options).some((option) => option.value === value)) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = label || value;
+            select.appendChild(option);
+        }
+    };
+
+    const hydrateFormFromDraft = (draft) => {
+        if (!draft) return;
+        lastDraftId = draft.id || lastDraftId;
+
+        if (draft.client) {
+            setSelectedClient({
+                id: draft.client.id,
+                fullName: draft.client.fullName,
+                cuit: draft.client.cuit,
+                lastMarginPercentage: draft.client.lastMarginPercentage
+            });
+        }
+
+        updateOperationType(draft.type === 'sell' ? 'sell' : 'buy');
+
+        if (draft.incomingAsset) {
+            ensureOption(assetIncomingSelect, draft.incomingAsset.code, draft.incomingAsset.label);
+            assetIncomingSelect.value = draft.incomingAsset.code;
+        }
+        if (draft.outgoingAsset) {
+            ensureOption(assetOutgoingSelect, draft.outgoingAsset.code, draft.outgoingAsset.label);
+            assetOutgoingSelect.value = draft.outgoingAsset.code;
+        }
+
+        if (draft.subtype) {
+            ensureOption(subtypeSelect, draft.subtype, draft.subtype);
+            subtypeSelect.value = draft.subtype;
+        }
+
+        if (Number.isFinite(Number(draft.apr))) aprInput.value = Number(draft.apr).toFixed(4);
+        if (Number.isFinite(Number(draft.marketApr))) marketAprInput.value = Number(draft.marketApr).toFixed(4);
+        if (Number.isFinite(Number(draft.incomingAmount))) incomingAmountInput.value = Number(draft.incomingAmount).toFixed(2);
+        if (Number.isFinite(Number(draft.outgoingAmount))) outgoingAmountInput.value = Number(draft.outgoingAmount).toFixed(2);
+
+        lastEditedField = 'incoming';
+        updateMarginIndicator();
+        updateDraftStatus(draft.updatedAt);
+    };
+
+    const loadDraftById = async (draftId) => {
+        if (!draftId) return;
+        try {
+            const response = await fetch(`/api/transactions/${encodeURIComponent(draftId)}`, {
+                credentials: 'include'
+            });
+            if (!response.ok) {
+                if (response.status === 404) {
+                    window.location.replace('/dashboard/operations/new');
+                    return;
+                }
+                throw new Error('No se pudo cargar el borrador.');
+            }
+            const data = await response.json();
+            hydrateFormFromDraft(data);
+        } catch (error) {
+            showFormFeedback(error.message || 'No se pudo cargar el borrador.', 'error');
+        }
+    };
+
+    if (saveDraftButton) {
+        saveDraftButton.addEventListener('click', async () => {
+            await saveDraft();
+        });
+    }
+
+    if (cancelButton) {
+        cancelButton.addEventListener('click', () => {
+            if (confirm('Estás por cancelar la operación. Los cambios no guardados se perderán. ¿Querés continuar?')) {
+                window.location.href = '/dashboard';
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const result = await saveDraft({ silent: true });
+            if (result) {
+                const draftId = result.id || lastDraftId;
+                if (draftId) {
+                    window.location.href = `/dashboard/operations/new/settlement?draftId=${encodeURIComponent(draftId)}`;
+                } else {
+                    showFormFeedback('No se pudo identificar el borrador. Intentá guardar nuevamente.', 'error');
+                }
+            } else {
+                showFormFeedback('Revisá los datos antes de continuar.', 'error');
+            }
+        });
+    }
+
+    if (newClientButton && clientModal) {
+        newClientButton.addEventListener('click', () => {
+            resetNewClientForm();
+            clientModal.classList.add('flex');
+            clientModal.classList.remove('hidden');
+            newClientFirstName?.focus();
+        });
+    }
+
+    const closeClientModal = () => {
+        resetNewClientForm();
+        clientModal?.classList.remove('flex');
+        clientModal?.classList.add('hidden');
+    };
+
+    closeClientModalBtn?.addEventListener('click', closeClientModal);
+    modalDismissButtons?.forEach((button) => {
+        button.addEventListener('click', closeClientModal);
+    });
+
+    clientModal?.addEventListener('click', (event) => {
+        if (event.target === clientModal) closeClientModal();
+    });
+
+    newClientForm?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (isCreatingClient) return;
+
+        hideClientModalFeedback();
+
+        if (!validateNewClientForm()) {
+            showClientModalFeedback('Revisá los campos obligatorios.', 'error');
+            return;
+        }
+
+        const payload = gatherNewClientPayload();
+        const originalButtonContent = createClientButton ? createClientButton.innerHTML : 'Guardar contacto';
+
+        isCreatingClient = true;
+        if (createClientButton) {
+            createClientButton.disabled = true;
+            createClientButton.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Guardando...';
+        }
+
+        try {
+            const response = await fetch('/api/clients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(payload),
+            });
+
+            if (!response.ok) {
+                const errorBody = await response.json().catch(() => ({}));
+                if (Array.isArray(errorBody?.errors)) {
+                    errorBody.errors.forEach((errorItem) => {
+                        if (errorItem?.field) {
+                            setClientModalFieldError(errorItem.field, errorItem.message || 'Campo inválido.');
+                        }
+                    });
+                }
+                showClientModalFeedback(errorBody?.message || 'No se pudo crear el contacto.', 'error');
+                return;
+            }
+
+            const client = await response.json();
+            closeClientModal();
+            setSelectedClient(client);
+            lastFetchedClients = [client, ...lastFetchedClients.filter((item) => item.id !== client.id)];
+            resetClientSuggestions();
+            showFormFeedback('Contacto creado correctamente.', 'success');
+        } catch (_error) {
+            showClientModalFeedback('No se pudo crear el contacto. Intentá nuevamente.', 'error');
+        } finally {
+            isCreatingClient = false;
+            if (createClientButton) {
+                createClientButton.disabled = false;
+                createClientButton.innerHTML = originalButtonContent;
+            }
+        }
+    });
+
+    if (draftIdFromParams) {
+        loadDraftById(draftIdFromParams);
+    } else {
+        updateOperationType('buy');
+        recomputeAmounts();
+    }
+});
+</script>
+
+</body>
+</html>

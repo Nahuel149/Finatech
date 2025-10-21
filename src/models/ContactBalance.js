@@ -1,0 +1,40 @@
+const mongoose = require('mongoose');
+
+const contactBalanceSchema = new mongoose.Schema(
+  {
+    contact: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Client',
+      required: true,
+    },
+    currency: {
+      type: String,
+      required: true,
+      uppercase: true,
+      trim: true,
+    },
+    amount: {
+      type: Number,
+      default: 0,
+    },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+  },
+  {
+    timestamps: true,
+  }
+);
+
+contactBalanceSchema.index({ contact: 1, currency: 1 }, { unique: true });
+
+contactBalanceSchema.pre('save', function roundAmount(next) {
+  if (Number.isFinite(this.amount)) {
+    this.amount = Math.round(Number(this.amount) * 100) / 100;
+  }
+  next();
+});
+
+module.exports = mongoose.model('ContactBalance', contactBalanceSchema);

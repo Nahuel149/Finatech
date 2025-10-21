@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .success-animation {
+            animation: successPulse 0.6s ease-out;
+        }
+        @keyframes successPulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Mobile Header -->
+<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="mobile-back-button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+                <i class="fa-solid fa-bars text-lg"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- COMPONENT: Mobile Navigation Menu -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden lg:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <button class="flex items-center w-full px-3 py-2 bg-primary bg-opacity-10 rounded-lg text-primary font-medium" type="button">
+                <i class="fa-solid fa-exchange-alt mr-3"></i>
+                Operaciones
+            </button>
+            <button class="flex items-center w-full px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                Tesorería
+            </button>
+            <button class="flex items-center w-full px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </button>
+            <button class="flex items-center w-full px-3 py-2 text-text-primary" type="button">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </button>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Mobile Balance Cards -->
+<section id="mobile-balance-cards" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30 overflow-x-auto lg:hidden">
+    <div class="px-4 py-4">
+        <div class="flex space-x-4 min-w-max">
+            <article class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline" type="button">Reintentar</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- COMPONENT: Desktop Navbar -->
+<nav id="desktop-navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="/dashboard" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div class="flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+            <div class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Desktop Balance Cards -->
+<section id="desktop-balance-cards" class="hidden lg:block fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </article>
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline" type="button">Reintentar</button>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- COMPONENT: Main Content -->
+<main id="confirmation-container" class="pt-[280px] px-4 pb-32 mx-auto lg:pt-[220px] lg:px-6 lg:max-w-4xl">
+    <section id="page-header" class="mb-6 lg:mb-8">
+        <nav id="breadcrumbs" class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <button onclick="navigateToOperations()" class="hover:text-primary transition-colors">Operaciones</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <button onclick="navigateToTransfers()" class="hover:text-primary transition-colors">Transferencia en ARS</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Confirmación</span>
+        </nav>
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="goBackToDistribution()" class="mr-3 p-2 hover:bg-gray-100 rounded-lg transition-colors lg:mr-4" aria-label="Volver">
+                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-xl font-bold text-text-primary lg:text-2xl">Confirmación de operación</h1>
+                    <p class="text-sm text-gray-600 lg:text-base">Verificá los datos antes de confirmar</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="confirmation-content" class="space-y-4 lg:space-y-6">
+        <article id="configuration-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-6">
+            <div class="flex items-center justify-between mb-3 lg:mb-4">
+                <h3 class="text-base font-semibold text-text-primary flex items-center lg:text-lg">
+                    <i class="fa-solid fa-cog text-primary mr-2 text-sm lg:mr-3"></i>
+                    Configuración
+                </h3>
+                <button onclick="editConfiguration()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div class="space-y-3 lg:grid lg:grid-cols-2 lg:gap-6 lg:space-y-0">
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Tipo de movimiento</span>
+                    <div class="mt-1 text-sm font-medium text-text-primary lg:text-base" id="movement-type">—</div>
+                </div>
+                <div>
+                    <span class="text-sm font-medium text-gray-600">Dirección</span>
+                    <div class="mt-1 text-sm font-medium text-text-primary lg:text-base" id="movement-direction">—</div>
+                </div>
+            </div>
+        </article>
+
+        <article id="total-amount-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-6">
+            <div class="flex items-center justify-between mb-3 lg:mb-4">
+                <h3 class="text-base font-semibold text-text-primary flex items-center lg:text-lg">
+                    <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm lg:mr-3"></i>
+                    Monto total
+                </h3>
+                <button onclick="editAmount()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="text-2xl font-bold text-blue-900 lg:text-3xl" id="total-amount-display">$0,00</div>
+                <div class="text-sm text-blue-700 mt-1" id="total-amount-currency">—</div>
+            </div>
+        </article>
+
+        <article id="distribution-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-6">
+            <div class="flex items-center justify-between mb-3 lg:mb-4">
+                <h3 class="text-base font-semibold text-text-primary flex items-center lg:text-lg">
+                    <i class="fa-solid fa-users text-primary mr-2 text-sm lg:mr-3"></i>
+                    Distribución
+                </h3>
+                <button onclick="editDistribution()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div id="distribution-lines" class="space-y-3 lg:space-y-4"></div>
+            <div class="mt-3 pt-3 border-t border-gray-200 lg:mt-4 lg:pt-4">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">Total distribuido:</span>
+                    <span class="font-semibold text-text-primary" id="distribution-total">—</span>
+                </div>
+            </div>
+        </article>
+    </div>
+</main>
+
+<!-- Success State -->
+<section id="success-state" class="hidden pt-[280px] px-4 pb-32 lg:pt-[170px] lg:px-6">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 text-center max-w-2xl mx-auto lg:p-8">
+        <div class="success-animation mb-6">
+            <div class="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-check text-white text-2xl"></i>
+            </div>
+            <h2 class="text-xl font-bold text-text-primary mb-2 lg:text-2xl">Transferencia registrada correctamente</h2>
+            <p class="text-gray-600 mb-6">La operación ha sido guardada exitosamente en el sistema</p>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="text-sm text-blue-700 font-medium mb-1">ID de operación</div>
+            <div class="text-xl font-bold text-blue-900 lg:text-2xl" id="success-operation-id">—</div>
+        </div>
+        <div class="space-y-3">
+            <button id="view-details-button" onclick="viewDetails()" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                <i class="fa-solid fa-eye mr-2"></i>
+                Ver detalle
+            </button>
+            <div class="space-y-2 lg:grid lg:grid-cols-2 lg:gap-3 lg:space-y-0">
+                <button onclick="newTransfer()" class="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Registrar otra transferencia
+                </button>
+                <button onclick="backToOperations()" class="w-full px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- COMPONENT: Fixed Footer Actions -->
+<div id="footer-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="px-4 py-3 lg:px-6 lg:py-4">
+        <div class="space-y-2 lg:flex lg:items-center lg:justify-between lg:space-y-0">
+            <div class="flex space-x-2 lg:space-x-4">
+                <button onclick="goBackToDistribution()" class="flex-1 px-4 py-2 text-gray-700 hover:text-text-primary transition-colors font-medium text-sm lg:flex-none lg:px-6 lg:py-3">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Atrás
+                </button>
+                <button onclick="saveDraft()" class="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium text-sm lg:flex-none lg:px-6 lg:py-3">
+                    <i class="fa-solid fa-save mr-2"></i>
+                    Guardar borrador
+                </button>
+            </div>
+            <button id="confirm-button" class="w-full px-6 py-3 bg-success text-white rounded-lg hover:bg-green-700 transition-colors font-medium lg:w-auto lg:px-8">
+                <span>Confirmar operación</span>
+                <i class="fa-solid fa-check ml-2"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+const operationData = {
+    operationId: 'FT-TRF-000123',
+    configuration: {
+        type: 'Transferencia',
+        direction: 'Entrante'
+    },
+    totalAmount: 150000,
+    totalCurrency: 'ARS',
+    distribution: [
+        {
+            id: 1,
+            name: 'María González',
+            type: 'Cliente',
+            cuit: '20-12345678-9',
+            method: 'ARS',
+            amount: 75000,
+            icon: 'fa-user'
+        },
+        {
+            id: 2,
+            name: 'Empresa ABC S.A.',
+            type: 'Cliente',
+            cuit: '30-12345678-9',
+            method: 'USD',
+            amount: 75,
+            icon: 'fa-building'
+        }
+    ]
+};
+
+function goBackToDistribution() {
+    console.log('Navigate back to distribution step');
+}
+
+function editConfiguration() {
+    console.log('Edit configuration - navigate to step 1');
+}
+
+function editAmount() {
+    console.log('Edit amount - navigate to step 2');
+}
+
+function editDistribution() {
+    console.log('Edit distribution - navigate to step 3');
+}
+
+function navigateToOperations() {
+    console.log('Navigate to operations');
+}
+
+function navigateToTransfers() {
+    console.log('Navigate to transfers');
+}
+
+function viewDetails() {
+    console.log('Navigate to operation details');
+}
+
+function newTransfer() {
+    console.log('Start new transfer operation');
+}
+
+function backToOperations() {
+    console.log('Navigate back to operations list');
+}
+
+function saveDraft() {
+    showTemporaryMessage('Borrador guardado correctamente', 'success');
+}
+
+function confirmOperation() {
+    const confirmationContainer = document.getElementById('confirmation-container');
+    const footerActions = document.getElementById('footer-actions');
+    const successState = document.getElementById('success-state');
+    const confirmButton = document.getElementById('confirm-button');
+
+    confirmationContainer?.classList.add('hidden');
+    footerActions?.classList.add('hidden');
+    successState?.classList.remove('hidden');
+
+    hydrateSuccessState(operationData);
+    confirmButton?.setAttribute('disabled', 'true');
+    showTemporaryMessage('Transferencia registrada correctamente', 'success');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function formatAmount(amount, currency = 'ARS') {
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric)) {
+        return '--';
+    }
+    const formatted = numeric.toLocaleString('es-AR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    });
+    if (currency.toUpperCase() === 'USD') {
+        return `USD ${formatted}`;
+    }
+    return `$${formatted}`;
+}
+
+function showTemporaryMessage(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 fade-in ${
+        type === 'success' ? 'bg-success text-white' :
+        type === 'warning' ? 'bg-warning text-gray-800' :
+        type === 'error' ? 'bg-danger text-white' :
+        'bg-gray-800 text-white'
+    }`;
+    const icon = type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : type === 'error' ? 'exclamation-circle' : 'info';
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fa-solid fa-${icon} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function renderConfiguration(data) {
+    const typeEl = document.getElementById('movement-type');
+    const directionEl = document.getElementById('movement-direction');
+    if (typeEl) typeEl.textContent = data.configuration.type || '—';
+    if (directionEl) directionEl.textContent = data.configuration.direction || '—';
+}
+
+function renderAmount(data) {
+    const amountEl = document.getElementById('total-amount-display');
+    const currencyEl = document.getElementById('total-amount-currency');
+    if (amountEl) amountEl.textContent = formatAmount(data.totalAmount, data.totalCurrency);
+    if (currencyEl) {
+        currencyEl.textContent = data.totalCurrency && data.totalCurrency.toUpperCase() === 'USD'
+            ? 'Dólares estadounidenses'
+            : 'Pesos argentinos';
+    }
+}
+
+function renderDistribution(data) {
+    const list = document.getElementById('distribution-lines');
+    if (!list) return;
+    list.innerHTML = '';
+    data.distribution.forEach((line) => {
+        const card = document.createElement('div');
+        card.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg lg:p-4';
+        card.innerHTML = `
+            <div class="flex items-center space-x-3 lg:space-x-4">
+                <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center lg:w-10 lg:h-10">
+                    <i class="fa-solid ${line.icon || 'fa-user'} text-white text-xs lg:text-sm"></i>
+                </div>
+                <div>
+                    <div class="font-medium text-text-primary text-sm lg:text-base">${line.name}</div>
+                    <div class="text-xs text-gray-600 lg:text-sm">${line.type || '—'} • ${line.cuit || '—'}</div>
+                </div>
+            </div>
+            <div class="text-right">
+                <div class="font-semibold text-text-primary text-sm lg:text-base">${formatAmount(line.amount, line.method)}</div>
+                <div class="text-xs text-gray-600 lg:text-sm">${line.method || ''}</div>
+            </div>
+        `;
+        list.appendChild(card);
+    });
+    const totalEl = document.getElementById('distribution-total');
+    if (totalEl) totalEl.textContent = formatAmount(data.totalAmount, data.totalCurrency);
+}
+
+function hydrateSuccessState(data) {
+    const successIdEl = document.getElementById('success-operation-id');
+    if (successIdEl) {
+        successIdEl.textContent = data.operationId ? `#${data.operationId}` : '—';
+    }
+}
+
+function hydratePage(data) {
+    renderConfiguration(data);
+    renderAmount(data);
+    renderDistribution(data);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    hydratePage(operationData);
+
+    const confirmButton = document.getElementById('confirm-button');
+    confirmButton?.addEventListener('click', confirmOperation);
+
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (menuToggle && mobileMenu) {
+        menuToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const icon = menuToggle.querySelector('i');
+            const isHidden = mobileMenu.classList.toggle('hidden');
+            if (icon) {
+                icon.className = isHidden ? 'fa-solid fa-bars text-lg' : 'fa-solid fa-times text-lg';
+            }
+        });
+
+        document.addEventListener('click', (event) => {
+            if (mobileMenu.classList.contains('hidden')) return;
+            if (mobileMenu.contains(event.target) || menuToggle.contains(event.target)) return;
+            mobileMenu.classList.add('hidden');
+            const icon = menuToggle.querySelector('i');
+            if (icon) {
+                icon.className = 'fa-solid fa-bars text-lg';
+            }
+        });
+    }
+
+    const mobileBackButton = document.getElementById('mobile-back-button');
+    mobileBackButton?.addEventListener('click', goBackToDistribution);
+
+    document.addEventListener('keydown', (event) => {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault();
+            saveDraft();
+        }
+        if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+            event.preventDefault();
+            if (!confirmButton?.disabled) {
+                confirmOperation();
+            }
+        }
+        if (event.key === 'Escape') {
+            goBackToDistribution();
+        }
+    });
+});
+</script>
+
+</body>
+</html>

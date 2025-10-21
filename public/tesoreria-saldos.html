@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in-right { animation: slideInRight 0.3s ease-out; }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .positive-amount { color: #28A745; }
+        .negative-amount { color: #DC3545; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .tab-button.active {
+            border-bottom: 2px solid #0066CC;
+            color: #0066CC;
+        }
+        .detail-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .detail-panel.open {
+            transform: translateX(0);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Mobile Navbar -->
+<nav id="mobile-navbar" class="lg:hidden fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button type="button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver a la vista anterior">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+
+            <div class="flex items-center gap-3">
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden sm:block"></div>
+                <button id="menu-toggle" type="button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-expanded="false" aria-controls="mobile-menu">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Mobile Menu -->
+<div id="mobile-menu" class="lg:hidden fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+    <div class="px-4 py-3 space-y-4">
+        <div class="flex items-center pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+
+        <div class="space-y-2">
+            <a href="operations-summary.html" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
+                <span>Operaciones</span>
+            </a>
+            <span class="flex items-center px-3 py-2 rounded-lg text-primary bg-blue-50">
+                <i class="fa-solid fa-vault text-primary mr-3"></i>
+                <span>Tesorería</span>
+            </span>
+            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                <span>Logística</span>
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                <span>Liquidaciones</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Mobile Balance Stripe -->
+<section id="mobile-balance-stripe" class="lg:hidden fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30">
+    <div class="px-4 py-4">
+        <div class="space-y-3">
+            <article class="bg-gray-50 rounded-lg p-3">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-exchange-alt text-primary text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xs font-medium text-text-primary">Transferencias</div>
+                        <div class="text-lg font-bold text-text-primary" id="treasury-transfers-amount-mobile">$0,00</div>
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">ARS</span>
+                            <span class="text-xs text-gray-500" id="treasury-transfers-updated-mobile">Actualizado —</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            <article class="bg-gray-50 rounded-lg p-3">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-money-bills text-success text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xs font-medium text-text-primary">Efectivo</div>
+                        <div class="text-lg font-bold text-text-primary" id="treasury-cash-amount-mobile">$0,00</div>
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">ARS</span>
+                            <span class="text-xs text-gray-500" id="treasury-cash-updated-mobile">Actualizado —</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            <article class="bg-gray-50 rounded-lg p-3">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-dollar-sign text-warning text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xs font-medium text-text-primary">Caja</div>
+                        <div class="text-lg font-bold text-text-primary" id="treasury-usd-amount-mobile">USD 0,00</div>
+                        <div class="flex items-center justify-between">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">USD</span>
+                            <span class="text-xs text-gray-500" id="treasury-usd-updated-mobile">Actualizado —</span>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- Desktop Navbar -->
+<nav id="desktop-navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-8 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-10">
+                <a href="dashboard.html" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div class="hidden lg:flex space-x-8">
+                    <a href="operations-summary.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
+            </div>
+            <div class="flex-1 max-w-lg mx-12">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors" type="button" aria-label="Notificaciones">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors" type="button">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Desktop Balance Stripe -->
+<section id="desktop-balance-stripe" class="hidden lg:block fixed top-[96px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-8 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <article class="flex items-center bg-gray-50 rounded-lg px-5 py-4">
+                <div class="flex items-center mr-4">
+                    <div class="w-11 h-11 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-exchange-alt text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Transferencias (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary" id="treasury-transfers-amount">$0,00</div>
+                        <div class="text-xs text-gray-500" id="treasury-transfers-updated">Actualizado —</div>
+                    </div>
+                </div>
+            </article>
+            <article class="flex items-center bg-gray-50 rounded-lg px-5 py-4">
+                <div class="flex items-center mr-4">
+                    <div class="w-11 h-11 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-money-bills text-success"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Efectivo (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary" id="treasury-cash-amount">$0,00</div>
+                        <div class="text-xs text-gray-500" id="treasury-cash-updated">Actualizado —</div>
+                    </div>
+                </div>
+            </article>
+            <article class="flex items-center bg-gray-50 rounded-lg px-5 py-4">
+                <div class="flex items-center mr-4">
+                    <div class="w-11 h-11 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-dollar-sign text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Caja (USD)</div>
+                        <div class="text-2xl font-bold text-text-primary" id="treasury-usd-amount">USD 0,00</div>
+                        <div class="text-xs text-gray-500" id="treasury-usd-updated">Actualizado —</div>
+                    </div>
+                </div>
+            </article>
+        </div>
+    </div>
+</section>
+
+<!-- Main Content -->
+<main id="main-content" class="pt-[360px] pb-12 lg:pt-[280px]">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <section id="page-header" class="mb-8 mt-4 lg:mt-24">
+            <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
+                <span class="text-primary font-medium cursor-pointer">Tesorería</span>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span>Saldos y cuentas vinculadas</span>
+            </nav>
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h1 class="text-xl font-bold text-text-primary mb-2 sm:text-2xl">Saldos y cuentas vinculadas</h1>
+                    <p class="text-sm text-gray-600 sm:text-base">Visualizá el estado actualizado de las cuentas de Tesorería y los últimos movimientos registrados</p>
+                </div>
+                <button type="button" class="order-2 flex items-center justify-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 transition-colors lg:order-none lg:text-base lg:w-auto w-full" onclick="refreshBalances(this)">
+                    <i class="fa-solid fa-sync"></i>
+                    Actualizar manualmente
+                </button>
+            </div>
+        </section>
+
+        <section id="balance-summary-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Resumen de saldos</h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <article class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-dollar-sign text-warning text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Cuentas a cobrar USD</div>
+                                <div class="text-2xl font-bold positive-amount" id="receivable-usd-amount">USD 0,00</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm positive-amount" id="receivable-usd-variation">
+                                <i class="fa-solid fa-minus mr-1"></i>
+                                —
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1" id="receivable-usd-updated">Actualizado —</div>
+                        </div>
+                    </div>
+                    <button type="button" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors" onclick="openDetailPanel('usd')">
+                        Ver detalle
+                    </button>
+                </article>
+                <article class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-money-bills text-success text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Cuentas a cobrar ARS</div>
+                                <div class="text-2xl font-bold positive-amount" id="receivable-ars-amount">$0,00</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm positive-amount" id="receivable-ars-variation">
+                                <i class="fa-solid fa-minus mr-1"></i>
+                                —
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1" id="receivable-ars-updated">Actualizado —</div>
+                        </div>
+                    </div>
+                    <button type="button" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors" onclick="openDetailPanel('ars')">
+                        Ver detalle
+                    </button>
+                </article>
+                <article class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-user-group text-primary text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500" id="top-contact-label">Contacto destacado</div>
+                                <div class="text-2xl font-bold positive-amount" id="top-contact-amount">—</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm text-gray-500" id="top-contact-currency">—</div>
+                            <div class="text-xs text-gray-500 mt-1" id="top-contact-meta">Sin movimientos recientes</div>
+                        </div>
+                    </div>
+                    <button type="button" id="top-contact-button" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                        Ver detalle
+                    </button>
+                </article>
+            </div>
+        </section>
+
+        <section id="recent-movements-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Movimientos recientes por cuenta</h2>
+            <div class="border-b border-gray-200 mb-6">
+                <div class="flex space-x-6 overflow-x-auto pb-1">
+                    <button type="button" class="tab-button active pb-3 px-1 text-sm font-medium" onclick="switchTab('usd-tab', this)">
+                        Caja USD
+                    </button>
+                    <button type="button" class="tab-button pb-3 px-1 text-sm font-medium" onclick="switchTab('ars-cash-tab', this)">
+                        Efectivo ARS
+                    </button>
+                    <button type="button" class="tab-button pb-3 px-1 text-sm font-medium" onclick="switchTab('ars-transfers-tab', this)">
+                        Transferencias ARS
+                    </button>
+                </div>
+            </div>
+            <div id="usd-tab" class="tab-content active">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[640px]">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="usd-movements-body" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Cargando movimientos…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button type="button" class="text-primary hover:text-blue-700 text-sm font-medium" onclick="viewAllMovements('usd')">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="ars-cash-tab" class="tab-content">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[640px]">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ars-cash-movements-body" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Cargando movimientos…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button type="button" class="text-primary hover:text-blue-700 text-sm font-medium" onclick="viewAllMovements('ars-cash')">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="ars-transfers-tab" class="tab-content">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[640px]">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ars-transfers-movements-body" class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td colspan="7" class="px-6 py-4 text-center text-sm text-gray-500">Cargando movimientos…</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button type="button" class="text-primary hover:text-blue-700 text-sm font-medium" onclick="viewAllMovements('ars-transfers')">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="contacts-section" class="mb-10">
+            <div class="flex flex-col gap-3 mb-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <h2 class="text-lg font-semibold text-text-primary">Contactos y cuentas vinculadas</h2>
+                    <p class="text-sm text-gray-600">Analizá la posición individual de cada cliente o proveedor.</p>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-gray-500">
+                    <span id="contacts-summary-label">Mostrando 0 resultados</span>
+                </div>
+            </div>
+
+            <div class="bg-white border border-gray-200 rounded-lg shadow-sm">
+                <div class="border-b border-gray-200 p-4 space-y-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div>
+                            <label for="contacts-currency" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Moneda</label>
+                            <select id="contacts-currency" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="USD">USD</option>
+                                <option value="ARS">ARS</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="contacts-type" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Tipo de contacto</label>
+                            <select id="contacts-type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">Todos</option>
+                                <option value="client">Clientes</option>
+                                <option value="provider">Proveedores</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="contacts-status" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Estado</label>
+                            <select id="contacts-status" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">Todos</option>
+                                <option value="active">Activos</option>
+                                <option value="inactive">Inactivos</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="contacts-balance" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Saldo</label>
+                            <select id="contacts-balance" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="">Todos</option>
+                                <option value="positive">Positivos</option>
+                                <option value="negative">Negativos</option>
+                                <option value="zero">En cero</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="lg:col-span-1">
+                            <label for="contacts-search" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Buscar</label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <i class="fa-solid fa-search text-gray-400 text-sm"></i>
+                                </div>
+                                <input type="text" id="contacts-search" class="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Nombre, CUIT o código">
+                            </div>
+                        </div>
+                        <div class="flex items-end gap-3">
+                            <div class="flex-1">
+                                <label for="contacts-date-from" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Desde</label>
+                                <input type="date" id="contacts-date-from" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div class="flex-1">
+                                <label for="contacts-date-to" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Hasta</label>
+                                <input type="date" id="contacts-date-to" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                        </div>
+                        <div>
+                            <label for="contacts-sort" class="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Ordenar por</label>
+                            <select id="contacts-sort" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                <option value="amount-desc">Saldo (mayor a menor)</option>
+                                <option value="amount-asc">Saldo (menor a mayor)</option>
+                                <option value="name-asc">Nombre (A → Z)</option>
+                                <option value="name-desc">Nombre (Z → A)</option>
+                                <option value="lastOperation-desc">Última operación (recientes)</option>
+                                <option value="lastOperation-asc">Última operación (antiguas)</option>
+                                <option value="contactType-asc">Tipo de contacto</option>
+                                <option value="contactType-desc">Tipo de contacto (desc)</option>
+                            </select>
+                        </div>
+                        <div class="flex items-end gap-3">
+                            <button id="contacts-apply" type="button" class="flex-1 px-3 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                                Aplicar filtros
+                            </button>
+                            <button id="contacts-reset" type="button" class="px-3 py-2 border border-gray-300 text-sm rounded-lg hover:bg-gray-50 transition-colors">
+                                Limpiar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="contacts-table-container" class="relative">
+                    <div id="contacts-loading" class="hidden absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+                        <div class="flex items-center gap-2 text-sm text-gray-600">
+                            <i class="fa-solid fa-spinner fa-spin"></i>
+                            Cargando contactos…
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full min-w-[760px]">
+                            <thead class="bg-gray-50 border-b border-gray-200 text-xs font-semibold text-gray-500 uppercase tracking-wide">
+                                <tr>
+                                    <th class="px-6 py-3 text-left">Contacto</th>
+                                    <th class="px-6 py-3 text-left">Tipo</th>
+                                    <th class="px-6 py-3 text-right">Saldo</th>
+                                    <th class="px-6 py-3 text-left">Última operación</th>
+                                    <th class="px-6 py-3 text-center">Estado</th>
+                                    <th class="px-6 py-3 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="contacts-table-body" class="bg-white divide-y divide-gray-200 text-sm"></tbody>
+                        </table>
+                    </div>
+                    <div id="contacts-empty" class="hidden px-6 py-10 text-center text-sm text-gray-500 border-t border-gray-100">
+                        No encontramos contactos que coincidan con los filtros seleccionados.
+                    </div>
+                </div>
+
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-t border-gray-200 px-4 py-4">
+                    <div class="text-xs text-gray-500" id="contacts-page-info">Página 1 de 1</div>
+                    <div class="flex items-center gap-2">
+                        <button id="contacts-prev" type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                            <i class="fa-solid fa-chevron-left mr-1 text-xs"></i>
+                            Anterior
+                        </button>
+                        <button id="contacts-next" type="button" class="px-3 py-1.5 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:pointer-events-none">
+                            Siguiente
+                            <i class="fa-solid fa-chevron-right ml-1 text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="footer-section" class="bg-white rounded-lg border border-gray-200 p-5 sm:p-6">
+            <div class="flex flex-col gap-3 text-center text-sm text-gray-600 sm:flex-row sm:items-center sm:justify-between sm:text-left">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <span class="flex items-center justify-center sm:justify-start">
+                        <i class="fa-solid fa-sync mr-2"></i>
+                        Actualizado automáticamente al cursar operaciones
+                    </span>
+                    <span class="text-xs text-gray-500" id="footer-sync-timestamp">Última sincronización: 14:35</span>
+                </div>
+                <div class="text-xs text-gray-500">
+                    Los saldos se actualizan también al registrar o compensar movimientos
+                </div>
+            </div>
+        </section>
+    </div>
+</main>
+
+<!-- Detail Panel -->
+<aside id="detail-panel" class="fixed inset-0 lg:inset-y-0 lg:right-0 w-full max-w-full sm:max-w-md lg:w-[480px] lg:max-w-[480px] bg-white shadow-xl border border-gray-200 z-50 detail-panel lg:border-l">
+    <div class="flex flex-col h-full">
+        <header class="flex items-center justify-between p-4 lg:p-6 border-b border-gray-200">
+            <div>
+                <h3 id="panel-title" class="text-lg font-semibold text-text-primary">Detalle de cuenta</h3>
+                <p class="text-sm text-gray-600 mt-1">Movimientos y saldo actual</p>
+            </div>
+            <button type="button" class="text-gray-400 hover:text-gray-600" aria-label="Cerrar" onclick="closeDetailPanel()">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </header>
+        <div class="flex-1 overflow-y-auto p-4 lg:p-6">
+            <section class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-500">Saldo actual</div>
+                        <div id="panel-balance-amount" class="text-2xl font-bold text-text-primary">--</div>
+                    </div>
+                    <div class="text-right text-xs text-gray-500" id="panel-balance-variation">Actualizado —</div>
+                </div>
+            </section>
+            <section class="mb-6">
+                <h4 class="text-sm font-medium text-text-primary mb-3">Filtros</h4>
+                <div class="space-y-3">
+                    <div class="flex flex-col gap-3 sm:flex-row sm:space-x-3">
+                        <input type="date" id="panel-date-from" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <input type="date" id="panel-date-to" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-3">
+                        <select id="panel-movement-type" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">Todos los movimientos</option>
+                            <option value="incoming">Solo ingresos</option>
+                            <option value="outgoing">Solo egresos</option>
+                        </select>
+                        <button id="panel-filter-apply" type="button" class="px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                            Actualizar
+                        </button>
+                    </div>
+                </div>
+            </section>
+            <section>
+                <h4 class="text-sm font-medium text-text-primary mb-3">Últimos movimientos</h4>
+                <div id="panel-movements-container" class="space-y-3">
+                    <p class="text-xs text-gray-500">Seleccioná una cuenta para ver sus movimientos recientes.</p>
+                </div>
+            </section>
+        </div>
+        <footer class="p-6 border-t border-gray-200">
+            <button type="button" class="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors" onclick="viewAllMovements('current')">
+                Ver todos los movimientos
+            </button>
+        </footer>
+    </div>
+</aside>
+
+<script src="/js/treasury-api.js"></script>
+<script src="/js/treasury-saldos.js"></script>
+<script src="/js/balance-widget.js"></script>
+</body>
+</html>

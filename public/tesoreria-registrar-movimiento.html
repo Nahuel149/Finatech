@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none; }
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in { animation: fadeIn 0.3s ease-in; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            transition: all 0.3s ease;
+        }
+        .drop-zone.dragover {
+            border-color: #0066CC;
+            background-color: #f0f8ff;
+        }
+        .file-item {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .positive-amount { color: #198754; }
+        .negative-amount { color: #dc3545; }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+        .radio-card {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .radio-card:hover {
+            border-color: #0066CC;
+            background-color: #f8faff;
+        }
+        .radio-card.selected {
+            border-color: #0066CC;
+            background-color: #f0f8ff;
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .toast {
+            animation: fadeIn 0.2s ease-in-out;
+        }
+        .text-warning { color: #d97706; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Mobile Header -->
+<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 md:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <button id="mobile-back" class="p-2 text-text-primary hover:text-primary transition-colors" type="button" aria-label="Volver a Tesorería">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="flex items-center">
+                <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden sm:block"></div>
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" type="button" aria-label="Abrir menú">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- Mobile Menu -->
+<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden md:hidden">
+    <div class="px-4 py-3">
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <a href="operations-summary.html" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
+                Operaciones
+            </a>
+            <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                <i class="fa-solid fa-vault text-primary mr-3"></i>
+                Tesorería
+            </span>
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                Logística
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                Liquidaciones
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- Fixed Navbar -->
+<nav id="navbar" class="hidden md:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-8">
+                <a href="dashboard.html" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div class="hidden md:flex space-x-8">
+                    <a href="operations-summary.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
+            </div>
+            <div class="flex-1 max-w-md mx-8 hidden lg:block">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+            <div class="flex items-center space-x-4">
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors" type="button" aria-label="Notificaciones">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors" type="button">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Modal -->
+<div id="new-movement-modal" class="fixed inset-0 z-40 modal-overlay">
+    <div class="flex items-start md:items-center justify-center min-h-screen p-4 pt-24 md:pt-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] overflow-y-auto fade-in relative">
+            <!-- Modal Header -->
+            <div id="modal-header" class="sticky top-0 bg-white border-b border-gray-200 p-6 z-10">
+                <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
+                    <button type="button" class="text-primary font-medium hover:underline" onclick="goToTreasury()">Tesorería</button>
+                    <i class="fa-solid fa-chevron-right text-xs"></i>
+                    <span>Nuevo movimiento</span>
+                </nav>
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="text-2xl font-bold text-text-primary mb-2">Registrar nuevo movimiento</h1>
+                        <p class="text-gray-600">Cargá manualmente un ingreso o egreso de fondos</p>
+                    </div>
+                    <button type="button" onclick="closeModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal Content -->
+            <div id="modal-content" class="p-6">
+                <form id="movement-form" class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <!-- Movement Data -->
+                    <section id="movement-data" class="bg-gray-50 rounded-lg p-6 space-y-6">
+                        <div>
+                            <h2 class="text-lg font-semibold text-text-primary mb-4">Datos del movimiento</h2>
+                            <div class="mb-6">
+                                <label class="block text-sm font-medium text-gray-700 mb-3">Tipo de movimiento *</label>
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div class="radio-card border-2 border-gray-200 rounded-lg p-4" onclick="selectMovementType('incoming')" tabindex="0" role="radio" aria-checked="false" data-movement-card="incoming">
+                                        <input type="radio" id="ingreso" name="movement-type" value="ingreso" class="sr-only">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fa-solid fa-arrow-trend-up text-success"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-text-primary">Ingreso</div>
+                                                <div class="text-sm text-gray-500">Entrada de fondos</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="radio-card border-2 border-gray-200 rounded-lg p-4" onclick="selectMovementType('outgoing')" tabindex="0" role="radio" aria-checked="false" data-movement-card="outgoing">
+                                        <input type="radio" id="egreso" name="movement-type" value="egreso" class="sr-only">
+                                        <div class="flex items-center">
+                                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                                <i class="fa-solid fa-arrow-trend-down text-danger"></i>
+                                            </div>
+                                            <div>
+                                                <div class="font-medium text-text-primary">Egreso</div>
+                                                <div class="text-sm text-gray-500">Salida de fondos</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-2">Seleccioná el tipo de flujo de fondos que querés registrar</p>
+                                <div id="movement-type-error" class="text-sm text-red-600 mt-2 hidden"></div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="medium" class="block text-sm font-medium text-gray-700 mb-2">Medio *</label>
+                                <select id="medium" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccionar medio</option>
+                                    <option value="cash">Efectivo</option>
+                                    <option value="transfer">Transferencia</option>
+                                    <option value="deposit">Depósito</option>
+                                </select>
+                                <p class="text-sm text-gray-500 mt-1">Define si el movimiento se realiza en caja o por cuenta bancaria</p>
+                                <div id="medium-error" class="text-sm text-red-600 mt-1 hidden"></div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="currency" class="block text-sm font-medium text-gray-700 mb-2">Moneda *</label>
+                                <select id="currency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="">Seleccionar moneda</option>
+                                    <option value="ARS">ARS - Peso Argentino</option>
+                                    <option value="USD">USD - Dólar Estadounidense</option>
+                                </select>
+                                <div id="currency-error" class="text-sm text-red-600 mt-1 hidden"></div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-2">Monto *</label>
+                                <div class="relative">
+                                    <span id="currency-symbol" class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-medium"></span>
+                                    <input type="text" id="amount" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="0,00" inputmode="decimal" autocomplete="off">
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">Usá coma o punto para decimales</p>
+                                <div id="amount-error" class="text-sm text-red-600 mt-1 hidden"></div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="datetime" class="block text-sm font-medium text-gray-700 mb-2">Fecha y hora</label>
+                                <input type="datetime-local" id="datetime" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                            </div>
+                            <div class="mb-6">
+                                <label for="status" class="block text-sm font-medium text-gray-700 mb-2">Estado inicial</label>
+                                <select id="status" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                                    <option value="registrado" selected>Registrado</option>
+                                    <option value="compensado">Compensado</option>
+                                    <option value="anulado">Anulado</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="reference" class="block text-sm font-medium text-gray-700 mb-2">Referencia o descripción</label>
+                                <textarea id="reference" rows="3" maxlength="200" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none" placeholder="Descripción del movimiento..."></textarea>
+                                <div class="flex justify-between mt-1">
+                                    <span class="text-sm text-gray-500">Opcional</span>
+                                    <span id="char-count" class="text-sm text-gray-500">0/200</span>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- Associations -->
+                    <section id="associations" class="bg-gray-50 rounded-lg p-6 space-y-6">
+                        <div>
+                            <h2 class="text-lg font-semibold text-text-primary mb-4">Asociaciones</h2>
+                            <div class="mb-6 relative">
+                                <label for="contact" class="block text-sm font-medium text-gray-700 mb-2">Contacto vinculado</label>
+                                <div class="flex space-x-3">
+                                    <div class="flex-1 relative">
+                                        <input type="text" id="contact" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar contacto..." autocomplete="off">
+                                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <i class="fa-solid fa-search text-gray-400"></i>
+                                        </div>
+                                        <div id="contact-dropdown" class="hidden absolute left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto z-20"></div>
+                                    </div>
+                                    <button type="button" onclick="openNewContactModal()" class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                        <i class="fa-solid fa-plus mr-2"></i>
+                                        Nuevo
+                                    </button>
+                                </div>
+                                <div id="contact-error" class="text-sm text-red-600 mt-1 hidden"></div>
+                            </div>
+                            <div class="mb-6">
+                                <label for="operation" class="block text-sm font-medium text-gray-700 mb-2">Operación asociada</label>
+                                <div class="relative">
+                                    <input type="text" id="operation" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar operación por ID (#FT-000123)..." autocomplete="off">
+                                    <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <i class="fa-solid fa-search text-gray-400"></i>
+                                    </div>
+                                </div>
+                                <p class="text-sm text-gray-500 mt-1">Opcional - Si se selecciona, autocompletará moneda y monto sugerido</p>
+                                <div id="operation-info" class="hidden mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div class="flex items-start">
+                                        <i class="fa-solid fa-info-circle text-blue-600 mr-3 mt-1"></i>
+                                        <div class="text-sm text-blue-800">
+                                            <div class="font-medium mb-1">Operación encontrada</div>
+                                            <div id="operation-details"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Adjuntos</label>
+                                <div id="drop-zone" class="drop-zone border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                                    <div class="flex flex-col items-center">
+                                        <i class="fa-solid fa-cloud-upload-alt text-4xl text-gray-400 mb-3"></i>
+                                        <div class="text-gray-600 mb-2">Arrastrá archivos aquí o</div>
+                                        <button type="button" onclick="document.getElementById('file-input').click()" class="text-primary hover:text-blue-700 font-medium">
+                                            seleccioná archivos
+                                        </button>
+                                        <div class="text-sm text-gray-500 mt-2">PDF o imágenes (máx. 5MB cada uno)</div>
+                                    </div>
+                                </div>
+                                <input type="file" id="file-input" class="hidden" multiple accept=".pdf,.jpg,.jpeg,.png">
+                                <div id="file-list" class="mt-3 space-y-2"></div>
+                            </div>
+                        </div>
+                    </section>
+                </form>
+            </div>
+
+            <!-- Modal Footer -->
+            <div id="modal-footer" class="sticky bottom-0 bg-white border-t border-gray-200 p-6">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <span class="text-sm text-gray-500">* Campos obligatorios</span>
+                    <div class="flex items-center space-x-4">
+                        <button type="button" onclick="closeModal()" class="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                            Cancelar
+                        </button>
+                        <button type="button" onclick="saveDraft()" class="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors">
+                            Guardar borrador
+                        </button>
+                        <button type="submit" form="movement-form" id="register-btn" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                            <span id="register-text">Registrar movimiento</span>
+                            <i id="register-spinner" class="fa-solid fa-spinner fa-spin ml-2 hidden"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Contact Modal -->
+<div id="new-contact-modal" class="hidden fixed inset-0 z-50 modal-overlay">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl w-full max-w-md p-6 fade-in relative">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary">Nuevo contacto</h3>
+                <button type="button" onclick="closeNewContactModal()" class="text-gray-400 hover:text-gray-600 text-xl">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="new-contact-name" class="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                    <input type="text" id="new-contact-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label for="new-contact-type" class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                    <select id="new-contact-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="Cliente">Cliente</option>
+                        <option value="Proveedor">Proveedor</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="new-contact-cuit" class="block text-sm font-medium text-gray-700 mb-2">CUIT</label>
+                    <input type="text" id="new-contact-cuit" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="20-12345678-9">
+                </div>
+            </div>
+            <div class="flex justify-end space-x-3 mt-6">
+                <button type="button" onclick="closeNewContactModal()" class="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors">Cancelar</button>
+                <button type="button" onclick="saveNewContact()" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div id="toast-container" class="fixed top-4 right-4 space-y-3 z-50"></div>
+
+<script src="/js/treasury-api.js"></script>
+<script src="/js/treasury-register.js"></script>
+<script src="/js/balance-widget.js"></script>
+</body>
+</html>
