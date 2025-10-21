@@ -188,19 +188,19 @@
     return pathSegments[pathSegments.length - 1] || null;
   };
 
-  const fetchContactDetail = async (contactId) => {
-    if (!contactId) return null;
+  async function fetchContactDetail(contactId, currency) {
     try {
-      const response = await fetch(`/api/current-accounts/contacts/${contactId}`, {
-        credentials: 'include',
-      });
-      if (!response.ok) return null;
-      const data = await response.json();
-      return data || null;
+      const url = `/api/current-accounts/contacts/${encodeURIComponent(contactId)}?currency=${encodeURIComponent(currency)}`;
+      const res = await fetch(apiUrl(url), { credentials: 'include' });
+      if (res.status === 401 || res.status === 403) throw new Error('No tenés permisos para ver el detalle.');
+      if (!res.ok) throw new Error('No pudimos obtener el detalle del contacto.');
+      const data = await res.json();
+      return data;
     } catch (error) {
+      showToast(error.message || 'Error al obtener el detalle del contacto.', 'danger');
       return null;
     }
-  };
+  }
 
   const renderAccountingRows = (movement) => {
     if (!elements.accountingRows) return;

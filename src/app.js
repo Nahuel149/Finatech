@@ -98,7 +98,7 @@ app.get('/dashboard/operations/transfer-ars', (_req, res) => {
   res.sendFile(path.join(publicDir, 'transferencia-pesos.html'));
 });
 
-app.use('*', (_req, res) => {
+app.use((_req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 

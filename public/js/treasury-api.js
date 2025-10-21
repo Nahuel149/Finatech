@@ -45,6 +45,19 @@
     }
   };
 
+  const resolveApiUrl = (path) => {
+    try {
+      if (typeof path !== 'string') return path;
+      if (/^https?:\/\//i.test(path)) return path;
+      const base = (global.API_BASE_URL || '').trim();
+      if (!base) return path;
+      if (path.startsWith('/')) return `${base}${path}`;
+      return `${base}/${path}`;
+    } catch (_) {
+      return path;
+    }
+  };
+
   const request = async (input, { method = 'GET', body, headers = {}, signal } = {}) => {
     const finalHeaders = new Headers(headers);
     const options = {
@@ -67,7 +80,7 @@
 
     let response;
     try {
-      response = await fetch(input, options);
+      response = await fetch(resolveApiUrl(input), options);
     } catch (error) {
       throw new TreasuryApiError('No se pudo conectar con el servidor.', 0, null, error);
     }

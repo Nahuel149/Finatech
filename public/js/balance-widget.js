@@ -207,7 +207,7 @@
         return;
       }
       try {
-        const response = await fetch(ENDPOINT, { credentials: 'include' });
+        const response = await fetch(apiUrl(ENDPOINT), { credentials: 'include' });
         if (response.status === 401 || response.status === 403) {
           hideWidget(anchor);
           clearInterval(STATE.timers.get(anchor));

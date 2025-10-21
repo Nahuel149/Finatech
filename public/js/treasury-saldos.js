@@ -109,7 +109,7 @@
   };
 
   const fetchJson = async (url) => {
-    const response = await fetch(url, {
+    const response = await fetch(apiUrl(url), {
       credentials: 'include',
     });
     if (!response.ok) {
@@ -393,7 +393,7 @@
     setContactsLoading(true);
     try {
       const query = buildContactsQueryString();
-      const response = await fetch(`/api/current-accounts/contacts?${query}`, {
+      const response = await fetch(apiUrl(`/api/current-accounts/contacts?${query}`), {
         credentials: 'include',
       });
       if (response.status === 401 || response.status === 403) {

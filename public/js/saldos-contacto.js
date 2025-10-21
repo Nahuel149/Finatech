@@ -450,7 +450,7 @@
     setLoading(true);
     try {
       const response = await fetch(
-        `/api/current-accounts/contacts/${state.contactId}?${buildQueryParams()}`,
+        apiUrl(`/api/current-accounts/contacts/${state.contactId}?${buildQueryParams()}`),
         { credentials: 'include' }
       );
       if (response.status === 404) {
@@ -658,3 +658,4 @@
 
   document.addEventListener('DOMContentLoaded', initialize);
 })();
+
