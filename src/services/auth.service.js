@@ -141,7 +141,7 @@ Si no solicitaste este cambio, podés ignorar este mensaje.`;
 
 const ensureGoogleClient = () => {
   if (!googleClient) {
-    throw new AppError('Google OAuth is not configured', 500, {
+    throw new AppError('Google OAuth no está configurado', 500, {
       code: 'GOOGLE_NOT_CONFIGURED',
     });
   }
@@ -219,7 +219,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
       ...requestMetadata,
     });
     throw new AppError(
-      'The email address is already registered. Please log in or reset your password.',
+      'El correo electrónico ya está registrado. Iniciá sesión o restablecé tu contraseña.',
       409,
       { code: 'EMAIL_ALREADY_REGISTERED' }
     );
@@ -249,7 +249,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
     });
     return {
       type: 'pending_verification',
-      message: 'Check your email to confirm your account.',
+      message: 'Revisá tu correo para confirmar tu cuenta.',
       user,
     };
   }
@@ -278,7 +278,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
     return {
       type: 'merged_google',
       message:
-        'We found a Google account with this email. We linked it, verified your account, and signed you in.',
+        'Encontramos una cuenta de Google con este email. La vinculamos, verificamos tu cuenta y te iniciamos sesión.',
       user,
       session,
     };
@@ -303,14 +303,14 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
 
   return {
     type: 'pending_verification',
-    message: 'Check your email to confirm your account.',
+    message: 'Revisá tu correo para confirmar tu cuenta.',
     user,
   };
 };
 
 const verifyEmailToken = async ({ token }, context = {}) => {
   if (!token) {
-    throw new AppError('Verification token is required', 400);
+    throw new AppError('Se requiere el token de verificación', 400);
   }
 
   const hashed = hashToken(token);
@@ -320,7 +320,7 @@ const verifyEmailToken = async ({ token }, context = {}) => {
   });
 
   if (!user) {
-    throw new AppError('Invalid or expired token. Please request a new verification email.', 400);
+    throw new AppError('Token inválido o vencido. Solicitá un nuevo correo de verificación.', 400, { code: 'INVALID_OR_EXPIRED_TOKEN' });
   }
 
   user.isVerified = true;
@@ -337,7 +337,7 @@ const verifyEmailToken = async ({ token }, context = {}) => {
 
   return {
     type: 'verified',
-    message: 'Your account has been verified. You can now sign in.',
+    message: 'Tu cuenta ha sido verificada. Ahora podés iniciar sesión.',
     user,
   };
 };
@@ -353,17 +353,17 @@ const authenticateGoogleToken = async (idToken) => {
 
 const registerWithGoogle = async ({ idToken }, context = {}) => {
   if (!idToken) {
-    throw new AppError('Google ID token is required', 400, { code: 'GOOGLE_TOKEN_MISSING' });
-  }
+     throw new AppError('Se requiere el token de Google ID', 400, { code: 'GOOGLE_TOKEN_MISSING' });
+   }
 
   const payload = await authenticateGoogleToken(idToken);
   const { sub, email, name, given_name: givenName, email_verified: emailVerified } = payload;
 
   if (!emailVerified) {
-    throw new AppError('Google account email is not verified.', 400, {
-      code: 'GOOGLE_EMAIL_NOT_VERIFIED',
-    });
-  }
+     throw new AppError('El correo de la cuenta de Google no está verificado.', 400, {
+       code: 'GOOGLE_EMAIL_NOT_VERIFIED',
+     });
+   }
 
   const normalizedEmail = email.toLowerCase();
   let user = await User.findOne({ email: normalizedEmail });
@@ -395,11 +395,11 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
       ...requestMetadata,
     });
     return {
-      type: 'google_registered',
-      message: 'Account created with Google. You are signed in.',
-      user,
-      session,
-    };
+       type: 'google_registered',
+       message: 'Cuenta creada con Google. Sesión iniciada.',
+       user,
+       session,
+     };
   }
 
   const hadLocalProvider = user.hasProvider('local');
@@ -424,7 +424,7 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
 
   return {
     type: 'google_linked',
-    message: 'Google account linked. You are signed in.',
+    message: 'Cuenta de Google vinculada. Sesión iniciada.',
     user,
     session,
   };
@@ -566,7 +566,7 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
 
 const verifyTwoFactorChallenge = async ({ challengeToken, code }, context = {}) => {
   if (!challengeToken || !code) {
-    throw new AppError('Two-factor challenge and code are required.', 400, {
+    throw new AppError('Se requieren el desafío de dos pasos y el código.', 400, {
       code: 'TWO_FACTOR_CODE_REQUIRED',
     });
   }
@@ -601,7 +601,7 @@ const verifyTwoFactorChallenge = async ({ challengeToken, code }, context = {}) 
       status: 'two_factor_failed',
       ...challenge.metadata,
     });
-    throw new AppError('Invalid or expired code', 400, {
+    throw new AppError('Código inválido o vencido. Intentá nuevamente.', 400, {
       code: 'INVALID_TWO_FACTOR',
     });
   }
@@ -644,7 +644,7 @@ const verifyTwoFactorChallenge = async ({ challengeToken, code }, context = {}) 
 
 const resendTwoFactorCode = async ({ challengeToken }, context = {}) => {
   if (!challengeToken) {
-    throw new AppError('Two-factor challenge token is required.', 400, {
+    throw new AppError('Se requiere el token del desafío de dos pasos.', 400, {
       code: 'TWO_FACTOR_CHALLENGE_REQUIRED',
     });
   }

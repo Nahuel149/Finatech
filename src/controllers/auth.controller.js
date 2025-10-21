@@ -65,7 +65,7 @@ const verifyEmail = async (req, res, next) => {
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>FinaTech | Account Verified</title>
+  <title>FinaTech | Cuenta verificada</title>
   <style>
     body { font-family: Arial, sans-serif; background: #f6f9fc; margin: 0; padding: 0; }
     .container { max-width: 480px; margin: 80px auto; background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 12px 30px rgba(15, 23, 42, 0.1); text-align: center; }

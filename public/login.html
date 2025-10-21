@@ -312,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
     let googleInitAttempts = 0;
     const MAX_GOOGLE_INIT_ATTEMPTS = 20;
 
-    const redirectTarget = new URLSearchParams(window.location.search).get('redirect') || '/';
+    const redirectTarget = new URLSearchParams(window.location.search).get('redirect') || '/dashboard';
 
     togglePassword.addEventListener('click', function() {
         const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';

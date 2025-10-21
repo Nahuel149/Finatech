@@ -28,58 +28,58 @@ const passwordValidator = (value) => {
   if (hasMinLength && hasUppercase && hasLowercase && hasNumber) {
     return true;
   }
-  throw new Error('Password does not meet the required complexity.');
+  throw new Error('La contraseña no cumple con la complejidad requerida.');
 };
 
 const registerValidators = [
-  body('fullName').trim().notEmpty().withMessage('Full name is required.'),
-  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('fullName').trim().notEmpty().withMessage('El nombre completo es obligatorio.'),
+  body('email').isEmail().withMessage('Ingresá un correo electrónico válido.').normalizeEmail(),
   body('password').isString().custom(passwordValidator),
   body('confirmPassword')
     .custom((value, { req }) => value === req.body.password)
-    .withMessage('Passwords do not match.'),
+    .withMessage('Las contraseñas no coinciden.'),
   body('acceptTerms')
     .toBoolean()
     .isBoolean()
-    .withMessage('Terms and conditions must be accepted.')
+    .withMessage('Debés aceptar los términos y condiciones.')
     .custom((value) => value === true)
-    .withMessage('Terms and conditions must be accepted.'),
+    .withMessage('Debés aceptar los términos y condiciones.'),
 ];
 
-const googleValidators = [body('idToken').isString().withMessage('Google ID token is required.')];
+const googleValidators = [body('idToken').isString().withMessage('Se requiere el token de Google ID.')];
 
 const loginValidators = [
-  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
-  body('password').notEmpty().withMessage('Password is required.'),
-  body('rememberMe').optional().isBoolean().withMessage('Remember me must be a boolean.').toBoolean(),
+  body('email').isEmail().withMessage('Ingresá un correo electrónico válido.').normalizeEmail(),
+  body('password').notEmpty().withMessage('La contraseña es obligatoria.'),
+  body('rememberMe').optional().isBoolean().withMessage('Recordarme debe ser un booleano.').toBoolean(),
 ];
 
 const twoFactorValidators = [
-  body('challengeToken').isString().withMessage('Two-factor challenge token is required.'),
+  body('challengeToken').isString().withMessage('Se requiere el token del desafío de dos pasos.'),
   body('code')
     .isString()
     .matches(/^\d{6}$/)
-    .withMessage('Enter a valid 6-digit code.'),
+    .withMessage('Ingresá un código válido de 6 dígitos.'),
 ];
 
 const twoFactorResendValidators = [
-  body('challengeToken').isString().withMessage('Two-factor challenge token is required.'),
+  body('challengeToken').isString().withMessage('Se requiere el token del desafío de dos pasos.'),
 ];
 
 const resendVerificationValidators = [
-  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('email').isEmail().withMessage('Ingresá un correo electrónico válido.').normalizeEmail(),
 ];
 
 const recoverValidators = [
-  body('email').isEmail().withMessage('Enter a valid email address.').normalizeEmail(),
+  body('email').isEmail().withMessage('Ingresá un correo electrónico válido.').normalizeEmail(),
 ];
 
 const resetPasswordValidators = [
-  body('token').isString().withMessage('Password reset token is required.'),
+  body('token').isString().withMessage('Se requiere el token de restablecimiento de contraseña.'),
   body('password').isString().custom(passwordValidator),
   body('confirmPassword')
     .custom((value, { req }) => value === req.body.password)
-    .withMessage('Passwords do not match.'),
+    .withMessage('Las contraseñas no coinciden.'),
 ];
 
 router.post('/register', authLimiter, ...registerValidators, validateRequest, register);
