@@ -61,6 +61,7 @@
 
   const panelElements = {
     panel: document.getElementById('detail-panel'),
+    overlay: document.getElementById('detail-panel-overlay'),
     amount: document.getElementById('panel-balance-amount'),
     updated: document.getElementById('panel-balance-variation'),
     dateFrom: document.getElementById('panel-date-from'),
@@ -695,11 +696,17 @@
     renderPanelMovements();
 
     panelElements.panel?.classList.add('open');
+    panelElements.panel?.setAttribute('aria-hidden', 'false');
+    panelElements.overlay?.classList.remove('hidden');
+    panelElements.overlay?.setAttribute('aria-hidden', 'false');
   };
 
   const closeDetailPanel = () => {
     detailState.activeKey = null;
     panelElements.panel?.classList.remove('open');
+    panelElements.panel?.setAttribute('aria-hidden', 'true');
+    panelElements.overlay?.classList.add('hidden');
+    panelElements.overlay?.setAttribute('aria-hidden', 'true');
   };
 
   const refreshBalances = (button) => {
@@ -808,6 +815,12 @@
     document.getElementById('detail-panel-overlay')?.addEventListener('click', closeDetailPanel);
     panelElements.applyButton?.addEventListener('click', () => {
       renderPanelMovements();
+    });
+
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && panelElements.panel?.classList.contains('open')) {
+        closeDetailPanel();
+      }
     });
   };
 

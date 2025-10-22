@@ -350,6 +350,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/login`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload),
         })
@@ -410,6 +411,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/google`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ idToken: response.credential }),
         })
@@ -449,6 +451,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/login/2fa`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ challengeToken: currentChallengeToken, code }),
         })
@@ -485,6 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/login/2fa/resend`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ challengeToken: currentChallengeToken }),
         })
@@ -518,6 +522,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/resend-verification`, {
             method: 'POST',
+            credentials: 'include',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ email: currentEmail }),
         })
@@ -584,7 +589,12 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         if (status === 422 && data && Array.isArray(data.details) && data.details.length) {
-            showLoginError(data.details[0].message || 'Revisá los datos ingresados.');
+            const firstIssue = data.details[0];
+            showLoginError(firstIssue.message || 'Revisá los datos ingresados.');
+            if (firstIssue.field) {
+                const fieldNode = document.getElementById(firstIssue.field);
+                fieldNode?.focus();
+            }
             return;
         }
 
