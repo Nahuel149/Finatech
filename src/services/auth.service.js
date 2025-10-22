@@ -24,8 +24,15 @@ const PASSWORD_RESET_WINDOW_MINUTES = Number(process.env.PASSWORD_RESET_WINDOW_M
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
 
 const buildClientUrl = (path) => {
-  const base = process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:4000';
-  return new URL(path, base).toString();
+  const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+  const clientBase = process.env.CLIENT_URL || undefined;
+  const apiBase = process.env.APP_URL || process.env.API_BASE_URL;
+  const defaultBase = 'http://localhost:4000';
+
+  const isApiPath = normalizedPath.startsWith('/api/');
+  const base = (isApiPath ? apiBase : clientBase) || apiBase || clientBase || defaultBase;
+
+  return new URL(normalizedPath, base).toString();
 };
 
 const buildRequestMetadata = (context = {}) => ({
@@ -291,7 +298,15 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   user.isVerified = false;
   await user.save();
 
-  await sendVerificationEmail(user, plainToken);
+  try {
+    await sendVerificationEmail(user, plainToken);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send verification email', error);
+    throw new AppError('No se pudo enviar el email de verificación.', 502, {
+      code: 'VERIFICATION_EMAIL_FAILED',
+    });
+  }
   await logSecurityEvent({
     user: user._id,
     email: normalizedEmail,
@@ -712,7 +727,15 @@ const resendVerificationEmail = async ({ email }, context = {}) => {
   const { plainToken, verificationPayload } = buildVerificationDetails();
   user.verification = verificationPayload;
   await user.save();
-  await sendVerificationEmail(user, plainToken);
+  try {
+    await sendVerificationEmail(user, plainToken);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to resend verification email', error);
+    throw new AppError('No se pudo reenviar el email de verificación.', 502, {
+      code: 'VERIFICATION_EMAIL_FAILED',
+    });
+  }
   await logSecurityEvent({
     user: user._id,
     email: normalizedEmail,

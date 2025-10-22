@@ -656,10 +656,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const navigateToDetail = () => {
         closeMobileMenu();
-        if (!operationContext.id) return;
         showToast('Navegando al detalle de la operación...');
         setTimeout(() => {
-            window.location.href = `/dashboard?operationId=${encodeURIComponent(operationContext.id)}`;
+            if (operationContext.id) {
+                window.location.href = `/dashboard?operationId=${encodeURIComponent(operationContext.id)}`;
+            } else {
+                window.location.href = '/dashboard';
+            }
         }, 400);
     };
 

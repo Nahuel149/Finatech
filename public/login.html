@@ -525,11 +525,23 @@ document.addEventListener('DOMContentLoaded', function() {
             const data = await response.json().catch(() => ({}));
             resendVerificationButton.disabled = false;
             resendVerificationButton.textContent = originalText;
+
             if (response.ok) {
                 showUnverifiedBanner('Verificación enviada', data.message || 'Revisá tu correo para completar la verificación.');
-            } else {
-                showUnverifiedBanner('No se pudo reenviar', data.message || 'Intentá nuevamente en unos minutos.');
+                return;
             }
+
+            if (response.status === 502 && data && data.details && data.details.code === 'VERIFICATION_EMAIL_FAILED') {
+                showUnverifiedBanner('No se pudo reenviar', 'Tenemos problemas con el servidor de correo. Intentá nuevamente en unos minutos.');
+                return;
+            }
+
+            if (response.status === 429) {
+                showUnverifiedBanner('Esperá un momento', data.message || 'Alcanzaste el límite de reenvíos. Intentá nuevamente más tarde.');
+                return;
+            }
+
+            showUnverifiedBanner('No se pudo reenviar', data.message || 'Intentá nuevamente en unos minutos.');
         })
         .catch((error) => {
             console.error('Resend verification error', error);
