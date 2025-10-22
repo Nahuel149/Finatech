@@ -98,6 +98,18 @@ app.get('/dashboard/operations/transfer-ars', (_req, res) => {
   res.sendFile(path.join(publicDir, 'transferencia-pesos.html'));
 });
 
+app.get('/dashboard/operations/transfer-ars/amount', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'transferencia-pesos-monto.html'));
+});
+
+app.get('/dashboard/operations/transfer-ars/distribution', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'transferencia-pesos-distribucion.html'));
+});
+
+app.get('/dashboard/operations/transfer-ars/confirmation', (_req, res) => {
+  res.sendFile(path.join(publicDir, 'transferencia-pesos-confirmacion.html'));
+});
+
 app.use((_req, res) => {
   res.status(404).json({ message: 'No encontrado' });
 });

@@ -8,6 +8,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="/js/config.js"></script>
     <style>
         ::-webkit-scrollbar { display: none;}
         * { font-family: 'Inter', sans-serif; }
@@ -277,7 +278,7 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const apiBaseUrl = '/api/auth';
+    const apiBaseUrl = apiUrl('/api/auth');
     const form = document.getElementById('login-form');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -417,7 +418,7 @@ document.addEventListener('DOMContentLoaded', function() {
             setGoogleLoading(false);
 
             if (apiResponse.ok) {
-                redirectToTarget();
+                redirectToTarget(1000);
             } else {
                 handleLoginError(apiResponse.status, data);
             }
@@ -663,12 +664,21 @@ document.addEventListener('DOMContentLoaded', function() {
         return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     }
 
-    function redirectToTarget() {
-        window.location.href = redirectTarget;
+    function redirectToTarget(delayMs) {
+        const navigate = () => {
+            window.location.href = redirectTarget;
+        };
+
+        if (typeof delayMs === 'number' && delayMs > 0) {
+            setTimeout(navigate, delayMs);
+            return;
+        }
+
+        navigate();
     }
 
     function loadConfig() {
-        fetch('/api/config')
+        fetch(apiUrl('/api/config'))
             .then((response) => response.json())
             .then((data) => {
                 if (data && data.googleClientId) {

@@ -54,94 +54,160 @@
 </head>
 <body class="bg-gray-50">
 
-<!-- COMPONENT: Mobile Header -->
-<header id="header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-40">
-    <div class="px-4 py-3">
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
         <div class="flex items-center justify-between">
-            <button id="back-header-button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
-                <i class="fa-solid fa-arrow-left text-lg"></i>
-            </button>
-            <div class="flex-1 text-center">
-                <h1 class="text-lg font-bold text-text-primary">Liquidación</h1>
+            <div class="flex items-center space-x-6">
+                <button id="back-header-button" class="p-2 text-text-primary hover:text-primary transition-colors lg:hidden" aria-label="Volver">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <a href="/dashboard" class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div id="main-nav" class="hidden lg:flex space-x-8">
+                    <a href="/dashboard" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <a href="/saldos" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </a>
+                    <a href="/logistica" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
             </div>
-            <div class="flex items-center gap-3 justify-end">
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
-                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
+
+            <div class="flex-1 max-w-md mx-6 hidden lg:block">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors lg:hidden" aria-label="Abrir menú">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
+                <div class="relative hidden lg:block">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-search text-lg"></i>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="hidden xl:flex" data-balance-widget data-balance-widget-target="/saldos"></div>
+                <div class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
             </div>
-        </div>
-    </div>
-</header>
-
-<!-- COMPONENT: Mobile Navigation Menu -->
-<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30 hidden">
-    <div class="px-4 py-3">
-        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
-            <div>
-                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
-                <div class="text-xs text-gray-500">Operador Senior</div>
-            </div>
-        </div>
-        <div class="space-y-2">
-            <button class="flex w-full items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg text-primary font-medium" type="button">
-                <i class="fa-solid fa-exchange-alt mr-3"></i>
-                Operaciones
-            </button>
-            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
-                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
-                Tesorería
-            </button>
-            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
-                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
-                Logística
-            </button>
-            <button class="flex w-full items-center px-3 py-2 text-text-primary" type="button">
-                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
-                Liquidaciones
-            </button>
         </div>
     </div>
 </nav>
 
-<!-- COMPONENT: Balance Cards -->
-<section id="balance-cards" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-20 overflow-x-auto">
-    <div class="px-4 py-4">
-        <div class="flex space-x-4 min-w-max">
-            <article id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="transfers">
+<!-- COMPONENT: Mobile Navigation Menu -->
+<nav id="mobile-menu" class="lg:hidden fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+    <div class="px-4 py-4 space-y-4">
+        <div class="flex items-center gap-3">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full">
+            <div>
+                <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
+                <span class="text-xs text-gray-500">Operador Senior</span>
+            </div>
+        </div>
+        <div class="space-y-2">
+            <a href="/dashboard" class="flex items-center justify-between px-3 py-2 rounded-lg bg-primary bg-opacity-10 text-primary font-medium">
+                <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-exchange-alt"></i>
+                    Operaciones
+                </span>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+            </a>
+            <a href="/saldos" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+                <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-vault text-gray-500"></i>
+                    Tesorería
+                </span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
+            <a href="/logistica" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+                <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-truck text-gray-500"></i>
+                    Logística
+                </span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+                <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-calculator text-gray-500"></i>
+                    Liquidaciones
+                </span>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<section id="balance-cards" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-30">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="transfers">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
-                        <span class="text-xs font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>$2.847.950,00</div>
-                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:32</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>$0,00</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
             </article>
-            <article id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="cash">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="cash">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
-                        <span class="text-xs font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>$456.780,50</div>
-                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:30</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>$0,00</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
             </article>
-            <article id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="usd">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="usd">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
-                        <span class="text-xs font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Caja (USD)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-danger" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg font-bold text-text-primary mb-1" data-balance-amount>USD 12.450,00</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>USD 0,00</div>
                 <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500" data-balance-time>Error conexión</div>
+                    <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
                     <button class="text-xs text-primary hover:underline" data-balance-retry>Reintentar</button>
                 </div>
             </article>
@@ -285,41 +351,8 @@
     </div>
 </div>
 
-<!-- COMPONENT: Progress Bar -->
-<section id="step-progress" class="fixed top-[185px] left-0 right-0 bg-white border-b border-gray-200 z-10">
-    <div class="px-4 py-4">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center">
-                <div class="w-6 h-6 bg-success text-white rounded-full flex items-center justify-center text-xs">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-                <div class="ml-2">
-                    <div class="font-medium text-text-primary text-xs">Datos</div>
-                    <div class="text-xs text-gray-500">Información</div>
-                </div>
-            </div>
-            <div class="flex-1 mx-3 h-px bg-primary"></div>
-            <div class="flex items-center">
-                <div class="w-6 h-6 bg-primary text-white rounded-full flex items-center justify-center text-xs">2</div>
-                <div class="ml-2">
-                    <div class="font-medium text-text-primary text-xs">Liquidación</div>
-                    <div class="text-xs text-gray-500">Pago</div>
-                </div>
-            </div>
-            <div class="flex-1 mx-3 h-px bg-gray-300"></div>
-            <div class="flex items-center">
-                <div class="w-6 h-6 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center text-xs">3</div>
-                <div class="ml-2">
-                    <div class="font-medium text-gray-400 text-xs">Resumen</div>
-                    <div class="text-xs text-gray-400">Confirmar</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
 <!-- STEP: Amount -->
-<section id="amount-step" class="pt-[240px] px-6 pb-24 max-w-4xl mx-auto">
+<section id="amount-step" class="pt-[220px] px-6 pb-20 max-w-6xl mx-auto">
     <div class="mb-8">
         <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
             <a href="/dashboard" class="hover:text-primary transition-colors">Operaciones</a>
@@ -391,60 +424,105 @@
     <div id="amount-toast-container" class="fixed top-4 right-4 z-50 space-y-3"></div>
 </section>
 
-<main id="main-container" class="hidden pt-[245px] px-4 pb-20 max-w-3xl mx-auto">
+
+<main id="main-container" class="hidden pt-[76px] lg:pt-[220px] px-6 pb-16 max-w-6xl mx-auto">
     <div id="feedback-box" class="hidden mb-6 border rounded-lg px-4 py-3 text-sm"></div>
 
-    <!-- Operation summary -->
-    <section id="operation-summary" class="mb-6">
-        <div class="bg-gray-50 rounded-lg p-4 border border-gray-200 space-y-3">
-            <div class="flex items-center justify-between">
+    <section id="wizard-header" class="mb-10">
+        <div class="hidden lg:flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div class="flex flex-col gap-3 md:flex-row md:items-center">
+                <button id="back-button" class="flex items-center text-primary hover:text-blue-700 font-medium transition-colors">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+                <div class="hidden md:block h-6 w-px bg-gray-300 md:mx-4"></div>
                 <div>
-                    <div class="text-xs text-gray-600">Cliente</div>
-                    <div id="summary-client" class="font-medium text-text-primary text-sm">—</div>
+                    <h1 class="text-3xl font-bold text-text-primary">Nueva operación</h1>
+                    <p class="text-sm text-gray-600">Definí la liquidación del movimiento y asegurá la trazabilidad.</p>
                 </div>
-                <button id="edit-step-1" class="text-primary hover:text-blue-700 text-xs">
-                    <i class="fa-solid fa-edit mr-1"></i>
-                    Editar
+            </div>
+        </div>
+
+        <div class="mt-6 bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-success text-white rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-text-primary">Datos</div>
+                        <div class="text-sm text-gray-500">Información de la operación</div>
+                    </div>
+                </div>
+                <div class="hidden lg:flex flex-1 h-px bg-primary mx-8"></div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-semibold">2</div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-text-primary">Liquidación</div>
+                        <div class="text-sm text-gray-500">Método de pago</div>
+                    </div>
+                </div>
+                <div class="hidden lg:flex flex-1 h-px bg-gray-200 mx-8"></div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-gray-200 text-gray-500 rounded-full flex items-center justify-center font-semibold">3</div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-gray-400">Resumen</div>
+                        <div class="text-sm text-gray-400">Confirmación final</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="operation-summary" class="mb-8">
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-5">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex flex-wrap gap-6 lg:items-center">
+                    <div>
+                        <div class="text-sm text-gray-600">Cliente</div>
+                        <div id="summary-client" class="font-medium text-text-primary text-base">—</div>
+                    </div>
+                    <div class="hidden lg:block h-10 w-px bg-gray-200"></div>
+                    <div>
+                        <div class="text-sm text-gray-600">Operación</div>
+                        <div id="summary-operation" class="font-medium text-text-primary text-base">—</div>
+                    </div>
+                    <div class="hidden lg:block h-10 w-px bg-gray-200"></div>
+                    <div>
+                        <div class="text-sm text-gray-600">Monto total</div>
+                        <div id="summary-amount" class="font-medium text-text-primary text-base">—</div>
+                    </div>
+                </div>
+                <button id="edit-step-1" class="self-start text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-2"></i>
+                    Editar datos
                 </button>
             </div>
-            <div class="h-px bg-gray-200"></div>
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <div class="text-xs text-gray-600">Operación</div>
-                    <div id="summary-operation" class="font-medium text-text-primary text-sm">—</div>
-                </div>
-                <div>
-                    <div class="text-xs text-gray-600">Monto total</div>
-                    <div id="summary-amount" class="font-medium text-text-primary text-sm">—</div>
-                </div>
-            </div>
         </div>
     </section>
 
-    <!-- Settlement type -->
-    <section id="settlement-type" class="mb-6">
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
-            <label class="block text-sm font-semibold text-text-primary">Tipo de liquidación</label>
-            <button id="simple-settlement" type="button" class="w-full p-4 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg text-left space-y-2">
-                <div class="flex items-center">
-                    <i class="fa-solid fa-circle-dot mr-3"></i>
-                    <span class="font-semibold">Simple</span>
+    <section id="settlement-type" class="mb-8">
+        <h2 class="text-lg font-semibold text-text-primary mb-4">Tipo de liquidación</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <button id="simple-settlement" type="button" class="p-6 border-2 border-primary bg-primary bg-opacity-5 text-primary rounded-lg text-left transition-colors">
+                <div class="flex items-center mb-2">
+                    <i class="fa-solid fa-circle-dot mr-3 text-lg"></i>
+                    <span class="font-semibold text-lg">Simple</span>
                 </div>
-                <p class="text-xs text-text-primary opacity-80">Un solo método de pago para el 100% de la operación.</p>
+                <p class="text-sm opacity-80">Un solo método de pago para el 100% de la operación.</p>
             </button>
-            <button id="compound-settlement" type="button" class="w-full p-4 border-2 border-gray-300 text-gray-600 rounded-lg text-left space-y-2 hover:border-primary hover:text-primary transition-colors">
-                <div class="flex items-center">
-                    <i class="fa-regular fa-circle mr-3"></i>
-                    <span class="font-semibold">Compuesta</span>
+            <button id="compound-settlement" type="button" class="p-6 border-2 border-gray-300 text-gray-600 rounded-lg text-left hover:border-primary hover:text-primary transition-colors">
+                <div class="flex items-center mb-2">
+                    <i class="fa-regular fa-circle mr-3 text-lg"></i>
+                    <span class="font-semibold text-lg">Compuesta</span>
                 </div>
-                <p class="text-xs text-text-primary opacity-80">Múltiples métodos de pago combinados.</p>
+                <p class="text-sm opacity-80">Combiná múltiples métodos de pago.</p>
             </button>
         </div>
     </section>
 
-    <!-- Simple settlement -->
-    <section id="simple-form" class="mb-6">
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-4">
+    <section id="simple-form" class="mb-8">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-6">
             <div>
                 <label class="block text-sm font-medium text-text-primary mb-2" for="simple-method-select">Método de liquidación</label>
                 <select id="simple-method-select" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
@@ -457,26 +535,25 @@
                 <label class="block text-sm font-medium text-text-primary mb-2">Monto</label>
                 <input id="simple-total-amount" type="text" class="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 text-sm" readonly value="—">
             </div>
-            <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-700 flex items-start">
-                <i class="fa-solid fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start text-sm text-blue-800">
+                <i class="fa-solid fa-info-circle mr-2 mt-0.5"></i>
                 Este método aplicará al 100% de la operación.
             </div>
         </div>
     </section>
 
-    <!-- Compound settlement -->
-    <section id="compound-form" class="mb-6 hidden">
+    <section id="compound-form" class="mb-8 hidden">
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
-            <div class="px-4 py-3 border-b border-gray-200 bg-gray-50">
-                <div class="grid grid-cols-12 gap-2 text-xs font-medium text-text-primary">
+            <div class="px-6 py-4 border-b border-gray-200 bg-gray-50">
+                <div class="grid grid-cols-12 gap-4 text-xs font-medium text-text-primary">
                     <div class="col-span-6">Método</div>
-                    <div class="col-span-5">Monto / %</div>
-                    <div class="col-span-1 text-center">-</div>
+                    <div class="col-span-4">Monto / Porcentaje</div>
+                    <div class="col-span-2 text-right">Acciones</div>
                 </div>
             </div>
             <div id="settlement-rows" class="divide-y divide-gray-200"></div>
-            <div class="px-4 py-3 border-t border-gray-200">
-                <button id="add-settlement-row" type="button" class="flex items-center text-primary hover:text-blue-700 text-sm">
+            <div class="px-6 py-4 border-t border-gray-200">
+                <button id="add-settlement-row" type="button" class="flex items-center text-primary hover:text-blue-700 text-sm font-medium">
                     <i class="fa-solid fa-plus mr-2"></i>
                     Agregar línea
                 </button>
@@ -484,9 +561,8 @@
         </div>
     </section>
 
-    <!-- Progress -->
-    <section id="settlement-progress" class="mb-6 hidden">
-        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 space-y-3">
+    <section id="settlement-progress" class="mb-8 hidden">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 space-y-4">
             <div class="flex items-center justify-between">
                 <span class="text-sm font-medium text-text-primary">Progreso de liquidación</span>
                 <span id="progress-percentage" class="text-sm font-semibold text-text-primary">0%</span>
@@ -494,35 +570,31 @@
             <div class="w-full bg-gray-200 rounded-full h-3">
                 <div id="progress-bar-fill" class="bg-primary h-3 rounded-full transition-all duration-300" style="width: 0%"></div>
             </div>
-            <div id="validation-message" class="text-sm text-gray-600">
-                <i class="fa-solid fa-info-circle mr-1"></i>
-                Ingresá los métodos para completar el 100%.
+            <div id="validation-message" class="text-sm text-gray-600 flex items-start">
+                <i class="fa-solid fa-info-circle mr-2 mt-0.5"></i>
+                Ingrese los métodos de liquidación para completar el 100%
             </div>
         </div>
     </section>
 
-    <!-- Actions -->
-    <section id="action-buttons" class="space-y-3">
-        <button id="continue-button" type="button" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
-            Continuar
-            <i class="fa-solid fa-arrow-right ml-2"></i>
-        </button>
-        <div class="grid grid-cols-3 gap-2">
-            <button id="back-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-arrow-left mr-1"></i>
-                Atrás
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <button id="save-draft-button" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium" type="button">
+                <i class="fa-solid fa-save mr-2"></i>
+                Guardar borrador
             </button>
-            <button id="save-draft-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-save mr-1"></i>
-                Guardar
-            </button>
-            <button id="cancel-button" type="button" class="px-3 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-times mr-1"></i>
+            <button id="cancel-button" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium" type="button">
+                <i class="fa-solid fa-times mr-2"></i>
                 Cancelar
             </button>
         </div>
-    </section>
+        <button id="continue-button" class="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium" type="button">
+            Continuar
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+        </button>
+    </div>
 </main>
+
 
 <footer id="settlement-footer" class="hidden bg-white border-t border-gray-200 py-4 px-4">
     <div class="text-center space-y-3">
@@ -1744,20 +1816,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const createCompoundRow = (line = {}) => {
         const row = document.createElement('div');
-        row.className = 'settlement-row px-4 py-3';
+        row.className = 'settlement-row px-6 py-4';
         row.innerHTML = `
-            <div class="grid grid-cols-12 gap-2 items-center">
+            <div class="grid grid-cols-12 gap-4 items-center">
                 <div class="col-span-6">
                     <select class="settlement-method w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"></select>
                 </div>
-                <div class="col-span-5">
+                <div class="col-span-4">
                     <div class="flex">
                         <input type="number" class="settlement-value flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm" placeholder="0" min="0" step="0.0001">
-                        <button type="button" class="settlement-toggle px-2 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-xs hover:bg-gray-200 transition-colors"></button>
+                        <button type="button" class="settlement-toggle px-3 py-2 bg-gray-100 border border-l-0 border-gray-300 rounded-r-lg text-xs hover:bg-gray-200 transition-colors"></button>
                     </div>
                 </div>
-                <div class="col-span-1 text-center">
-                    <button type="button" class="settlement-remove text-danger hover:text-red-700 p-1">
+                <div class="col-span-2 text-right">
+                    <button type="button" class="settlement-remove text-danger hover:text-red-700 p-2">
                         <i class="fa-solid fa-trash text-xs"></i>
                     </button>
                 </div>

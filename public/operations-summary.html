@@ -40,52 +40,67 @@
 </head>
 <body class="bg-gray-50">
 
-<!-- Mobile Header -->
-<header id="mobile-header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
-    <div class="px-4 py-3">
-        <div class="flex items-center justify-between">
-            <button id="header-back-button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
-                <i class="fa-solid fa-arrow-left text-lg"></i>
-            </button>
-            <div class="flex-1 text-center">
-                <h1 class="text-lg font-bold text-text-primary">Resumen</h1>
-            </div>
-            <div class="flex items-center gap-3 justify-end">
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
-                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
-                    <i class="fa-solid fa-bars text-lg"></i>
-                </button>
-            </div>
-        </div>
-    </div>
-</header>
-
-<!-- Desktop Navbar -->
-<nav id="desktop-navbar" class="hidden lg:block fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50" aria-label="Principal">
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
     <div class="px-6 py-4">
         <div class="flex items-center justify-between">
-            <a href="/dashboard" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
-                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
-                    <i class="fa-solid fa-chart-line text-white text-sm"></i>
-                </div>
-                <span class="text-xl font-bold text-text-primary">FinaTech</span>
-            </a>
-            <div class="flex items-center space-x-4">
-                <div class="relative">
-                    <button id="notifications-button" class="relative p-2 text-text-primary hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-full" aria-haspopup="true" aria-expanded="false" aria-label="Notificaciones">
-                        <i class="fa-solid fa-bell text-lg"></i>
-                        <span id="notifications-badge" class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 hidden items-center justify-center">0</span>
-                    </button>
-                    <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-72 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                        <div class="px-4 py-2 border-b border-gray-100 text-sm font-medium text-text-primary">Notificaciones</div>
-                        <div id="notifications-empty" class="hidden px-4 py-5 text-sm text-gray-500">No tenés notificaciones nuevas.</div>
-                        <ul id="notifications-list" class="max-h-64 overflow-y-auto divide-y divide-gray-100"></ul>
-                        <button id="notifications-view-all" class="w-full px-4 py-2 border-t border-gray-100 text-sm text-primary hover:underline">Ver todas</button>
+            <div class="flex items-center space-x-6">
+                <button id="header-back-button" class="p-2 text-text-primary hover:text-primary transition-colors lg:hidden" aria-label="Volver">
+                    <i class="fa-solid fa-arrow-left"></i>
+                </button>
+                <a href="/dashboard" class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
                     </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                <div id="main-nav" class="hidden lg:flex space-x-8">
+                    <a href="/dashboard" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <a href="/saldos" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </a>
+                    <a href="/logistica" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
                 </div>
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+            </div>
+
+            <div class="flex-1 max-w-md mx-6 hidden lg:block">
                 <div class="relative">
-                    <button id="user-menu-trigger" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2" aria-haspopup="true" aria-expanded="false">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors lg:hidden" aria-label="Abrir menú">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <div class="relative hidden lg:block">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-search text-lg"></i>
+                    </button>
+                </div>
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+                <div class="hidden xl:flex" data-balance-widget data-balance-widget-target="/saldos"></div>
+                <div class="relative">
+                    <button id="user-menu-trigger" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
                         <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
                         <div class="text-left">
                             <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
@@ -93,9 +108,15 @@
                         </div>
                         <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
                     </button>
-                    <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
-                        <button id="profile-button" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Perfil</button>
-                        <button id="settings-button" class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50">Configuración</button>
+                    <div id="user-dropdown" class="hidden absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-40">
+                        <div class="px-4 py-3 border-b border-gray-100">
+                            <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
+                            <p class="text-xs text-gray-500">Operador Senior</p>
+                        </div>
+                        <div class="py-2">
+                            <button class="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-gray-50">Perfil</button>
+                            <button class="w-full text-left px-4 py-2 text-sm text-text-primary hover:bg-gray-50">Configuración</button>
+                        </div>
                         <button id="logout-button" class="w-full text-left px-4 py-2 text-sm text-danger hover:bg-red-50">Cerrar sesión</button>
                     </div>
                 </div>
@@ -104,86 +125,86 @@
     </div>
 </nav>
 
-<!-- Mobile Navigation Menu -->
-<nav id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden lg:hidden">
-    <div class="px-4 py-3">
-        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+<!-- COMPONENT: Mobile Navigation Menu -->
+<nav id="mobile-menu" class="lg:hidden fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+    <div class="px-4 py-4 space-y-4">
+        <div class="flex items-center gap-3">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full">
             <div>
-                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
-                <div class="text-xs text-gray-500">Operador Senior</div>
+                <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
+                <span class="text-xs text-gray-500">Operador Senior</span>
             </div>
         </div>
         <div class="space-y-2">
-            <button class="flex w-full items-center justify-between px-3 py-2 bg-primary bg-opacity-10 rounded-lg text-sm font-medium text-primary" type="button">
+            <a href="/dashboard" class="flex items-center justify-between px-3 py-2 rounded-lg bg-primary bg-opacity-10 text-primary font-medium">
                 <span class="flex items-center gap-3">
-                    <i class="fa-solid fa-exchange-alt text-primary"></i>
+                    <i class="fa-solid fa-exchange-alt"></i>
                     Operaciones
                 </span>
-                <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
-            </button>
-            <button class="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-text-primary" type="button">
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+            </a>
+            <a href="/saldos" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-vault text-gray-500"></i>
                     Tesorería
                 </span>
-                <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
-            </button>
-            <button class="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-text-primary" type="button">
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
+            <a href="/logistica" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-truck text-gray-500"></i>
                     Logística
                 </span>
-                <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
-            </button>
-            <button class="flex w-full items-center justify-between px-3 py-2 text-sm font-medium text-text-primary" type="button">
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
+            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-calculator text-gray-500"></i>
                     Liquidaciones
                 </span>
-                <i class="fa-solid fa-chevron-right text-gray-400 text-xs"></i>
-            </button>
+                <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
+            </a>
         </div>
     </div>
 </nav>
 
-<!-- Balances -->
-<section id="balance-cards" class="fixed top-[61px] lg:top-[72px] left-0 right-0 bg-white border-b border-gray-200 z-30 overflow-x-auto">
-    <div class="px-4 lg:px-6 py-4">
-        <div class="flex lg:grid lg:grid-cols-3 gap-4 min-w-max lg:min-w-0">
-            <article id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="transfers">
+<!-- COMPONENT: Balance Stripe -->
+<section id="balance-cards" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-30">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="transfers">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
-                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Transferencias (ARS)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>$2.847.950,00</div>
-                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:32</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>$0,00</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
             </article>
-            <article id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="cash">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="cash">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
-                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Efectivo (ARS)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-success" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>$456.780,50</div>
-                <div class="text-xs text-gray-500" data-balance-time>Actualizado 14:30</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>$0,00</div>
+                <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
             </article>
-            <article id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm min-w-[200px]" data-balance="usd">
+            <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="usd">
                 <div class="flex items-center justify-between mb-2">
                     <div class="flex items-center">
-                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
-                        <span class="text-xs lg:text-sm font-medium text-gray-600" data-balance-label>Caja (USD)</span>
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600" data-balance-label>Caja (USD)</span>
                     </div>
-                    <div class="w-2 h-2 rounded-full bg-danger" data-balance-status></div>
+                    <span class="w-2 h-2 rounded-full bg-success" data-balance-status></span>
                 </div>
-                <div class="text-lg lg:text-2xl font-bold text-text-primary mb-1" data-balance-amount>USD 12.450,00</div>
+                <div class="text-2xl font-bold text-text-primary mb-1" data-balance-amount>USD 0,00</div>
                 <div class="flex items-center justify-between">
-                    <div class="text-xs text-gray-500" data-balance-time>Error conexión</div>
+                    <div class="text-xs text-gray-500" data-balance-time>Actualizado --:--</div>
                     <button class="text-xs text-primary hover:underline" data-balance-retry>Reintentar</button>
                 </div>
             </article>
@@ -191,42 +212,7 @@
     </div>
 </section>
 
-<!-- Step Progress -->
-<section id="step-progress" class="fixed top-[185px] lg:top-[190px] left-0 right-0 bg-white border-b border-gray-200 z-20">
-    <div class="px-4 lg:px-6 py-4">
-        <div class="flex items-center justify-between text-xs lg:text-sm">
-            <div class="flex items-center">
-                <div class="w-6 h-6 lg:w-8 lg:h-8 bg-success text-white rounded-full flex items-center justify-center font-semibold text-xs lg:text-sm">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-                <div class="ml-2">
-                    <div class="font-medium text-text-primary">Datos</div>
-                    <div class="text-gray-500 hidden lg:block">Información de la operación</div>
-                </div>
-            </div>
-            <div class="flex-1 mx-3 lg:mx-8 h-px bg-success"></div>
-            <div class="flex items-center">
-                <div class="w-6 h-6 lg:w-8 lg:h-8 bg-success text-white rounded-full flex items-center justify-center font-semibold text-xs lg:text-sm">
-                    <i class="fa-solid fa-check"></i>
-                </div>
-                <div class="ml-2">
-                    <div class="font-medium text-text-primary">Liquidación</div>
-                    <div class="text-gray-500 hidden lg:block">Métodos de pago</div>
-                </div>
-            </div>
-            <div class="flex-1 mx-3 lg:mx-8 h-px bg-primary"></div>
-            <div class="flex items-center">
-                <div class="w-6 h-6 lg:w-8 lg:h-8 bg-primary text-white rounded-full flex items-center justify-center font-semibold text-xs lg:text-sm">3</div>
-                <div class="ml-2">
-                    <div class="font-medium text-text-primary">Resumen</div>
-                    <div class="text-gray-500 hidden lg:block">Confirmación final</div>
-                </div>
-            </div>
-        </div>
-    </div>
-</section>
-
-<main id="main-container" class="pt-[245px] lg:pt-[260px] px-4 lg:px-6 pb-16 max-w-5xl mx-auto">
+<main id="main-container" class="pt-[76px] lg:pt-[220px] px-6 pb-16 max-w-6xl mx-auto">
     <section id="breadcrumbs" class="hidden lg:flex items-center text-sm text-gray-500 mb-4">
         <button id="breadcrumb-operations" class="hover:text-primary transition-colors">Operaciones</button>
         <i class="fa-solid fa-chevron-right mx-2 text-xs"></i>
@@ -235,24 +221,66 @@
         <span class="text-text-primary font-medium">Resumen</span>
     </section>
 
-    <div id="draft-status" class="hidden mb-4 text-xs text-gray-500 text-center lg:text-left">
+    <section id="wizard-header" class="mb-8">
+        <div class="hidden lg:flex items-center mb-6">
+            <button class="flex items-center text-primary hover:text-blue-700 font-medium transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
+                Volver a Operaciones
+            </button>
+            <div class="h-6 w-px bg-gray-300 mx-4"></div>
+            <h1 class="text-3xl font-bold text-text-primary">Nueva operación</h1>
+        </div>
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-success text-white rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-text-primary">Datos</div>
+                        <div class="text-sm text-gray-500">Información de la operación</div>
+                    </div>
+                </div>
+                <div class="hidden lg:flex flex-1 h-px bg-success mx-8"></div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-success text-white rounded-full flex items-center justify-center">
+                        <i class="fa-solid fa-check text-sm"></i>
+                    </div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-text-primary">Liquidación</div>
+                        <div class="text-sm text-gray-500">Método de pago</div>
+                    </div>
+                </div>
+                <div class="hidden lg:flex flex-1 h-px bg-primary mx-8"></div>
+                <div class="flex items-center">
+                    <div class="w-10 h-10 bg-primary text-white rounded-full flex items-center justify-center font-semibold">3</div>
+                    <div class="ml-3">
+                        <div class="font-semibold text-text-primary">Resumen</div>
+                        <div class="text-sm text-gray-500">Confirmación final</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div id="draft-status" class="hidden mb-4 text-xs text-gray-500">
         <i class="fa-solid fa-floppy-disk mr-1 text-primary"></i>
         Borrador guardado a las <span id="draft-saved-at">--:--</span>
     </div>
 
-    <section id="summary-cards" class="space-y-6 mb-6">
+    <section id="summary-cards" class="space-y-6 mb-8">
         <article class="bg-white rounded-lg border border-gray-200 shadow-sm" aria-labelledby="card-client-title">
-            <div class="p-4 lg:p-6 border-b border-gray-200 flex items-center justify-between">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 id="card-client-title" class="text-lg font-semibold text-text-primary flex items-center gap-2">
                     <i class="fa-solid fa-user text-primary"></i>
                     Cliente
                 </h3>
-                <button id="edit-client" class="flex items-center px-3 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
-                    <i class="fa-solid fa-edit mr-1"></i>
+                <button id="edit-client" class="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
+                    <i class="fa-solid fa-edit mr-2"></i>
                     Editar
                 </button>
             </div>
-            <div class="p-4 lg:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-4">
                     <div>
                         <span class="block text-sm font-medium text-gray-600 mb-1">Nombre / Razón social</span>
@@ -271,7 +299,7 @@
                     <div>
                         <span class="block text-sm font-medium text-gray-600 mb-1">Último margen con este cliente</span>
                         <div id="client-last-margin-container" class="flex items-center gap-2">
-                            <span id="client-last-margin" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium badge-positive">—</span>
+                            <span id="client-last-margin" class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-success bg-opacity-10 text-success">—</span>
                             <span id="client-last-margin-note" class="text-sm text-gray-500"></span>
                         </div>
                     </div>
@@ -280,26 +308,26 @@
         </article>
 
         <article class="bg-white rounded-lg border border-gray-200 shadow-sm" aria-labelledby="card-operation-title">
-            <div class="p-4 lg:p-6 border-b border-gray-200 flex items-center justify-between">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 id="card-operation-title" class="text-lg font-semibold text-text-primary flex items-center gap-2">
                     <i class="fa-solid fa-exchange-alt text-primary"></i>
                     Operación
                 </h3>
-                <button id="edit-operation" class="flex items-center px-3 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
-                    <i class="fa-solid fa-edit mr-1"></i>
+                <button id="edit-operation" class="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
+                    <i class="fa-solid fa-edit mr-2"></i>
                     Editar
                 </button>
             </div>
-            <div class="p-4 lg:p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <div class="space-y-4">
                     <div>
                         <span class="block text-sm font-medium text-gray-600 mb-1">Tipo de operación</span>
-                        <div class="flex items-center">
-                            <span id="operation-type" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium badge-positive">—</span>
+                        <div class="flex items-center gap-2">
+                            <span id="operation-type" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">—</span>
                         </div>
                     </div>
                     <div>
-                        <span class="block text-sm font-medium text-gray-600 mb-1">Bien que ingresa</span>
+                        <span class="block text-sm font-medium text-gray-600 mb-1">Bien que entra</span>
                         <div id="incoming-asset" class="text-text-primary">—</div>
                     </div>
                     <div>
@@ -314,14 +342,14 @@
                             <div id="apr-value" class="text-text-primary font-medium">—</div>
                         </div>
                         <div>
-                            <span class="block text-sm font-medium text-gray-600 mb-1">TC de mercado</span>
+                            <span class="block text-sm font-medium text-gray-600 mb-1">TC mercado</span>
                             <div id="market-apr-value" class="text-text-primary">—</div>
                         </div>
                     </div>
                     <div>
                         <span class="block text-sm font-medium text-gray-600 mb-1">Margen estimado</span>
                         <div class="flex items-center gap-2">
-                            <span id="margin-percentage" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium badge-positive">—</span>
+                            <span id="margin-percentage" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-success bg-opacity-10 text-success">—</span>
                             <button id="margin-info" class="text-gray-400 hover:text-gray-600" aria-label="Información de margen">
                                 <i class="fa-solid fa-info-circle"></i>
                             </button>
@@ -332,17 +360,17 @@
         </article>
 
         <article class="bg-white rounded-lg border border-gray-200 shadow-sm" aria-labelledby="card-settlement-title">
-            <div class="p-4 lg:p-6 border-b border-gray-200 flex items-center justify-between">
+            <div class="p-6 border-b border-gray-200 flex items-center justify-between">
                 <h3 id="card-settlement-title" class="text-lg font-semibold text-text-primary flex items-center gap-2">
                     <i class="fa-solid fa-credit-card text-primary"></i>
                     Liquidación
                 </h3>
-                <button id="edit-settlement" class="flex items-center px-3 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
-                    <i class="fa-solid fa-edit mr-1"></i>
+                <button id="edit-settlement" class="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm">
+                    <i class="fa-solid fa-edit mr-2"></i>
                     Editar
                 </button>
             </div>
-            <div class="p-4 lg:p-6 space-y-4">
+            <div class="p-6 space-y-4">
                 <div>
                     <span class="block text-sm font-medium text-gray-600 mb-1">Tipo de liquidación</span>
                     <div id="settlement-mode" class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">—</div>
@@ -365,10 +393,10 @@
                 </div>
                 <div id="settlement-compound" class="hidden">
                     <div class="bg-gray-50 border border-gray-200 rounded-lg overflow-hidden">
-                        <div class="px-4 py-3 bg-gray-100 border-b border-gray-200 grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
+                        <div class="px-4 py-3 border-b border-gray-200 bg-gray-100 grid grid-cols-3 gap-4 text-sm font-medium text-gray-700">
                             <div>Método</div>
                             <div class="text-right">Monto</div>
-                            <div class="text-center">% </div>
+                            <div class="text-center">Porcentaje</div>
                         </div>
                         <div id="settlement-lines" class="divide-y divide-gray-200"></div>
                         <div class="px-4 py-3 bg-success bg-opacity-5 border-t border-gray-200 grid grid-cols-3 gap-4 text-sm font-semibold text-success" id="settlement-total-row">
@@ -382,8 +410,8 @@
         </article>
     </section>
 
-    <section id="final-validation" class="bg-white rounded-lg border border-gray-200 shadow-sm p-4 lg:p-6 mb-6">
-        <div class="flex items-center justify-between mb-4">
+    <section id="final-validation" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-4">
             <h3 class="text-lg font-semibold text-text-primary flex items-center gap-2">
                 <i class="fa-solid fa-shield-halved text-success"></i>
                 Validación final
@@ -397,30 +425,30 @@
         <div id="validation-summary" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
     </section>
 
-    <section id="action-buttons" class="space-y-3">
-        <button id="confirm-button" class="w-full px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium" disabled>
-            <i class="fa-solid fa-check mr-2"></i>
-            Confirmar operación
-        </button>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <button id="back-button" class="px-4 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-arrow-left mr-1"></i>
+    <section id="action-buttons" class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div class="flex flex-col sm:flex-row gap-2 sm:gap-4">
+            <button id="back-button" class="px-6 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-arrow-left mr-2"></i>
                 Atrás
             </button>
-            <button id="save-draft" class="px-4 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-save mr-1"></i>
-                Guardar
+            <button id="save-draft" class="px-6 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-save mr-2"></i>
+                Guardar borrador
             </button>
-            <button id="cancel-button" class="px-4 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm">
-                <i class="fa-solid fa-times mr-1"></i>
+            <button id="cancel-button" class="px-6 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
+                <i class="fa-solid fa-times mr-2"></i>
                 Cancelar
             </button>
         </div>
+        <button id="confirm-button" class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium" disabled>
+            <i class="fa-solid fa-check mr-2"></i>
+            Confirmar operación
+        </button>
     </section>
 
-    <section id="success-state" class="hidden mt-12 text-center">
-        <div class="w-20 h-20 bg-success rounded-full flex items-center justify-center mx-auto mb-6 text-white">
-            <i class="fa-solid fa-check text-3xl"></i>
+    <section id="success-state" class="hidden mt-16 text-center">
+        <div class="w-20 h-20 bg-success rounded-full flex items-center justify-center mx-auto mb-6">
+            <i class="fa-solid fa-check text-white text-3xl"></i>
         </div>
         <h2 class="text-3xl font-bold text-text-primary mb-2">Operación registrada</h2>
         <p class="text-gray-600 mb-6">La operación se guardó exitosamente en el sistema.</p>
@@ -428,7 +456,7 @@
             <span class="text-sm text-gray-600 mb-1">ID de operación</span>
             <span id="operation-code" class="text-2xl font-bold text-primary">—</span>
         </div>
-        <div class="flex flex-col space-y-3">
+        <div class="flex flex-col sm:flex-row justify-center gap-3">
             <button id="view-operation" class="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
                 <i class="fa-solid fa-eye mr-2"></i>
                 Ver detalle de operación
@@ -441,15 +469,15 @@
     </section>
 </main>
 
-<footer id="footer" class="bg-white border-t border-gray-200 py-6 px-4 lg:px-6">
+<footer id="footer" class="bg-white border-t border-gray-200 py-6 px-6">
     <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-        <div class="grid grid-cols-2 lg:flex lg:items-center lg:space-x-6 gap-3 text-xs text-gray-600">
+        <div class="flex flex-wrap gap-4 text-sm text-gray-600">
             <span class="hover:text-primary transition-colors cursor-pointer">Términos de uso</span>
             <span class="hover:text-primary transition-colors cursor-pointer">Política de privacidad</span>
             <span class="hover:text-primary transition-colors cursor-pointer">Centro de ayuda</span>
             <span class="hover:text-primary transition-colors cursor-pointer">Soporte técnico</span>
         </div>
-        <div class="flex items-center justify-center space-x-3 text-xs text-gray-500">
+        <div class="flex items-center space-x-4 text-sm text-gray-500">
             <span>© 2024 FinaTech - Versión 2.1.4</span>
             <div class="flex items-center space-x-2">
                 <div class="w-2 h-2 bg-success rounded-full"></div>
@@ -470,10 +498,10 @@
             </div>
             <p class="text-gray-600 mb-6">Se perderán todos los datos ingresados en esta operación. Esta acción no se puede deshacer.</p>
             <div class="flex space-x-3">
-                <button class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors" id="cancel-modal-dismiss">
+                <button id="cancel-modal-dismiss" class="flex-1 px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors">
                     Continuar editando
                 </button>
-                <button class="flex-1 px-4 py-2 bg-danger text-white rounded-lg hover:bg-red-700 transition-colors" id="cancel-modal-confirm">
+                <button id="cancel-modal-confirm" class="flex-1 px-4 py-2 bg-danger text-white rounded-lg hover:bg-red-700 transition-colors">
                     Descartar cambios
                 </button>
             </div>
@@ -487,6 +515,7 @@
         <span id="toast-message">Operación guardada correctamente</span>
     </div>
 </div>
+
 
 <script>
 document.addEventListener('DOMContentLoaded', () => {

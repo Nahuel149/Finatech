@@ -2,7 +2,7 @@
   // Set this to your backend origin, e.g.:
   // global.API_BASE_URL = 'https://finatech-api.onrender.com';
   // Leave as empty string to use same-origin relative requests in local dev.
-  global.API_BASE_URL = '';
+  global.API_BASE_URL = 'https://finatech-qp5l.onrender.com';
 
   // Helper to resolve URLs against the backend origin.
   // Accepts absolute URLs unchanged.

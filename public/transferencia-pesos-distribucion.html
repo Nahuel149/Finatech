@@ -1,0 +1,707 @@
+<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .progress-bar {
+            transition: all 0.3s ease;
+        }
+        .contact-row {
+            transition: all 0.2s ease;
+        }
+        .contact-row:hover {
+            background-color: #f8fafc;
+        }
+        .amount-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+        .dropdown-container {
+            position: relative;
+        }
+        .dropdown-menu {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .validation-indicator {
+            transition: all 0.3s ease;
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </div>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Transferencias ARS -->
+            <div id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </div>
+
+            <!-- Efectivo ARS -->
+            <div id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </div>
+
+            <!-- Caja USD -->
+            <div id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline">Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Main Content -->
+<main id="distribution-container" class="pt-[220px] px-6 pb-12 max-w-6xl mx-auto">
+    
+    <!-- SECTION: Header and Breadcrumbs -->
+    <section id="page-header" class="mb-8">
+        <!-- Breadcrumbs -->
+        <nav id="breadcrumbs" class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <button onclick="navigateToOperations()" class="hover:text-primary transition-colors">Operaciones</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <button onclick="navigateToTransfers()" class="hover:text-primary transition-colors">Transferencia en ARS</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Distribución</span>
+        </nav>
+        
+        <!-- Page Title -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="goBackToAmount()" class="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-text-primary">Distribución de montos entre contactos</h1>
+                    <p class="text-gray-600">Asigná el monto total entre uno o varios clientes o proveedores</p>
+                </div>
+            </div>
+            <!-- Total Amount Display -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="text-sm text-blue-700 font-medium">Monto total</div>
+                <div class="text-2xl font-bold text-blue-900" id="total-amount-display">$150.000,00</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Distribution Progress -->
+    <section id="progress-section" class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <!-- Progress Bar -->
+            <div class="mb-4">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                    <span id="progress-percentage" class="text-sm font-medium text-gray-700">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-3">
+                    <div id="progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            
+            <!-- Status Message -->
+            <div id="status-message" class="validation-indicator p-3 rounded-lg bg-gray-50 border border-gray-200">
+                <div class="flex items-center">
+                    <i class="fa-solid fa-info-circle text-gray-500 mr-2"></i>
+                    <span class="text-sm text-gray-700">Agregá contactos para comenzar la distribución</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Distribution Table -->
+    <section id="distribution-table-section" class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <!-- Table Header -->
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-text-primary">Distribución por contactos</h3>
+                <button onclick="addNewRow()" class="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Agregar línea
+                </button>
+            </div>
+        </div>
+
+        <!-- Table Content -->
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Método de liquidación</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto asignado</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-table-body" class="bg-white divide-y divide-gray-200">
+                    <!-- Empty state -->
+                    <tr id="empty-state" class="text-center">
+                        <td colspan="4" class="px-6 py-8">
+                            <div class="flex flex-col items-center">
+                                <i class="fa-solid fa-users text-gray-300 text-3xl mb-3"></i>
+                                <p class="text-gray-500 text-base font-medium mb-1">No hay contactos agregados</p>
+                                <p class="text-gray-400 text-sm mb-3">Comenzá agregando un contacto para distribuir el monto</p>
+                                <button onclick="addNewRow()" class="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                                    <i class="fa-solid fa-plus mr-2"></i>
+                                    Agregar primer contacto
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</main>
+
+<!-- COMPONENT: Fixed Footer Actions -->
+<div id="footer-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+            <div class="flex items-center space-x-4">
+                <button onclick="goBackToAmount()" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Atrás
+                </button>
+                <button onclick="saveDraft()" class="px-6 py-3 border border-gray-300 text-gray-707 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-save mr-2"></i>
+                    Guardar borrador
+                </button>
+            </div>
+            <button id="confirm-btn" class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed font-medium" disabled>
+                <span>Confirmar operación</span>
+                <i class="fa-solid fa-check ml-2"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: New Client Modal -->
+<div id="new-client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-text-primary">Nuevo cliente</h3>
+                <button onclick="closeNewClientModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+        </div>
+        <div class="px-6 py-4">
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre / Razón social</label>
+                    <input type="text" id="client-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">CUIT / DNI</label>
+                    <input type="text" id="client-id" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                    <select id="client-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Seleccionar tipo</option>
+                        <option value="cliente">Cliente</option>
+                        <option value="proveedor">Proveedor</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+            <button onclick="closeNewClientModal()" class="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors">
+                Cancelar
+            </button>
+            <button onclick="saveNewClient()" class="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Guardar cliente
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let totalAmount = 150000;
+let distributionRows = [];
+let rowCounter = 0;
+
+const sampleContacts = [
+    { id: 1, name: 'María González', type: 'Cliente', cuit: '20-12345678-9' },
+    { id: 2, name: 'Carlos Rodríguez', type: 'Proveedor', cuit: '20-98765432-1' },
+    { id: 3, name: 'Ana Martínez', type: 'Cliente', cuit: '27-11223344-5' },
+    { id: 4, name: 'Luis Fernández', type: 'Proveedor', cuit: '20-55667788-9' },
+    { id: 5, name: 'Empresa ABC S.A.', type: 'Cliente', cuit: '30-12345678-9' }
+];
+
+function addNewRow() {
+    rowCounter++;
+    const rowId = `row-${rowCounter}`;
+    const row = {
+        id: rowId,
+        contactId: null,
+        contactName: '',
+        method: '',
+        amount: 0
+    };
+    distributionRows.push(row);
+    renderTable();
+    setTimeout(() => {
+        const input = document.getElementById(`${rowId}-contact`);
+        input?.focus();
+    }, 100);
+}
+
+function removeRow(rowId) {
+    distributionRows = distributionRows.filter(row => row.id !== rowId);
+    renderTable();
+    updateProgress();
+}
+
+function renderTable() {
+    const tbody = document.getElementById('distribution-table-body');
+    const emptyState = document.getElementById('empty-state');
+    if (distributionRows.length === 0) {
+        emptyState.classList.remove('hidden');
+        return;
+    }
+    emptyState.classList.add('hidden');
+    tbody.innerHTML = distributionRows.map(row => `
+        <tr class="contact-row" data-row-id="${row.id}">
+            <td class="px-6 py-4">
+                <div class="dropdown-container">
+                    <div class="flex items-center space-x-2">
+                        <input 
+                            type="text" 
+                            id="${row.id}-contact"
+                            class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                            placeholder="Buscar contacto..."
+                            value="${row.contactName}"
+                            oninput="handleContactSearch(this, '${row.id}')"
+                            onblur="hideContactDropdown('${row.id}')"
+                        >
+                        <button 
+                            onclick="openNewClientModal('${row.id}')"
+                            class="px-3 py-2 text-primary hover:bg-blue-50 rounded-lg transition-colors"
+                            title="Nuevo cliente"
+                        >
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+                    <div id="${row.id}-dropdown" class="hidden absolute top-full left-0 right-0 bg-white border border-gray-300 rounded-lg shadow-lg z-10 mt-1 dropdown-menu"></div>
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <select 
+                    id="${row.id}-method"
+                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                    onchange="handleMethodChange('${row.id}', this.value)"
+                >
+                    <option value="">Seleccionar método</option>
+                    <option value="ARS" ${row.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                    <option value="USD" ${row.method === 'USD' ? 'selected' : ''}>USD</option>
+                </select>
+            </td>
+            <td class="px-6 py-4">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500">${row.method === 'USD' ? 'USD' : '$'}</span>
+                    </div>
+                    <input 
+                        type="text" 
+                        id="${row.id}-amount"
+                        class="w-full ${row.method === 'USD' ? 'pl-12' : 'pl-8'} pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        placeholder="0,00"
+                        value="${formatAmount(row.amount)}"
+                        oninput="handleAmountChange('${row.id}', this.value)"
+                    >
+                </div>
+            </td>
+            <td class="px-6 py-4">
+                <button 
+                    onclick="removeRow('${row.id}')"
+                    class="text-danger hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition-colors"
+                    title="Eliminar línea"
+                >
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function handleContactSearch(input, rowId) {
+    const query = input.value.toLowerCase();
+    const dropdown = document.getElementById(`${rowId}-dropdown`);
+    if (query.length < 2) {
+        dropdown.classList.add('hidden');
+        return;
+    }
+    const filtered = sampleContacts.filter(contact =>
+        contact.name.toLowerCase().includes(query) ||
+        contact.cuit.includes(query)
+    );
+    if (filtered.length > 0) {
+        dropdown.innerHTML = filtered.map(contact => `
+            <div 
+                class="px-4 py-2 hover:bg-gray-100 cursor-pointer border-b border-gray-100 last:border-b-0"
+                onmousedown="selectContact('${rowId}', ${contact.id}, '${contact.name}')"
+            >
+                <div class="font-medium text-gray-900">${contact.name}</div>
+                <div class="text-sm text-gray-500">${contact.type} • ${contact.cuit}</div>
+            </div>
+        `).join('');
+        dropdown.classList.remove('hidden');
+    } else {
+        dropdown.classList.add('hidden');
+    }
+}
+
+function selectContact(rowId, contactId, contactName) {
+    const row = distributionRows.find(r => r.id === rowId);
+    if (row) {
+        row.contactId = contactId;
+        row.contactName = contactName;
+        const input = document.getElementById(`${rowId}-contact`);
+        input.value = contactName;
+        hideContactDropdown(rowId);
+        updateProgress();
+    }
+}
+
+function hideContactDropdown(rowId) {
+    setTimeout(() => {
+        const dropdown = document.getElementById(`${rowId}-dropdown`);
+        dropdown?.classList.add('hidden');
+    }, 200);
+}
+
+function handleMethodChange(rowId, method) {
+    const row = distributionRows.find(r => r.id === rowId);
+    if (row) {
+        row.method = method;
+        renderTable();
+        updateProgress();
+    }
+}
+
+function handleAmountChange(rowId, value) {
+    const row = distributionRows.find(r => r.id === rowId);
+    if (row) {
+        const formatted = formatAmountInput(value);
+        const numeric = parseAmountInput(formatted);
+        row.amount = numeric;
+        const input = document.getElementById(`${rowId}-amount`);
+        input.value = formatted;
+        updateProgress();
+    }
+}
+
+function formatAmount(amount) {
+    if (!amount || amount === 0) return '';
+    return amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function formatAmountInput(value) {
+    value = value.replace(/[^\d,]/g, '');
+    const parts = value.split(',');
+    if (parts.length > 2) {
+        value = parts[0] + ',' + parts.slice(1).join('');
+    }
+    if (parts[1] && parts[1].length > 2) {
+        value = parts[0] + ',' + parts[1].substring(0, 2);
+    }
+    if (parts[0]) {
+        const integerPart = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        value = parts[1] !== undefined ? integerPart + ',' + parts[1] : integerPart;
+    }
+    return value;
+}
+
+function parseAmountInput(value) {
+    if (!value) return 0;
+    return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+}
+
+function updateProgress() {
+    const totalAssigned = distributionRows.reduce((sum, row) => sum + (row.amount || 0), 0);
+    const percentage = totalAmount > 0 ? Math.min((totalAssigned / totalAmount) * 100, 100) : 0;
+    const remaining = totalAmount - totalAssigned;
+    const progressBar = document.getElementById('progress-bar');
+    const progressPercentage = document.getElementById('progress-percentage');
+    progressBar.style.width = `${percentage}%`;
+    progressPercentage.textContent = `${Math.round(percentage)}%`;
+    const statusMessage = document.getElementById('status-message');
+    let statusClass, statusIcon, statusText;
+    if (distributionRows.length === 0) {
+        statusClass = 'bg-gray-50 border-gray-200';
+        statusIcon = 'fa-info-circle text-gray-500';
+        statusText = 'Agregá contactos para comenzar la distribución';
+    } else if (remaining > 0) {
+        statusClass = 'bg-yellow-50 border-yellow-200';
+        statusIcon = 'fa-exclamation-triangle text-yellow-600';
+        statusText = `Faltan $${formatAmount(remaining)} para completar`;
+        progressBar.classList.remove('bg-success', 'bg-danger');
+        progressBar.classList.add('bg-primary');
+    } else if (remaining < 0) {
+        statusClass = 'bg-red-50 border-red-200';
+        statusIcon = 'fa-exclamation-circle text-danger';
+        statusText = `Excede $${formatAmount(Math.abs(remaining))} del total`;
+        progressBar.classList.remove('bg-primary', 'bg-success');
+        progressBar.classList.add('bg-danger');
+    } else {
+        statusClass = 'bg-green-50 border-green-200';
+        statusIcon = 'fa-check-circle text-success';
+        statusText = 'Total asignado correctamente';
+        progressBar.classList.remove('bg-primary', 'bg-danger');
+        progressBar.classList.add('bg-success');
+    }
+    statusMessage.className = `validation-indicator p-3 rounded-lg ${statusClass}`;
+    statusMessage.innerHTML = `
+        <div class="flex items-center">
+            <i class="fa-solid ${statusIcon} mr-2"></i>
+            <span class="text-sm font-medium">${statusText}</span>
+        </div>
+    `;
+    const confirmBtn = document.getElementById('confirm-btn');
+    if (remaining === 0 && distributionRows.length > 0 && distributionRows.every(row => row.contactName && row.method && row.amount > 0)) {
+        confirmBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.add('bg-success', 'text-white', 'hover:bg-green-700', 'cursor-pointer');
+        confirmBtn.disabled = false;
+    } else {
+        confirmBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.remove('bg-success', 'text-white', 'hover:bg-green-700', 'cursor-pointer');
+        confirmBtn.disabled = true;
+    }
+}
+
+function openNewClientModal(rowId = null) {
+    document.getElementById('new-client-modal').classList.remove('hidden');
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-id').value = '';
+    document.getElementById('client-type').value = '';
+    document.getElementById('new-client-modal').dataset.rowId = rowId || '';
+}
+
+function closeNewClientModal() {
+    document.getElementById('new-client-modal').classList.add('hidden');
+}
+
+function saveNewClient() {
+    const name = document.getElementById('client-name').value.trim();
+    const clientId = document.getElementById('client-id').value.trim();
+    const type = document.getElementById('client-type').value;
+    const rowId = document.getElementById('new-client-modal').dataset.rowId;
+    if (!name || !clientId || !type) {
+        showTemporaryMessage('Complete todos los campos obligatorios', 'warning');
+        return;
+    }
+    const newContact = {
+        id: Date.now(),
+        name: name,
+        type: type,
+        cuit: clientId
+    };
+    sampleContacts.push(newContact);
+    if (rowId) {
+        selectContact(rowId, newContact.id, newContact.name);
+    }
+    closeNewClientModal();
+    showTemporaryMessage('Cliente creado correctamente', 'success');
+}
+
+function goBackToAmount() {
+    console.log('Navigate back to amount step');
+}
+
+function confirmOperation() {
+    if (distributionRows.length === 0) {
+        showTemporaryMessage('Agregá al menos un contacto', 'warning');
+        return;
+    }
+    const totalAssigned = distributionRows.reduce((sum, row) => sum + (row.amount || 0), 0);
+    if (totalAssigned !== totalAmount) {
+        showTemporaryMessage('La suma debe coincidir exactamente con el monto total', 'warning');
+        return;
+    }
+    console.log('Confirm operation with distribution:', distributionRows);
+    showTemporaryMessage('Operación confirmada correctamente', 'success');
+}
+
+function saveDraft() {
+    console.log('Save draft with current distribution');
+    showTemporaryMessage('Borrador guardado correctamente', 'success');
+}
+
+function showTemporaryMessage(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 ${
+        type === 'success' ? 'bg-success text-white' : 
+        type === 'warning' ? 'bg-warning text-gray-800' : 
+        'bg-gray-800 text-white'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fa-solid fa-${type === 'success' ? 'check' : type === 'warning' ? 'exclamation-triangle' : 'info'} mr-2"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+}
+
+function navigateToOperations() {
+    console.log('Navigate to operations');
+}
+
+function navigateToTransfers() {
+    console.log('Navigate to transfers');
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('total-amount-display').textContent = `$${formatAmount(totalAmount)}`;
+    addNewRow();
+    document.addEventListener('keydown', function(event) {
+        if ((event.ctrlKey || event.metaKey) && event.key === 's') {
+            event.preventDefault();
+            saveDraft();
+        }
+        if (event.key === 'Escape') {
+            const modal = document.getElementById('new-client-modal');
+            if (!modal.classList.contains('hidden')) {
+                closeNewClientModal();
+            } else {
+                goBackToAmount();
+            }
+        }
+    });
+    document.getElementById('confirm-btn').addEventListener('click', confirmOperation);
+});
+</script>
+
+
+</body></html>

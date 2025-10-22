@@ -11,8 +11,8 @@
           colors: {
             primary: '#0066CC',
             success: '#28A745',
-            warning: '#FFC107',
             danger: '#DC3545',
+            warning: '#FFC107',
             'text-primary': '#333333',
           },
         },
@@ -29,16 +29,17 @@
     * { font-family: 'Inter', sans-serif; }
     .skeleton {
       position: relative;
+      color: transparent !important;
       overflow: hidden;
     }
     .skeleton::after {
-      animation: pulse 1.5s linear infinite;
-      background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.6) 50%, rgba(255,255,255,0) 100%);
       content: '';
-      inset: 0;
       position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, rgba(240,240,240,0) 0%, rgba(224,224,224,0.8) 50%, rgba(240,240,240,0) 100%);
+      animation: loading 1.5s infinite;
     }
-    @keyframes pulse {
+    @keyframes loading {
       0% { transform: translateX(-100%); }
       100% { transform: translateX(100%); }
     }
@@ -46,148 +47,78 @@
   <title>FinaTech | Dashboard</title>
 </head>
 <body class="bg-gray-50 min-h-screen">
-  <!-- Desktop Navbar -->
-  <header id="desktop-navbar" class="hidden lg:block fixed inset-x-0 top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-      <a href="/dashboard" class="flex items-center gap-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2">
-        <div class="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
-          <i class="fa-solid fa-chart-line text-white"></i>
-        </div>
-        <span class="text-xl font-bold text-text-primary">FinaTech</span>
-      </a>
-      <nav aria-label="Principal">
-        <ul class="flex items-center gap-1 text-sm font-medium">
-          <li>
-            <a href="/dashboard/operations" data-section-link="operations" class="rounded-md px-3 py-2 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Operaciones</a>
-          </li>
-          <li>
-            <a href="/dashboard/treasury" data-section-link="treasury" class="rounded-md px-3 py-2 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Tesorería</a>
-          </li>
-          <li>
-            <a href="/dashboard/logistics" data-section-link="logistics" class="rounded-md px-3 py-2 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Logística</a>
-          </li>
-          <li>
-            <a href="/dashboard/settlements" data-section-link="settlements" class="rounded-md px-3 py-2 text-gray-500 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Liquidaciones</a>
-          </li>
-        </ul>
-      </nav>
-      <div class="flex items-center gap-4">
-        <div class="relative">
-          <button id="notifications-button" class="relative rounded-full p-2 text-text-primary transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-haspopup="true" aria-expanded="false" aria-label="Notificaciones">
-            <i class="fa-solid fa-bell text-lg"></i>
-            <span id="notifications-badge" class="absolute -top-1 -right-1 hidden h-5 min-w-[20px] rounded-full bg-danger px-1 text-xs font-semibold text-white"></span>
-          </button>
-        </div>
-        <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
-        <div class="relative">
-          <button id="account-menu-trigger" class="flex items-center gap-3 rounded-lg px-2 py-1 transition hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-haspopup="true" aria-expanded="false">
-            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Avatar de usuario" class="h-9 w-9 rounded-full object-cover">
-            <div class="text-left">
-              <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
-              <span class="text-xs text-gray-500">Operador Senior</span>
+  <!-- Navbar -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+      <div class="flex items-center justify-between">
+        <!-- Logo Section -->
+        <div id="logo-section" class="flex items-center space-x-8">
+          <a href="/dashboard" class="flex items-center">
+            <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+              <i class="fa-solid fa-chart-line text-white text-sm"></i>
             </div>
-            <i class="fa-solid fa-chevron-down text-xs text-gray-400"></i>
-          </button>
-          <div id="account-dropdown" class="absolute right-0 mt-2 hidden w-56 rounded-lg border border-gray-200 bg-white shadow-lg" role="menu" aria-label="Menú de cuenta">
-            <button class="flex w-full items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">
-              <i class="fa-solid fa-user text-gray-400"></i>
-              Perfil
+            <span class="text-xl font-bold text-text-primary">FinaTech</span>
+          </a>
+          <!-- Main Navigation Menu -->
+          <div id="main-nav" class="flex space-x-8">
+            <a href="/dashboard" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer">
+              <i class="fa-solid fa-exchange-alt mr-2"></i>
+              Operaciones
+            </a>
+            <a href="/saldos" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+              <i class="fa-solid fa-vault mr-2"></i>
+              Tesorería
+            </a>
+            <a href="/logistica" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+              <i class="fa-solid fa-truck mr-2"></i>
+              Logística
+            </a>
+            <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+              <i class="fa-solid fa-calculator mr-2"></i>
+              Liquidaciones
+            </a>
+          </div>
+        </div>
+
+        <!-- Center Search -->
+        <div id="global-search" class="flex-1 max-w-md mx-8">
+          <div class="relative">
+            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <i class="fa-solid fa-search text-gray-400"></i>
+            </div>
+            <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+          </div>
+        </div>
+
+        <!-- Right Section -->
+        <div id="navbar-right" class="flex items-center space-x-4">
+          <!-- Notifications -->
+          <div class="relative">
+            <button id="notifications-button" class="relative p-2 text-text-primary hover:text-primary transition-colors rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-haspopup="true" aria-expanded="false" aria-label="Notificaciones">
+              <i class="fa-solid fa-bell text-lg"></i>
+              <span id="notifications-badge" class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center hidden"></span>
             </button>
-            <button class="flex w-full items-center gap-2 px-4 py-2 text-sm text-text-primary hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">
-              <i class="fa-solid fa-gear text-gray-400"></i>
-              Configuración
-            </button>
-            <button class="flex w-full items-center gap-2 px-4 py-2 text-sm text-danger hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2" type="button" data-logout>
-              <i class="fa-solid fa-right-from-bracket"></i>
-              Cerrar sesión
+          </div>
+
+          <!-- User Menu -->
+          <div id="user-menu" class="relative">
+            <button id="user-menu-button" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-haspopup="true" aria-expanded="false">
+              <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+              <div class="text-left">
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
             </button>
           </div>
         </div>
       </div>
     </div>
-  </header>
-
-  <!-- Mobile Header -->
-  <header id="mobile-header" class="lg:hidden fixed inset-x-0 top-0 z-50 bg-white border-b border-gray-200 shadow-sm">
-    <div class="flex items-center justify-between px-4 py-3">
-      <div class="flex items-center gap-3">
-        <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <i class="fa-solid fa-chart-line text-white text-sm"></i>
-        </div>
-        <span class="text-lg font-bold text-text-primary">FinaTech</span>
-      </div>
-        <div class="flex items-center gap-3">
-          <button id="notifications-button-mobile" class="relative rounded-full p-2 text-text-primary transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="Notificaciones" aria-haspopup="true" aria-expanded="false">
-            <i class="fa-solid fa-bell text-lg"></i>
-            <span id="notifications-badge-mobile" class="absolute -top-1 -right-1 hidden h-5 min-w-[20px] rounded-full bg-danger px-1 text-xs font-semibold text-white"></span>
-          </button>
-          <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
-          <button data-menu-toggle class="rounded-lg p-2 text-text-primary transition hover:text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-label="Abrir menú">
-            <i class="fa-solid fa-bars text-lg"></i>
-          </button>
-        </div>
-    </div>
-  </header>
-
-  <!-- Mobile Navigation -->
-  <nav id="mobile-menu" class="lg:hidden fixed inset-x-0 top-[64px] z-40 hidden border-b border-gray-200 bg-white shadow-sm" aria-label="Menú móvil">
-    <div class="space-y-4 px-4 py-5">
-      <div class="flex items-center gap-3">
-        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Avatar de usuario" class="h-10 w-10 rounded-full object-cover">
-        <div>
-          <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
-          <span class="text-xs text-gray-500">Operador Senior</span>
-        </div>
-      </div>
-      <div class="space-y-2">
-        <button type="button" data-mobile-link="operations" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <span class="flex items-center gap-3">
-            <i class="fa-solid fa-exchange-alt text-gray-500"></i>
-            Operaciones
-          </span>
-          <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-        <button type="button" data-mobile-link="treasury" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <span class="flex items-center gap-3">
-            <i class="fa-solid fa-vault text-gray-500"></i>
-            Tesorería
-          </span>
-          <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-        <button type="button" data-mobile-link="logistics" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <span class="flex items-center gap-3">
-            <i class="fa-solid fa-truck text-gray-500"></i>
-            Logística
-          </span>
-          <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-        <button type="button" data-mobile-link="settlements" class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <span class="flex items-center gap-3">
-            <i class="fa-solid fa-calculator text-gray-500"></i>
-            Liquidaciones
-          </span>
-          <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
-        </button>
-      </div>
-      <div class="space-y-2 border-t border-gray-200 pt-4">
-        <button type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <i class="fa-solid fa-user text-gray-400"></i>
-          Perfil
-        </button>
-        <button type="button" class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-text-primary hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-          <i class="fa-solid fa-gear text-gray-400"></i>
-          Configuración
-        </button>
-        <button type="button" data-logout class="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-danger hover:bg-red-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2">
-          <i class="fa-solid fa-right-from-bracket"></i>
-          Cerrar sesión
-        </button>
-      </div>
-    </div>
   </nav>
 
-  <div id="notifications-dropdown" class="fixed inset-x-4 top-[72px] z-50 mx-auto hidden max-w-sm overflow-hidden rounded-lg border border-gray-200 bg-white shadow-xl lg:inset-auto lg:right-10 lg:top-[96px] lg:mx-0 lg:w-80" role="dialog" aria-label="Lista de notificaciones">
-    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+  <!-- Notifications Dropdown -->
+  <div id="notifications-dropdown" class="fixed top-[90px] right-6 w-80 z-50 hidden bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden" role="dialog" aria-label="Lista de notificaciones">
+    <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
       <p class="text-sm font-semibold text-text-primary">Notificaciones</p>
       <button id="mark-all-read" class="text-xs font-medium text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Marcar todas como leídas</button>
     </div>
@@ -197,469 +128,586 @@
     <button id="notifications-view-all" class="w-full border-t border-gray-100 px-4 py-2 text-sm font-medium text-primary hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Ver todas</button>
   </div>
 
-  <!-- Balances -->
-  <section id="balance-bar" class="fixed inset-x-0 top-[64px] z-40 border-b border-gray-200 bg-white shadow-sm lg:top-[80px]">
-    <div class="mx-auto max-w-6xl px-4 py-4 lg:px-6">
-      <div id="balance-cards" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <article data-balance-card data-balance="transfers" class="relative overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-          <div class="flex items-start justify-between">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-money-bill-transfer text-primary"></i>
-              <p class="text-xs font-semibold text-gray-600">Transferencias (ARS)</p>
+  <!-- User Dropdown -->
+  <div id="account-dropdown" class="fixed top-[90px] right-6 w-56 z-50 hidden bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden" role="menu" aria-label="Cuenta">
+    <div class="px-4 py-3 border-b border-gray-100">
+      <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
+      <p class="text-xs text-gray-500">Operador Senior</p>
+    </div>
+    <div class="py-2">
+      <a href="#" class="block px-4 py-2 text-sm text-text-primary hover:bg-gray-50" role="menuitem">Perfil</a>
+      <a href="#" class="block px-4 py-2 text-sm text-text-primary hover:bg-gray-50" role="menuitem">Configuración</a>
+    </div>
+    <button data-logout class="w-full px-4 py-2 text-sm text-danger hover:bg-red-50 text-left" role="menuitem">Cerrar sesión</button>
+  </div>
+
+  <!-- Balance Stripe -->
+  <section id="balance-stripe" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6" id="balance-cards">
+        <article id="balance-transfers" data-balance-card data-balance="transfers" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center">
+              <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+              <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
             </div>
-            <span data-balance-status class="mt-1 inline-block h-2 w-2 rounded-full bg-success"></span>
+            <span data-balance-status class="w-2 h-2 rounded-full bg-success"></span>
           </div>
-          <p data-balance-amount class="mt-3 text-2xl font-semibold text-text-primary">$0,00</p>
-          <p data-balance-time class="text-xs text-gray-500">Actualizado --:--</p>
+          <div data-balance-amount class="text-2xl font-bold text-text-primary mb-1">$0,00</div>
+          <div data-balance-time class="text-xs text-gray-500">Actualizado --:--</div>
         </article>
-        <article data-balance-card data-balance="cash" class="relative overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-          <div class="flex items-start justify-between">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-hand-holding-dollar text-primary"></i>
-              <p class="text-xs font-semibold text-gray-600">Efectivo (ARS)</p>
+
+        <article id="balance-cash" data-balance-card data-balance="cash" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center">
+              <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+              <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
             </div>
-            <span data-balance-status class="mt-1 inline-block h-2 w-2 rounded-full bg-success"></span>
+            <span data-balance-status class="w-2 h-2 rounded-full bg-success"></span>
           </div>
-          <p data-balance-amount class="mt-3 text-2xl font-semibold text-text-primary">$0,00</p>
-          <p data-balance-time class="text-xs text-gray-500">Actualizado --:--</p>
+          <div data-balance-amount class="text-2xl font-bold text-text-primary mb-1">$0,00</div>
+          <div data-balance-time class="text-xs text-gray-500">Actualizado --:--</div>
         </article>
-        <article data-balance-card data-balance="usd" class="relative overflow-hidden rounded-lg border border-gray-200 bg-white p-4 shadow-sm transition focus-within:ring-2 focus-within:ring-primary focus-within:ring-offset-2">
-          <div class="flex items-start justify-between">
-            <div class="flex items-center gap-2">
-              <i class="fa-solid fa-dollar-sign text-primary"></i>
-              <p class="text-xs font-semibold text-gray-600">Caja (USD)</p>
+
+        <article id="balance-usd" data-balance-card data-balance="usd" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center">
+              <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+              <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
             </div>
-            <span data-balance-status class="mt-1 inline-block h-2 w-2 rounded-full bg-success"></span>
+            <span data-balance-status class="w-2 h-2 rounded-full bg-success"></span>
           </div>
-          <p data-balance-amount class="mt-3 text-2xl font-semibold text-text-primary">$0,00</p>
-          <p data-balance-time class="text-xs text-gray-500">Actualizado --:--</p>
+          <div data-balance-amount class="text-2xl font-bold text-text-primary mb-1">USD 0,00</div>
+          <div class="flex items-center justify-between">
+            <div data-balance-time class="text-xs text-gray-500">Actualizado --:--</div>
+            <button id="balance-retry" class="text-xs text-primary hover:underline hidden">Reintentar</button>
+          </div>
         </article>
       </div>
-      <div id="balance-error" class="mt-4 hidden items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+      <div id="balance-error" class="hidden mt-4 flex items-center justify-between rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-danger">
         <span>No se pudieron obtener los saldos.</span>
-        <button id="balance-retry" class="rounded bg-red-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2">Reintentar</button>
+        <button id="balance-error-retry" class="rounded bg-danger px-3 py-1 text-xs font-semibold text-white transition hover:bg-red-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-danger focus-visible:ring-offset-2">Reintentar</button>
       </div>
     </div>
   </section>
 
   <!-- Main Content -->
-  <main id="app-content" class="pt-[320px] pb-16 lg:pt-[260px]">
-    <div class="mx-auto max-w-6xl px-4 lg:px-6">
-      <!-- Operations Section -->
-      <section data-section="operations" class="space-y-6" aria-label="Operaciones">
-        <header class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-primary">Panel principal</p>
-          <h1 class="text-3xl font-bold text-text-primary">Operaciones</h1>
-          <p class="text-sm text-gray-600">Gestioná y supervisá todas las operaciones financieras de tus clientes.</p>
-        </header>
-        <div class="grid gap-4 md:grid-cols-3">
-          <article class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-text-primary">Operaciones de hoy</span>
-              <span class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">+8%</span>
-            </div>
-            <p class="text-3xl font-bold text-text-primary">38</p>
-            <p class="text-xs text-gray-500">Última actualización hace 10 minutos.</p>
-          </article>
-          <article class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-text-primary">Margen promedio</span>
-              <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">Atención</span>
-            </div>
-            <p class="text-3xl font-bold text-text-primary">+2,3%</p>
-            <p class="text-xs text-gray-500">Comparado contra el TC de mercado.</p>
-          </article>
-          <article class="flex flex-col gap-3 rounded-lg border border-gray-200 bg-white p-4 shadow-sm">
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-semibold text-text-primary">Pendientes de validación</span>
-              <span class="rounded-full bg-danger/10 px-2 py-0.5 text-xs font-semibold text-danger">4</span>
-            </div>
-          <p class="text-3xl font-bold text-text-primary">11</p>
-          <p class="text-xs text-gray-500">Solicitudes a revisar antes del cierre.</p>
-          </article>
+  <main id="main-container" class="pt-[145px] px-6 pb-8">
+    <!-- SECTION: Header Section -->
+    <section id="operations-header" class="mb-8">
+      <div class="flex items-center justify-between mb-6">
+        <div>
+          <h1 class="text-3xl font-bold text-text-primary mb-2">Operaciones</h1>
+          <p class="text-gray-600">Gestioná y supervisá todas las operaciones financieras</p>
         </div>
-        <section aria-labelledby="quick-actions-title" class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-          <div class="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div id="header-actions" class="flex space-x-3">
+          <button class="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <i class="fa-solid fa-plus mr-2"></i>
+            Nueva operación
+          </button>
+          <a href="/dashboard/operations/transfer-ars" class="flex items-center px-4 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-paper-plane mr-2"></i>
+            Transferir pesos
+          </a>
+          <a href="/saldos" class="flex items-center px-4 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors">
+            <i class="fa-solid fa-file-invoice mr-2"></i>
+            Ver cuentas corrientes
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: Quick Flow Shortcuts -->
+    <section id="flow-shortcuts" class="mb-8">
+      <div class="mb-6">
+        <h2 class="text-xl font-semibold text-text-primary mb-2">Atajos de flujo</h2>
+        <p class="text-gray-600">Accesos rápidos a operaciones frecuentes</p>
+      </div>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <button id="shortcut-buy" class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer text-left">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-success bg-opacity-10 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-arrow-down text-success text-xl"></i>
+            </div>
             <div>
-              <h2 id="quick-actions-title" class="text-lg font-semibold text-text-primary">Atajos rápidos</h2>
-              <p class="text-sm text-gray-600">Creá operaciones frecuentes con un click.</p>
+              <h3 class="text-lg font-semibold text-text-primary">Compra</h3>
+              <p class="text-sm text-gray-600">Entra Pesos</p>
             </div>
-            <button class="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">
-              <i class="fa-solid fa-plus"></i>
-              Nueva operación
-            </button>
           </div>
-        <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <button type="button" class="group flex items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10 text-success">
-                <i class="fa-solid fa-arrow-down"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-semibold text-text-primary">Compra | Entra Pesos</h3>
-                <p class="text-sm text-gray-600">Carga una operación de compra con acreditación inmediata.</p>
-              </div>
-            </button>
-            <button type="button" class="group flex items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                <i class="fa-solid fa-arrow-up"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-semibold text-text-primary">Venta | Entra USD</h3>
-                <p class="text-sm text-gray-600">Gestioná una venta con liquidación en dólares.</p>
-              </div>
-            </button>
-            <a href="/dashboard/operations/transfer-ars" class="group flex items-start gap-3 rounded-lg border border-gray-200 px-4 py-3 text-left transition hover:border-primary hover:bg-primary/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">
-              <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
-                <i class="fa-solid fa-money-bill-transfer"></i>
-              </div>
-              <div>
-                <h3 class="text-sm font-semibold text-text-primary">Transferencia en Pesos</h3>
-                <p class="text-sm text-gray-600">Registrá ingresos o egresos de fondos en ARS.</p>
-              </div>
-            </a>
-        </div>
-      </section>
-        <section aria-labelledby="recent-activity-title" class="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+          <p class="text-gray-600 mb-4">Registrá la compra de divisas con ingreso de pesos argentinos</p>
+          <div class="flex items-center text-primary text-sm font-medium">
+            Iniciar operación
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+          </div>
+        </button>
+
+        <button id="shortcut-sell" class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer text-left">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-arrow-up text-primary text-xl"></i>
+            </div>
             <div>
-              <h2 id="recent-activity-title" class="text-lg font-semibold text-text-primary">Actividad reciente</h2>
-              <p class="text-sm text-gray-600">Últimas operaciones registradas.</p>
+              <h3 class="text-lg font-semibold text-text-primary">Venta</h3>
+              <p class="text-sm text-gray-600">Entra USD</p>
             </div>
-            <a href="#" class="text-sm font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2">Ver historial</a>
           </div>
-          <ul class="divide-y divide-gray-100">
-            <li class="flex items-start justify-between px-6 py-4">
-              <div>
-                <p class="text-sm font-semibold text-text-primary">Cliente Alpha • Compra</p>
-                <p class="text-xs text-gray-500">22/03/2024 14:25 · Ingreso $125.000,00</p>
-              </div>
-              <span class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Completada</span>
-            </li>
-            <li class="flex items-start justify-between px-6 py-4">
-              <div>
-                <p class="text-sm font-semibold text-text-primary">Cliente Beta • Venta</p>
-                <p class="text-xs text-gray-500">22/03/2024 13:45 · Salida USD 2.450,00</p>
-              </div>
-              <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">En revisión</span>
-            </li>
-            <li class="flex items-start justify-between px-6 py-4">
-              <div>
-                <p class="text-sm font-semibold text-text-primary">Cliente Gamma • Liquidación</p>
-                <p class="text-xs text-gray-500">22/03/2024 12:30 · Monto $980.000,00</p>
-              </div>
-              <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Enviada</span>
-            </li>
-          </ul>
-        </section>
-      </section>
+          <p class="text-gray-600 mb-4">Registrá la venta de divisas con ingreso de dólares estadounidenses</p>
+          <div class="flex items-center text-primary text-sm font-medium">
+            Iniciar operación
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+          </div>
+        </button>
 
-      <!-- Treasury Section -->
-      <section data-section="treasury" class="hidden space-y-6" aria-label="Tesorería">
-        <header class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-primary">Gestión de fondos</p>
-          <h1 class="text-3xl font-bold text-text-primary">Tesorería</h1>
-          <p class="text-sm text-gray-600">Administra disponibilidades, transferencias y posiciones de caja.</p>
-        </header>
-        <div class="grid gap-4 md:grid-cols-2">
-          <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 class="text-base font-semibold text-text-primary">Posición consolidada</h2>
-            <p class="mt-1 text-sm text-gray-600">Detalle por moneda y entidad.</p>
-            <div class="mt-4 space-y-2 text-sm">
+        <button id="shortcut-compound" class="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer text-left">
+          <div class="flex items-center mb-4">
+            <div class="w-12 h-12 bg-orange-500 bg-opacity-10 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-layer-group text-orange-500 text-xl"></i>
+            </div>
+            <div>
+              <h3 class="text-lg font-semibold text-text-primary">Liquidación</h3>
+              <p class="text-sm text-gray-600">Compuesta</p>
+            </div>
+          </div>
+          <p class="text-gray-600 mb-4">Procesá múltiples operaciones relacionadas en una sola liquidación</p>
+          <div class="flex items-center text-primary text-sm font-medium">
+            Iniciar proceso
+            <i class="fa-solid fa-arrow-right ml-2"></i>
+          </div>
+        </button>
+      </div>
+    </section>
+
+    <!-- SECTION: Recent Validations -->
+    <section id="recent-validations" class="mb-8">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="p-6 border-b border-gray-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-xl font-semibold text-text-primary mb-1">Validaciones recientes</h2>
+            <p class="text-gray-600">Alertas y notificaciones importantes</p>
+          </div>
+          <a href="#" class="text-primary hover:underline font-medium">Ver todas</a>
+        </div>
+        <div class="divide-y divide-gray-200">
+          <div class="p-6 flex items-center">
+            <div class="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-exclamation-triangle text-orange-600"></i>
+            </div>
+            <div class="flex-1">
               <div class="flex items-center justify-between">
-                <span class="text-gray-600">Banco Nación (ARS)</span>
-                <span class="font-semibold text-text-primary">$ 12.458.900,00</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600">Banco Galicia (USD)</span>
-                <span class="font-semibold text-text-primary">USD 245.100,00</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-gray-600">Caja física (ARS)</span>
-                <span class="font-semibold text-text-primary">$ 745.300,00</span>
+                <div>
+                  <h3 class="font-medium text-text-primary">Alerta tipo de cambio</h3>
+                  <p class="text-gray-600 text-sm">El TC actual supera el límite para operaciones automáticas</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-500">Hace 15 min</div>
+                  <a href="#" class="text-primary text-sm hover:underline">Revisar</a>
+                </div>
               </div>
             </div>
-          </article>
-          <article class="rounded-lg border border-gray-200 bg-white p-5 shadow-sm">
-            <h2 class="text-base font-semibold text-text-primary">Alertas de liquidez</h2>
-            <ul class="mt-3 space-y-3 text-sm text-gray-600">
-              <li class="flex items-start gap-2">
-                <i class="fa-solid fa-circle-exclamation mt-0.5 text-warning"></i>
-                <span>Cuenta USD Nación por debajo del mínimo operativo.</span>
-              </li>
-              <li class="flex items-start gap-2">
-                <i class="fa-solid fa-circle-info mt-0.5 text-primary"></i>
-                <span>Liquidación CFTE-904 vence en 3 horas.</span>
-              </li>
-            </ul>
-          </article>
-        </div>
-      </section>
-
-      <!-- Logistics Section -->
-      <section data-section="logistics" class="hidden space-y-6" aria-label="Logística">
-        <header class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-primary">Distribución y retiros</p>
-          <h1 class="text-3xl font-bold text-text-primary">Logística</h1>
-          <p class="text-sm text-gray-600">Seguimiento de pedidos físicos, cadetería y coordinación de entrega.</p>
-        </header>
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h2 class="text-lg font-semibold text-text-primary">Pedidos activos</h2>
-            <span class="text-sm text-gray-500">Actualizado hace 5 minutos</span>
           </div>
-          <ul class="divide-y divide-gray-100 text-sm">
-            <li class="flex items-center justify-between px-6 py-4">
-              <div>
-                <p class="font-semibold text-text-primary">Retiro USD • CABA</p>
-                <p class="text-xs text-gray-500">Cliente Delta • 15:30 hs</p>
-              </div>
-              <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">En camino</span>
-            </li>
-            <li class="flex items-center justify-between px-6 py-4">
-              <div>
-                <p class="font-semibold text-text-primary">Entrega ARS • Córdoba</p>
-                <p class="text-xs text-gray-500">Cliente Épsilon • 17:00 hs</p>
-              </div>
-              <span class="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">Asignado</span>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <!-- Settlements Section -->
-      <section data-section="settlements" class="hidden space-y-6" aria-label="Liquidaciones">
-        <header class="space-y-2">
-          <p class="text-xs font-semibold uppercase tracking-wide text-primary">Conciliaciones</p>
-          <h1 class="text-3xl font-bold text-text-primary">Liquidaciones</h1>
-          <p class="text-sm text-gray-600">Consolidá operaciones y verificá el estado de liquidaciones pendientes.</p>
-        </header>
-        <div class="rounded-lg border border-gray-200 bg-white shadow-sm">
-          <div class="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <h2 class="text-lg font-semibold text-text-primary">Resúmenes pendientes</h2>
-            <button class="text-sm font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">Generar nuevo</button>
+          <div class="p-6 flex items-center">
+            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-times-circle text-danger"></i>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium text-text-primary">Error en liquidación</h3>
+                  <p class="text-gray-600 text-sm">La liquidación #LQ-2024-0847 requiere intervención manual</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-500">Hace 32 min</div>
+                  <a href="#" class="text-primary text-sm hover:underline">Resolver</a>
+                </div>
+              </div>
+            </div>
           </div>
-          <table class="min-w-full divide-y divide-gray-100 text-sm">
-            <thead class="bg-gray-50 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+
+          <div class="p-6 flex items-center">
+            <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+              <i class="fa-solid fa-clock text-yellow-600"></i>
+            </div>
+            <div class="flex-1">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="font-medium text-text-primary">Límite diario próximo</h3>
+                  <p class="text-gray-600 text-sm">Operaciones USD alcanzan el 85% del límite diario</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-sm text-gray-500">Hace 1 hora</div>
+                  <a href="#" class="text-primary text-sm hover:underline">Monitorear</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECTION: Recent Operations Table -->
+    <section id="recent-operations" class="mb-8">
+      <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+        <div class="p-6 border-b border-gray-200">
+          <div class="flex items-center justify-between mb-4">
+            <div>
+              <h2 class="text-xl font-semibold text-text-primary mb-1">Últimas operaciones</h2>
+              <p class="text-gray-600">Registro de operaciones más recientes</p>
+            </div>
+            <a href="#" class="text-primary hover:underline font-medium">Ver historial completo</a>
+          </div>
+          <div id="quick-filters" class="flex flex-wrap gap-4">
+            <div class="relative">
+              <select class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option>Todos los clientes</option>
+                <option>Cliente A</option>
+                <option>Cliente B</option>
+                <option>Cliente C</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <i class="fa-solid fa-chevron-down text-gray-400"></i>
+              </div>
+            </div>
+            <div class="relative">
+              <select class="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent">
+                <option>Todos los tipos</option>
+                <option>Compra</option>
+                <option>Venta</option>
+                <option>Liquidación</option>
+              </select>
+              <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <i class="fa-solid fa-chevron-down text-gray-400"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead class="bg-gray-50">
               <tr>
-                <th class="px-6 py-3">Código</th>
-                <th class="px-6 py-3">Cliente</th>
-                <th class="px-6 py-3">Monto</th>
-                <th class="px-6 py-3">Estado</th>
-                <th class="px-6 py-3 text-right">Acciones</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cliente</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Bien entra/sale</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">TC Efectivo</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margen %</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-gray-100 bg-white">
-              <tr>
-                <td class="px-6 py-4 font-semibold text-text-primary">LQ-9041</td>
-                <td class="px-6 py-4 text-gray-600">Cliente Omega</td>
-                <td class="px-6 py-4 font-semibold text-text-primary">$ 845.300,00</td>
-                <td class="px-6 py-4">
-                  <span class="rounded-full bg-warning/10 px-2 py-0.5 text-xs font-semibold text-warning">Validación requerida</span>
+            <tbody class="bg-white divide-y divide-gray-200 text-sm">
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">22/03/2024 14:25</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-blue-600 text-sm font-medium">CA</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-text-primary">Cliente Alpha</div>
+                      <div class="text-sm text-gray-500">CUIT: 20-12345678-9</div>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-6 py-4 text-right">
-                  <button class="text-sm font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">Revisar</button>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Compra</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">
+                  <div>Entra: $125.000,00</div>
+                  <div>Sale: USD 150,00</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">$833,33</td>
+                <td class="px-6 py-4 whitespace-nowrap text-success">+2,5%</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Completada</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" class="text-primary hover:text-blue-700 mr-3">Ver</a>
+                  <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
                 </td>
               </tr>
-              <tr>
-                <td class="px-6 py-4 font-semibold text-text-primary">LQ-9033</td>
-                <td class="px-6 py-4 text-gray-600">Cliente Sigma</td>
-                <td class="px-6 py-4 font-semibold text-text-primary">USD 124.500,00</td>
-                <td class="px-6 py-4">
-                  <span class="rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success">Enviada</span>
+
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">22/03/2024 13:45</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-purple-600 text-sm font-medium">CB</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-text-primary">Cliente Beta</div>
+                      <div class="text-sm text-gray-500">CUIT: 20-98765432-1</div>
+                    </div>
+                  </div>
                 </td>
-                <td class="px-6 py-4 text-right">
-                  <button class="text-sm font-semibold text-primary hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button">Ver detalle</button>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary bg-opacity-10 text-primary">Venta</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">
+                  <div>Entra: USD 300,00</div>
+                  <div>Sale: $248.500,00</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">$828,33</td>
+                <td class="px-6 py-4 whitespace-nowrap text-success">+1,8%</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pendiente</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" class="text-primary hover:text-blue-700 mr-3">Ver</a>
+                  <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">22/03/2024 12:30</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-green-600 text-sm font-medium">CG</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-text-primary">Cliente Gamma</div>
+                      <div class="text-sm text-gray-500">CUIT: 20-11223344-5</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Liquidación</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">
+                  <div>Múltiple</div>
+                  <div class="text-xs text-gray-500">3 operaciones</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">$825,75</td>
+                <td class="px-6 py-4 whitespace-nowrap text-success">+3,2%</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Completada</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" class="text-primary hover:text-blue-700 mr-3">Ver</a>
+                  <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">22/03/2024 11:15</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-red-600 text-sm font-medium">CD</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-text-primary">Cliente Delta</div>
+                      <div class="text-sm text-gray-500">CUIT: 20-55667788-9</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Compra</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">
+                  <div>Entra: $85.000,00</div>
+                  <div>Sale: USD 102,50</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">$829,27</td>
+                <td class="px-6 py-4 whitespace-nowrap text-danger">-0,5%</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Cancelada</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" class="text-primary hover:text-blue-700 mr-3">Ver</a>
+                  <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-gray-50">
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">22/03/2024 10:45</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <div class="flex items-center">
+                    <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                      <span class="text-indigo-600 text-sm font-medium">CE</span>
+                    </div>
+                    <div>
+                      <div class="text-sm font-medium text-text-primary">Cliente Epsilon</div>
+                      <div class="text-sm text-gray-500">CUIT: 20-99887766-4</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary bg-opacity-10 text-primary">Venta</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">
+                  <div>Entra: USD 450,00</div>
+                  <div>Sale: $372.150,00</div>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-text-primary">$827,00</td>
+                <td class="px-6 py-4 whitespace-nowrap text-success">+2,1%</td>
+                <td class="px-6 py-4 whitespace-nowrap">
+                  <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">En proceso</span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <a href="#" class="text-primary hover:text-blue-700 mr-3">Ver</a>
+                  <a href="#" class="text-gray-600 hover:text-gray-900">Editar</a>
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
-      </section>
-    </div>
+      </div>
+    </section>
   </main>
 
-  <footer class="border-t border-gray-200 bg-white py-6">
-    <div class="mx-auto flex max-w-6xl flex-col items-center gap-3 px-4 text-xs text-gray-500 lg:flex-row lg:justify-between lg:px-6">
-      <div class="flex flex-wrap items-center justify-center gap-3">
-        <a href="#" class="hover:text-primary">Términos de uso</a>
-        <a href="#" class="hover:text-primary">Política de privacidad</a>
-        <a href="#" class="hover:text-primary">Centro de ayuda</a>
-        <a href="#" class="hover:text-primary">Soporte técnico</a>
+  <!-- Footer -->
+  <footer id="footer" class="bg-white border-t border-gray-200 py-6 px-6">
+    <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <div class="flex flex-wrap gap-4">
+        <a href="#" class="text-sm text-gray-600 hover:text-primary transition-colors">Términos de uso</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-primary transition-colors">Política de privacidad</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-primary transition-colors">Centro de ayuda</a>
+        <a href="#" class="text-sm text-gray-600 hover:text-primary transition-colors">Soporte técnico</a>
       </div>
-      <div class="flex items-center gap-2">
-        <span>© 2024 FinaTech - Versión 2.1.4</span>
-        <span class="flex items-center gap-1 text-gray-600">
-          <span class="inline-flex h-2 w-2 rounded-full bg-success"></span>
-          Sistema operativo
-        </span>
+      <div class="flex items-center space-x-4">
+        <span class="text-sm text-gray-500">© 2024 FinaTech - Versión 2.1.4</span>
+        <div class="flex items-center space-x-2">
+          <div class="w-2 h-2 bg-success rounded-full"></div>
+          <span class="text-sm text-gray-600">Sistema operativo</span>
+        </div>
       </div>
     </div>
   </footer>
 
   <script>
-  document.addEventListener('DOMContentLoaded', () => {
-      const DEFAULT_SECTION = 'operations';
-      const VALID_SECTIONS = ['operations', 'treasury', 'logistics', 'settlements'];
+    document.addEventListener('DOMContentLoaded', () => {
+      const BALANCES_ENDPOINT = '/api/dashboard/balances';
+      const NOTIFICATIONS_ENDPOINT = '/api/dashboard/notifications';
+      const BALANCE_REFRESH_MS = 60000;
 
-      const resolveSectionFromPath = (pathname) => {
-        const normalized = pathname.replace(/\/+$/u, '');
-        if (!normalized || normalized === '/dashboard') {
-          return DEFAULT_SECTION;
-        }
-        const parts = normalized.replace('/dashboard', '').split('/').filter(Boolean);
-        const candidate = parts[0];
-        return VALID_SECTIONS.includes(candidate) ? candidate : DEFAULT_SECTION;
-      };
-
-      let currentSection = resolveSectionFromPath(window.location.pathname);
-
-      const sectionNodes = new Map();
-      VALID_SECTIONS.forEach((section) => {
-        sectionNodes.set(section, document.querySelector(`[data-section="${section}"]`));
-      });
-
-      const navLinks = document.querySelectorAll('[data-section-link]');
-      const mobileLinks = document.querySelectorAll('[data-mobile-link]');
-      const menuToggles = document.querySelectorAll('[data-menu-toggle]');
-      const mobileMenu = document.getElementById('mobile-menu');
-
-      const notificationsButtonDesktop = document.getElementById('notifications-button');
-      const notificationsButtonMobile = document.getElementById('notifications-button-mobile');
-      const notificationsDropdown = document.getElementById('notifications-dropdown');
-      const notificationsList = document.getElementById('notifications-list');
-      const notificationsBadgeDesktop = document.getElementById('notifications-badge');
-      const notificationsBadgeMobile = document.getElementById('notifications-badge-mobile');
-      const notificationsEmpty = document.getElementById('notifications-empty');
-      const notificationsError = document.getElementById('notifications-error');
-      const notificationsViewAll = document.getElementById('notifications-view-all');
-      const notificationsMarkAll = document.getElementById('mark-all-read');
-
-      const accountTrigger = document.getElementById('account-menu-trigger');
-      const accountDropdown = document.getElementById('account-dropdown');
-      const logoutButtons = document.querySelectorAll('[data-logout]');
-
-      const balanceBar = document.getElementById('balance-bar');
       const balanceCards = new Map();
       document.querySelectorAll('[data-balance-card]').forEach((card) => {
-        balanceCards.set(card.dataset.balance, {
+        const key = card.getAttribute('data-balance');
+        if (!key) return;
+        balanceCards.set(key, {
           card,
-          amountEl: card.querySelector('[data-balance-amount]'),
-          timeEl: card.querySelector('[data-balance-time]'),
-          statusEl: card.querySelector('[data-balance-status]'),
+          amount: card.querySelector('[data-balance-amount]'),
+          time: card.querySelector('[data-balance-time]'),
+          status: card.querySelector('[data-balance-status]'),
         });
       });
+
       const balanceError = document.getElementById('balance-error');
+      const balanceErrorRetry = document.getElementById('balance-error-retry');
       const balanceRetry = document.getElementById('balance-retry');
+      let balanceIntervalId;
 
-      const BALANCE_ENDPOINT = '/api/dashboard/balances';
-      const BALANCE_REFRESH_MS = 60000;
-      const NOTIFICATIONS_ENDPOINT = '/api/dashboard/notifications';
-
-      let balanceIntervalId = null;
-      let notifications = [];
-
-      const disableBalanceWidget = () => {
-        if (balanceIntervalId) {
-          clearInterval(balanceIntervalId);
-          balanceIntervalId = null;
-        }
-        if (balanceBar) {
-          balanceBar.classList.add('hidden');
-        }
-        balanceError?.classList.add('hidden');
+      const setBalanceSkeleton = (state) => {
+        balanceCards.forEach(({ amount, time }) => {
+          [amount, time].forEach((el) => {
+            if (!el) return;
+            if (state) {
+              el.classList.add('skeleton');
+            } else {
+              el.classList.remove('skeleton');
+            }
+          });
+        });
       };
 
-      const formatCurrency = (value, currencyLabel = 'ARS') => {
+      const formatCurrency = (value, currency) => {
         const numeric = Number(value);
         if (!Number.isFinite(numeric)) {
-          return '--';
+          return currency === 'USD' ? 'USD --' : '$ --';
         }
-        const formatter = new Intl.NumberFormat('es-AR', {
-          style: 'currency',
-          currency: currencyLabel === 'USD' ? 'USD' : 'ARS',
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2,
-        });
-        return formatter.format(numeric);
+        try {
+          return new Intl.NumberFormat('es-AR', {
+            style: 'currency',
+            currency: currency === 'USD' ? 'USD' : 'ARS',
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          }).format(numeric);
+        } catch (_error) {
+          const prefix = currency === 'USD' ? 'USD ' : '$';
+          return `${prefix}${numeric.toFixed(2)}`;
+        }
       };
 
-      const formatUpdateTime = (input) => {
-        const date = input instanceof Date ? input : new Date(input);
+      const formatUpdateTime = (isoString) => {
+        if (!isoString) {
+          return 'Actualizado --:--';
+        }
+        const date = new Date(isoString);
         if (Number.isNaN(date.getTime())) {
           return 'Actualizado --:--';
         }
-        return `Actualizado ${date.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}`;
+        return `Actualizado ${date.toLocaleTimeString('es-AR', {
+          hour: '2-digit',
+          minute: '2-digit',
+        })}`;
       };
 
-      const setBalanceSkeleton = (isLoading) => {
-        balanceCards.forEach(({ card }) => {
-          card.classList.toggle('skeleton', isLoading);
-        });
-      };
-
-      const updateBalanceCard = (id, payload) => {
-        const entry = balanceCards.get(id);
+      const updateBalanceCard = (key, { amountText, timeText, status }) => {
+        const entry = balanceCards.get(key);
         if (!entry) return;
-        const { amountEl, timeEl, statusEl } = entry;
-        if (amountEl) {
-          amountEl.textContent = payload.amountText || '--';
-        }
-        if (timeEl) {
-          timeEl.textContent = payload.timeText || 'Actualizado --:--';
-        }
-        if (statusEl) {
-          const statusClass = (() => {
-            if (payload.status === 'warning') return 'bg-warning';
-            if (payload.status === 'error') return 'bg-danger';
-            if (payload.status === 'offline') return 'bg-gray-300';
-            return 'bg-success';
-          })();
-          statusEl.className = `mt-1 inline-block h-2 w-2 rounded-full ${statusClass}`;
+        if (entry.amount) entry.amount.textContent = amountText;
+        if (entry.time) entry.time.textContent = timeText;
+        if (entry.status) {
+          entry.status.classList.remove('bg-success', 'bg-warning', 'bg-danger', 'bg-gray-300');
+          const statusClass = {
+            ok: 'bg-success',
+            warning: 'bg-warning',
+            error: 'bg-danger',
+            offline: 'bg-gray-300',
+          }[status] || 'bg-success';
+          entry.status.classList.add(statusClass);
         }
       };
 
       const loadBalances = async ({ showSkeleton = false } = {}) => {
+        if (!balanceCards.size) {
+          return false;
+        }
         if (showSkeleton) {
           setBalanceSkeleton(true);
         }
+        balanceError?.classList.add('hidden');
+        balanceRetry?.classList.add('hidden');
         try {
-          const response = await fetch(BALANCE_ENDPOINT, { credentials: 'include' });
+          const response = await fetch(BALANCES_ENDPOINT, { credentials: 'include' });
           if (response.status === 401 || response.status === 403) {
-            disableBalanceWidget();
-            return false;
+            throw new Error('No autorizado');
           }
           if (!response.ok) {
-            throw new Error('No se pudieron obtener los balances.');
+            throw new Error('Error al obtener balances');
           }
           const data = await response.json();
           const balances = Array.isArray(data?.balances) ? data.balances : [];
-          balanceError.classList.add('hidden');
 
           balances.forEach((item) => {
             updateBalanceCard(item.id, {
               amountText: formatCurrency(item.amount, item.currency),
-              timeText: formatUpdateTime(item.updatedAt || Date.now()),
+              timeText: formatUpdateTime(item.updatedAt),
               status: item.status || 'ok',
             });
           });
 
           balanceCards.forEach((_, key) => {
-            if (!balances.some((entry) => entry.id === key)) {
+            if (!balances.some((item) => item.id === key)) {
               updateBalanceCard(key, {
                 amountText: '--',
-                timeText: 'Sin datos',
+                timeText: 'Actualizado --:--',
                 status: 'offline',
               });
             }
           });
+
           return true;
         } catch (error) {
           console.error('Balance fetch error', error);
-          balanceError.classList.remove('hidden');
+          balanceError?.classList.remove('hidden');
+          balanceRetry?.classList.remove('hidden');
           balanceCards.forEach((_, key) => {
             updateBalanceCard(key, {
               amountText: '--',
-              timeText: 'Sin datos',
+              timeText: 'Actualizado --:--',
               status: 'error',
             });
           });
@@ -670,43 +718,67 @@
       };
 
       const startBalancePolling = () => {
-        if (balanceBar && balanceBar.classList.contains('hidden')) {
-          return;
-        }
         if (balanceIntervalId) {
           clearInterval(balanceIntervalId);
         }
         balanceIntervalId = setInterval(() => {
-          if (
-            !document.hidden &&
-            !(balanceBar && balanceBar.classList.contains('hidden'))
-          ) {
+          if (!document.hidden) {
             loadBalances();
           }
         }, BALANCE_REFRESH_MS);
       };
 
+      balanceErrorRetry?.addEventListener('click', () => {
+        loadBalances({ showSkeleton: true }).then((canPoll) => {
+          if (canPoll) startBalancePolling();
+        });
+      });
+
+      balanceRetry?.addEventListener('click', () => {
+        loadBalances({ showSkeleton: true }).then((canPoll) => {
+          if (canPoll) startBalancePolling();
+        });
+      });
+
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) {
+          loadBalances();
+        }
+      });
+
+      loadBalances({ showSkeleton: true }).then((canPoll) => {
+        if (canPoll) startBalancePolling();
+      });
+
+      // Notifications
+      const notificationsButton = document.getElementById('notifications-button');
+      const notificationsDropdown = document.getElementById('notifications-dropdown');
+      const notificationsList = document.getElementById('notifications-list');
+      const notificationsBadge = document.getElementById('notifications-badge');
+      const notificationsEmpty = document.getElementById('notifications-empty');
+      const notificationsErrorEl = document.getElementById('notifications-error');
+      const notificationsViewAll = document.getElementById('notifications-view-all');
+      const notificationsMarkAll = document.getElementById('mark-all-read');
+      let notifications = [];
+
       const renderNotifications = () => {
-        const recent = notifications.slice(0, 10);
         const unreadCount = notifications.filter((item) => !item.read).length;
-
-        const updateBadge = (badgeEl) => {
-          if (!badgeEl) return;
+        if (notificationsBadge) {
           if (unreadCount > 0) {
-            badgeEl.textContent = unreadCount;
-            badgeEl.classList.remove('hidden');
+            notificationsBadge.textContent = unreadCount;
+            notificationsBadge.classList.remove('hidden');
           } else {
-            badgeEl.classList.add('hidden');
+            notificationsBadge.classList.add('hidden');
           }
-        };
-
-        updateBadge(notificationsBadgeDesktop);
-        updateBadge(notificationsBadgeMobile);
-
+        }
+        if (!notificationsList || !notificationsEmpty) return;
         notificationsList.innerHTML = '';
-        notificationsEmpty.classList.toggle('hidden', recent.length > 0);
-
-        recent.forEach((item) => {
+        if (!notifications.length) {
+          notificationsEmpty.classList.remove('hidden');
+          return;
+        }
+        notificationsEmpty.classList.add('hidden');
+        notifications.slice(0, 10).forEach((item) => {
           const li = document.createElement('li');
           li.className = `px-4 py-3 transition ${item.read ? 'bg-white' : 'bg-primary/5'}`;
           li.innerHTML = `
@@ -716,7 +788,7 @@
                 <p class="text-xs text-gray-600">${item.message}</p>
                 <p class="mt-1 text-[11px] text-gray-400">${item.relativeTime}</p>
               </div>
-              <button class="text-xs font-semibold ${item.read ? 'text-gray-400' : 'text-primary'} hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" type="button" data-mark-read="${item.id}">
+              <button class="text-xs font-semibold ${item.read ? 'text-gray-400' : 'text-primary'} hover:underline" type="button" data-mark-read="${item.id}">
                 ${item.read ? 'Leída' : 'Marcar como leída'}
               </button>
             </div>
@@ -726,119 +798,112 @@
       };
 
       const loadNotifications = async () => {
+        if (!notificationsButton) return;
+        notificationsErrorEl?.classList.add('hidden');
         try {
-          notificationsError.classList.add('hidden');
           const response = await fetch(NOTIFICATIONS_ENDPOINT, { credentials: 'include' });
           if (!response.ok) {
-            throw new Error('No se pudieron obtener las notificaciones.');
+            throw new Error('Error al obtener notificaciones');
           }
           const data = await response.json();
           const items = Array.isArray(data?.notifications) ? data.notifications : [];
-          notifications = items.map((item) => ({
-            ...item,
-            relativeTime: (() => {
-              const createdAt = new Date(item.createdAt);
-              if (Number.isNaN(createdAt.getTime())) {
-                return 'Hace unos instantes';
-              }
-              const diff = Date.now() - createdAt.getTime();
-              const minutes = Math.round(diff / (1000 * 60));
-              if (minutes < 1) return 'Hace instantes';
-              if (minutes === 1) return 'Hace 1 minuto';
-              if (minutes < 60) return `Hace ${minutes} minutos`;
+          notifications = items.map((item) => {
+            const createdAt = new Date(item.createdAt);
+            const diff = Date.now() - createdAt.getTime();
+            const minutes = Math.max(0, Math.round(diff / (1000 * 60)));
+            let relative = 'Hace instantes';
+            if (minutes >= 1 && minutes < 60) {
+              relative = minutes === 1 ? 'Hace 1 minuto' : `Hace ${minutes} minutos`;
+            } else if (minutes >= 60 && minutes < 1440) {
               const hours = Math.round(minutes / 60);
-              if (hours === 1) return 'Hace 1 hora';
-              if (hours < 24) return `Hace ${hours} horas`;
-              const days = Math.round(hours / 24);
-              return `Hace ${days} día${days !== 1 ? 's' : ''}`;
-            })(),
-          }));
+              relative = hours === 1 ? 'Hace 1 hora' : `Hace ${hours} horas`;
+            } else if (minutes >= 1440) {
+              const days = Math.round(minutes / 1440);
+              relative = days === 1 ? 'Hace 1 día' : `Hace ${days} días`;
+            }
+            return { ...item, relativeTime: relative };
+          });
           renderNotifications();
         } catch (error) {
           console.error('Notifications fetch error', error);
-          notificationsError.classList.remove('hidden');
-        }
-      };
-
-      const closeMobileMenu = () => {
-        if (mobileMenu) {
-          mobileMenu.classList.add('hidden');
-        }
-      };
-
-      const closeAccountMenu = () => {
-        if (accountDropdown) {
-          accountDropdown.classList.add('hidden');
-          accountTrigger?.setAttribute('aria-expanded', 'false');
+          notificationsErrorEl?.classList.remove('hidden');
         }
       };
 
       const closeNotificationsDropdown = () => {
         notificationsDropdown?.classList.add('hidden');
-        notificationsButtonDesktop?.setAttribute('aria-expanded', 'false');
-        notificationsButtonMobile?.setAttribute('aria-expanded', 'false');
+        notificationsButton?.setAttribute('aria-expanded', 'false');
       };
 
-      const updateSectionVisibility = (section) => {
-        sectionNodes.forEach((node, key) => {
-          if (!node) return;
-          const isActive = key === section;
-          node.classList.toggle('hidden', !isActive);
-          node.setAttribute('aria-hidden', (!isActive).toString());
-        });
-      };
-
-      const updateNavigationState = (section) => {
-        navLinks.forEach((link) => {
-          const isActive = link.dataset.sectionLink === section;
-          link.classList.toggle('text-primary', isActive);
-          link.classList.toggle('text-gray-500', !isActive);
-          link.classList.toggle('bg-primary/10', isActive);
-          link.setAttribute('aria-current', isActive ? 'page' : 'false');
-        });
-        mobileLinks.forEach((button) => {
-          const isActive = button.dataset.mobileLink === section;
-          button.classList.toggle('bg-primary/10', isActive);
-          button.classList.toggle('text-primary', isActive);
-        });
-        document.title = `FinaTech | ${section.charAt(0).toUpperCase()}${section.slice(1)}`;
-      };
-
-      const navigateToSection = (section, { pushState = true } = {}) => {
-        if (!VALID_SECTIONS.includes(section)) {
-          section = DEFAULT_SECTION;
-        }
-        if (section === currentSection) {
-          closeMobileMenu();
-          return;
-        }
-        currentSection = section;
-        updateSectionVisibility(section);
-        updateNavigationState(section);
-        closeMobileMenu();
-        if (pushState) {
-          const targetPath = section === DEFAULT_SECTION ? '/dashboard' : `/dashboard/${section}`;
-          window.history.pushState({ section }, '', targetPath);
+      const toggleNotificationsDropdown = () => {
+        if (!notificationsDropdown) return;
+        const isHidden = notificationsDropdown.classList.toggle('hidden');
+        notificationsButton?.setAttribute('aria-expanded', String(!isHidden));
+        if (!isHidden) {
+          closeAccountMenu();
         }
       };
 
-      navLinks.forEach((link) => {
-        link.addEventListener('click', (event) => {
+      notificationsButton?.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleNotificationsDropdown();
+      });
+
+      notificationsList?.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const id = target.getAttribute('data-mark-read');
+        if (!id) return;
+        notifications = notifications.map((item) => (item.id === id ? { ...item, read: true } : item));
+        renderNotifications();
+      });
+
+      notificationsMarkAll?.addEventListener('click', () => {
+        notifications = notifications.map((item) => ({ ...item, read: true }));
+        renderNotifications();
+      });
+
+      notificationsViewAll?.addEventListener('click', () => {
+        closeNotificationsDropdown();
+      });
+
+      // Account menu
+      const accountTrigger = document.getElementById('user-menu-button');
+      const accountDropdown = document.getElementById('account-dropdown');
+
+      const closeAccountMenu = () => {
+        accountDropdown?.classList.add('hidden');
+        accountTrigger?.setAttribute('aria-expanded', 'false');
+      };
+
+      accountTrigger?.addEventListener('click', (event) => {
+        event.preventDefault();
+        if (!accountDropdown) return;
+        const isHidden = accountDropdown.classList.toggle('hidden');
+        accountTrigger.setAttribute('aria-expanded', String(!isHidden));
+        if (!isHidden) {
+          closeNotificationsDropdown();
+        }
+      });
+
+      const logoutButtons = document.querySelectorAll('[data-logout]');
+      logoutButtons.forEach((button) => {
+        button.addEventListener('click', async (event) => {
           event.preventDefault();
-          navigateToSection(link.dataset.sectionLink);
-        });
-      });
-
-      mobileLinks.forEach((button) => {
-        button.addEventListener('click', () => {
-          navigateToSection(button.dataset.mobileLink);
-        });
-      });
-
-      menuToggles.forEach((toggle) => {
-        toggle.addEventListener('click', () => {
-          if (mobileMenu) {
-            mobileMenu.classList.toggle('hidden');
+          const original = button.innerHTML;
+          button.disabled = true;
+          button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saliendo…';
+          try {
+            const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            if (!response.ok) {
+              throw new Error('Error al cerrar sesión');
+            }
+            window.location.href = '/login';
+          } catch (error) {
+            console.error('Logout error', error);
+            button.innerHTML = original;
+            button.disabled = false;
+            alert('No se pudo cerrar sesión. Intentá nuevamente.');
           }
         });
       });
@@ -847,145 +912,48 @@
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
 
-        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
-          const toggleClicked = [...menuToggles].some((button) => button.contains(target));
-          if (!mobileMenu.contains(target) && !toggleClicked) {
-            closeMobileMenu();
+        if (notificationsDropdown && !notificationsDropdown.classList.contains('hidden')) {
+          const clickedButton = notificationsButton?.contains(target);
+          if (!clickedButton && !notificationsDropdown.contains(target)) {
+            closeNotificationsDropdown();
           }
         }
 
         if (accountDropdown && !accountDropdown.classList.contains('hidden')) {
-          if (accountTrigger && !accountTrigger.contains(target) && !accountDropdown.contains(target)) {
+          const clickedAccount = accountTrigger?.contains(target);
+          if (!clickedAccount && !accountDropdown.contains(target)) {
             closeAccountMenu();
-          }
-        }
-
-        if (notificationsDropdown && !notificationsDropdown.classList.contains('hidden')) {
-          const clickedNotifButton = (notificationsButtonDesktop && notificationsButtonDesktop.contains(target))
-            || (notificationsButtonMobile && notificationsButtonMobile.contains(target));
-          if (!notificationsDropdown.contains(target) && !clickedNotifButton) {
-            closeNotificationsDropdown();
           }
         }
       });
 
       document.addEventListener('keydown', (event) => {
         if (event.key === 'Escape') {
-          closeMobileMenu();
           closeAccountMenu();
           closeNotificationsDropdown();
         }
       });
 
-      accountTrigger?.addEventListener('click', (event) => {
-        event.preventDefault();
-        const isOpen = accountDropdown?.classList.toggle('hidden');
-        accountTrigger.setAttribute('aria-expanded', String(!isOpen));
-        if (!isOpen) {
-          closeNotificationsDropdown();
-        }
-      });
+      loadNotifications();
 
-      const toggleNotificationsDropdown = () => {
-        if (!notificationsDropdown) return;
-        const isHidden = notificationsDropdown.classList.toggle('hidden');
-        notificationsButtonDesktop?.setAttribute('aria-expanded', String(!isHidden));
-        notificationsButtonMobile?.setAttribute('aria-expanded', String(!isHidden));
-        if (!isHidden) {
-          closeAccountMenu();
-          closeMobileMenu();
-        }
-      };
-
-      notificationsButtonDesktop?.addEventListener('click', (event) => {
-        event.preventDefault();
-        toggleNotificationsDropdown();
-      });
-
-      notificationsButtonMobile?.addEventListener('click', (event) => {
-        event.preventDefault();
-        toggleNotificationsDropdown();
-      });
-
-      notificationsList.addEventListener('click', (event) => {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        const id = target.dataset.markRead;
-        if (id) {
-          const notification = notifications.find((item) => item.id === id);
-          if (notification && !notification.read) {
-            notification.read = true;
-            renderNotifications();
-          }
-        }
-      });
-
-      notificationsViewAll?.addEventListener('click', () => {
-        closeNotificationsDropdown();
-        navigateToSection('operations');
-      });
-
-      notificationsMarkAll?.addEventListener('click', () => {
-        notifications = notifications.map((item) => ({ ...item, read: true }));
-        renderNotifications();
-      });
-
-      logoutButtons.forEach((button) => {
-        button.addEventListener('click', async (event) => {
-          event.preventDefault();
-          const originalText = button.innerHTML;
-          button.disabled = true;
-          button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saliendo...';
-          try {
-            const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-            if (!response.ok) {
-              throw new Error('No se pudo cerrar sesión.');
-            }
-            window.location.href = '/login';
-          } catch (error) {
-            console.error('Logout error', error);
-            button.innerHTML = originalText;
-            button.disabled = false;
-            alert('No se pudo cerrar sesión. Intentá nuevamente.');
-          }
+      // Subtle button feedback
+      document.querySelectorAll('#flow-shortcuts button').forEach((button) => {
+        button.addEventListener('mouseenter', () => {
+          button.style.transform = 'translateY(-2px)';
+        });
+        button.addEventListener('mouseleave', () => {
+          button.style.transform = 'translateY(0)';
+        });
+        button.addEventListener('click', () => {
+          button.style.transform = 'scale(0.97)';
+          setTimeout(() => {
+            button.style.transform = 'translateY(-2px)';
+          }, 150);
         });
       });
-
-      balanceRetry?.addEventListener('click', () => {
-        loadBalances({ showSkeleton: true }).then((canPoll) => {
-          if (canPoll) {
-            startBalancePolling();
-          }
-        });
-      });
-
-      document.addEventListener('visibilitychange', () => {
-        if (
-          !document.hidden &&
-          !(balanceBar && balanceBar.classList.contains('hidden'))
-        ) {
-          loadBalances();
-        }
-      });
-
-      window.addEventListener('popstate', () => {
-        const section = resolveSectionFromPath(window.location.pathname);
-        currentSection = section;
-        updateSectionVisibility(section);
-        updateNavigationState(section);
-      });
-
-      updateSectionVisibility(currentSection);
-      updateNavigationState(currentSection);
-  loadBalances({ showSkeleton: true }).then((canPoll) => {
-    if (canPoll) {
-      startBalancePolling();
-    }
-  });
-  loadNotifications();
-});
-</script>
-<script src="/js/config.js"></script>
-<script src="/js/balance-widget.js"></script>
+    });
+  </script>
+  <script src="/js/config.js"></script>
+  <script src="/js/balance-widget.js"></script>
 </body>
 </html>
