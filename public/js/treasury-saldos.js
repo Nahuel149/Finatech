@@ -454,7 +454,7 @@
       if (!button) return;
       const contactId = button.getAttribute('data-contact-id');
       if (!contactId) return;
-      window.location.href = `saldos-contacto.html?contact=${encodeURIComponent(contactId)}`;
+      window.location.href = `/tesoreria/contacto/${encodeURIComponent(contactId)}`;
     });
   };
 
@@ -674,10 +674,12 @@
     let card;
     if (currencyKey === 'usd') {
       card = findByCurrency('USD');
-      document.getElementById('panel-title')?.textContent = 'Detalle de cuenta USD';
     } else {
       card = findByCurrency('ARS');
-      document.getElementById('panel-title')?.textContent = 'Detalle de cuenta ARS';
+    }
+    const titleEl = document.getElementById('panel-title');
+    if (titleEl) {
+      titleEl.textContent = currencyKey === 'usd' ? 'Detalle de cuenta USD' : 'Detalle de cuenta ARS';
     }
 
     panelElements.amount.textContent = card
@@ -729,10 +731,10 @@
 
   const viewAllMovements = (section) => {
     if (section === 'current') {
-      window.location.href = 'tesoreria-movimientos.html';
+      window.location.href = '/tesoreria/movimientos';
       return;
     }
-    window.location.href = 'tesoreria-movimientos.html';
+    window.location.href = '/tesoreria/movimientos';
   };
 
   const viewTopContactDetail = () => {
@@ -743,7 +745,7 @@
       showToast('No hay un contacto destacado disponible.', 'info');
       return;
     }
-    window.location.href = `saldos-contacto.html?contact=${encodeURIComponent(contactId)}`;
+    window.location.href = `/tesoreria/contacto/${encodeURIComponent(contactId)}`;
   };
 
   function showToast(message, type = 'info') {

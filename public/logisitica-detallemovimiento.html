@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .positive-amount { color: #28A745; }
+        .negative-amount { color: #DC3545; }
+        .detail-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .detail-panel.open {
+            transform: translateX(0);
+        }
+        .filter-panel {
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+        .filter-panel.open {
+            transform: translateX(0);
+        }
+        .timeline-item {
+            position: relative;
+        }
+        .timeline-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 32px;
+            width: 2px;
+            height: 40px;
+            background-color: #E5E7EB;
+        }
+        .timeline-item.active::after {
+            background-color: #0066CC;
+        }
+        .timeline-item.completed::after {
+            background-color: #28A745;
+        }
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .radio-pill {
+            transition: all 0.2s ease;
+        }
+        .radio-pill:hover {
+            transform: translateY(-1px);
+        }
+        .dropzone {
+            border: 2px dashed #D1D5DB;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .dropzone:hover {
+            border-color: #0066CC;
+            background-color: #F8FAFF;
+        }
+        .dropzone.dragover {
+            border-color: #0066CC;
+            background-color: #EBF4FF;
+        }
+        .side-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .side-panel.open {
+            transform: translateX(0);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <a href="/dashboard" class="flex items-center" aria-label="Ir al dashboard">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </a>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="flex space-x-8">
+                    <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </a>
+                    <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </a>
+                    <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary transition-colors cursor-pointer" aria-current="page">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </a>
+                    <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </a>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed top-20 left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="flex space-x-6">
+            <!-- ARS Transferencias -->
+            <div id="ars-transfers-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-exchange-alt text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Transferencias (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary">$2.450.320,50</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:32</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ARS Efectivo -->
+            <div id="ars-cash-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-money-bills text-success"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Efectivo (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary">$1.875.450,00</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:28</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USD Caja -->
+            <div id="usd-cash-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-dollar-sign text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Caja (USD)</div>
+                        <div class="text-2xl font-bold text-text-primary">USD 12.450,00</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:30</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Movement Detail Side Panel -->
+<div id="movement-detail-panel" class="fixed top-0 right-0 h-full w-[520px] bg-white shadow-2xl side-panel z-50 open">
+    <div class="h-full flex flex-col">
+        
+        <!-- Panel Header -->
+        <div id="panel-header" class="px-6 py-6 border-b border-gray-200 bg-gray-50">
+            <!-- Breadcrumbs -->
+            <nav class="flex items-center space-x-2 text-sm text-gray-600 mb-3">
+                <span onclick="window.location.href='logistica-panel.html'" class="text-primary font-medium cursor-pointer">Logística</span>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span>#FT-LOG-000123</span>
+            </nav>
+            
+            <!-- Title and Close -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-text-primary">Detalle del movimiento</h2>
+                    <p class="text-sm text-gray-600 mt-1">Consulta de información completa y estado operativo</p>
+                </div>
+                <button onclick="window.location.href='logistica-panel.html'" class="text-gray-400 hover:text-gray-600 p-2">
+                    <i class="fa-solid fa-times text-lg"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Panel Content -->
+        <div id="panel-content" class="flex-1 overflow-y-auto px-6 py-6">
+            
+            <!-- Block 1: Movement Summary -->
+            <div id="movement-summary" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <div class="flex items-start justify-between mb-4">
+                    <div class="flex items-center">
+                        <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                            <i class="fa-solid fa-truck text-primary text-lg"></i>
+                        </div>
+                        <div>
+                            <div class="text-lg font-semibold text-text-primary">#FT-LOG-000123</div>
+                            <div class="text-sm text-gray-600">Entrega</div>
+                        </div>
+                    </div>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        <i class="fa-solid fa-clock mr-1"></i>
+                        En curso
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Fecha y hora:</span>
+                        <span class="text-sm font-medium text-text-primary">15/01/2024 - 10:30</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Responsable:</span>
+                        <span class="text-sm font-medium text-text-primary">Juan Pérez - Operador Senior</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Contacto:</span>
+                        <span class="text-sm font-medium text-text-primary">Empresa ABC S.A.</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Referencia:</span>
+                        <span class="text-sm text-text-primary">Entrega de documentación para operación #FT-000456</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-sm text-gray-600">Última actualización:</span>
+                        <span class="text-sm text-gray-500">15/01/2024 - 14:25</span>
+                    </div>
+                </div>
+
+                <button onclick="markAsCompleted()" class="w-full mt-4 px-4 py-2 bg-success text-white rounded-lg hover:bg-green-600 transition-colors">
+                    <i class="fa-solid fa-check mr-2"></i>
+                    Marcar como completado
+                </button>
+            </div>
+
+            <!-- Block 2: Status Timeline -->
+            <div id="status-timeline" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-text-primary mb-4">Timeline de estados</h3>
+                
+                <div class="space-y-4">
+                    <div class="timeline-item active flex items-start">
+                        <div class="w-8 h-8 bg-success rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fa-solid fa-plus text-white text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-text-primary">Creado</div>
+                            <div class="text-xs text-gray-600">15/01/2024 - 10:30 por Juan Pérez</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item active flex items-start">
+                        <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fa-solid fa-play text-white text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-text-primary">En curso</div>
+                            <div class="text-xs text-gray-600">15/01/2024 - 11:15 por Juan Pérez</div>
+                            <div class="text-xs text-gray-500 mt-1">Movimiento iniciado hacia destino</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item flex items-start">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fa-solid fa-check text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-gray-400">Recibido</div>
+                            <div class="text-xs text-gray-400">Pendiente</div>
+                        </div>
+                    </div>
+
+                    <div class="timeline-item flex items-start">
+                        <div class="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-4 flex-shrink-0">
+                            <i class="fa-solid fa-flag text-gray-400 text-sm"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-gray-400">Completado</div>
+                            <div class="text-xs text-gray-400">Pendiente</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block 3: Operational Details -->
+            <div id="operational-details" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-text-primary mb-4">Detalle operativo</h3>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Origen</span>
+                        <span class="text-sm font-medium text-text-primary">Sede Central</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Destino</span>
+                        <span class="text-sm font-medium text-text-primary">Sucursal Norte</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Medio</span>
+                        <span class="text-sm font-medium text-text-primary">Transporte interno</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Moneda</span>
+                        <span class="text-sm font-medium text-text-primary">USD</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Monto total</span>
+                        <span class="text-sm font-medium text-text-primary">USD 125.000,00</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-sm text-gray-600">Operación vinculada</span>
+                        <span class="text-sm font-medium text-primary hover:text-blue-700 cursor-pointer">#FT-000456</span>
+                    </div>
+                </div>
+
+                <div class="mt-4 p-3 bg-gray-50 rounded-lg">
+                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                        <i class="fa-solid fa-info-circle mr-1"></i>
+                        Sin impacto contable directo
+                    </span>
+                </div>
+            </div>
+
+            <!-- Block 4: Associated Items -->
+            <div id="associated-items" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-text-primary">Ítems asociados</h3>
+                    <button onclick="addNewItem()" class="text-sm text-primary hover:text-blue-700 font-medium">
+                        <i class="fa-solid fa-plus mr-1"></i>
+                        Agregar ítem
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full">
+                        <thead>
+                            <tr class="border-b border-gray-200">
+                                <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Descripción</th>
+                                <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Identificador</th>
+                                <th class="text-left text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Cantidad</th>
+                                <th class="text-right text-xs font-medium text-gray-500 uppercase tracking-wider py-2">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200">
+                            <tr>
+                                <td class="py-3 text-sm text-text-primary">Documentación contractual</td>
+                                <td class="py-3 text-sm text-gray-600">DOC-001-2024</td>
+                                <td class="py-3 text-sm text-text-primary">1</td>
+                                <td class="py-3 text-right">
+                                    <button class="text-primary hover:text-blue-700 text-sm mr-2">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-gray-600 text-sm">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="py-3 text-sm text-text-primary">Cheques en custodia</td>
+                                <td class="py-3 text-sm text-gray-600">CHQ-ABC-001</td>
+                                <td class="py-3 text-sm text-text-primary">3</td>
+                                <td class="py-3 text-right">
+                                    <button class="text-primary hover:text-blue-700 text-sm mr-2">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                    <button class="text-gray-400 hover:text-gray-600 text-sm">
+                                        <i class="fa-solid fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Block 5: Attached Documents -->
+            <div id="attached-documents" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-text-primary mb-4">Documentos adjuntos</h3>
+                
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fa-solid fa-file-pdf text-red-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">contrato_abc_2024.pdf</div>
+                                <div class="text-xs text-gray-500">PDF • 2.4 MB</div>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="text-primary hover:text-blue-700">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="text-danger hover:text-red-700">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between p-3 border border-gray-200 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                <i class="fa-solid fa-file-image text-blue-600"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">foto_cheques.jpg</div>
+                                <div class="text-xs text-gray-500">JPG • 1.8 MB</div>
+                            </div>
+                        </div>
+                        <div class="flex space-x-2">
+                            <button class="text-primary hover:text-blue-700">
+                                <i class="fa-solid fa-eye"></i>
+                            </button>
+                            <button class="text-danger hover:text-red-700">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Block 6: Audit and Registry -->
+            <div id="audit-registry" class="bg-white border border-gray-200 rounded-lg p-6 mb-6">
+                <h3 class="text-lg font-semibold text-text-primary mb-4">Auditoría y registro</h3>
+                
+                <div class="space-y-3">
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Creado por</span>
+                        <span class="text-sm text-text-primary">Juan Pérez - 15/01/2024 10:30</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">Última modificación</span>
+                        <span class="text-sm text-text-primary">Juan Pérez - 15/01/2024 14:25</span>
+                    </div>
+                    <div class="flex justify-between py-2 border-b border-gray-100">
+                        <span class="text-sm text-gray-600">IP de registro</span>
+                        <span class="text-sm text-gray-500">192.168.1.45</span>
+                    </div>
+                    <div class="flex justify-between py-2">
+                        <span class="text-sm text-gray-600">Log de cambios</span>
+                        <span class="text-sm text-gray-400 cursor-not-allowed">Próximamente</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Footer -->
+        <div id="panel-footer" class="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div class="flex justify-between">
+                <button onclick="window.location.href='logistica-panel.html'" class="flex items-center px-4 py-2 text-text-primary hover:bg-gray-200 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Logística
+                </button>
+                
+                <div class="flex space-x-3">
+                    <button onclick="editMovement()" class="px-4 py-2 border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors">
+                        Editar movimiento
+                    </button>
+                    <button onclick="cancelMovement()" class="px-4 py-2 border border-danger text-danger rounded-lg hover:bg-red-50 transition-colors">
+                        Anular movimiento
+                    </button>
+                    <button onclick="markAsCompleted()" class="px-4 py-2 bg-success text-white rounded-lg hover:bg-green-600 transition-colors">
+                        Marcar como completado
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Completion Confirmation Modal -->
+<div id="completion-modal" class="fixed inset-0 z-60 modal-overlay hidden flex items-center justify-center p-4">

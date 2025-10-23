@@ -56,7 +56,7 @@
                 <span class="text-lg font-bold text-text-primary">FinaTech</span>
             </div>
             <div class="flex items-center gap-3">
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
+                <div data-balance-widget data-balance-widget-target="/saldos" class="flex"></div>
                 <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
@@ -76,19 +76,19 @@
             </div>
         </div>
         <div class="space-y-2">
-            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+            <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
                 Operaciones
             </a>
-            <a href="#" class="flex items-center px-3 py-2 text-primary bg-primary bg-opacity-10 rounded-lg">
+            <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-primary bg-primary bg-opacity-10 rounded-lg font-medium" aria-current="page">
                 <i class="fa-solid fa-vault mr-3"></i>
                 Tesorería
             </a>
-            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+            <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
                 Logística
             </a>
-            <a href="#" class="flex items-center px-3 py-2 text-text-primary">
+            <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
                 Liquidaciones
             </a>
@@ -115,19 +115,19 @@
                     <span class="text-xl font-bold text-text-primary">FinaTech</span>
                 </a>
                 <div class="flex space-x-8">
-                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-exchange-alt mr-2"></i>
                         Operaciones
                     </a>
-                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                    <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
                         <i class="fa-solid fa-vault mr-2"></i>
                         Tesorería
-                    </span>
-                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    </a>
+                    <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-truck mr-2"></i>
                         Logística
                     </a>
-                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-calculator mr-2"></i>
                         Liquidaciones
                     </a>
@@ -148,7 +148,7 @@
                         <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
                     </button>
                 </div>
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div data-balance-widget data-balance-widget-target="/saldos" class="hidden lg:block"></div>
                 <div class="relative">
                     <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
                         <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">

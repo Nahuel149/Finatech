@@ -423,7 +423,7 @@
       return;
     }
     if (source === 'treasury') {
-      window.location.href = `tesoreria-movimiento-detalle.html?movement=${encodeURIComponent(operationId)}`;
+      window.location.href = `/tesoreria/movimientos/${encodeURIComponent(operationId)}`;
       return;
     }
     window.location.href = `/dashboard/operations?operation=${encodeURIComponent(operationId)}`;

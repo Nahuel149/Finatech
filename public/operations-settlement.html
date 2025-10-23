@@ -62,26 +62,26 @@
                 <button id="back-header-button" class="p-2 text-text-primary hover:text-primary transition-colors lg:hidden" aria-label="Volver">
                     <i class="fa-solid fa-arrow-left"></i>
                 </button>
-                <a href="/dashboard" class="flex items-center">
+                <a href="/dashboard" class="flex items-center" aria-label="Ir al dashboard">
                     <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
                         <i class="fa-solid fa-chart-line text-white text-sm"></i>
                     </div>
                     <span class="text-xl font-bold text-text-primary">FinaTech</span>
                 </a>
                 <div id="main-nav" class="hidden lg:flex space-x-8">
-                    <a href="/dashboard" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary">
+                    <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary" aria-current="page">
                         <i class="fa-solid fa-exchange-alt mr-2"></i>
                         Operaciones
                     </a>
-                    <a href="/saldos" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-vault mr-2"></i>
                         Tesorería
                     </a>
-                    <a href="/logistica" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-truck mr-2"></i>
                         Logística
                     </a>
-                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-calculator mr-2"></i>
                         Liquidaciones
                     </a>
@@ -129,7 +129,7 @@
 </nav>
 
 <!-- COMPONENT: Mobile Navigation Menu -->
-<nav id="mobile-menu" class="lg:hidden fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+<nav id="mobile-menu" class="lg:hidden fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
     <div class="px-4 py-4 space-y-4">
         <div class="flex items-center gap-3">
             <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full">
@@ -139,28 +139,28 @@
             </div>
         </div>
         <div class="space-y-2">
-            <a href="/dashboard" class="flex items-center justify-between px-3 py-2 rounded-lg bg-primary bg-opacity-10 text-primary font-medium">
+            <a href="/dashboard" data-nav-link="operations" class="flex items-center justify-between px-3 py-2 rounded-lg bg-primary bg-opacity-10 text-primary font-medium" aria-current="page">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-exchange-alt"></i>
                     Operaciones
                 </span>
                 <i class="fa-solid fa-chevron-right text-xs"></i>
             </a>
-            <a href="/saldos" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+            <a href="/tesoreria" data-nav-link="treasury" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-vault text-gray-500"></i>
                     Tesorería
                 </span>
                 <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
             </a>
-            <a href="/logistica" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+            <a href="/logistica" data-nav-link="logistics" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-truck text-gray-500"></i>
                     Logística
                 </span>
                 <i class="fa-solid fa-chevron-right text-xs text-gray-400"></i>
             </a>
-            <a href="#" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
+            <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center justify-between px-3 py-2 rounded-lg text-text-primary hover:bg-gray-100">
                 <span class="flex items-center gap-3">
                     <i class="fa-solid fa-calculator text-gray-500"></i>
                     Liquidaciones
@@ -172,7 +172,7 @@
 </nav>
 
 <!-- COMPONENT: Balance Stripe -->
-<section id="balance-cards" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-30">
+<section id="balance-cards" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30">
     <div class="px-6 py-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <article class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm" data-balance="transfers">
@@ -246,11 +246,11 @@
         <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                    <span id="distribution-progress-label" class="text-sm font-medium text-gray-700">Progreso de asignación</span>
                     <span id="distribution-progress-percentage" class="text-sm font-medium text-gray-700">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div id="distribution-progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%"></div>
+                    <div id="distribution-progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% asignado" aria-labelledby="distribution-progress-label" aria-describedby="distribution-progress-percentage"></div>
                 </div>
             </div>
             <div id="distribution-status" class="validation-indicator p-3 rounded-lg bg-gray-50 border border-gray-200">

@@ -315,7 +315,7 @@
       }
       if (elements.contactAccountBtn && contact.id) {
         elements.contactAccountBtn.addEventListener('click', () => {
-          window.location.href = `saldos-contacto.html?contact=${encodeURIComponent(contact.id)}`;
+          window.location.href = `/tesoreria/contacto/${encodeURIComponent(contact.id)}`;
         });
       }
     } else if (elements.contactCard) {

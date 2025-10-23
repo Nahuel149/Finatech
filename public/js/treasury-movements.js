@@ -645,7 +645,7 @@
 
     if (viewBtn) {
       const id = viewBtn.getAttribute('data-view');
-      window.location.href = `tesoreria-movimiento-detalle.html?movement=${encodeURIComponent(id)}`;
+      window.location.href = `/tesoreria/movimientos/${encodeURIComponent(id)}`;
       return;
     }
     if (editBtn) {
@@ -660,7 +660,7 @@
     }
     if (detailRow) {
       const id = detailRow.getAttribute('data-detail');
-      window.location.href = `tesoreria-movimiento-detalle.html?movement=${encodeURIComponent(id)}`;
+      window.location.href = `/tesoreria/movimientos/${encodeURIComponent(id)}`;
     }
   };
 
@@ -716,7 +716,7 @@
     }
     if (DOMSelectors.registerMovement) {
       DOMSelectors.registerMovement.addEventListener('click', () => {
-        window.location.href = 'tesoreria-registrar-movimiento.html';
+        window.location.href = '/tesoreria/movimientos/nuevo';
       });
     }
     if (DOMSelectors.openConciliation) {

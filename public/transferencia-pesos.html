@@ -64,14 +64,14 @@
             <button onclick="backToOperations()" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Volver">
                 <i class="fa-solid fa-arrow-left text-lg"></i>
             </button>
-            <div class="flex items-center">
+            <a href="/dashboard" class="flex items-center" aria-label="Ir al dashboard">
                 <div class="w-6 h-6 bg-primary rounded-lg flex items-center justify-center mr-2">
                     <i class="fa-solid fa-chart-line text-white text-xs"></i>
                 </div>
                 <span class="text-lg font-bold text-text-primary">FinaTech</span>
-            </div>
+            </a>
         <div class="flex items-center gap-3">
-            <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
+            <div data-balance-widget data-balance-widget-target="/saldos" class="flex"></div>
             <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors" aria-label="Abrir menú">
                 <i class="fa-solid fa-bars text-lg"></i>
             </button>
@@ -91,22 +91,22 @@
             </div>
         </div>
         <div class="space-y-2">
-            <a href="/dashboard" class="flex items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg">
+            <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg" aria-current="page">
                 <i class="fa-solid fa-exchange-alt text-primary mr-3"></i>
                 <span class="text-primary font-medium">Operaciones</span>
             </a>
-            <span class="flex items-center px-3 py-2 text-text-primary">
+            <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
                 Tesorería
-            </span>
-            <span class="flex items-center px-3 py-2 text-text-primary">
+            </a>
+            <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
                 Logística
-            </span>
-            <span class="flex items-center px-3 py-2 text-text-primary">
+            </a>
+            <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
                 Liquidaciones
-            </span>
+            </a>
         </div>
     </div>
 </nav>
@@ -203,7 +203,7 @@
                     <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
                 </button>
             </div>
-            <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+            <div data-balance-widget data-balance-widget-target="/saldos" class="hidden lg:block"></div>
             <div class="relative">
                 <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
                         <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
@@ -395,11 +395,11 @@
         </div>
         <div id="progress-container" class="mb-4 lg:mb-6">
             <div class="flex items-center justify-between mb-2">
-                <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                <span id="distribution-progress-label" class="text-sm font-medium text-gray-700">Progreso de asignación</span>
                 <span id="progress-text" class="text-sm text-gray-600">$0,00 de $0,00</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3">
-                <div id="progress-bar" class="progress-bar bg-gray-400 h-3 rounded-full" style="width: 0%"></div>
+                <div id="progress-bar" class="progress-bar bg-gray-400 h-3 rounded-full" style="width: 0%" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% asignado" aria-labelledby="distribution-progress-label" aria-describedby="progress-text"></div>
             </div>
             <div id="progress-message" class="text-sm text-gray-600 mt-2">Agrega contactos para comenzar la distribución</div>
         </div>

@@ -64,31 +64,31 @@
         <div class="flex items-center justify-between">
             <!-- Logo Section -->
             <div id="logo-section" class="flex items-center space-x-8">
-                <div class="flex items-center">
+                <a href="/dashboard" class="flex items-center" aria-label="Ir al dashboard">
                     <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
                         <i class="fa-solid fa-chart-line text-white text-sm"></i>
                     </div>
                     <span class="text-xl font-bold text-text-primary">FinaTech</span>
-                </div>
+                </a>
                 
                 <!-- Main Navigation Menu -->
                 <div id="main-nav" class="flex space-x-8">
-                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer">
+                    <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer" aria-current="page">
                         <i class="fa-solid fa-exchange-alt mr-2"></i>
                         Operaciones
-                    </span>
-                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                    </a>
+                    <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
                         <i class="fa-solid fa-vault mr-2"></i>
                         Tesorería
-                    </span>
-                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                    </a>
+                    <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
                         <i class="fa-solid fa-truck mr-2"></i>
                         Logística
-                    </span>
-                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                    </a>
+                    <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
                         <i class="fa-solid fa-calculator mr-2"></i>
                         Liquidaciones
-                    </span>
+                    </a>
                 </div>
             </div>
 
@@ -216,11 +216,11 @@
             <!-- Progress Bar -->
             <div class="mb-4">
                 <div class="flex items-center justify-between mb-2">
-                    <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                    <span id="distribution-progress-label" class="text-sm font-medium text-gray-700">Progreso de asignación</span>
                     <span id="progress-percentage" class="text-sm font-medium text-gray-700">0%</span>
                 </div>
                 <div class="w-full bg-gray-200 rounded-full h-3">
-                    <div id="progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%"></div>
+                    <div id="progress-bar" class="progress-bar bg-primary h-3 rounded-full" style="width: 0%" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-valuetext="0% asignado" aria-labelledby="distribution-progress-label" aria-describedby="progress-percentage"></div>
                 </div>
             </div>
             

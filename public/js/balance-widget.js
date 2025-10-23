@@ -244,7 +244,7 @@
 
     if (button) {
       button.addEventListener('click', () => {
-        const targetUrl = anchor.getAttribute('data-balance-widget-target') || 'tesoreria-saldos.html';
+        const targetUrl = anchor.getAttribute('data-balance-widget-target') || '/saldos';
         window.location.href = targetUrl;
       });
       button.addEventListener('focus', () => {

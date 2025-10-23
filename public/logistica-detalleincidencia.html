@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .severity-chip-medium {
+            background-color: #FEF3C7;
+            color: #B45309;
+            border: 1px solid #FDE68A;
+        }
+        .status-chip-review {
+            background-color: #DBEAFE;
+            color: #1D4ED8;
+            border: 1px solid #93C5FD;
+        }
+        .timeline-line {
+            position: relative;
+        }
+        .timeline-line::before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 24px;
+            bottom: -16px;
+            width: 2px;
+            background-color: #E5E7EB;
+        }
+        .timeline-line:last-child::before {
+            display: none;
+        }
+        .timeline-dot {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            z-index: 10;
+        }
+        .timeline-dot-created {
+            background-color: #10B981;
+            color: white;
+        }
+        .timeline-dot-review {
+            background-color: #3B82F6;
+            color: white;
+        }
+        .timeline-dot-comment {
+            background-color: #F59E0B;
+            color: white;
+        }
+        .panel-overlay {
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .panel-slide {
+            transform: translateX(100%);
+            transition: transform 0.3s ease-out;
+        }
+        .panel-slide.open {
+            transform: translateX(0);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- Background Overlay -->
+<div id="panel-overlay" class="fixed inset-0 panel-overlay z-40"></div>
+
+<!-- COMPONENT: Side Panel Overlay -->
+<div id="incident-detail-panel" class="fixed top-0 right-0 h-full w-[520px] bg-white z-50 shadow-2xl border-l border-gray-200 panel-slide open">
+    <!-- Panel Header -->
+    <div class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-semibold text-text-primary">Detalle de incidencia</h2>
+                <p class="text-sm text-gray-600 mt-1">Consulta toda la información registrada y los documentos asociados</p>
+            </div>
+            <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                <i class="fa-solid fa-times text-gray-500"></i>
+            </button>
+        </div>
+        
+        <!-- Breadcrumb -->
+        <nav class="flex items-center space-x-2 text-sm text-gray-600 mt-3">
+            <span onclick="window.location.href='logistica-panel.html'" class="text-primary font-medium cursor-pointer">Logística</span>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span>#INC-000320</span>
+        </nav>
+    </div>
+
+    <!-- Panel Content with Scroll -->
+    <div class="flex-1 overflow-y-auto px-6 py-6 pb-32">
+        
+        <!-- Block 1: Incident Summary -->
+        <div id="incident-summary" class="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <h3 class="text-base font-semibold text-text-primary mb-4">Resumen de la incidencia</h3>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="text-sm text-gray-500">ID de incidencia</label>
+                    <div class="text-lg font-semibold text-primary cursor-pointer hover:underline" title="Ver incidencia completa en sistema">#INC-000320</div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-gray-500">Tipo</label>
+                        <div class="text-sm text-text-primary font-medium">Retraso</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm text-gray-500">Severidad</label>
+                        <div>
+                            <span class="px-2 py-1 text-xs rounded-full severity-chip-medium">Media</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="text-sm text-gray-500">Estado</label>
+                    <div>
+                        <span class="px-2 py-1 text-xs rounded-full status-chip-review">En revisión</span>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-gray-500">Fecha del evento</label>
+                        <div class="text-sm text-text-primary font-medium">14/01/2024 14:45</div>
+                    </div>
+                    
+                    <div>
+                        <label class="text-sm text-gray-500">Última actualización</label>
+                        <div class="text-sm text-text-primary">15/01/2024 08:15</div>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="text-sm text-gray-500">Responsable</label>
+                    <div class="text-sm text-text-primary font-medium">María González</div>
+                </div>
+                
+                <div>
+                    <label class="text-sm text-gray-500">Movimiento asociado</label>
+                    <div>
+                        <span onclick="window.location.href='logisitica-detallemovimiento.html'" class="text-primary hover:underline cursor-pointer text-sm font-medium">#FT-LOG-000122</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block 2: Detailed Description -->
+        <div id="incident-description" class="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <h3 class="text-base font-semibold text-text-primary mb-4">Descripción detallada</h3>
+            
+            <div class="mb-6">
+                <p class="text-sm text-gray-700 leading-relaxed">
+                    Demora en la entrega por problemas de tráfico en ruta principal. El conductor reportó congestión vehicular que retrasó la entrega por 2 horas.
+                </p>
+            </div>
+            
+            <div>
+                <h4 class="text-sm font-medium text-text-primary mb-3">Impacto operativo</h4>
+                <div class="space-y-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-check text-success text-sm mr-2"></i>
+                        <span class="text-sm text-gray-700">Retrasó la entrega</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-check text-success text-sm mr-2"></i>
+                        <span class="text-sm text-gray-700">Requiere revisión manual</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-check text-success text-sm mr-2"></i>
+                        <span class="text-sm text-gray-700">Afecta documentación</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Block 3: Involved Items -->
+        <div id="involved-items" class="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <h3 class="text-base font-semibold text-text-primary mb-4">Ítems involucrados</h3>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Descripción</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Cantidad</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Observación</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr>
+                            <td class="py-3 text-sm text-text-primary">Billetes USD serie 2023</td>
+                            <td class="py-3 text-sm text-text-primary">2</td>
+                            <td class="py-3 text-sm text-gray-600">Faltante detectado</td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 text-sm text-text-primary">Recibo de entrega</td>
+                            <td class="py-3 text-sm text-text-primary">1</td>
+                            <td class="py-3 text-sm text-gray-600">Dañado / ilegible</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Block 4: Attached Documents -->
+        <div id="attached-documents" class="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <h3 class="text-base font-semibold text-text-primary mb-4">Documentos adjuntos</h3>
+            
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead>
+                        <tr class="border-b border-gray-200">
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Archivo</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Tipo</th>
+                            <th class="text-left py-3 text-sm font-medium text-gray-500">Tamaño</th>
+                            <th class="text-center py-3 text-sm font-medium text-gray-500">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr>
+                            <td class="py-3 text-sm text-text-primary">evidencia_01.pdf</td>
+                            <td class="py-3 text-sm text-gray-600">PDF</td>
+                            <td class="py-3 text-sm text-gray-600">1.2 MB</td>
+                            <td class="py-3 text-center">
+                                <button class="text-primary hover:text-blue-700">
+                                    <i class="fa-solid fa-download text-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="py-3 text-sm text-text-primary">foto_03.jpg</td>
+                            <td class="py-3 text-sm text-gray-600">Imagen</td>
+                            <td class="py-3 text-sm text-gray-600">450 KB</td>
+                            <td class="py-3 text-center">
+                                <button class="text-primary hover:text-blue-700">
+                                    <i class="fa-solid fa-download text-sm"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Block 5: Change History -->
+        <div id="change-history" class="bg-white border border-gray-200 rounded-lg p-6 mb-4">
+            <h3 class="text-base font-semibold text-text-primary mb-4">Historial de cambios</h3>
+            
+            <div class="space-y-4">
+                <!-- Timeline Item 1 -->
+                <div class="flex timeline-line">
+                    <div class="timeline-dot timeline-dot-created mr-4 mt-1">
+                        <i class="fa-solid fa-plus text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-text-primary">Creada</span>
+                            <span class="text-sm text-gray-500">15/01/2024 14:30</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-1">Juan Pérez</div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 2 -->
+                <div class="flex timeline-line">
+                    <div class="timeline-dot timeline-dot-review mr-4 mt-1">
+                        <i class="fa-solid fa-eye text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-text-primary">En revisión</span>
+                            <span class="text-sm text-gray-500">15/01/2024 15:00</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-1">María González</div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Item 3 -->
+                <div class="flex timeline-line">
+                    <div class="timeline-dot timeline-dot-comment mr-4 mt-1">
+                        <i class="fa-solid fa-comment text-xs"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="text-sm font-medium text-text-primary">Comentario</span>
+                            <span class="text-sm text-gray-500">15/01/2024 17:15</span>
+                        </div>
+                        <div class="text-sm text-gray-600 mt-1">Se solicitó validación con Sucursal Norte.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer Actions -->
+    <div class="fixed bottom-0 left-0 right-0 bg-gray-50 border-t border-gray-200 px-6 py-4">
+        <div class="flex items-center justify-between">
+            <div class="flex space-x-3">
+                <button class="px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm">
+                    Editar incidencia
+                </button>
+                <button class="px-4 py-2 bg-success text-white rounded-lg hover:bg-green-600 transition-colors text-sm">
+                    Marcar como resuelta
+                </button>
+                <button class="px-4 py-2 bg-danger text-white rounded-lg hover:bg-red-600 transition-colors text-sm">
+                    Anular incidencia
+                </button>
+            </div>
+            
+            <button onclick="window.location.href='logitica-historialincidencias.html'" class="text-primary hover:text-blue-700 text-sm">
+                Cerrar panel
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

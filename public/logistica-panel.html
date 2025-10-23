@@ -32,9 +32,11 @@
         .detail-panel {
             transform: translateX(100%);
             transition: transform 0.3s ease;
+            pointer-events: none;
         }
         .detail-panel.open {
             transform: translateX(0);
+            pointer-events: auto;
         }
         .filter-panel {
             transform: translateX(-100%);
@@ -129,7 +131,7 @@
             </div>
 
             <div class="flex items-center gap-3">
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="flex"></div>
+                <div data-balance-widget data-balance-widget-target="/saldos" class="flex"></div>
                 <button id="menu-toggle" type="button" class="p-2 text-text-primary hover:text-primary transition-colors" aria-expanded="false" aria-controls="mobile-menu">
                     <i class="fa-solid fa-bars text-lg"></i>
                 </button>
@@ -150,19 +152,19 @@
         </div>
 
         <div class="space-y-2">
-            <a href="operations-summary.html" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+            <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-exchange-alt text-gray-500 mr-3"></i>
                 <span>Operaciones</span>
             </a>
-            <a href="tesoreria-saldos.html" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+            <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
                 <span>Tesorería</span>
             </a>
-            <span class="flex items-center px-3 py-2 rounded-lg text-primary bg-blue-50">
+            <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 rounded-lg text-primary bg-blue-50 font-medium" aria-current="page">
                 <i class="fa-solid fa-truck text-primary mr-3"></i>
                 <span>Logística</span>
-            </span>
-            <a href="#" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
+            </a>
+            <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 rounded-lg text-text-primary hover:bg-gray-50 transition-colors">
                 <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
                 <span>Liquidaciones</span>
             </a>
@@ -175,26 +177,26 @@
     <div class="px-8 py-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-10">
-                <a href="dashboard.html" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg">
+                <a href="/dashboard" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-lg" aria-label="Ir al dashboard">
                     <div class="w-9 h-9 bg-primary rounded-lg flex items-center justify-center mr-3">
                         <i class="fa-solid fa-chart-line text-white text-sm"></i>
                     </div>
                     <span class="text-xl font-bold text-text-primary">FinaTech</span>
                 </a>
                 <div class="hidden lg:flex space-x-8">
-                    <a href="operations-summary.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/dashboard" data-nav-link="operations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-exchange-alt mr-2"></i>
                         Operaciones
                     </a>
-                    <a href="tesoreria-saldos.html" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    <a href="/tesoreria" data-nav-link="treasury" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-vault mr-2"></i>
                         Tesorería
                     </a>
-                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg">
+                    <a href="/logistica" data-nav-link="logistics" class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary" aria-current="page">
                         <i class="fa-solid fa-truck mr-2"></i>
                         Logística
-                    </span>
-                    <a href="#" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
+                    </a>
+                    <a href="/dashboard/operations/new/summary" data-nav-link="liquidations" class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors">
                         <i class="fa-solid fa-calculator mr-2"></i>
                         Liquidaciones
                     </a>
@@ -215,7 +217,7 @@
                         <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
                     </button>
                 </div>
-                <div data-balance-widget data-balance-widget-target="tesoreria-saldos.html" class="hidden lg:block"></div>
+                <div data-balance-widget data-balance-widget-target="/saldos" class="hidden lg:block"></div>
                 <div class="relative">
                     <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors" type="button">
                         <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
@@ -244,7 +246,7 @@
                     <h1 class="text-xl font-bold text-text-primary mb-2 sm:text-2xl">Panel de Logística</h1>
                     <p class="text-sm text-gray-600 sm:text-base">Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes.</p>
                 </div>
-                <button id="register-action" type="button" class="order-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 lg:order-none lg:text-base">
+                <button id="register-action" type="button" class="order-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 lg:order-none lg:text-base" onclick="window.location.href='logistica-registrarnuevomovimiento.html'">
                     <i class="fa-solid fa-plus"></i>
                     Registrar nuevo movimiento logístico
                 </button>
@@ -254,7 +256,7 @@
         <section id="general-summary-section" class="mb-8">
             <h2 class="text-lg font-semibold text-text-primary mb-4">Resumen general</h2>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm cursor-pointer" onclick="window.location.href='logistica-resumengeneral.html'" aria-label="Ver resumen general">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center">
                             <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
@@ -272,7 +274,7 @@
                     </div>
                     <div class="text-xs text-gray-500">En curso actualmente</div>
                 </article>
-                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm cursor-pointer" onclick="window.location.href='logistica-resumengeneral.html'" aria-label="Ver resumen general">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center">
                             <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mr-4">
@@ -290,7 +292,7 @@
                     </div>
                     <div class="text-xs text-gray-500">A la espera de confirmación</div>
                 </article>
-                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm cursor-pointer" onclick="window.location.href='logistica-resumengeneral.html'" aria-label="Ver resumen general">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center">
                             <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
@@ -308,7 +310,7 @@
                     </div>
                     <div class="text-xs text-gray-500">Movimientos físicos registrados</div>
                 </article>
-                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm">
+                <article class="bg-white rounded-lg border border-gray-200 p-6 shadow-sm cursor-pointer" onclick="window.location.href='logistica-resumengeneral.html'" aria-label="Ver resumen general">
                     <div class="flex items-center justify-between mb-4">
                         <div class="flex items-center">
                             <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
@@ -558,6 +560,7 @@
         </footer>
     </div>
 </aside>
+<div id="detail-overlay" class="fixed inset-0 z-40 bg-black/30 hidden" aria-hidden="true"></div>
 
 <div id="sr-announce" class="sr-only" aria-live="polite"></div>
 
@@ -589,6 +592,7 @@ let detailOperation = null;
 let autoRefreshTimer = null;
 let menuToggleButton;
 let mobileMenuPanel;
+let detailOverlay;
 let detailLoadingTimer = null;
 let isFetchingOperations = false;
 
@@ -714,7 +718,7 @@ const renderOperationsTable = () => {
       <td class="px-6 py-4">
         <input type="checkbox" class="rounded border-gray-300 text-primary focus:ring-primary row-checkbox" data-operation-id="${operation.id}">
       </td>
-      <td class="px-6 py-4 text-sm font-medium text-primary cursor-pointer" data-operation-link="${operation.id}">#${operation.operationCode || operation.id}</td>
+      <td class="px-6 py-4 text-sm font-medium text-primary">#${operation.operationCode || operation.id}</td>
       <td class="px-6 py-4 text-sm text-text-primary">${formatDateTime(operation.datetime)}</td>
       <td class="px-6 py-4">${createTypeBadge(operation.type)}</td>
       <td class="px-6 py-4 text-sm text-text-primary">${operation.contact || '—'}</td>
@@ -1020,7 +1024,7 @@ const registerNewLogisticsMovement = () => {
 };
 
 const viewInTreasury = () => {
-  window.location.href = '/tesoreria-saldos.html?from=logistica';
+  window.location.href = '//tesoreria?from=logistica';
 };
 
 const updateDetailState = async (state, successMessage) => {
@@ -1073,6 +1077,11 @@ const openDetailPanel = (operationId) => {
   const panel = document.getElementById('operation-detail-panel');
   panel.classList.add('open');
   panel.setAttribute('aria-hidden', 'false');
+  if (detailOverlay) {
+    detailOverlay.classList.remove('hidden');
+    detailOverlay.setAttribute('aria-hidden', 'false');
+  }
+  document.body.classList.add('overflow-hidden');
   fetchDetail(operationId);
 };
 
@@ -1080,6 +1089,11 @@ const closeDetailPanel = () => {
   const panel = document.getElementById('operation-detail-panel');
   panel.classList.remove('open');
   panel.setAttribute('aria-hidden', 'true');
+  if (detailOverlay) {
+    detailOverlay.classList.add('hidden');
+    detailOverlay.setAttribute('aria-hidden', 'true');
+  }
+  document.body.classList.remove('overflow-hidden');
   detailOperation = null;
   if (detailLoadingTimer) {
     clearTimeout(detailLoadingTimer);
@@ -1131,6 +1145,7 @@ const fetchOperations = async ({ page = currentPage, silent = false } = {}) => {
 document.addEventListener('DOMContentLoaded', () => {
   menuToggleButton = document.getElementById('menu-toggle');
   mobileMenuPanel = document.getElementById('mobile-menu');
+  detailOverlay = document.getElementById('detail-overlay');
 
   if (menuToggleButton && mobileMenuPanel) {
     menuToggleButton.addEventListener('click', () => {
@@ -1156,6 +1171,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } else if (typeof lgBreakpoint.addListener === 'function') {
       lgBreakpoint.addListener(handleBreakpointChange);
     }
+  }
+
+  if (detailOverlay) {
+    detailOverlay.addEventListener('click', closeDetailPanel);
   }
 
   document.getElementById('filter-toggle').addEventListener('click', openFilterPanel);
@@ -1190,11 +1209,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const detailTrigger = event.target.closest('.detail-trigger');
     if (detailTrigger) {
       openDetailPanel(detailTrigger.dataset.operationId);
-      return;
-    }
-    const linkTrigger = event.target.closest('[data-operation-link]');
-    if (linkTrigger) {
-      openDetailPanel(linkTrigger.dataset.operationLink);
     }
   });
 
