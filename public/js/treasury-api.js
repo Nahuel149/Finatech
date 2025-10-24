@@ -1,5 +1,17 @@
 (function attachTreasuryApi(global) {
   const JSON_MIME = 'application/json';
+  const CSRF_COOKIE_NAME = 'finatech_csrf';
+
+  const getCookie = (name) => {
+    try {
+      const match = document.cookie
+        .split('; ')
+        .find((row) => row.startsWith(`${name}=`));
+      return match ? decodeURIComponent(match.split('=')[1]) : null;
+    } catch (_) {
+      return null;
+    }
+  };
 
   class TreasuryApiError extends Error {
     constructor(message, status, payload, cause) {
@@ -75,6 +87,17 @@
           finalHeaders.set('Content-Type', JSON_MIME);
         }
         options.body = safeJsonStringify(body);
+      }
+    }
+
+    // Attach CSRF token for state-changing requests if not provided
+    const methodUpper = String(method || 'GET').toUpperCase();
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(methodUpper)) {
+      if (!finalHeaders.has('X-CSRF-Token')) {
+        const csrfToken = getCookie(CSRF_COOKIE_NAME);
+        if (csrfToken) {
+          finalHeaders.set('X-CSRF-Token', csrfToken);
+        }
       }
     }
 

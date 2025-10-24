@@ -279,6 +279,15 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const apiBaseUrl = apiUrl('/api/auth');
+    const CSRF_COOKIE_NAME = 'finatech_csrf';
+    const getCookie = (name) => {
+        try {
+            const match = document.cookie.split('; ').find((row) => row.startsWith(`${name}=`));
+            return match ? decodeURIComponent(match.split('=')[1]) : null;
+        } catch (_) {
+            return null;
+        }
+    };
     const form = document.getElementById('login-form');
     const emailInput = document.getElementById('email');
     const passwordInput = document.getElementById('password');
@@ -351,7 +360,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${apiBaseUrl}/login`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie(CSRF_COOKIE_NAME) || '' },
             body: JSON.stringify(payload),
         })
         .then(async (response) => {
@@ -412,7 +421,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${apiBaseUrl}/google`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie(CSRF_COOKIE_NAME) || '' },
             body: JSON.stringify({ idToken: response.credential }),
         })
         .then(async (apiResponse) => {
@@ -452,7 +461,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${apiBaseUrl}/login/2fa`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie(CSRF_COOKIE_NAME) || '' },
             body: JSON.stringify({ challengeToken: currentChallengeToken, code }),
         })
         .then(async (response) => {
@@ -489,7 +498,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${apiBaseUrl}/login/2fa/resend`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie(CSRF_COOKIE_NAME) || '' },
             body: JSON.stringify({ challengeToken: currentChallengeToken }),
         })
         .then(async (response) => {
@@ -523,7 +532,7 @@ document.addEventListener('DOMContentLoaded', function() {
         fetch(`${apiBaseUrl}/resend-verification`, {
             method: 'POST',
             credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie(CSRF_COOKIE_NAME) || '' },
             body: JSON.stringify({ email: currentEmail }),
         })
         .then(async (response) => {

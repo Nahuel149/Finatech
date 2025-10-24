@@ -270,6 +270,11 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const apiBaseUrl = '/api/auth';
+    // Add CSRF cookie helper
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2]) : '';
+    }
     const recoveryForm = document.getElementById('recovery-form');
     const resetForm = document.getElementById('reset-form');
     const emailInput = document.getElementById('email');
@@ -337,7 +342,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/recover`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('finatech_csrf') },
             body: JSON.stringify({ email }),
         })
         .then(async (response) => {
@@ -392,7 +397,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/reset`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('finatech_csrf') },
             body: JSON.stringify({ token, password: newPassword, confirmPassword }),
         })
         .then(async (response) => {

@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .success-animation {
+            animation: successPulse 0.6s ease-out;
+        }
+        @keyframes successPulse {
+            0% { transform: scale(0.8); opacity: 0; }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from { 
+                transform: translateX(100%); 
+                opacity: 0;
+            }
+            to { 
+                transform: translateX(0); 
+                opacity: 1;
+            }
+        }
+        .backdrop {
+            animation: backdropFadeIn 0.3s ease-out;
+        }
+        @keyframes backdropFadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </div>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Transferencias ARS -->
+            <div id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$2.997.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:33</div>
+            </div>
+
+            <!-- Efectivo ARS -->
+            <div id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </div>
+
+            <!-- Caja USD -->
+            <div id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">USD 12.525,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline">Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Main Content -->
+<main id="confirmation-container" class="hidden pt-[220px] px-6 pb-24 max-w-4xl mx-auto">
+    
+    <!-- SECTION: Header and Breadcrumbs -->
+    <section id="page-header" class="mb-8">
+        <!-- Breadcrumbs -->
+        <nav id="breadcrumbs" class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <button onclick="navigateToOperations()" class="hover:text-primary transition-colors">Operaciones</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <button onclick="navigateToTransfers()" class="hover:text-primary transition-colors">Transferencia en ARS</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Confirmación</span>
+        </nav>
+        
+        <!-- Page Title -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="goBackToDistribution()" class="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-text-primary">Confirmación de operación</h1>
+                    <p class="text-gray-600">Verificá los datos antes de confirmar la operación</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Confirmation Content -->
+    <div id="confirmation-content" class="space-y-6">
+        
+        <!-- Configuration Card -->
+        <div id="configuration-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary flex items-center">
+                    <i class="fa-solid fa-cog text-primary mr-3"></i>
+                    Configuración
+                </h3>
+                <button onclick="editConfiguration()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div class="grid grid-cols-2 gap-6">
+                <div>
+                    <label class="text-sm font-medium text-gray-600">Tipo de movimiento</label>
+                    <div class="mt-1 text-text-primary font-medium">Transferencia</div>
+                </div>
+                <div>
+                    <label class="text-sm font-medium text-gray-600">Dirección</label>
+                    <div class="mt-1 text-text-primary font-medium">Entrante</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Amount Card -->
+        <div id="total-amount-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary flex items-center">
+                    <i class="fa-solid fa-dollar-sign text-primary mr-3"></i>
+                    Monto total
+                </h3>
+                <button onclick="editAmount()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div class="text-3xl font-bold text-blue-900">$150.000,00</div>
+                <div class="text-sm text-blue-700 mt-1">Pesos argentinos</div>
+            </div>
+        </div>
+
+        <!-- Distribution Card -->
+        <div id="distribution-card" class="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary flex items-center">
+                    <i class="fa-solid fa-users text-primary mr-3"></i>
+                    Distribución
+                </h3>
+                <button onclick="editDistribution()" class="text-primary hover:text-blue-700 text-sm font-medium">
+                    <i class="fa-solid fa-edit mr-1"></i>
+                    Editar
+                </button>
+            </div>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-user text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-text-primary">María González</div>
+                            <div class="text-sm text-gray-600">Cliente • 20-12345678-9</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-text-primary">$75.000,00</div>
+                        <div class="text-sm text-gray-600">ARS</div>
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div class="flex items-center space-x-4">
+                        <div class="w-10 h-10 bg-primary rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-building text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <div class="font-medium text-text-primary">Empresa ABC S.A.</div>
+                            <div class="text-sm text-gray-600">Cliente • 30-12345678-9</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div class="font-semibold text-text-primary">USD 75,00</div>
+                        <div class="text-sm text-gray-600">USD</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Summary -->
+            <div class="mt-4 pt-4 border-t border-gray-200">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-gray-600">Total distribuido:</span>
+                    <span class="font-semibold text-text-primary">$150.000,00</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</main>
+
+<!-- Success State -->
+<div id="success-state" class="pt-[270px] px-6 pb-24 max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
+        <div class="success-animation mb-6">
+            <div class="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-check text-white text-2xl"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-text-primary mb-2">Transferencia registrada correctamente</h2>
+            <p class="text-gray-600 mb-6">La operación ha sido guardada exitosamente en el sistema</p>
+        </div>
+        
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="text-sm text-blue-700 font-medium mb-1">ID de operación</div>
+            <div class="text-xl font-bold text-blue-900">#FT-TRF-000123</div>
+        </div>
+        
+        <div class="space-y-3">
+            <button onclick="viewDetails()" class="w-full px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                <i class="fa-solid fa-eye mr-2"></i>
+                Ver detalle
+            </button>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="newTransfer()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Registrar otra transferencia
+                </button>
+                <button onclick="backToOperations()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Fixed Footer Actions -->
+<div id="footer-actions" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between max-w-4xl mx-auto">
+            <div class="flex items-center space-x-4">
+                <button onclick="goBackToDistribution()" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Atrás
+                </button>
+                <button onclick="saveDraft()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-save mr-2"></i>
+                    Guardar borrador
+                </button>
+            </div>
+            <button onclick="confirmOperation()" class="px-8 py-3 bg-success text-white rounded-lg hover:bg-green-700 transition-colors font-medium">
+                <span>Confirmar operación</span>
+                <i class="fa-solid fa-check ml-2"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Accounting Impact Sheet -->
+<div id="accounting-impact-sheet" class="fixed inset-0 z-[60] hidden">
+    <!-- Backdrop -->
+    <div id="sheet-backdrop" class="fixed inset-0 bg-black bg-opacity-50 backdrop"></div>
+    
+    <!-- Sheet Panel -->
+    <div id="sheet-panel" class="fixed top-0 right-0 h-full w-full max-w-xl bg-white shadow-2xl slide-in-right overflow-y-auto">
+        
+        <!-- Sheet Header -->
+        <div id="sheet-header" class="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h2 class="text-xl font-bold text-text-primary">Impacto contable generado</h2>
+                    <p class="text-sm text-gray-600 mt-1">Estos movimientos se registraron automáticamente en las cuentas corrientes y saldos de Tesorería</p>
+                </div>
+                <button onclick="closeAccountingSheet()" class="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-times text-gray-600"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Sheet Content -->
+        <div id="sheet-content" class="px-6 py-6">
+            
+            <!-- Operation Info Card -->
+            <div id="operation-info" class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <div class="text-sm font-medium text-blue-700">ID de operación</div>
+                        <div class="text-lg font-bold text-blue-900">#FT-TRF-000123</div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-blue-700">Fecha y hora</div>
+                        <div class="text-blue-900">08/10/2025 - 14:32</div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-blue-700">Usuario</div>
+                        <div class="text-blue-900">Juan Pérez • Operador Senior</div>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-blue-700">Tipo</div>
+                        <div class="text-blue-900">Transferencia ARS</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Movements Table -->
+            <div id="movements-table" class="mb-6">
+                <h3 class="text-lg font-semibold text-text-primary mb-4">Movimientos generados</h3>
+                
+                <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-gray-50 border-b border-gray-200">
+                                <tr>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta afectada</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contraparte</th>
+                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-gray-200">
+                                <tr>
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                                            <span class="text-sm font-medium text-text-primary">Transferencias ARS</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">ARS</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-bold text-success">+$150.000,00</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-600">Múltiples clientes</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                            <i class="fa-solid fa-check mr-1"></i>
+                                            Registrado
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-users text-primary mr-2"></i>
+                                            <span class="text-sm font-medium text-text-primary">Cuentas a Cobrar ARS</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">ARS</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-bold text-danger">-$75.000,00</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-600">María González</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                            <i class="fa-solid fa-check mr-1"></i>
+                                            Registrado
+                                        </span>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center">
+                                            <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                                            <span class="text-sm font-medium text-text-primary">Cuentas a Cobrar USD</span>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">USD</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm font-bold text-danger">-USD 75,00</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="text-sm text-gray-600">Empresa ABC S.A.</span>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                                            <i class="fa-solid fa-check mr-1"></i>
+                                            Registrado
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Explanation Section -->
+            <div id="explanation-section" class="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <i class="fa-solid fa-info-circle text-primary mt-1"></i>
+                    </div>
+                    <div class="ml-3">
+                        <h4 class="text-sm font-medium text-text-primary mb-2">Principio de partida doble</h4>
+                        <p class="text-sm text-gray-600">
+                            Cada operación genera dos o más movimientos compensatorios. Los saldos afectados se actualizan instantáneamente en Tesorería y Cuentas Corrientes.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Sheet Footer
+</div>
+</div>

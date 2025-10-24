@@ -1,0 +1,672 @@
+<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Mobile Header -->
+<header id="header" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-4 py-3">
+        <div class="flex items-center justify-between">
+            <!-- Logo -->
+            <div class="flex items-center">
+                <div class="w-7 h-7 bg-primary rounded-lg flex items-center justify-center mr-2">
+                    <i class="fa-solid fa-chart-line text-white text-xs"></i>
+                </div>
+                <span class="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            
+            <!-- Right Section -->
+            <div class="flex items-center space-x-3">
+                <!-- Search Icon -->
+                <button class="p-2 text-text-primary hover:text-primary transition-colors">
+                    <i class="fa-solid fa-search text-lg"></i>
+                </button>
+                
+                <!-- Notifications -->
+                <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                    <i class="fa-solid fa-bell text-lg"></i>
+                    <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-4 h-4 flex items-center justify-center text-xs">3</span>
+                </button>
+                
+                <!-- Menu Toggle -->
+                <button id="menu-toggle" class="p-2 text-text-primary hover:text-primary transition-colors">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</header>
+
+<!-- COMPONENT: Mobile Navigation Menu -->
+<div id="mobile-menu" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 hidden">
+    <div class="px-4 py-3">
+        <!-- User Info -->
+        <div class="flex items-center mb-4 pb-4 border-b border-gray-200">
+            <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-10 h-10 rounded-full mr-3">
+            <div>
+                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-xs text-gray-500">Operador Senior</div>
+            </div>
+        </div>
+        
+        <!-- Navigation Items -->
+        <div class="space-y-2">
+            <div class="flex items-center px-3 py-2 bg-primary bg-opacity-10 rounded-lg">
+                <i class="fa-solid fa-exchange-alt text-primary mr-3"></i>
+                <span class="text-primary font-medium">Operaciones</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-vault text-gray-500 mr-3"></i>
+                <span>Tesorería</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-truck text-gray-500 mr-3"></i>
+                <span>Logística</span>
+            </div>
+            <div class="flex items-center px-3 py-2 text-text-primary">
+                <i class="fa-solid fa-calculator text-gray-500 mr-3"></i>
+                <span>Liquidaciones</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Balance Cards -->
+<div id="balance-stripe" class="fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-30">
+    <div class="px-4 py-3">
+        <div class="grid grid-cols-1 gap-3">
+            <!-- Transferencias ARS -->
+            <div id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </div>
+
+            <!-- Efectivo ARS -->
+            <div id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </div>
+
+            <!-- Caja USD -->
+            <div id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+                <div class="flex items-center justify-between mb-1">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2 text-sm"></i>
+                        <span class="text-xs font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-lg font-bold text-text-primary mb-1">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline">Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Main Container -->
+<main id="main-container" class="pt-[320px] px-4 pb-8">
+    
+    <!-- SECTION: Header Section -->
+    <section id="operations-header" class="mb-6">
+        <div class="mb-4">
+            <h1 class="text-2xl font-bold text-text-primary mb-2">Operaciones</h1>
+            <p class="text-gray-600 text-sm">Gestiona y supervisa todas las operaciones financieras</p>
+        </div>
+        
+        <div id="header-actions" class="space-y-2 mt-8">
+            <button class="w-full flex items-center justify-center px-4 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                <i class="fa-solid fa-plus mr-2"></i>
+                Nueva operación
+            </button>
+            <div class="grid grid-cols-2 gap-2">
+                <button class="flex items-center justify-center px-3 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                    <i class="fa-solid fa-paper-plane mr-1 text-xs"></i>
+                    Transferir pesos
+                </button>
+                <button class="flex items-center justify-center px-3 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors text-sm">
+                    <i class="fa-solid fa-file-invoice mr-1 text-xs"></i>
+                    Ver cuentas corrientes
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Quick Flow Shortcuts -->
+    <section id="flow-shortcuts" class="mb-6">
+        <div class="mb-4">
+            <h2 class="text-lg font-semibold text-text-primary mb-1">Atajos de flujo</h2>
+            <p class="text-gray-600 text-sm">Accesos rápidos a operaciones frecuentes</p>
+        </div>
+        
+        <div class="space-y-3">
+            <!-- Compra / Entra Pesos -->
+            <div id="shortcut-buy" class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group">
+                <div class="flex items-center mb-3">
+                    <div class="w-10 h-10 bg-success bg-opacity-10 rounded-lg flex items-center justify-center mr-3 group-hover:bg-opacity-20 transition-colors">
+                        <i class="fa-solid fa-arrow-down text-success"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-text-primary">Compra</h3>
+                        <p class="text-xs text-gray-600">Entra Pesos</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-primary text-sm"></i>
+                </div>
+                <p class="text-gray-600 text-sm">Registra operación de compra de divisas con ingreso de pesos argentinos</p>
+            </div>
+
+            <!-- Venta / Entra USD -->
+            <div id="shortcut-sell" class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group">
+                <div class="flex items-center mb-3">
+                    <div class="w-10 h-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center mr-3 group-hover:bg-opacity-20 transition-colors">
+                        <i class="fa-solid fa-arrow-up text-primary"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-text-primary">Venta</h3>
+                        <p class="text-xs text-gray-600">Entra USD</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-primary text-sm"></i>
+                </div>
+                <p class="text-gray-600 text-sm">Registra operación de venta de divisas con ingreso de dólares estadounidenses</p>
+            </div>
+
+            <!-- Liquidación Compuesta -->
+            <div id="shortcut-compound" class="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer group">
+                <div class="flex items-center mb-3">
+                    <div class="w-10 h-10 bg-orange-500 bg-opacity-10 rounded-lg flex items-center justify-center mr-3 group-hover:bg-opacity-20 transition-colors">
+                        <i class="fa-solid fa-layer-group text-orange-500"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-text-primary">Liquidación</h3>
+                        <p class="text-xs text-gray-600">Compuesta</p>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-primary text-sm"></i>
+                </div>
+                <p class="text-gray-600 text-sm">Procesa múltiples operaciones relacionadas en una sola liquidación</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Recent Validations -->
+    <section id="recent-validations" class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h2 class="text-lg font-semibold text-text-primary mb-1">Validaciones recientes</h2>
+                        <p class="text-gray-600 text-sm">Alertas y notificaciones importantes</p>
+                    </div>
+                    <button class="text-primary hover:underline font-medium text-sm">Ver todas</button>
+                </div>
+            </div>
+            
+            <div class="divide-y divide-gray-200">
+                <!-- Validation Item 1 -->
+                <div id="validation-1" class="p-4 flex items-start">
+                    <div class="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                        <i class="fa-solid fa-exclamation-triangle text-orange-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-medium text-text-primary text-sm">Alerta tipo de cambio</h3>
+                        <p class="text-gray-600 text-sm mt-1">TC actual supera límite establecido para operaciones automáticas</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="text-xs text-gray-500">Hace 15 min</div>
+                            <button class="text-primary text-sm hover:underline">Revisar</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Item 2 -->
+                <div id="validation-2" class="p-4 flex items-start">
+                    <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                        <i class="fa-solid fa-times-circle text-danger text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-medium text-text-primary text-sm">Error en liquidación</h3>
+                        <p class="text-gray-600 text-sm mt-1">Liquidación #LQ-2024-0847 requiere intervención manual</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="text-xs text-gray-500">Hace 32 min</div>
+                            <button class="text-primary text-sm hover:underline">Resolver</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Validation Item 3 -->
+                <div id="validation-3" class="p-4 flex items-start">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3 flex-shrink-0 mt-1">
+                        <i class="fa-solid fa-clock text-yellow-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="font-medium text-text-primary text-sm">Límite diario próximo</h3>
+                        <p class="text-gray-600 text-sm mt-1">Operaciones USD alcanzan 85% del límite diario establecido</p>
+                        <div class="flex items-center justify-between mt-2">
+                            <div class="text-xs text-gray-500">Hace 1 hora</div>
+                            <button class="text-primary text-sm hover:underline">Monitorear</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Recent Operations Table -->
+    <section id="recent-operations" class="mb-6">
+        <div class="bg-white rounded-lg border border-gray-200 shadow-sm">
+            <div class="p-4 border-b border-gray-200">
+                <div class="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 class="text-lg font-semibold text-text-primary mb-1">Últimas operaciones</h2>
+                        <p class="text-gray-600 text-sm">Registro de operaciones más recientes</p>
+                    </div>
+                    <button class="text-primary hover:underline font-medium text-sm">Ver historial completo</button>
+                </div>
+                
+                <!-- Quick Filters -->
+                <div id="quick-filters" class="grid grid-cols-2 gap-2">
+                    <div class="relative">
+                        <select class="appearance-none w-full bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                            <option>Todos los clientes</option>
+                            <option>Cliente A</option>
+                            <option>Cliente B</option>
+                            <option>Cliente C</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                            <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="relative">
+                        <select class="appearance-none w-full bg-white border border-gray-300 rounded-lg px-3 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm">
+                            <option>Todos los tipos</option>
+                            <option>Compra</option>
+                            <option>Venta</option>
+                            <option>Liquidación</option>
+                        </select>
+                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                            <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Mobile Cards Layout -->
+            <div class="divide-y divide-gray-200">
+                <!-- Operation Card 1 -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-blue-600 text-xs font-medium">CA</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">Cliente Alpha</div>
+                                <div class="text-xs text-gray-500">22/03/2024 14:25</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Compra</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-500">Entra</div>
+                            <div class="text-sm font-medium text-text-primary">$125.000,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Sale</div>
+                            <div class="text-sm font-medium text-text-primary">USD 150,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">TC Efectivo</div>
+                            <div class="text-sm font-medium text-text-primary">$833,33</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Margen</div>
+                            <div class="text-sm font-medium text-success">+2,5%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Completada</span>
+                        <div class="flex space-x-3">
+                            <button class="text-primary hover:text-blue-700 text-sm">Ver</button>
+                            <button class="text-gray-600 hover:text-gray-900 text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Operation Card 2 -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-purple-600 text-xs font-medium">CB</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">Cliente Beta</div>
+                                <div class="text-xs text-gray-500">22/03/2024 13:45</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary bg-opacity-10 text-primary">Venta</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-500">Entra</div>
+                            <div class="text-sm font-medium text-text-primary">USD 300,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Sale</div>
+                            <div class="text-sm font-medium text-text-primary">$248.500,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">TC Efectivo</div>
+                            <div class="text-sm font-medium text-text-primary">$828,33</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Margen</div>
+                            <div class="text-sm font-medium text-success">+1,8%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">Pendiente</span>
+                        <div class="flex space-x-3">
+                            <button class="text-primary hover:text-blue-700 text-sm">Ver</button>
+                            <button class="text-gray-600 hover:text-gray-900 text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Operation Card 3 -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-green-600 text-xs font-medium">CG</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">Cliente Gamma</div>
+                                <div class="text-xs text-gray-500">22/03/2024 12:30</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800">Liquidación</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-500">Operaciones</div>
+                            <div class="text-sm font-medium text-text-primary">Multiple</div>
+                            <div class="text-xs text-gray-500">3 operaciones</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">TC Efectivo</div>
+                            <div class="text-sm font-medium text-text-primary">$825,75</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Margen</div>
+                            <div class="text-sm font-medium text-success">+3,2%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Completada</span>
+                        <div class="flex space-x-3">
+                            <button class="text-primary hover:text-blue-700 text-sm">Ver</button>
+                            <button class="text-gray-600 hover:text-gray-900 text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Operation Card 4 -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-red-600 text-xs font-medium">CD</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">Cliente Delta</div>
+                                <div class="text-xs text-gray-500">22/03/2024 11:15</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success">Compra</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-500">Entra</div>
+                            <div class="text-sm font-medium text-text-primary">$85.000,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Sale</div>
+                            <div class="text-sm font-medium text-text-primary">USD 102,50</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">TC Efectivo</div>
+                            <div class="text-sm font-medium text-text-primary">$829,27</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Margen</div>
+                            <div class="text-sm font-medium text-danger">-0,5%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-800">Cancelada</span>
+                        <div class="flex space-x-3">
+                            <button class="text-primary hover:text-blue-700 text-sm">Ver</button>
+                            <button class="text-gray-600 hover:text-gray-900 text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Operation Card 5 -->
+                <div class="p-4">
+                    <div class="flex items-center justify-between mb-3">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center mr-3">
+                                <span class="text-indigo-600 text-xs font-medium">CE</span>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-text-primary">Cliente Epsilon</div>
+                                <div class="text-xs text-gray-500">22/03/2024 10:45</div>
+                            </div>
+                        </div>
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary bg-opacity-10 text-primary">Venta</span>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-3 mb-3">
+                        <div>
+                            <div class="text-xs text-gray-500">Entra</div>
+                            <div class="text-sm font-medium text-text-primary">USD 450,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Sale</div>
+                            <div class="text-sm font-medium text-text-primary">$372.150,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">TC Efectivo</div>
+                            <div class="text-sm font-medium text-text-primary">$827,00</div>
+                        </div>
+                        <div>
+                            <div class="text-xs text-gray-500">Margen</div>
+                            <div class="text-sm font-medium text-success">+2,1%</div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">En proceso</span>
+                        <div class="flex space-x-3">
+                            <button class="text-primary hover:text-blue-700 text-sm">Ver</button>
+                            <button class="text-gray-600 hover:text-gray-900 text-sm">Editar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: System Status Dashboard -->
+    <section id="system-status" class="mb-6">
+    </section>
+
+    <!-- SECTION: Quick Actions Panel -->
+    <section id="quick-actions" class="mb-6">
+    </section>
+
+    <!-- SECTION: Market Information -->
+    <section id="market-info" class="mb-6">
+    </section>
+
+    <!-- SECTION: Activity Timeline -->
+    <section id="activity-timeline" class="mb-6">
+    </section>
+
+    <!-- SECTION: Performance Metrics -->
+    <section id="performance-metrics" class="mb-6">
+    </section>
+
+</main>
+
+<!-- COMPONENT: Footer -->
+<footer id="footer" class="bg-white border-t border-gray-200 py-4 px-4">
+    <div class="text-center space-y-3">
+        <div class="grid grid-cols-2 gap-3 text-xs">
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Términos de uso</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Política de privacidad</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Centro de ayuda</span>
+            <span class="text-gray-600 hover:text-primary transition-colors cursor-pointer">Soporte técnico</span>
+        </div>
+        <div class="text-center space-y-2">
+            <span class="text-xs text-gray-500 block">© 2024 FinaTech - Versión 2.1.4</span>
+            <div class="flex items-center justify-center space-x-2">
+                <div class="w-2 h-2 bg-success rounded-full"></div>
+                <span class="text-xs text-gray-600">Sistema operativo</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<script>
+// Mobile menu toggle
+document.getElementById('menu-toggle').addEventListener('click', function() {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const icon = this.querySelector('i');
+    
+    if (mobileMenu.classList.contains('hidden')) {
+        mobileMenu.classList.remove('hidden');
+        icon.className = 'fa-solid fa-times text-lg';
+    } else {
+        mobileMenu.classList.add('hidden');
+        icon.className = 'fa-solid fa-bars text-lg';
+    }
+});
+
+// Close mobile menu when clicking outside
+document.addEventListener('click', function(event) {
+    const mobileMenu = document.getElementById('mobile-menu');
+    const menuToggle = document.getElementById('menu-toggle');
+    
+    if (!mobileMenu.contains(event.target) && !menuToggle.contains(event.target)) {
+        mobileMenu.classList.add('hidden');
+        menuToggle.querySelector('i').className = 'fa-solid fa-bars text-lg';
+    }
+});
+
+// Simulate real-time updates for balance cards
+function updateBalances() {
+    const balanceCards = document.querySelectorAll('[id^="balance-"]');
+    balanceCards.forEach(card => {
+        const timeElement = card.querySelector('.text-xs.text-gray-500');
+        if (timeElement && timeElement.textContent.includes('Actualizado')) {
+            const now = new Date();
+            const hours = now.getHours().toString().padStart(2, '0');
+            const minutes = now.getMinutes().toString().padStart(2, '0');
+            timeElement.textContent = `Actualizado ${hours}:${minutes}`;
+        }
+    });
+}
+
+// Update balances every minute
+setInterval(updateBalances, 60000);
+
+// Add click handlers for quick action buttons
+document.addEventListener('DOMContentLoaded', function() {
+    const quickActions = document.querySelectorAll('#quick-actions button');
+    quickActions.forEach(button => {
+        button.addEventListener('click', function() {
+            this.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                this.style.transform = 'scale(1)';
+            }, 150);
+        });
+    });
+    
+    // Add hover effects to operation shortcuts
+    const shortcuts = document.querySelectorAll('[id^="shortcut-"]');
+    shortcuts.forEach(shortcut => {
+        shortcut.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+        });
+        shortcut.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+
+// Notification dropdown toggle
+document.querySelector('.fa-bell').parentElement.addEventListener('click', function() {
+    console.log('Notifications clicked');
+});
+</script>
+
+
+</body></html>

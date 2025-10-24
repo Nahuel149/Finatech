@@ -194,7 +194,10 @@ const createTwoFactorChallenge = async ({ user, rememberMe, context }) => {
     metadata: buildRequestMetadata(context),
   });
 
-  await sendTwoFactorCodeEmail(user, code);
+  sendTwoFactorCodeEmail(user, code).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send 2FA code email', err);
+  });
 
   return { challengeToken: plainToken, expiresAt };
 };
@@ -490,7 +493,10 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
       user.lockUntil = new Date(now.getTime() + LOGIN_LOCK_MINUTES * 60 * 1000);
       await user.save();
       if (!alreadyLocked) {
-        await sendAccountLockedEmail(user);
+        sendAccountLockedEmail(user).catch((err) => {
+          // eslint-disable-next-line no-console
+          console.error('Failed to send account locked email', err);
+        });
       }
       await logSecurityEvent({
         user: user._id,

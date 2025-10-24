@@ -307,16 +307,11 @@ document.addEventListener('DOMContentLoaded', function() {
     let googleInitialized = false;
     let googleInitAttempts = 0;
     const MAX_GOOGLE_INIT_ATTEMPTS = 20;
-
-    // Password visibility toggles
-    const togglePassword = document.getElementById('toggle-password');
-    const toggleConfirmPassword = document.getElementById('toggle-confirm-password');
-
-    // Password requirements elements
-    const reqLength = document.getElementById('req-length');
-    const reqUpper = document.getElementById('req-upper');
-    const reqLower = document.getElementById('req-lower');
-    const reqNumber = document.getElementById('req-number');
+// Add CSRF cookie helper
+function getCookie(name) {
+  const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+  return match ? decodeURIComponent(match[2]) : '';
+}
 
     function setErrorContent(errorId, message) {
         const errorElement = document.getElementById(errorId);
@@ -498,7 +493,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             fetch(`${apiBaseUrl}/register`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('finatech_csrf') },
                 body: JSON.stringify(payload),
             })
             .then(async (response) => {
@@ -563,7 +558,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function handleRegisterError(status, data) {
         if (status === 409) {
-            const message = data && data.message ? data.message : 'The email is already registered. Please sign in or recover your password.';
+            const message = data && data.message ? data.message : 'El email ya está registrado.';
             showExistingEmailRegistered(message);
             return;
         }
@@ -609,7 +604,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         fetch(`${apiBaseUrl}/google`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': getCookie('finatech_csrf') },
             body: JSON.stringify({ idToken: response.credential }),
         })
         .then(async (apiResponse) => {

@@ -11,6 +11,9 @@ const buildTransport = ({ port, secure }) => {
     secure,
     auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) || 10000,
+    pool: true,
+    maxConnections: Number(process.env.SMTP_MAX_CONNECTIONS) || 3,
+    maxMessages: Number(process.env.SMTP_MAX_MESSAGES) || 50,
   });
 };
 

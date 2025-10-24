@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .progress-bar {
+            transition: width 0.3s ease;
+        }
+        .radio-card {
+            transition: all 0.2s ease;
+        }
+        .radio-card:hover {
+            transform: translateY(-1px);
+        }
+        .radio-card.selected {
+            box-shadow: 0 4px 12px rgba(0, 102, 204, 0.15);
+        }
+        .amount-input:focus {
+            box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </div>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-primary font-medium border-b-2 border-primary cursor-pointer">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="grid grid-cols-3 gap-6">
+            <!-- Transferencias ARS -->
+            <div id="balance-transfers" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-money-bill-transfer text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Transferencias (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$2.847.950,00</div>
+                <div class="text-xs text-gray-500">Actualizado 14:32</div>
+            </div>
+
+            <!-- Efectivo ARS -->
+            <div id="balance-cash" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-hand-holding-dollar text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Efectivo (ARS)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-success rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">$456.780,50</div>
+                <div class="text-xs text-gray-500">Actualizado 14:30</div>
+            </div>
+
+            <!-- Caja USD -->
+            <div id="balance-usd" class="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-dollar-sign text-primary mr-2"></i>
+                        <span class="text-sm font-medium text-gray-600">Caja (USD)</span>
+                    </div>
+                    <div class="w-2 h-2 bg-danger rounded-full"></div>
+                </div>
+                <div class="text-2xl font-bold text-text-primary mb-1">USD 12.450,00</div>
+                <div class="flex items-center justify-between">
+                    <div class="text-xs text-gray-500">Error conexión</div>
+                    <button class="text-xs text-primary hover:underline">Reintentar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Main Content -->
+<main id="transfer-container" class="pt-[200px] px-6 pb-8 max-w-6xl mx-auto">
+    
+    <!-- SECTION: Header and Breadcrumbs -->
+    <section id="page-header" class="mb-8">
+        <!-- Breadcrumbs -->
+        <nav id="breadcrumbs" class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+            <button onclick="navigateToOperations()" class="hover:text-primary transition-colors">Operaciones</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <button onclick="navigateToTransfers()" class="hover:text-primary transition-colors">Transferencia en Pesos</button>
+            <i class="fa-solid fa-chevron-right text-xs"></i>
+            <span class="text-text-primary font-medium">Nueva</span>
+        </nav>
+        
+        <!-- Page Title -->
+        <div class="flex items-center justify-between">
+            <div class="flex items-center">
+                <button onclick="navigateToOperations()" class="mr-4 p-2 hover:bg-gray-100 rounded-lg transition-colors">
+                    <i class="fa-solid fa-arrow-left text-gray-600"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-text-primary">Nueva transferencia en ARS</h1>
+                    <p class="text-gray-600">Registra un movimiento de efectivo o transferencia bancaria</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Configuration -->
+    <section id="configuration-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8">
+        <div class="flex items-center mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">1</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Configuración</h2>
+        </div>
+        
+        <!-- Movement Type -->
+        <div class="mb-8">
+            <h3 class="text-sm font-medium text-gray-700 mb-4">Tipo de movimiento</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div id="cash-card" class="radio-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all" onclick="selectMovementType('cash')">
+                    <div class="flex items-center">
+                        <input type="radio" id="cash" name="movement-type" value="cash" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-money-bills text-primary mr-2"></i>
+                                <span class="font-medium text-text-primary">Efectivo</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Movimiento de dinero en efectivo</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="transfer-card" class="radio-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all" onclick="selectMovementType('transfer')">
+                    <div class="flex items-center">
+                        <input type="radio" id="transfer" name="movement-type" value="transfer" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-building-columns text-primary mr-2"></i>
+                                <span class="font-medium text-text-primary">Transferencia</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Transferencia bancaria</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Direction -->
+        <div class="mb-8">
+            <h3 class="text-sm font-medium text-gray-700 mb-4">Dirección</h3>
+            <div class="grid grid-cols-2 gap-4">
+                <div id="incoming-card" class="radio-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all" onclick="selectDirection('incoming')">
+                    <div class="flex items-center">
+                        <input type="radio" id="incoming" name="direction" value="incoming" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-arrow-down text-success mr-2"></i>
+                                <span class="font-medium text-text-primary">Entrante</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Aumenta el saldo de tesorería</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="outgoing-card" class="radio-card border-2 border-gray-200 rounded-lg p-4 cursor-pointer hover:border-primary transition-all" onclick="selectDirection('outgoing')">
+                    <div class="flex items-center">
+                        <input type="radio" id="outgoing" name="direction" value="outgoing" class="mr-3">
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <i class="fa-solid fa-arrow-up text-danger mr-2"></i>
+                                <span class="font-medium text-text-primary">Saliente</span>
+                            </div>
+                            <p class="text-sm text-gray-600">Disminuye el saldo de tesorería</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Help Text -->
+        <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div class="flex items-start">
+                <i class="fa-solid fa-info-circle text-blue-600 mr-2 mt-0.5"></i>
+                <p class="text-sm text-blue-800">Esta configuración define el impacto en saldos de Tesorería.</p>
+            </div>
+        </div>
+        
+        <!-- Continue Button -->
+        <div class="flex justify-end">
+            <button id="continue-config-btn" class="px-6 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed" disabled onclick="proceedToAmount()">
+                <i class="fa-solid fa-arrow-right mr-2"></i>
+                Continuar
+            </button>
+        </div>
+    </section>
+
+    <!-- SECTION: Total Amount -->
+    <section id="amount-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 hidden">
+        <div class="flex items-center mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">2</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Monto total</h2>
+        </div>
+        
+        <div class="max-w-md">
+            <label for="total-amount" class="block text-sm font-medium text-gray-700 mb-2">Monto total (ARS)</label>
+            <div class="relative">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span class="text-gray-500 text-lg">$</span>
+                </div>
+                <input type="text" id="total-amount" class="amount-input w-full pl-8 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-lg" placeholder="0,00" oninput="formatAmountInput(this)" onblur="validateTotalAmount()">
+            </div>
+            <div id="amount-error" class="text-danger text-sm mt-2 hidden">
+                <i class="fa-solid fa-exclamation-circle mr-1"></i>
+                <span id="amount-error-text">El monto debe ser mayor a 0</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECTION: Distribution -->
+    <section id="distribution-section" class="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 hidden">
+        <div class="flex items-center mb-6">
+            <div class="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
+                <span class="text-white font-semibold text-sm">3</span>
+            </div>
+            <h2 class="text-lg font-semibold text-text-primary">Distribución por contactos</h2>
+        </div>
+        
+        <!-- Progress Bar -->
+        <div id="progress-container" class="mb-6">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-sm font-medium text-gray-700">Progreso de asignación</span>
+                <span id="progress-text" class="text-sm text-gray-600">$0,00 de $0,00</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-3">
+                <div id="progress-bar" class="progress-bar bg-gray-400 h-3 rounded-full" style="width: 0%"></div>
+            </div>
+            <div id="progress-message" class="text-sm text-gray-600 mt-2">Agrega contactos para comenzar la distribución</div>
+        </div>
+        
+        <!-- Distribution Table -->
+        <div class="overflow-x-auto mb-6">
+            <table class="w-full border border-gray-200 rounded-lg">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Contacto</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Método</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Monto asignado</th>
+                        <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="distribution-table-body">
+                    <!-- Rows will be added dynamically -->
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Add Line Button -->
+        <button id="add-line-btn" class="flex items-center px-4 py-2 text-primary hover:bg-blue-50 rounded-lg transition-colors border border-primary" onclick="addDistributionLine()">
+            <i class="fa-solid fa-plus mr-2"></i>
+            Agregar línea
+        </button>
+    </section>
+
+</main>
+
+<!-- COMPONENT: Fixed Footer Actions -->
+<div id="footer-actions" class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between max-w-6xl mx-auto">
+            <div class="flex items-center space-x-4">
+                <button onclick="cancelTransfer()" class="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors">
+                    <i class="fa-solid fa-times mr-2"></i>
+                    Cancelar
+                </button>
+                <button onclick="saveDraft()" class="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-save mr-2"></i>
+                    Guardar borrador
+                </button>
+            </div>
+            <button id="confirm-transfer-btn" class="px-8 py-3 bg-gray-300 text-gray-500 rounded-lg cursor-not-allowed" disabled onclick="confirmTransfer()">
+                <i class="fa-solid fa-check mr-2"></i>
+                Confirmar operación
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Success State (Hidden initially) -->
+<div id="success-state" class="hidden fixed inset-0 bg-white z-50">
+    <div class="flex items-center justify-center min-h-screen p-8">
+        <div class="max-w-2xl w-full text-center">
+            <div class="w-20 h-20 bg-success rounded-full flex items-center justify-center mx-auto mb-6">
+                <i class="fa-solid fa-check text-white text-3xl"></i>
+            </div>
+            <h1 class="text-3xl font-bold text-text-primary mb-3">Transferencia registrada</h1>
+            <p class="text-lg text-gray-600 mb-6">La transferencia ha sido procesada correctamente</p>
+            <div class="inline-flex items-center px-6 py-3 bg-primary bg-opacity-10 rounded-full mb-8">
+                <i class="fa-solid fa-hashtag text-primary mr-2"></i>
+                <span id="transfer-id" class="text-2xl font-bold text-primary">FT-TRF-000123</span>
+            </div>
+            
+            <div class="flex items-center justify-center space-x-4">
+                <button onclick="viewTransferDetail()" class="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium">
+                    <i class="fa-solid fa-eye mr-2"></i>
+                    Ver detalle
+                </button>
+                <button onclick="newTransfer()" class="px-8 py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium">
+                    <i class="fa-solid fa-plus mr-2"></i>
+                    Nueva transferencia
+                </button>
+                <button onclick="backToOperations()" class="px-6 py-3 text-primary hover:text-blue-700 transition-colors font-medium">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>
+                    Volver a Operaciones
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Client Modal -->
+<div id="client-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-semibold text-text-primary">Nuevo cliente</h3>
+                <button onclick="closeClientModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre</label>
+                    <input type="text" id="client-name" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Apellido</label>
+                    <input type="text" id="client-lastname" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
+                    <select id="client-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="Cliente">Cliente</option>
+                        <option value="Proveedor">Proveedor</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Responsable</label>
+                    <input type="text" id="client-responsible" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                </div>
+            </div>
+            
+            <div class="flex items-center justify-end space-x-3 mt-6">
+                <button onclick="closeClientModal()" class="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors">Cancelar</button>
+                <button onclick="saveNewClient()" class="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">Guardar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Global state
+let transferData = {
+    movementType: null,
+    direction: null,
+    totalAmount: 0,
+    distributionLines: [],
+    nextLineId: 1
+};
+
+// Configuration functions
+function selectMovementType(type) {
+    transferData.movementType = type;
+    
+    // Update UI
+    document.getElementById('cash-card').classList.remove('selected', 'border-primary');
+    document.getElementById('transfer-card').classList.remove('selected', 'border-primary');
+    document.getElementById('cash').checked = false;
+    document.getElementById('transfer').checked = false;
+    
+    const selectedCard = document.getElementById(type + '-card');
+    const selectedInput = document.getElementById(type);
+    
+    selectedCard.classList.add('selected', 'border-primary');
+    selectedInput.checked = true;
+    
+    checkConfigurationComplete();
+}
+
+function selectDirection(direction) {
+    transferData.direction = direction;
+    
+    // Update UI
+    document.getElementById('incoming-card').classList.remove('selected', 'border-primary');
+    document.getElementById('outgoing-card').classList.remove('selected', 'border-primary');
+    document.getElementById('incoming').checked = false;
+    document.getElementById('outgoing').checked = false;
+    
+    const selectedCard = document.getElementById(direction + '-card');
+    const selectedInput = document.getElementById(direction);
+    
+    selectedCard.classList.add('selected', 'border-primary');
+    selectedInput.checked = true;
+    
+    checkConfigurationComplete();
+}
+
+function checkConfigurationComplete() {
+    const continueBtn = document.getElementById('continue-config-btn');
+    
+    if (transferData.movementType && transferData.direction) {
+        continueBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        continueBtn.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+        continueBtn.disabled = false;
+    } else {
+        continueBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        continueBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+        continueBtn.disabled = true;
+    }
+}
+
+function proceedToAmount() {
+    if (!transferData.movementType || !transferData.direction) return;
+    
+    document.getElementById('amount-section').classList.remove('hidden');
+    document.getElementById('total-amount').focus();
+}
+
+// Amount functions
+function formatAmountInput(input) {
+    let value = input.value.replace(/[^\d,]/g, '');
+    
+    // Handle decimal separator
+    const parts = value.split(',');
+    if (parts.length > 2) {
+        value = parts[0] + ',' + parts.slice(1).join('');
+    }
+    
+    // Limit decimals to 2
+    if (parts[1] && parts[1].length > 2) {
+        value = parts[0] + ',' + parts[1].substring(0, 2);
+    }
+    
+    // Add thousand separators
+    if (parts[0]) {
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        value = parts.join(',');
+    }
+    
+    input.value = value;
+    
+    // Real-time validation
+    const numericValue = parseFloat(value.replace(/\./g, '').replace(',', '.'));
+    if (!isNaN(numericValue) && numericValue > 0) {
+        hideAmountError();
+        transferData.totalAmount = numericValue;
+        updateProgressDisplay();
+    }
+}
+
+function validateTotalAmount() {
+    const input = document.getElementById('total-amount');
+    const value = input.value.replace(/\./g, '').replace(',', '.');
+    const numericValue = parseFloat(value);
+    
+    if (isNaN(numericValue) || numericValue <= 0) {
+        showAmountError('El monto debe ser mayor a 0');
+        return false;
+    }
+    
+    transferData.totalAmount = numericValue;
+    hideAmountError();
+    showDistributionSection();
+    return true;
+}
+
+function showAmountError(message) {
+    const errorDiv = document.getElementById('amount-error');
+    const errorText = document.getElementById('amount-error-text');
+    
+    errorText.textContent = message;
+    errorDiv.classList.remove('hidden');
+    
+    const input = document.getElementById('total-amount');
+    input.classList.add('border-danger', 'focus:ring-danger');
+    input.classList.remove('border-gray-300', 'focus:ring-primary');
+}
+
+function hideAmountError() {
+    const errorDiv = document.getElementById('amount-error');
+    errorDiv.classList.add('hidden');
+    
+    const input = document.getElementById('total-amount');
+    input.classList.remove('border-danger', 'focus:ring-danger');
+    input.classList.add('border-gray-300', 'focus:ring-primary');
+}
+
+function showDistributionSection() {
+    document.getElementById('distribution-section').classList.remove('hidden');
+    
+    // Add initial line if none exist
+    if (transferData.distributionLines.length === 0) {
+        addDistributionLine();
+    }
+}
+
+// Distribution functions
+function addDistributionLine() {
+    const lineId = transferData.nextLineId++;
+    const line = {
+        id: lineId,
+        contact: '',
+        method: 'ARS',
+        amount: 0
+    };
+    
+    transferData.distributionLines.push(line);
+    renderDistributionTable();
+    updateProgressDisplay();
+}
+
+function removeDistributionLine(lineId) {
+    transferData.distributionLines = transferData.distributionLines.filter(line => line.id !== lineId);
+    renderDistributionTable();
+    updateProgressDisplay();
+    checkConfirmationReady();
+}
+
+function renderDistributionTable() {
+    const tbody = document.getElementById('distribution-table-body');
+    
+    if (transferData.distributionLines.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="px-4 py-8 text-center text-gray-500">
+                    <i class="fa-solid fa-users text-2xl mb-2 block"></i>
+                    No hay contactos agregados
+                </td>
+            </tr>
+        `;
+        return;
+    }
+    
+    tbody.innerHTML = transferData.distributionLines.map(line => `
+        <tr class="border-t border-gray-200">
+            <td class="px-4 py-3">
+                <div class="relative">
+                    <input type="text" 
+                           value="${line.contact}" 
+                           placeholder="Buscar contacto..."
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                           oninput="updateLineContact(${line.id}, this.value)">
+                    <button onclick="openClientModal(${line.id})" class="absolute right-2 top-2 text-primary hover:text-blue-700 text-sm">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </td>
+            <td class="px-4 py-3">
+                <select class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                        onchange="updateLineMethod(${line.id}, this.value)">
+                    <option value="ARS" ${line.method === 'ARS' ? 'selected' : ''}>ARS</option>
+                    <option value="USD" ${line.method === 'USD' ? 'selected' : ''}>USD</option>
+                </select>
+            </td>
+            <td class="px-4 py-3">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span class="text-gray-500">${line.method === 'USD' ? '$' : '$'}</span>
+                    </div>
+                    <input type="text" 
+                           value="${formatAmount(line.amount)}"
+                           class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                           oninput="updateLineAmount(${line.id}, this.value)"
+                           onblur="formatLineAmount(${line.id}, this)">
+                </div>
+            </td>
+            <td class="px-4 py-3 text-center">
+                <button onclick="removeDistributionLine(${line.id})" class="text-danger hover:text-red-700 p-1">
+                    <i class="fa-solid fa-trash"></i>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function updateLineContact(lineId, value) {
+    const line = transferData.distributionLines.find(l => l.id === lineId);
+    if (line) {
+        line.contact = value;
+        checkConfirmationReady();
+    }
+}
+
+function updateLineMethod(lineId, value) {
+    const line = transferData.distributionLines.find(l => l.id === lineId);
+    if (line) {
+        line.method = value;
+        renderDistributionTable();
+    }
+}
+
+function updateLineAmount(lineId, value) {
+    const line = transferData.distributionLines.find(l => l.id === lineId);
+    if (line) {
+        const numericValue = parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+        line.amount = numericValue;
+        updateProgressDisplay();
+        checkConfirmationReady();
+    }
+}
+
+function formatLineAmount(lineId, input) {
+    const line = transferData.distributionLines.find(l => l.id === lineId);
+    if (line && line.amount > 0) {
+        input.value = formatAmount(line.amount);
+    }
+}
+
+function formatAmount(amount) {
+    if (!amount || amount === 0) return '';
+    return amount.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function updateProgressDisplay() {
+    const totalAssigned = transferData.distributionLines.reduce((sum, line) => sum + line.amount, 0);
+    const totalAmount = transferData.totalAmount;
+    
+    const progressBar = document.getElementById('progress-bar');
+    const progressText = document.getElementById('progress-text');
+    const progressMessage = document.getElementById('progress-message');
+    
+    const percentage = totalAmount > 0 ? (totalAssigned / totalAmount) * 100 : 0;
+    const difference = totalAmount - totalAssigned;
+    
+    // Update progress bar
+    progressBar.style.width = Math.min(percentage, 100) + '%';
+    
+    // Update colors and text based on status
+    if (percentage === 100) {
+        progressBar.className = 'progress-bar bg-success h-3 rounded-full';
+        progressMessage.className = 'text-sm text-success mt-2';
+        progressMessage.innerHTML = '<i class="fa-solid fa-check mr-1"></i>Total asignado correctamente';
+    } else if (percentage > 100) {
+        progressBar.className = 'progress-bar bg-danger h-3 rounded-full';
+        progressMessage.className = 'text-sm text-danger mt-2';
+        progressMessage.innerHTML = `<i class="fa-solid fa-exclamation-triangle mr-1"></i>Excede por $${formatAmount(Math.abs(difference))}`;
+    } else if (totalAssigned > 0) {
+        progressBar.className = 'progress-bar bg-warning h-3 rounded-full';
+        progressMessage.className = 'text-sm text-warning mt-2';
+        progressMessage.innerHTML = `<i class="fa-solid fa-clock mr-1"></i>Faltan $${formatAmount(difference)}`;
+    } else {
+        progressBar.className = 'progress-bar bg-gray-400 h-3 rounded-full';
+        progressMessage.className = 'text-sm text-gray-600 mt-2';
+        progressMessage.textContent = 'Agrega contactos para comenzar la distribución';
+    }
+    
+    progressText.textContent = `$${formatAmount(totalAssigned)} de $${formatAmount(totalAmount)}`;
+}
+
+function checkConfirmationReady() {
+    const confirmBtn = document.getElementById('confirm-transfer-btn');
+    const totalAssigned = transferData.distributionLines.reduce((sum, line) => sum + line.amount, 0);
+    const hasValidContacts = transferData.distributionLines.every(line => line.contact.trim() !== '');
+    const hasLines = transferData.distributionLines.length > 0;
+    const totalMatches = Math.abs(totalAssigned - transferData.totalAmount) < 0.01;
+    
+    if (hasLines && hasValidContacts && totalMatches && transferData.totalAmount > 0) {
+        confirmBtn.classList.remove('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.add('bg-primary', 'text-white', 'hover:bg-blue-700');
+        confirmBtn.disabled = false;
+    } else {
+        confirmBtn.classList.add('bg-gray-300', 'text-gray-500', 'cursor-not-allowed');
+        confirmBtn.classList.remove('bg-primary', 'text-white', 'hover:bg-blue-700');
+        confirmBtn.disabled = true;
+    }
+}
+
+// Client modal functions
+function openClientModal(lineId) {
+    document.getElementById('client-modal').classList.remove('hidden');
+    document.getElementById('client-modal').setAttribute('data-line-id', lineId);
+}
+
+function closeClientModal() {
+    document.getElementById('client-modal').classList.add('hidden');
+    // Clear form
+    document.getElementById('client-name').value = '';
+    document.getElementById('client-lastname').value = '';
+    document.getElementById('client-responsible').value = '';
+    document.getElementById('client-type').value = 'Cliente';
+}
+
+function saveNewClient() {
+    const name = document.getElementById('client-name').value;
+    const lastname = document.getElementById('client-lastname').value;
+    const type = document.getElementById('client-type').value;
+    
+    if (!name.trim() || !lastname.trim()) {
+        alert('Por favor completa nombre y apellido');
+        return;
+    }
+    
+    const fullName = `${name} ${lastname}`;
+    const lineId = parseInt(document.getElementById('client-modal').getAttribute('data-line-id'));
+    
+    // Update the line with the new client
+    updateLineContact(lineId, fullName);
+    renderDistributionTable();
+    closeClientModal();
+}
+
+// Action functions
+function cancelTransfer() {
+    if (confirm('¿Estás seguro de que deseas cancelar? Se perderán todos los cambios.')) {
+        navigateToOperations();
+    }
+}
+
+function saveDraft() {
+    // Simulate saving draft
+    alert('Borrador guardado correctamente');
+}
+
+function confirmTransfer() {
+    if (!transferData.movementType || !transferData.direction || transferData.totalAmount <= 0) {
+        alert('Por favor completa todos los campos requeridos');
+        return;
+    }
+    
+    const totalAssigned = transferData.distributionLines.reduce((sum, line) => sum + line.amount, 0);
+    if (Math.abs(totalAssigned - transferData.totalAmount) >= 0.01) {
+        alert('La suma de las asignaciones debe ser igual al monto total');
+        return;
+    }
+    
+    // Generate unique ID
+    const transferId = 'FT-TRF-' + String(Math.floor(Math.random() * 1000000)).padStart(6, '0');
+    document.getElementById('transfer-id').textContent = transferId;
+    
+    // Show success state
+    document.getElementById('success-state').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+// Navigation functions
+function navigateToOperations() {
+    console.log('Navigate to operations list');
+}
+
+function navigateToTransfers() {
+    console.log('Navigate to transfers list');
+}
+
+function viewTransferDetail() {
+    console.log('Navigate to transfer detail');
+}
+
+function newTransfer() {
+    document.getElementById('success-state').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+    location.reload();
+}
+
+function backToOperations() {
+    console.log('Navigate back to operations');
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Ensure footer actions don't overlap with content
+    document.body.style.paddingBottom = '100px';
+});
+</script>
+
+</body>
+</html>

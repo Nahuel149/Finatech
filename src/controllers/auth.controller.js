@@ -193,11 +193,16 @@ const profile = async (req, res) => {
 const logout = async (req, res, next) => {
   try {
     const sessionToken = req.cookies?.[COOKIE_NAME];
-    if (sessionToken) {
-      await deleteSessionByToken(sessionToken);
-    }
     clearAuthCookie(res);
     res.status(204).send();
+    if (sessionToken) {
+      setImmediate(() => {
+        deleteSessionByToken(sessionToken).catch((error) => {
+          // eslint-disable-next-line no-console
+          console.error('Failed to delete session on logout', error);
+        });
+      });
+    }
   } catch (error) {
     next(error);
   }

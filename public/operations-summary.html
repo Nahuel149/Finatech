@@ -212,7 +212,7 @@
     </div>
 </section>
 
-<main id="main-container" class="pt-[76px] lg:pt-[220px] px-6 pb-16 max-w-6xl mx-auto">
+<main id="main-container" class="pt-[76px] lg:pt-[205px] px-6 pb-16 max-w-6xl mx-auto">
     <section id="breadcrumbs" class="hidden lg:flex items-center text-sm text-gray-500 mb-4">
         <button id="breadcrumb-operations" class="hover:text-primary transition-colors">Operaciones</button>
         <i class="fa-solid fa-chevron-right mx-2 text-xs"></i>
@@ -803,7 +803,17 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/auth/logout', {
                 method: 'POST',
-                credentials: 'include'
+                credentials: 'include',
+                headers: {
+                    'X-CSRF-Token': (function () {
+                        try {
+                            const match = document.cookie.split('; ').find((row) => row.startsWith('finatech_csrf='));
+                            return match ? decodeURIComponent(match.split('=')[1]) : '';
+                        } catch (_) {
+                            return '';
+                        }
+                    })(),
+                }
             });
             if (!response.ok) {
                 const body = await response.json().catch(() => ({}));

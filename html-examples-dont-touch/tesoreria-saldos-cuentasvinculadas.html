@@ -1,0 +1,866 @@
+<!DOCTYPE html><html><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script> window.FontAwesomeConfig = { autoReplaceSvg: 'nest'};</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet">
+    <style>
+        ::-webkit-scrollbar { display: none;}
+        * { font-family: 'Inter', sans-serif; }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: loading 1.5s infinite;
+        }
+        @keyframes loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .slide-in-right {
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from { opacity: 0; transform: translateX(100%); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .positive-amount { color: #28A745; }
+        .negative-amount { color: #DC3545; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-button { 
+            transition: all 0.2s ease; 
+            cursor: pointer;
+        }
+        .tab-button.active {
+            border-bottom: 2px solid #0066CC;
+            color: #0066CC;
+        }
+        .detail-panel {
+            transform: translateX(100%);
+            transition: transform 0.3s ease;
+        }
+        .detail-panel.open {
+            transform: translateX(0);
+        }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'primary': '#0066CC',
+                        'success': '#28A745',
+                        'danger': '#DC3545',
+                        'warning': '#FFC107',
+                        'text-primary': '#333333'
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50">
+
+<!-- COMPONENT: Fixed Navbar -->
+<nav id="navbar" class="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50">
+    <div class="px-6 py-4">
+        <div class="flex items-center justify-between">
+            <!-- Logo Section -->
+            <div id="logo-section" class="flex items-center space-x-8">
+                <div class="flex items-center">
+                    <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-chart-line text-white text-sm"></i>
+                    </div>
+                    <span class="text-xl font-bold text-text-primary">FinaTech</span>
+                </div>
+                
+                <!-- Main Navigation Menu -->
+                <div id="main-nav" class="flex space-x-8">
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-exchange-alt mr-2"></i>
+                        Operaciones
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-primary bg-blue-50 rounded-lg transition-colors cursor-pointer">
+                        <i class="fa-solid fa-vault mr-2"></i>
+                        Tesorería
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-truck mr-2"></i>
+                        Logística
+                    </span>
+                    <span class="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+                        <i class="fa-solid fa-calculator mr-2"></i>
+                        Liquidaciones
+                    </span>
+                </div>
+            </div>
+
+            <!-- Center Search -->
+            <div id="global-search" class="flex-1 max-w-md mx-8">
+                <div class="relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <i class="fa-solid fa-search text-gray-400"></i>
+                    </div>
+                    <input type="text" class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Buscar cliente u operación…">
+                </div>
+            </div>
+
+            <!-- Right Section -->
+            <div id="navbar-right" class="flex items-center space-x-4">
+                <!-- Notifications -->
+                <div class="relative">
+                    <button class="relative p-2 text-text-primary hover:text-primary transition-colors">
+                        <i class="fa-solid fa-bell text-lg"></i>
+                        <span class="absolute -top-1 -right-1 bg-danger text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">3</span>
+                    </button>
+                </div>
+
+                <!-- User Menu -->
+                <div id="user-menu" class="relative">
+                    <button class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors">
+                        <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
+                        <div class="text-left">
+                            <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                            <div class="text-xs text-gray-500">Operador Senior</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- COMPONENT: Balance Stripe -->
+<div id="balance-stripe" class="fixed top-20 left-0 right-0 bg-white border-b border-gray-200 z-40">
+    <div class="px-6 py-4">
+        <div class="flex space-x-6">
+            <!-- ARS Transferencias -->
+            <div id="ars-transfers-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-exchange-alt text-primary"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Transferencias (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary">$2.450.320,50</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:32</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ARS Efectivo -->
+            <div id="ars-cash-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-money-bills text-success"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Efectivo (ARS)</div>
+                        <div class="text-2xl font-bold text-text-primary">$1.875.450,00</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:28</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USD Caja -->
+            <div id="usd-cash-card" class="flex items-center bg-gray-50 rounded-lg px-4 py-3 min-w-0 flex-1">
+                <div class="flex items-center mr-4">
+                    <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fa-solid fa-dollar-sign text-warning"></i>
+                    </div>
+                    <div>
+                        <div class="text-sm font-medium text-text-primary">Caja (USD)</div>
+                        <div class="text-2xl font-bold text-text-primary">USD 12.450,00</div>
+                        <div class="text-xs text-gray-500">Actualizado 14:30</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- COMPONENT: Main Content -->
+<main id="main-content" class="pt-40 pb-8">
+    <div class="max-w-7xl mx-auto px-6">
+        
+        <!-- Header Section -->
+        <div id="page-header" class="mb-8 mt-20">
+            <!-- Breadcrumbs -->
+            <nav id="breadcrumbs" class="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+                <span class="text-primary font-medium cursor-pointer">Tesorería</span>
+                <i class="fa-solid fa-chevron-right text-xs"></i>
+                <span>Saldos y cuentas vinculadas</span>
+            </nav>
+            
+            <!-- Title and Description -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <h1 class="text-2xl font-bold text-text-primary mb-2">Saldos y cuentas vinculadas</h1>
+                    <p class="text-gray-600">Visualizá el estado actualizado de las cuentas de Tesorería y los últimos movimientos registrados</p>
+                </div>
+                <button onclick="refreshBalances()" class="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                    <i class="fa-solid fa-sync mr-2"></i>
+                    Actualizar manualmente
+                </button>
+            </div>
+        </div>
+
+        <!-- Section 1: Balance Summary -->
+        <div id="balance-summary-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Resumen de saldos</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Caja USD Card -->
+                <div id="usd-balance-card" class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-dollar-sign text-warning text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Caja USD</div>
+                                <div class="text-2xl font-bold positive-amount">USD 12.450,00</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm positive-amount">
+                                <i class="fa-solid fa-arrow-up mr-1"></i>
+                                +2.5%
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Actualizado 14:30</div>
+                        </div>
+                    </div>
+                    <button onclick="openDetailPanel('usd')" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors">
+                        Ver detalle
+                    </button>
+                </div>
+
+                <!-- Efectivo ARS Card -->
+                <div id="ars-cash-balance-card" class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-money-bills text-success text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Efectivo ARS</div>
+                                <div class="text-2xl font-bold positive-amount">$1.875.450,00</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm positive-amount">
+                                <i class="fa-solid fa-arrow-up mr-1"></i>
+                                +1.8%
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Actualizado 14:28</div>
+                        </div>
+                    </div>
+                    <button onclick="openDetailPanel('ars-cash')" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors">
+                        Ver detalle
+                    </button>
+                </div>
+
+                <!-- Transferencias ARS Card -->
+                <div id="ars-transfers-balance-card" class="bg-white rounded-lg border border-gray-200 p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center">
+                            <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mr-4">
+                                <i class="fa-solid fa-university text-primary text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-medium text-gray-500">Transferencias ARS</div>
+                                <div class="text-2xl font-bold positive-amount">$2.450.320,50</div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <div class="flex items-center text-sm negative-amount">
+                                <i class="fa-solid fa-arrow-down mr-1"></i>
+                                -0.3%
+                            </div>
+                            <div class="text-xs text-gray-500 mt-1">Actualizado 14:32</div>
+                        </div>
+                    </div>
+                    <button onclick="openDetailPanel('ars-transfers')" class="w-full py-2 text-sm text-primary hover:bg-blue-50 rounded-lg transition-colors">
+                        Ver detalle
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Recent Movements -->
+        <div id="recent-movements-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Movimientos recientes por cuenta</h2>
+            
+            <!-- Tabs -->
+            <div id="movements-tabs" class="border-b border-gray-200 mb-6">
+                <div class="flex space-x-8">
+                    <button class="tab-button active pb-3 px-1 text-sm font-medium" onclick="switchTab('usd-tab')">
+                        Caja USD
+                    </button>
+                    <button class="tab-button pb-3 px-1 text-sm font-medium" onclick="switchTab('ars-cash-tab')">
+                        Efectivo ARS
+                    </button>
+                    <button class="tab-button pb-3 px-1 text-sm font-medium" onclick="switchTab('ars-transfers-tab')">
+                        Transferencias ARS
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tab Content: Caja USD -->
+            <div id="usd-tab" class="tab-content active">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 14:35</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fa-solid fa-arrow-up mr-1"></i>
+                                        Ingreso
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Transferencia</td>
+                                <td class="px-6 py-4 text-sm font-medium positive-amount">USD 5.250,00</td>
+                                <td class="px-6 py-4 text-sm text-text-primary">María González</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Compensado
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="viewMovementDetail('MOV-000789')" class="text-primary hover:text-blue-700 text-sm">
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 12:20</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <i class="fa-solid fa-arrow-down mr-1"></i>
+                                        Egreso
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Efectivo</td>
+                                <td class="px-6 py-4 text-sm font-medium negative-amount">USD 2.100,00</td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Juan Pérez</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        Registrado
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="viewMovementDetail('MOV-000790')" class="text-primary hover:text-blue-700 text-sm">
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button onclick="viewAllMovements('usd')" class="text-primary hover:text-blue-700 text-sm font-medium">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Efectivo ARS -->
+            <div id="ars-cash-tab" class="tab-content">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 13:45</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fa-solid fa-arrow-up mr-1"></i>
+                                        Ingreso
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Efectivo</td>
+                                <td class="px-6 py-4 text-sm font-medium positive-amount">$850.000,00</td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Empresa ABC</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Compensado
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="viewMovementDetail('MOV-000791')" class="text-primary hover:text-blue-700 text-sm">
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button onclick="viewAllMovements('ars-cash')" class="text-primary hover:text-blue-700 text-sm font-medium">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab Content: Transferencias ARS -->
+            <div id="ars-transfers-tab" class="tab-content">
+                <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                    <table class="w-full">
+                        <thead class="bg-gray-50 border-b border-gray-200">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha y hora</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medio</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Monto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr>
+                                <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 11:30</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fa-solid fa-arrow-up mr-1"></i>
+                                        Ingreso
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Transferencia</td>
+                                <td class="px-6 py-4 text-sm font-medium positive-amount">$1.200.000,00</td>
+                                <td class="px-6 py-4 text-sm text-text-primary">Proveedor XYZ</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        Pendiente
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <button onclick="viewMovementDetail('MOV-000792')" class="text-primary hover:text-blue-700 text-sm">
+                                        Ver detalle
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                    
+                    <div class="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                        <button onclick="viewAllMovements('ars-transfers')" class="text-primary hover:text-blue-700 text-sm font-medium">
+                            Ver todos los movimientos →
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Associated Accounting Accounts -->
+        <div id="accounting-accounts-section" class="mb-8">
+            <h2 class="text-lg font-semibold text-text-primary mb-4">Integración contable</h2>
+            
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cuenta contable</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Moneda</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Saldo total</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Última operación</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-medium text-text-primary">Caja Moneda Extranjera USD</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                                    USD
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium positive-amount">USD 12.450,00</td>
+                            <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 14:35</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Activo
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <button onclick="viewInAccountsReceivable('usd-cash')" class="text-primary hover:text-blue-700 text-sm">
+                                    Ver en CC
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-medium text-text-primary">Caja Pesos Efectivo</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    ARS
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium positive-amount">$1.875.450,00</td>
+                            <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 13:45</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Activo
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <button onclick="viewInAccountsReceivable('ars-cash')" class="text-primary hover:text-blue-700 text-sm">
+                                    Ver en CC
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="px-6 py-4 text-sm font-medium text-text-primary">Banco Cuenta Corriente ARS</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                    ARS
+                                </span>
+                            </td>
+                            <td class="px-6 py-4 text-sm font-medium positive-amount">$2.450.320,50</td>
+                            <td class="px-6 py-4 text-sm text-text-primary">13/10/2025 11:30</td>
+                            <td class="px-6 py-4">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                    Activo
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <button onclick="viewInAccountsReceivable('ars-transfers')" class="text-primary hover:text-blue-700 text-sm">
+                                    Ver en CC
+                                </button>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Footer Section -->
+        <div id="footer-section" class="bg-white rounded-lg border border-gray-200 p-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center text-sm text-gray-600">
+                    <i class="fa-solid fa-sync mr-2"></i>
+                    <span>Actualizado automáticamente al cursar operaciones</span>
+                    <div class="ml-4 text-xs text-gray-500">
+                        Última sincronización: 14:35
+                    </div>
+                </div>
+                <div class="text-xs text-gray-500">
+                    Los saldos se actualizan también al registrar o compensar movimientos
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<!-- COMPONENT: Detail Panel -->
+<div id="detail-panel" class="fixed inset-y-0 right-0 w-[480px] bg-white shadow-xl border-l border-gray-200 z-50 detail-panel">
+    <div class="flex flex-col h-full">
+        <!-- Panel Header -->
+        <div id="panel-header" class="flex items-center justify-between p-6 border-b border-gray-200">
+            <div>
+                <h3 id="panel-title" class="text-lg font-semibold text-text-primary">Detalle de cuenta</h3>
+                <p class="text-sm text-gray-600 mt-1">Movimientos y saldo actual</p>
+            </div>
+            <button onclick="closeDetailPanel()" class="text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-times text-xl"></i>
+            </button>
+        </div>
+
+        <!-- Panel Content -->
+        <div id="panel-content" class="flex-1 overflow-y-auto p-6">
+            <!-- Balance Info -->
+            <div id="panel-balance-info" class="bg-gray-50 rounded-lg p-4 mb-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <div class="text-sm text-gray-500">Saldo actual</div>
+                        <div id="panel-balance-amount" class="text-2xl font-bold positive-amount">USD 12.450,00</div>
+                    </div>
+                    <div class="text-right">
+                        <div id="panel-balance-variation" class="flex items-center text-sm positive-amount">
+                            <i class="fa-solid fa-arrow-up mr-1"></i>
+                            +2.5%
+                        </div>
+                        <div class="text-xs text-gray-500 mt-1">vs período anterior</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div id="panel-filters" class="mb-6">
+                <h4 class="text-sm font-medium text-text-primary mb-3">Filtros</h4>
+                <div class="space-y-3">
+                    <div class="flex space-x-3">
+                        <input type="date" id="panel-date-from" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <input type="date" id="panel-date-to" class="flex-1 px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <select id="panel-movement-type" class="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent">
+                        <option value="">Todos los movimientos</option>
+                        <option value="ingreso">Solo ingresos</option>
+                        <option value="egreso">Solo egresos</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Recent Movements -->
+            <div id="panel-movements">
+                <h4 class="text-sm font-medium text-text-primary mb-3">Últimos movimientos</h4>
+                <div class="space-y-3">
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-arrow-up text-success text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-text-primary">Ingreso - Transferencia</div>
+                                    <div class="text-xs text-gray-500">13/10/2025 14:35</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium positive-amount">USD 5.250,00</div>
+                                <div class="text-xs text-gray-500">#MOV-000789</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-gray-600">María González</span>
+                            <span class="text-primary">#FT-000456</span>
+                        </div>
+                    </div>
+
+                    <div class="bg-white border border-gray-200 rounded-lg p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <div class="flex items-center">
+                                <div class="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3">
+                                    <i class="fa-solid fa-arrow-down text-danger text-sm"></i>
+                                </div>
+                                <div>
+                                    <div class="text-sm font-medium text-text-primary">Egreso - Efectivo</div>
+                                    <div class="text-xs text-gray-500">13/10/2025 12:20</div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-sm font-medium negative-amount">USD 2.100,00</div>
+                                <div class="text-xs text-gray-500">#MOV-000790</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center justify-between text-xs">
+                            <span class="text-gray-600">Juan Pérez</span>
+                            <span class="text-primary">#FT-000457</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Panel Footer -->
+        <div id="panel-footer" class="p-6 border-t border-gray-200">
+            <button onclick="viewAllMovements('current')" class="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors">
+                Ver todos los movimientos
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Tab functionality
+function switchTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all tab buttons
+    document.querySelectorAll('.tab-button').forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById(tabId).classList.add('active');
+    
+    // Add active class to clicked button
+    event.target.classList.add('active');
+}
+
+// Detail panel functionality
+function openDetailPanel(accountType) {
+    const panel = document.getElementById('detail-panel');
+    const title = document.getElementById('panel-title');
+    const balanceAmount = document.getElementById('panel-balance-amount');
+    const balanceVariation = document.getElementById('panel-balance-variation');
+    
+    // Set panel content based on account type
+    switch(accountType) {
+        case 'usd':
+            title.textContent = 'Detalle de Caja USD';
+            balanceAmount.textContent = 'USD 12.450,00';
+            balanceVariation.innerHTML = '<i class="fa-solid fa-arrow-up mr-1"></i>+2.5%';
+            break;
+        case 'ars-cash':
+            title.textContent = 'Detalle de Efectivo ARS';
+            balanceAmount.textContent = '$1.875.450,00';
+            balanceVariation.innerHTML = '<i class="fa-solid fa-arrow-up mr-1"></i>+1.8%';
+            break;
+        case 'ars-transfers':
+            title.textContent = 'Detalle de Transferencias ARS';
+            balanceAmount.textContent = '$2.450.320,50';
+            balanceVariation.innerHTML = '<i class="fa-solid fa-arrow-down mr-1"></i>-0.3%';
+            balanceVariation.className = 'flex items-center text-sm negative-amount';
+            break;
+    }
+    
+    panel.classList.add('open');
+}
+
+function closeDetailPanel() {
+    document.getElementById('detail-panel').classList.remove('open');
+}
+
+// Navigation functions
+function viewMovementDetail(movementId) {
+    showTemporaryMessage(`Abriendo detalle del movimiento ${movementId}`, 'info');
+}
+
+function viewAllMovements(accountType) {
+    showTemporaryMessage(`Navegando a todos los movimientos de ${accountType}`, 'info');
+}
+
+function viewInAccountsReceivable(accountType) {
+    showTemporaryMessage(`Abriendo Cuentas Corrientes para ${accountType}`, 'info');
+}
+
+// Refresh functionality
+function refreshBalances() {
+    const button = event.target;
+    const originalContent = button.innerHTML;
+    
+    // Show loading state
+    button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Actualizando...';
+    button.disabled = true;
+    
+    // Simulate API call
+    setTimeout(() => {
+        // Reset button
+        button.innerHTML = originalContent;
+        button.disabled = false;
+        
+        // Show success message
+        showTemporaryMessage('Saldos actualizados correctamente', 'success');
+        
+        // Update timestamp
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
+        
+        document.querySelectorAll('.text-xs.text-gray-500').forEach(element => {
+            if (element.textContent.includes('Actualizado')) {
+                element.textContent = `Actualizado ${timeString}`;
+            }
+        });
+    }, 1500);
+}
+
+// Utility function for temporary messages
+function showTemporaryMessage(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `fixed top-24 right-6 z-50 px-6 py-4 rounded-lg shadow-lg text-white ${
+        type === 'success' ? 'bg-success' : 
+        type === 'warning' ? 'bg-warning' : 
+        type === 'error' ? 'bg-danger' : 
+        'bg-primary'
+    }`;
+    toast.innerHTML = `
+        <div class="flex items-center">
+            <i class="fa-solid ${
+                type === 'success' ? 'fa-check-circle' : 
+                type === 'warning' ? 'fa-exclamation-triangle' : 
+                type === 'error' ? 'fa-times-circle' : 
+                'fa-info-circle'
+            } mr-3"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Animate in
+    toast.style.transform = 'translateX(100%)';
+    toast.style.transition = 'transform 0.3s ease';
+    setTimeout(() => {
+        toast.style.transform = 'translateX(0)';
+    }, 10);
+    
+    // Remove after delay
+    setTimeout(() => {
+        toast.style.transform = 'translateX(100%)';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Set current date for filters
+    const today = new Date().toISOString().split('T')[0];
+    const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    document.getElementById('panel-date-from').value = weekAgo;
+    document.getElementById('panel-date-to').value = today;
+    
+    // Auto-refresh every 60 seconds
+    setInterval(() => {
+        // Simulate automatic balance updates
+        const now = new Date();
+        const timeString = now.getHours().toString().padStart(2, '0') + ':' + 
+                          now.getMinutes().toString().padStart(2, '0');
+        
+        document.querySelector('#footer-section .text-xs.text-gray-500').textContent = 
+            `Última sincronización: ${timeString}`;
+    }, 60000);
+});
+
+// Close panel on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeDetailPanel();
+    }
+});
+</script>
+
+
+</body></html>

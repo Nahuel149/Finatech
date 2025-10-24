@@ -105,7 +105,7 @@
             <button id="user-menu-button" class="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2" aria-haspopup="true" aria-expanded="false">
               <img src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg" alt="Usuario" class="w-8 h-8 rounded-full">
               <div class="text-left">
-                <div class="text-sm font-medium text-text-primary">Juan Pérez</div>
+                <div class="text-sm font-medium text-text-primary" data-user-fullname>Juan Pérez</div>
                 <div class="text-xs text-gray-500">Operador Senior</div>
               </div>
               <i class="fa-solid fa-chevron-down text-gray-400 text-xs"></i>
@@ -131,7 +131,7 @@
   <!-- User Dropdown -->
   <div id="account-dropdown" class="fixed top-[90px] right-6 w-56 z-50 hidden bg-white border border-gray-200 shadow-lg rounded-lg overflow-hidden" role="menu" aria-label="Cuenta">
     <div class="px-4 py-3 border-b border-gray-100">
-      <p class="text-sm font-semibold text-text-primary">Juan Pérez</p>
+      <p class="text-sm font-semibold text-text-primary" data-user-fullname>Juan Pérez</p>
       <p class="text-xs text-gray-500">Operador Senior</p>
     </div>
     <div class="py-2">
@@ -917,7 +917,20 @@
           button.disabled = true;
           button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Saliendo…';
           try {
-            const response = await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+            const response = await fetch('/api/auth/logout', {
+              method: 'POST',
+              credentials: 'include',
+              headers: {
+                'X-CSRF-Token': (function () {
+                  try {
+                    const match = document.cookie.split('; ').find((row) => row.startsWith('finatech_csrf='));
+                    return match ? decodeURIComponent(match.split('=')[1]) : '';
+                  } catch (_) {
+                    return '';
+                  }
+                })(),
+              },
+            });
             if (!response.ok) {
               throw new Error('Error al cerrar sesión');
             }
@@ -1003,6 +1016,7 @@
     });
   </script>
   <script src="/js/config.js"></script>
+  <script src="/js/user-header.js"></script>
   <script src="/js/balance-widget.js"></script>
 </body>
 </html>
