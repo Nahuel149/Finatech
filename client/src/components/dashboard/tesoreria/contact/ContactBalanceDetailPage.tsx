@@ -10,7 +10,8 @@ import { ContactSummaryCard } from './ContactSummaryCard';
 import { ContactFilters, ContactFilterValues } from './ContactFilters';
 import { ContactOperationsTable } from './ContactOperationsTable';
 import { Alert } from '../../../ui';
-import { TreasuryContactBalanceOperation } from '../../../../types';
+import { ClientSummary, TreasuryContactBalanceOperation } from '../../../../types';
+import { NewClientModal } from '../../../clients/NewClientModal';
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   registered: 'Registrada',
@@ -101,6 +102,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
     null
   );
   const [globalSearch, setGlobalSearch] = useState(filters.search);
+  const [createContactOpen, setCreateContactOpen] = useState(false);
 
   const apiFilters: ContactBalanceDetailFilters = {
     currency: filters.currency || null,
@@ -143,6 +145,11 @@ export const ContactBalanceDetailPage: React.FC = () => {
   }, [filters.search]);
 
   const activeFilters = useMemo(() => buildAppliedFilterChips(filters), [filters]);
+
+  const handleNewContactCreated = (client: ClientSummary) => {
+    setCreateContactOpen(false);
+    setToast({ type: 'success', message: `Contacto ${client.fullName} creado correctamente.` });
+  };
 
   const handleFiltersChange = (updates: Partial<ContactFilterValues>) => {
     setFilters((prev) => ({
@@ -277,6 +284,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
                 setShowAdvanced(false);
                 setToast({ type: 'success', message: 'Filtros aplicados correctamente.' });
               }}
+              onCreateContact={() => setCreateContactOpen(true)}
             />
 
             <ContactOperationsTable
@@ -322,6 +330,14 @@ export const ContactBalanceDetailPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <NewClientModal
+        open={createContactOpen}
+        onClose={() => setCreateContactOpen(false)}
+        onCreated={handleNewContactCreated}
+        defaultType="client"
+        ownerLabel="Tesorería"
+      />
     </div>
   );
 };

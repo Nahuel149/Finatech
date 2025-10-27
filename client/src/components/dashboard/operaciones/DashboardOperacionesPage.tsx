@@ -18,7 +18,7 @@ export const DashboardOperacionesPage: React.FC = () => {
       <BalanceStripe />
 
       {/* Main container (offset for fixed navbar + stripe) */}
-      <main id="main-content" className="pt-[145px] px-6 pb-8">
+      <main id="main-content" className="pt-[320px] lg:pt-[145px] px-4 lg:px-6 pb-8">
         {/* Header */}
         <OperationsHeader onTransferPesos={() => setTransferOpen(true)} />
 

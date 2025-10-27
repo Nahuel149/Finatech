@@ -49,8 +49,8 @@ interface TransferPesosContextValue {
 }
 
 const DEFAULT_STATE: TransferDraftState = {
-  movementType: null,
-  direction: null,
+  movementType: 'transfer',
+  direction: 'outgoing',
   totalAmount: 0,
   distributionLines: [],
 };

@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDashboardBalances } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
+import { subscribeDashboardBalanceRefresh } from '../../../utils';
 
 const formatTime = (iso?: string) => {
   const d = iso ? new Date(iso) : new Date();
@@ -35,12 +36,22 @@ const iconForBalance = (label?: string, currency?: string) => {
 };
 
 export const BalanceStripe: React.FC = () => {
-  const { balances, loading, error, refresh } = useDashboardBalances();
+  const { balances, loading, error, refresh } = useDashboardBalances({ pollInterval: 60000 });
+
+  useEffect(() => {
+    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
+      refresh().catch(() => {});
+    });
+    return unsubscribe;
+  }, [refresh]);
 
   return (
-    <div id="balance-stripe" className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
-      <div className="px-6 py-4">
-        <div className="grid grid-cols-3 gap-6">
+    <div
+      id="balance-stripe"
+      className="fixed top-[61px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-30"
+    >
+      <div className="px-4 py-3 lg:px-6 lg:py-4">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -56,24 +67,35 @@ export const BalanceStripe: React.FC = () => {
             </>
           )}
 
-          {!loading && !error && balances.map((b: TreasuryBalance) => (
-            <div key={b.id} id={`balance-${b.id}`} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center">
-                  <i className={`fa-solid ${iconForBalance(b.label, b.currency)} text-primary mr-2`}></i>
-                  <span className="text-sm font-medium text-gray-600">{b.label} ({b.currency})</span>
+          {!loading && !error &&
+            balances.map((b: TreasuryBalance) => (
+              <div
+                key={b.id}
+                id={`balance-${b.id}`}
+                className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm lg:p-4"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center">
+                    <i
+                      className={`fa-solid ${iconForBalance(b.label, b.currency)} text-primary mr-2 text-sm lg:text-base`}
+                    ></i>
+                    <span className="text-xs lg:text-sm font-medium text-gray-600">
+                      {b.label} ({b.currency})
+                    </span>
+                  </div>
+                  <div className={`w-2 h-2 ${statusDotClass(b.status)} rounded-full`}></div>
                 </div>
-                <div className={`w-2 h-2 ${statusDotClass(b.status)} rounded-full`}></div>
+                <div className="text-lg lg:text-2xl font-bold text-text-primary mb-1">
+                  {formatAmount(b.amount, b.currency)}
+                </div>
+                <div className="text-xs text-gray-500">Actualizado {formatTime(b.updatedAt)}</div>
               </div>
-              <div className="text-2xl font-bold text-text-primary mb-1">{formatAmount(b.amount, b.currency)}</div>
-              <div className="text-xs text-gray-500">Actualizado {formatTime(b.updatedAt)}</div>
-            </div>
-          ))}
+            ))}
 
           {!loading && error && (
             <>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm lg:p-4">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                       <i className="fa-solid fa-wallet text-primary mr-2"></i>

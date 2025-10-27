@@ -25,6 +25,7 @@ interface Props {
   onClearFilters: () => void;
   onToggleAdvanced: () => void;
   onApplyAdvanced: () => void;
+  onCreateContact?: () => void;
 }
 
 const STATUS_LABEL_MAP: Record<string, string> = {
@@ -43,6 +44,7 @@ export const ContactFilters: React.FC<Props> = ({
   onClearFilters,
   onToggleAdvanced,
   onApplyAdvanced,
+  onCreateContact,
 }) => {
   const handleDateChange = (key: 'dateFrom' | 'dateTo', value: string) => {
     onChange({ [key]: value || null });
@@ -53,16 +55,28 @@ export const ContactFilters: React.FC<Props> = ({
       id="filters-section"
       className="bg-white rounded-lg border border-gray-200 shadow-sm p-6 mb-8"
     >
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
         <h3 className="text-lg font-semibold text-text-primary">Filtros de operaciones</h3>
-        <button
-          type="button"
-          onClick={onClearFilters}
-          className="text-primary hover:text-blue-700 text-sm font-medium"
-        >
-          <i className="fa-solid fa-times mr-1" />
-          Limpiar filtros
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onClearFilters}
+            className="text-primary hover:text-blue-700 text-sm font-medium"
+          >
+            <i className="fa-solid fa-times mr-1" />
+            Limpiar filtros
+          </button>
+          {onCreateContact && (
+            <button
+              type="button"
+              onClick={onCreateContact}
+              className="inline-flex items-center rounded-lg border border-primary px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white"
+            >
+              <i className="fa-solid fa-user-plus mr-2" />
+              Nuevo contacto
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">

@@ -9,107 +9,81 @@ export const FlowShortcuts: React.FC = () => {
   };
 
   return (
-    <section id="flow-shortcuts" className="mb-8">
-      <div className="mb-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">Atajos de flujo</h2>
-        <p className="text-gray-600">Accesos rápidos a operaciones frecuentes</p>
+    <section id="flow-shortcuts" className="mb-6 lg:mb-8">
+      <div className="mb-4 lg:mb-6">
+        <h2 className="text-lg lg:text-xl font-semibold text-text-primary mb-1 lg:mb-2">
+          Atajos de flujo
+        </h2>
+        <p className="text-gray-600 text-sm lg:text-base">
+          Accesos rápidos a operaciones frecuentes
+        </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Compra */}
-        <div
-          id="shortcut-buy"
-          onClick={() => handleNavigate('/dashboard/operaciones/nueva?tipo=compra')}
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow transform hover:-translate-y-0.5 cursor-pointer group"
-        >
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-success bg-opacity-10 rounded-lg flex items-center justify-center mr-4 group-hover:bg-opacity-20 transition-colors">
-              <i className="fa-solid fa-arrow-down text-success text-xl"></i>
+      <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 xl:grid-cols-4 lg:gap-6">
+        {[{
+          id: 'shortcut-buy',
+          title: 'Compra',
+          subtitle: 'Entra Pesos',
+          icon: 'fa-arrow-down',
+          iconColor: 'text-success',
+          iconBg: 'bg-success bg-opacity-10',
+          description: 'Registra operación de compra de divisas con ingreso de pesos argentinos',
+          onClick: () => handleNavigate('/dashboard/operaciones/nueva?tipo=compra'),
+        },
+        {
+          id: 'shortcut-sell',
+          title: 'Venta',
+          subtitle: 'Entra USD',
+          icon: 'fa-arrow-up',
+          iconColor: 'text-primary',
+          iconBg: 'bg-primary bg-opacity-10',
+          description: 'Registra operación de venta de divisas con ingreso de dólares estadounidenses',
+          onClick: () => handleNavigate('/dashboard/operaciones/nueva?tipo=venta'),
+        },
+        {
+          id: 'shortcut-compound',
+          title: 'Liquidación',
+          subtitle: 'Compuesta',
+          icon: 'fa-layer-group',
+          iconColor: 'text-orange-500',
+          iconBg: 'bg-orange-500 bg-opacity-10',
+          description: 'Procesa múltiples operaciones relacionadas en una sola liquidación',
+          onClick: () => handleNavigate('/dashboard/operaciones/nueva'),
+        },
+        {
+          id: 'shortcut-transfer',
+          title: 'Transferencia en pesos',
+          subtitle: 'Distribuí montos por contacto',
+          icon: 'fa-money-bill-transfer',
+          iconColor: 'text-blue-500',
+          iconBg: 'bg-blue-500 bg-opacity-10',
+          description: 'Registrá el envío o recepción de pesos argentinos distribuyendo entre múltiples contactos.',
+          onClick: () => handleNavigate('/dashboard/operaciones/transfer-pesos'),
+        }].map((shortcut) => (
+          <div
+            key={shortcut.id}
+            id={shortcut.id}
+            onClick={shortcut.onClick}
+            className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow cursor-pointer group"
+          >
+            <div className="flex items-center mb-3 lg:mb-4">
+              <div
+                className={`w-10 h-10 lg:w-12 lg:h-12 ${shortcut.iconBg} rounded-lg flex items-center justify-center mr-3 lg:mr-4 group-hover:bg-opacity-20 transition-colors`}
+              >
+                <i className={`fa-solid ${shortcut.icon} ${shortcut.iconColor} text-sm lg:text-xl`} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-text-primary text-base lg:text-lg">
+                  {shortcut.title}
+                </h3>
+                <p className="text-xs text-gray-600">{shortcut.subtitle}</p>
+              </div>
+              <i className="fa-solid fa-arrow-right text-primary text-sm" />
             </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-primary">Compra</h3>
-              <p className="text-sm text-gray-600">Entra Pesos</p>
-            </div>
+            <p className="text-gray-600 text-sm lg:text-base">
+              {shortcut.description}
+            </p>
           </div>
-          <p className="text-gray-600 mb-4">
-            Registra operación de compra de divisas con ingreso de pesos argentinos
-          </p>
-          <div className="flex items-center text-primary text-sm font-medium">
-            Iniciar operación
-            <i className="fa-solid fa-arrow-right ml-2"></i>
-          </div>
-        </div>
-
-        {/* Venta */}
-        <div
-          id="shortcut-sell"
-          onClick={() => handleNavigate('/dashboard/operaciones/nueva?tipo=venta')}
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow transform hover:-translate-y-0.5 cursor-pointer group"
-        >
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center mr-4 group-hover:bg-opacity-20 transition-colors">
-              <i className="fa-solid fa-arrow-up text-primary text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-primary">Venta</h3>
-              <p className="text-sm text-gray-600">Entra USD</p>
-            </div>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Registra operación de venta de divisas con ingreso de dólares estadounidenses
-          </p>
-          <div className="flex items-center text-primary text-sm font-medium">
-            Iniciar operación
-            <i className="fa-solid fa-arrow-right ml-2"></i>
-          </div>
-        </div>
-
-        {/* Liquidación compuesta */}
-        <div
-          id="shortcut-compound"
-          onClick={() => handleNavigate('/dashboard/operaciones/nueva')}
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow transform hover:-translate-y-0.5 cursor-pointer group"
-        >
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-orange-500 bg-opacity-10 rounded-lg flex items-center justify-center mr-4 group-hover:bg-opacity-20 transition-colors">
-              <i className="fa-solid fa-layer-group text-orange-500 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-primary">Liquidación</h3>
-              <p className="text-sm text-gray-600">Compuesta</p>
-            </div>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Procesa múltiples operaciones relacionadas en una sola liquidación
-          </p>
-          <div className="flex items-center text-primary text-sm font-medium">
-            Iniciar proceso
-            <i className="fa-solid fa-arrow-right ml-2"></i>
-          </div>
-        </div>
-
-        {/* Transferencia en pesos */}
-        <div
-          id="shortcut-transfer"
-          onClick={() => handleNavigate('/dashboard/operaciones/transfer-pesos')}
-          className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow transform hover:-translate-y-0.5 cursor-pointer group"
-        >
-          <div className="flex items-center mb-4">
-            <div className="w-12 h-12 bg-blue-500 bg-opacity-10 rounded-lg flex items-center justify-center mr-4 group-hover:bg-opacity-20 transition-colors">
-              <i className="fa-solid fa-money-bill-transfer text-blue-500 text-xl"></i>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-text-primary">Transferencia en pesos</h3>
-              <p className="text-sm text-gray-600">Distribuí montos por contacto</p>
-            </div>
-          </div>
-          <p className="text-gray-600 mb-4">
-            Registrá el envío o recepción de pesos argentinos distribuyendo entre múltiples contactos.
-          </p>
-          <div className="flex items-center text-primary text-sm font-medium">
-            Iniciar flujo
-            <i className="fa-solid fa-arrow-right ml-2"></i>
-          </div>
-        </div>
+        ))}
       </div>
     </section>
   );

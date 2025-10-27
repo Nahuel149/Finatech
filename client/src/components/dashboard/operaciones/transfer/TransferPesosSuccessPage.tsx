@@ -6,6 +6,7 @@ import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency, formatDateTime } from './utils';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
+import { emitDashboardBalanceRefresh } from '../../../../utils';
 
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -23,6 +24,12 @@ export const TransferPesosSuccessPage: React.FC = () => {
       navigate('/dashboard/operaciones/transfer-pesos', { replace: true });
     }
   }, [lastOperation, navigate]);
+
+  useEffect(() => {
+    if (lastOperation) {
+      emitDashboardBalanceRefresh();
+    }
+  }, [lastOperation]);
 
   useEffect(() => {
     if (!toast) return;

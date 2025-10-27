@@ -23,7 +23,7 @@ import { AmountSection } from './AmountSection';
 import { MarginIndicator } from './MarginIndicator';
 import { ValidationChecklist } from './ValidationChecklist';
 import { WizardActions } from './WizardActions';
-import { NewClientModal } from './NewClientModal';
+import { NewClientModal } from '../../../clients/NewClientModal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 
@@ -478,6 +478,8 @@ export const OperationWizardStep1Page: React.FC = () => {
         open={isNewClientModalOpen}
         onClose={() => setIsNewClientModalOpen(false)}
         onCreated={handleNewClientCreated}
+        defaultType="client"
+        ownerLabel="Operaciones"
       />
     </div>
   );

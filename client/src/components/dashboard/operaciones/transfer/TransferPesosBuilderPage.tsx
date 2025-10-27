@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ClientSummary,
@@ -9,15 +9,23 @@ import {
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { useClientSearch } from '../../../../hooks/dashboard';
-import { useCreateClient } from '../../../../hooks';
 import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
+import { NewClientModal } from '../../../clients/NewClientModal';
 
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
 }
+
+type BuilderStep = 'config' | 'amount' | 'distribution';
+
+const STEP_INDEX: Record<BuilderStep, number> = {
+  config: 1,
+  amount: 2,
+  distribution: 3,
+};
 
 const MOVEMENT_TYPE_OPTIONS: Array<{
   id: MovementType;
@@ -93,145 +101,6 @@ interface DistributionRowProps {
   onRequestNewClient: () => void;
 }
 
-interface NewClientModalProps {
-  open: boolean;
-  loading: boolean;
-  errorMessage: string | null;
-  onClose: () => void;
-  onSubmit: (payload: { firstName: string; lastName: string; internalOwner: string; contactType: 'client' | 'provider' }) => Promise<void>;
-}
-
-const NewClientModal: React.FC<NewClientModalProps> = ({ open, loading, errorMessage, onClose, onSubmit }) => {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [contactType, setContactType] = useState<'client' | 'provider'>('client');
-  const [internalOwner, setInternalOwner] = useState('');
-  const [localError, setLocalError] = useState<string | null>(null);
-
-  const handleClose = () => {
-    if (loading) return;
-    setFirstName('');
-    setLastName('');
-    setContactType('client');
-    setInternalOwner('');
-    setLocalError(null);
-    onClose();
-  };
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!firstName.trim() || !lastName.trim() || !internalOwner.trim()) {
-      setLocalError('Completá nombre, apellido y responsable interno.');
-      return;
-    }
-    setLocalError(null);
-    await onSubmit({
-      firstName: firstName.trim(),
-      lastName: lastName.trim(),
-      internalOwner: internalOwner.trim(),
-      contactType,
-    });
-    setFirstName('');
-    setLastName('');
-    setContactType('client');
-    setInternalOwner('');
-  };
-
-  if (!open) {
-    return null;
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
-        <form onSubmit={handleSubmit}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-text-primary">Nuevo contacto</h3>
-              <button
-                type="button"
-                onClick={handleClose}
-                className="text-gray-400 hover:text-gray-600"
-                aria-label="Cerrar"
-              >
-                <i className="fa-solid fa-times" />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
-                <input
-                  type="text"
-                  value={firstName}
-                  onChange={(event) => setFirstName(event.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Apellido</label>
-                <input
-                  type="text"
-                  value={lastName}
-                  onChange={(event) => setLastName(event.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Responsable interno</label>
-                <input
-                  type="text"
-                  value={internalOwner}
-                  onChange={(event) => setInternalOwner(event.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={loading}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                <select
-                  value={contactType}
-                  onChange={(event) => setContactType(event.target.value as 'client' | 'provider')}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                  disabled={loading}
-                >
-                  <option value="client">Cliente</option>
-                  <option value="provider">Proveedor</option>
-                </select>
-              </div>
-              {(localError || errorMessage) && (
-                <div className="text-sm text-danger">
-                  {localError || errorMessage}
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-end space-x-3">
-            <button
-              type="button"
-              onClick={handleClose}
-              className="px-4 py-2 text-gray-700 hover:text-text-primary transition-colors"
-              disabled={loading}
-            >
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-70"
-              disabled={loading}
-            >
-              {loading ? 'Guardando…' : 'Guardar'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
-
 const DistributionRow: React.FC<DistributionRowProps> = ({
   contactId,
   contactName,
@@ -246,121 +115,113 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   onRemove,
   onRequestNewClient,
 }) => {
-  const [inputValue, setInputValue] = useState<string>(contactName || '');
+  const { query, setQuery, suggestions, loading } = useClientSearch();
+  const [searchValue, setSearchValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const { setQuery, suggestions, loading, error } = useClientSearch('');
 
   useEffect(() => {
-    if (contactName && contactName !== inputValue) {
-      setInputValue(contactName);
+    const term = searchValue.trim();
+    if (term.length >= 2) {
+      setQuery(term);
+    } else {
+      setQuery('');
     }
-  }, [contactName]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchValue, setQuery]);
 
-  const handleInputChange = (value: string) => {
-    setInputValue(value);
-    setQuery(value);
-    setShowSuggestions(Boolean(value.trim()));
-    if (!value.trim()) {
-      onClearContact();
+  useEffect(() => {
+    if (contactId) {
+      setShowSuggestions(false);
+      setSearchValue('');
+      setQuery('');
     }
-  };
+  }, [contactId, setQuery]);
 
-  const handleSuggestionClick = (client: ClientSummary) => {
+  const handleSelect = (client: ClientSummary) => {
     onContactSelect(client);
-    setInputValue(client.fullName);
+    setSearchValue('');
     setShowSuggestions(false);
   };
 
+  const handleAmountInput = (value: string) => {
+    const normalized = value.replace(/,/g, '.');
+    const parsed = parseFloat(normalized);
+    onAmountChange(Number.isFinite(parsed) ? parsed : 0);
+  };
+
   return (
-    <tr className="border-b border-gray-100 last:border-b-0">
-      <td className="px-4 py-4 align-top">
-        <div className="relative">
-          <label className="block text-xs font-medium text-gray-500 mb-1">Contacto</label>
-          <input
-            type="text"
-            value={inputValue}
-            onChange={(event) => handleInputChange(event.target.value)}
-            onFocus={() => {
-              if (inputValue.trim()) {
-                setQuery(inputValue);
-                setShowSuggestions(true);
-              }
-            }}
-            placeholder="Buscar cliente"
-            className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-            autoComplete="off"
-          />
-          {contactId && (
+    <tr className="border-b border-gray-200">
+      <td className="px-4 py-4 align-top text-sm text-gray-700">
+        {contactId ? (
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-semibold text-text-primary">{contactName}</div>
+              <div className="text-xs text-gray-500 capitalize">
+                {contactType || 'Sin tipo'}
+                {cuit ? ` · ${cuit}` : ''}
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setInputValue('');
-                onClearContact();
-              }}
-              className="absolute right-2 top-7 text-gray-400 hover:text-danger"
-              aria-label="Quitar contacto"
+              onClick={onClearContact}
+              className="text-xs text-primary hover:text-blue-700"
             >
-              <i className="fa-solid fa-times" />
+              Limpiar
             </button>
-          )}
-          <button
-            type="button"
-            onClick={onRequestNewClient}
-            className="absolute right-10 top-7 text-primary hover:text-blue-700 text-sm"
-          >
-            <i className="fa-solid fa-user-plus" />
-          </button>
-          {showSuggestions && (
-            <div className="absolute z-20 mt-2 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-56 overflow-y-auto">
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchValue}
+                onChange={(event) => setSearchValue(event.target.value)}
+                onFocus={() => setShowSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                placeholder="Buscar contacto"
+                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+              />
               {loading && (
-                <div className="px-3 py-2 text-xs text-gray-500">Buscando…</div>
+                <i className="fa-solid fa-circle-notch animate-spin absolute right-3 top-3 text-gray-400" />
               )}
-              {!loading && suggestions.length === 0 && (
-                <div className="px-3 py-2 text-xs text-gray-500">Sin resultados</div>
-              )}
-              {!loading &&
-                suggestions.map((client) => (
-                  <button
-                    type="button"
-                    key={client.id}
-                    onClick={() => handleSuggestionClick(client)}
-                    className="w-full text-left px-3 py-2 hover:bg-gray-50"
-                  >
-                    <div className="text-sm font-medium text-text-primary">
-                      {client.fullName}
+              {showSuggestions && (suggestions.length > 0 || loading) && (
+                <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {suggestions.map((client) => (
+                    <button
+                      type="button"
+                      key={client.id}
+                      onClick={() => handleSelect(client)}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                    >
+                      <div className="font-medium text-text-primary">{client.fullName}</div>
+                      {client.cuit && (
+                        <div className="text-xs text-gray-500">{client.cuit}</div>
+                      )}
+                    </button>
+                  ))}
+                  {!loading && suggestions.length === 0 && (
+                    <div className="px-3 py-2 text-sm text-gray-500">
+                      Sin resultados. Creá un contacto nuevo.
                     </div>
-                    <div className="text-xs text-gray-500 flex items-center justify-between">
-                      <span>{client.contactType === 'provider' ? 'Proveedor' : 'Cliente'}</span>
-                      {client.cuit && <span>CUIT {client.cuit}</span>}
-                    </div>
-                  </button>
-                ))}
-              {error && (
-                <div className="px-3 py-2 text-xs text-danger">
-                  {error.message || 'No pudimos buscar clientes.'}
+                  )}
                 </div>
               )}
             </div>
-          )}
-          {(contactType || cuit) && (
-            <div className="mt-2 text-xs text-gray-500 flex items-center space-x-2">
-              {contactType && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded bg-blue-50 text-blue-700">
-                  {contactType === 'provider' ? 'Proveedor' : 'Cliente'}
-                </span>
-              )}
-              {cuit && <span>CUIT {cuit}</span>}
-            </div>
-          )}
-        </div>
+            <button
+              type="button"
+              onClick={onRequestNewClient}
+              className="inline-flex items-center text-xs text-primary hover:text-blue-700"
+            >
+              <i className="fa-solid fa-user-plus mr-2" />
+              Nuevo contacto
+            </button>
+          </div>
+        )}
       </td>
-
-      <td className="px-4 py-4 align-top w-44">
-        <label className="block text-xs font-medium text-gray-500 mb-1">Medio</label>
+      <td className="px-4 py-4 align-top">
         <select
           value={method}
           onChange={(event) => onMethodChange(event.target.value as MovementMethod)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
         >
           {Object.entries(METHOD_LABEL).map(([value, label]) => (
             <option key={value} value={value}>
@@ -369,26 +230,21 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
           ))}
         </select>
       </td>
-
-      <td className="px-4 py-4 align-top w-40">
-        <label className="block text-xs font-medium text-gray-500 mb-1">Monto</label>
+      <td className="px-4 py-4 align-top">
         <input
           type="number"
+          value={Number.isFinite(amount) ? amount : 0}
+          onChange={(event) => handleAmountInput(event.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
           step="0.01"
           min="0"
-          value={amount ? amount.toString() : ''}
-          onChange={(event) => onAmountChange(parseFloat(event.target.value) || 0)}
-          className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-          placeholder="0.00"
         />
       </td>
-
-      <td className="px-4 py-4 align-top w-12">
+      <td className="px-4 py-4 align-top text-right">
         <button
           type="button"
           onClick={onRemove}
-          className="mt-6 text-danger hover:text-red-600"
-          aria-label="Eliminar contacto"
+          className="text-sm text-danger hover:text-red-700"
         >
           <i className="fa-solid fa-trash" />
         </button>
@@ -399,7 +255,7 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
 
 export const TransferPesosBuilderPage: React.FC = () => {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const {
     draft,
     setMovementType,
@@ -412,25 +268,34 @@ export const TransferPesosBuilderPage: React.FC = () => {
     removeLine,
     reset,
   } = useTransferPesos();
-  const {
-    execute: createClient,
-    loading: creatingClient,
-    error: createClientError,
-    reset: resetCreateClient,
-  } = useCreateClient();
-
   const [amountInput, setAmountInput] = useState<string>('');
-  const [step, setStep] = useState<number>(1);
+  const [step, setStep] = useState<BuilderStep>('config');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [clientModalLineId, setClientModalLineId] = useState<string | null>(null);
+  const [amountError, setAmountError] = useState<string | null>(null);
+
+  const goToStep = useCallback(
+    (nextStep: BuilderStep) => {
+      setStep(nextStep);
+      if (nextStep === 'config') {
+        setSearchParams({}, { replace: true });
+        return;
+      }
+
+      const params = new URLSearchParams();
+      params.set('step', nextStep);
+      setSearchParams(params, { replace: true });
+    },
+    [setSearchParams]
+  );
 
   useEffect(() => {
     const stepParam = searchParams.get('step');
-    if (stepParam === 'amount') {
-      setStep(2);
-    } else if (stepParam === 'distribution') {
-      setStep(3);
+    if (stepParam === 'distribution' || stepParam === 'amount') {
+      setStep(stepParam as BuilderStep);
+      return;
     }
+    setStep('config');
   }, [searchParams]);
 
   useEffect(() => {
@@ -441,8 +306,22 @@ export const TransferPesosBuilderPage: React.FC = () => {
           maximumFractionDigits: 2,
         })
       );
+    } else {
+      setAmountInput('');
     }
   }, [draft.totalAmount]);
+
+  useEffect(() => {
+    if (step === 'distribution' && (!draft.totalAmount || draft.totalAmount <= 0)) {
+      goToStep('amount');
+    }
+  }, [draft.totalAmount, step, goToStep]);
+
+  useEffect(() => {
+    if (step === 'distribution' && draft.distributionLines.length === 0) {
+      addLine();
+    }
+  }, [step, draft.distributionLines.length, addLine]);
 
   useEffect(() => {
     if (!toast) return;
@@ -474,27 +353,38 @@ export const TransferPesosBuilderPage: React.FC = () => {
   }, [draft.distributionLines.length, draft.totalAmount, progressDifference]);
 
   const handleAmountInputChange = (value: string) => {
+    setAmountError(null);
     setAmountInput(value);
     const numericValue = sanitizeAmountInput(value);
-    setTotalAmount(numericValue);
+    if (Number.isFinite(numericValue)) {
+      setTotalAmount(numericValue);
+    } else {
+      setTotalAmount(0);
+    }
   };
 
-  const handleAmountBlur = () => {
-    if (!amountInput) {
+  const validateAmountValue = () => {
+    const rawValue = amountInput.trim();
+    if (!rawValue) {
+      setAmountError('Este campo es obligatorio.');
       setTotalAmount(0);
-      return;
-    }
-    const numericValue = sanitizeAmountInput(amountInput);
-    if (!Number.isFinite(numericValue) || numericValue <= 0) {
-      setTotalAmount(0);
-      setAmountInput('');
-      setToast({
-        type: 'error',
-        message: 'Ingresá un monto total mayor a 0.',
-      });
-      return;
+      return false;
     }
 
+    const numericValue = sanitizeAmountInput(rawValue);
+    if (!Number.isFinite(numericValue) || numericValue <= 0) {
+      setAmountError('Ingresá un monto válido en pesos argentinos.');
+      setTotalAmount(0);
+      return false;
+    }
+
+    if (numericValue > 999999999.99) {
+      setAmountError('El monto ingresado es demasiado alto.');
+      setTotalAmount(0);
+      return false;
+    }
+
+    setAmountError(null);
     setTotalAmount(numericValue);
     setAmountInput(
       numericValue.toLocaleString('es-AR', {
@@ -502,11 +392,21 @@ export const TransferPesosBuilderPage: React.FC = () => {
         maximumFractionDigits: 2,
       })
     );
-    if (step < 3) {
-      setStep(3);
-      if (draft.distributionLines.length === 0) {
-        addLine();
-      }
+    return true;
+  };
+
+  const handleAmountBlur = () => {
+    if (!amountInput.trim()) {
+      setAmountError('Este campo es obligatorio.');
+      setTotalAmount(0);
+      return;
+    }
+    validateAmountValue();
+  };
+
+  const handleAmountContinue = () => {
+    if (validateAmountValue()) {
+      goToStep('distribution');
     }
   };
 
@@ -514,7 +414,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
     if (!draft.movementType || !draft.direction) {
       return;
     }
-    setStep(2);
+    goToStep('amount');
   };
 
   const handleAddLine = () => {
@@ -526,42 +426,28 @@ export const TransferPesosBuilderPage: React.FC = () => {
       return;
     }
     addLine();
-    if (step < 3) {
-      setStep(3);
+    if (step !== 'distribution') {
+      goToStep('distribution');
     }
   };
 
-  const handleCreateClientSubmit = async (payload: {
-    firstName: string;
-    lastName: string;
-    internalOwner: string;
-    contactType: 'client' | 'provider';
-  }) => {
-    try {
-      const newClient = await createClient(payload);
-      if (clientModalLineId) {
-        setLineContact(clientModalLineId, {
-          contactId: newClient.id,
-          contactName: newClient.fullName,
-          contactType: newClient.contactType,
-          cuit: newClient.cuit || null,
-        });
-        setToast({
-          type: 'success',
-          message: 'Contacto creado correctamente.',
-        });
-        setClientModalLineId(null);
-        resetCreateClient();
-      }
-    } catch {
-      // error handled via hook
-    }
+  const handleClientCreated = (newClient: ClientSummary) => {
+    if (!clientModalLineId) return;
+    setLineContact(clientModalLineId, {
+      contactId: newClient.id,
+      contactName: newClient.fullName,
+      contactType: newClient.contactType,
+      cuit: newClient.cuit || null,
+    });
+    setToast({
+      type: 'success',
+      message: 'Contacto creado correctamente.',
+    });
+    setClientModalLineId(null);
   };
 
   const handleCloseClientModal = () => {
-    if (creatingClient) return;
     setClientModalLineId(null);
-    resetCreateClient();
   };
 
   const handleOpenConfirm = () => {
@@ -622,6 +508,8 @@ export const TransferPesosBuilderPage: React.FC = () => {
     });
   };
 
+  const currentStepIndex = STEP_INDEX[step];
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar search="" onSearchChange={() => {}} />
@@ -644,7 +532,9 @@ export const TransferPesosBuilderPage: React.FC = () => {
                   <div
                     key={index}
                     className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      index <= step ? 'bg-primary text-white' : 'bg-gray-200 text-gray-500'
+                      index <= currentStepIndex
+                        ? 'bg-primary text-white'
+                        : 'bg-gray-200 text-gray-500'
                     }`}
                   >
                     {index}
@@ -745,7 +635,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
         {/* Step 2 */}
         <section
           className={`bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 ${
-            step >= 2 ? 'block' : 'hidden'
+            currentStepIndex >= 2 ? 'block' : 'hidden'
           }`}
         >
           <div className="flex items-center mb-6">
@@ -774,16 +664,35 @@ export const TransferPesosBuilderPage: React.FC = () => {
                 autoComplete="off"
               />
             </div>
+            {amountError && (
+              <p className="text-sm text-danger mt-2">{amountError}</p>
+            )}
             <p className="text-xs text-gray-500 mt-2">
               La suma de los montos asignados debe coincidir con el total.
             </p>
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <button
+              type="button"
+              onClick={handleAmountContinue}
+              className={`px-6 py-3 rounded-lg transition-colors ${
+                draft.totalAmount && draft.totalAmount > 0
+                  ? 'bg-primary text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              disabled={!draft.totalAmount || draft.totalAmount <= 0}
+            >
+              <i className="fa-solid fa-arrow-right mr-2" />
+              Continuar con la distribución
+            </button>
           </div>
         </section>
 
         {/* Step 3 */}
         <section
           className={`bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 ${
-            step >= 3 ? 'block' : 'hidden'
+            currentStepIndex >= 3 ? 'block' : 'hidden'
           }`}
         >
           <div className="flex items-center mb-6">
@@ -971,10 +880,10 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
       <NewClientModal
         open={clientModalLineId !== null}
-        loading={creatingClient}
-        errorMessage={createClientError?.message || null}
         onClose={handleCloseClientModal}
-        onSubmit={handleCreateClientSubmit}
+        onCreated={handleClientCreated}
+        defaultType="client"
+        ownerLabel="Tesorería"
       />
 
       {toast && (

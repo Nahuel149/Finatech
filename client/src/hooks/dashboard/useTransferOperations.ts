@@ -8,10 +8,16 @@ export interface UseTransferOperationsOptions {
   query?: string; // local filter by code/contactName
 }
 
+// Create a stable empty options object to prevent useApi from recreating execute
+const STABLE_OPTIONS = {};
+
 export const useTransferOperations = (opts: UseTransferOperationsOptions = {}) => {
   const { limit = 20, skip = 0, query = '' } = opts;
-  const endpoint = `/api/transfers/pesos?limit=${encodeURIComponent(limit)}&skip=${encodeURIComponent(skip)}`;
-  const { data, loading, error, execute } = useApi<ListTransfersResponse>(endpoint);
+  const endpoint = useMemo(() => 
+    `/api/transfers/pesos?limit=${encodeURIComponent(limit)}&skip=${encodeURIComponent(skip)}`,
+    [limit, skip]
+  );
+  const { data, loading, error, execute } = useApi<ListTransfersResponse>(endpoint, STABLE_OPTIONS);
   const [search, setSearch] = useState(query);
 
   useEffect(() => {

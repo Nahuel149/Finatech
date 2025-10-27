@@ -70,7 +70,7 @@ const userSchema = new mongoose.Schema(
     },
     permissions: {
       type: [String],
-      default: ['view-balances'],
+      default: ['view-balances', 'access-treasury', 'access-transfers'],
     },
   },
   {
