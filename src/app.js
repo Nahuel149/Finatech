@@ -42,103 +42,18 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
-const publicDir = path.join(__dirname, '..', 'public');
-app.use(express.static(publicDir));
+// Serve React build files
+const buildDir = path.join(__dirname, '..', 'client', 'build');
+app.use(express.static(buildDir));
 
-app.get('/', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
+// Serve React app for specific routes (SPA routing)
+app.get(['/', '/login', '/register', '/dashboard'], (_req, res) => {
+  res.sendFile(path.join(buildDir, 'index.html'));
 });
 
-app.get('/registration', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'index.html'));
-});
-
-app.get('/login', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'login.html'));
-});
-
-app.get('/recover', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'recover.html'));
-});
-
-app.get('/reset', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'recover.html'));
-});
-
-app.get(['/dashboard', '/dashboard/:section'], (_req, res) => {
-  res.sendFile(path.join(publicDir, 'dashboard.html'));
-});
-
-app.get('/dashboard/operations/new', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'operations-new.html'));
-});
-
-app.get('/dashboard/operations/new/settlement', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'operations-settlement.html'));
-});
-
-app.get('/dashboard/operations/new/summary', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'operations-summary.html'));
-});
-
-app.get('/tesoreria', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'tesoreria-saldos.html'));
-});
-
-app.get('/tesoreria/contacto/:contactId', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'saldos-contacto.html'));
-});
-
-app.get('/tesoreria/movimientos', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'tesoreria-movimientos.html'));
-});
-
-app.get('/tesoreria/movimientos/nuevo', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'tesoreria-registrar-movimiento.html'));
-});
-
-app.get('/tesoreria/movimientos/:movementId', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'tesoreria-movimiento-detalle.html'));
-});
-
-app.get('/tesoreria/conciliacion', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'tesoreria-conciliacion.html'));
-});
-
-app.get('/saldos', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'saldos-overview.html'));
-});
-
-app.get('/saldos/contacto/:contactId', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'saldos-contacto.html'));
-});
-
-app.get('/logistica', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'logistica-panel.html'));
-});
-
-app.get('/dashboard/operations/confirmation', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'operations-confirmation.html'));
-});
-
-app.get('/dashboard/operations/transfer-ars', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'transferencia-pesos.html'));
-});
-
-app.get('/dashboard/operations/transfer-ars/amount', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'transferencia-pesos-monto.html'));
-});
-
-app.get('/dashboard/operations/transfer-ars/distribution', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'transferencia-pesos-distribucion.html'));
-});
-
-app.get('/dashboard/operations/transfer-ars/confirmation', (_req, res) => {
-  res.sendFile(path.join(publicDir, 'transferencia-pesos-confirmacion.html'));
-});
-
+// Catch-all for other routes
 app.use((_req, res) => {
-  res.status(404).json({ message: 'No encontrado' });
+  res.sendFile(path.join(buildDir, 'index.html'));
 });
 
 app.use(errorHandler);
