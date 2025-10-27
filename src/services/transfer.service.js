@@ -9,6 +9,8 @@ const {
 const { createTransferOperationEvents } = require('./treasuryEvent.service');
 const { applyTreasurySettlement } = require('./currentAccount.service');
 
+const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 const roundAmount = (value) => {
   const numeric = Number(value);
   if (!Number.isFinite(numeric)) {
@@ -252,29 +254,78 @@ const getTransferOperationById = async (id) => {
   return formatTransferOperation(operation, contacts);
 };
 
-const listTransferOperations = async ({ limit = 20, skip = 0 } = {}) => {
+const listTransferOperations = async ({ limit = 20, skip = 0, search = '' } = {}) => {
   const sanitizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
   const sanitizedSkip = Math.max(Number(skip) || 0, 0);
+  const searchTerm = typeof search === 'string' ? search.trim() : '';
+  const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), 'i') : null;
 
-  const operations = await TransferOperation.find({})
-    .sort({ confirmedAt: -1 })
-    .skip(sanitizedSkip)
-    .limit(sanitizedLimit)
-    .lean();
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'clients',
+        localField: 'distributionLines.contact',
+        foreignField: '_id',
+        as: 'contacts',
+      },
+    },
+  ];
 
-  const contactIds = operations.flatMap((operation) =>
-    Array.isArray(operation.distributionLines)
-      ? operation.distributionLines
-          .map((line) => line.contact)
-          .filter((contactId) => mongoose.Types.ObjectId.isValid(contactId))
-      : []
-  );
+  if (regex) {
+    const orFilters = [
+      { operationCode: regex },
+      { status: regex },
+      { movementType: regex },
+      { currency: regex },
+      { direction: regex },
+      { 'contacts.fullName': regex },
+      { 'contacts.shortName': regex },
+    ];
 
-  const contacts = contactIds.length
-    ? await Client.find({ _id: { $in: contactIds } }).lean()
-    : [];
+    if (mongoose.Types.ObjectId.isValid(searchTerm)) {
+      orFilters.push({ _id: new mongoose.Types.ObjectId(searchTerm) });
+    }
 
-  return operations.map((operation) => formatTransferOperation(operation, contacts));
+    pipeline.push({
+      $match: {
+        $or: orFilters,
+      },
+    });
+  }
+
+  pipeline.push({
+    $sort: { confirmedAt: -1, createdAt: -1 },
+  });
+
+  if (sanitizedSkip) {
+    pipeline.push({ $skip: sanitizedSkip });
+  }
+
+  pipeline.push({ $limit: sanitizedLimit });
+
+  pipeline.push({
+    $project: {
+      operationCode: 1,
+      movementType: 1,
+      direction: 1,
+      currency: 1,
+      totalAmount: 1,
+      distributionLines: 1,
+      status: 1,
+      confirmedAt: 1,
+      createdAt: 1,
+      updatedAt: 1,
+      contacts: 1,
+    },
+  });
+
+  const operations = await TransferOperation.aggregate(pipeline);
+
+  return operations.map((operation) => {
+    const contacts = Array.isArray(operation.contacts) ? operation.contacts : [];
+    const { contacts: _ignored, ...rest } = operation;
+    return formatTransferOperation(rest, contacts);
+  });
 };
 
 module.exports = {

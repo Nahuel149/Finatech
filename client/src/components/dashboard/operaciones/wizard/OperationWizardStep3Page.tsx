@@ -222,6 +222,17 @@ export const OperationWizardStep3Page: React.FC = () => {
 
         {isReady && !successStateVisible && (
           <>
+            <div className="flex justify-end mb-4">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="px-4 py-2 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors text-sm flex items-center"
+              >
+                <i className="fa-solid fa-file-export mr-2" />
+                Exportar resumen (PDF)
+              </button>
+            </div>
+
             <WizardCompleteSummary
               clientName={clientSummary?.fullName ?? '—'}
               clientDocument={clientSummary?.cuit}

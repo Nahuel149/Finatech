@@ -3,6 +3,8 @@ Registro de usuario
 
 Description
 
+Estado: Implementado en la aplicación React (registro local + Google, pendiente verificación, reenvío de correo).
+
 Como visitante
 Quiero crear una cuenta usando email y contraseña o con mi cuenta de Google
 Para acceder a la plataforma y guardar mi progreso/configuración
@@ -74,6 +76,8 @@ Login de usuario
 
 Description
 
+Estado: Implementado (login local, Google, recordarme, reenvío de verificación y rate limiting).
+
 Como usuario registrado
 Quiero iniciar sesión con email/contraseña o con Google
 Para acceder de forma segura a mi cuenta
@@ -143,6 +147,8 @@ Recuperar y restablecer contraseña
 
 
 Description
+
+Estado: Implementado (solicitud genérica, validación de token, reinicio de contraseña).
 
 Como usuario que olvidó su contraseña
 Quiero restablecerla mediante un enlace enviado a mi email
@@ -359,6 +365,8 @@ Antes de confirmar, el sistema hace validación final de reglas de negocio.
 Acciones: Atrás, Guardar borrador, Confirmar/Finalizar operación, Cancelar.
 
 Opcional: exportar/imprimir resumen como PDF.
+
+Implementado: botón de exportación en la vista de resumen con impresión nativa.
 
 Criterios de aceptación
 Paso 1 – Datos de la operación
@@ -697,6 +705,7 @@ Se actualiza el saldo del cliente de forma correspondiente.
 Se reduce el saldo de Caja en Dólares, representando la salida real del dinero.
 
 💰 Transferencias en Pesos
+Estado: Flujo completo implementado en React (ruta /dashboard/operaciones/transfer-pesos) con confirmación, éxito y panel contable integrado.
 Para este tipo de operaciones, el comportamiento es similar, pero actuando sobre las cuentas a cobrar en pesos (ARS) y las cuentas de caja / transferencias en pesos, según el caso.
 
 Ingreso de efectivo (ARS)
@@ -1007,6 +1016,8 @@ Módulo de tesorería
 
 Description
 
+Estado: Listado, detalle lateral, registro manual y conciliación implementados en React (ruta /dashboard/tesoreria), con filtros, sumatorias, stripe de balances, alta y compensación de movimientos integrados a la API.
+
 Como operador financiero de FinaTech
 Quiero acceder a un módulo de Tesorería que me permita registrar, visualizar y gestionar los movimientos de ingreso y egreso de fondos, tanto en pesos como en dólares
 Para reflejar en el sistema los flujos reales de caja y transferencias, compensar operaciones pendientes y mantener actualizado el estado financiero global de la empresa
@@ -1117,6 +1128,7 @@ Se marcan ambas partes como Compensadas.
 Se actualizan saldos en caja, cuentas corrientes y contacto.
 
 5. Saldos y cuentas vinculadas
+Estado: Implementado en React (ruta /dashboard/tesoreria/saldos) con resumen 1:1, pestañas de movimientos, integración contable y panel lateral enlazado al stripe de saldos.
 Vista con los saldos actuales de:
 
 Caja en USD

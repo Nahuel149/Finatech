@@ -66,9 +66,11 @@ export interface LoginResponse {
 }
 
 export interface RegisterResponse {
-  success: boolean;
+  type?: 'pending_verification' | 'merged_google' | 'verified' | string;
   message: string;
+  profile?: User;
   user?: User;
+  success?: boolean;
 }
 
 export interface TwoFactorResponse {

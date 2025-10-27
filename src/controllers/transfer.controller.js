@@ -40,8 +40,12 @@ const fetchTransferOperation = async (req, res, next) => {
 
 const listTransferOperationsHandler = async (req, res, next) => {
   try {
-    const { limit, skip } = req.query;
-    const operations = await listTransferOperations({ limit, skip });
+    const { limit, skip, search, q } = req.query;
+    const operations = await listTransferOperations({
+      limit,
+      skip,
+      search: search || q,
+    });
     res.json({ items: operations });
   } catch (error) {
     next(error);

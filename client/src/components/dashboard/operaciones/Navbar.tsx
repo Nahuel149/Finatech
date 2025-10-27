@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 interface Props {
   search: string;
@@ -15,7 +16,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
               <i className="fa-solid fa-chart-line text-white text-sm"></i>
             </div>
-            <span className="text-xl font-bold text-text-primary">FinaTech</span>
+            <Link to="/dashboard" className="text-xl font-bold text-text-primary">FinaTech</Link>
           </div>
 
           {/* Main Navigation Menu */}
@@ -24,10 +25,10 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               <i className="fa-solid fa-exchange-alt mr-2"></i>
               Operaciones
             </span>
-            <span className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
+            <Link to="/dashboard/tesoreria" className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
               <i className="fa-solid fa-vault mr-2"></i>
               Tesorería
-            </span>
+            </Link>
             <span className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer">
               <i className="fa-solid fa-truck mr-2"></i>
               Logística

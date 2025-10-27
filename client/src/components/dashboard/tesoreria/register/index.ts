@@ -1,0 +1,1 @@
+export { RegisterMovementModal } from './RegisterMovementModal';

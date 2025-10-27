@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, useConfig } from '../hooks';
+import { RegisterResponse } from '../types';
 import { validateRegistrationForm, hasFormErrors } from '../utils/validation';
 
 interface RegisterFormData {
@@ -24,12 +25,16 @@ export const Register: React.FC = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [showExistingEmailMessage, setShowExistingEmailMessage] = useState(false);
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  
-  const { register, googleAuth } = useAuth();
+  const [registerResult, setRegisterResult] = useState<RegisterResponse | null>(null);
+  const [lastSubmittedEmail, setLastSubmittedEmail] = useState('');
+  const [resendState, setResendState] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [resendMessage, setResendMessage] = useState('');
+
+  const { register, googleAuth, resendVerification } = useAuth();
   const { config } = useConfig();
 
   const handleGoogleResponse = useCallback(async (response: any) => {
@@ -90,10 +95,20 @@ export const Register: React.FC = () => {
     
     setIsLoading(true);
     setFormErrors({});
+    setRegisterResult(null);
+    setResendState('idle');
+    setResendMessage('');
     
     try {
-      await register(formData);
-      setShowSuccessMessage(true);
+      const response = await register(formData);
+      setRegisterResult(response);
+      setLastSubmittedEmail(formData.email.trim().toLowerCase());
+
+      if (response && response.type === 'merged_google') {
+        navigate('/dashboard');
+        return;
+      }
+
       setFormData({
         fullName: '',
         email: '',
@@ -332,6 +347,16 @@ export const Register: React.FC = () => {
                   </div>
                 )}
 
+                {/* Success Message */}
+                {showSuccessMessage && (
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <div className="flex items-center">
+                      <i className="fa-solid fa-check-circle text-success mr-2"></i>
+                      <span className="text-sm text-green-700">¡Registro exitoso con Google! Serás redirigido al panel principal.</span>
+                    </div>
+                  </div>
+                )}
+
                 {/* Register Button */}
                 <button 
                   type="submit" 
@@ -372,14 +397,53 @@ export const Register: React.FC = () => {
                 <span>{isGoogleLoading ? 'Cargando...' : 'Continuar con Google'}</span>
               </button>
 
-              {/* Success Message */}
-              {showSuccessMessage && (
+              {/* Success / Verification Message */}
+              {registerResult && (
                 <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="flex items-center">
-                    <i className="fa-solid fa-check-circle text-success mr-3"></i>
-                    <div>
-                      <h3 className="text-sm font-medium text-green-800">¡Registro exitoso!</h3>
-                      <p className="text-sm text-green-700 mt-1">Revisá tu correo para confirmar tu cuenta.</p>
+                  <div className="flex items-start">
+                    <i className="fa-solid fa-check-circle text-success mr-3 mt-1"></i>
+                    <div className="flex-1">
+                      <h3 className="text-sm font-medium text-green-800">
+                        {registerResult.type === 'pending_verification' ? '¡Registro exitoso!' : 'Cuenta vinculada'}
+                      </h3>
+                      <p className="text-sm text-green-700 mt-1">
+                        {registerResult.message || 'Revisá tu correo para conocer los próximos pasos.'}
+                      </p>
+                      {registerResult.type === 'pending_verification' && lastSubmittedEmail && (
+                        <div className="mt-3">
+                          <p className="text-xs text-green-700 mb-2">
+                            Si no recibiste el correo de verificación, podés reenviarlo.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (!lastSubmittedEmail) {
+                                return;
+                              }
+                              setResendState('loading');
+                              setResendMessage('');
+                              try {
+                                await resendVerification(lastSubmittedEmail);
+                                setResendState('success');
+                                setResendMessage('Enviamos un nuevo correo de verificación. Revisá tu bandeja de entrada.');
+                              } catch (error: any) {
+                                setResendState('error');
+                                setResendMessage(error?.message || 'No pudimos reenviar el correo. Intentá nuevamente.');
+                              }
+                            }}
+                            className="inline-flex items-center px-3 py-2 bg-white border border-green-300 text-green-700 rounded-md text-xs font-medium hover:bg-green-50 disabled:opacity-60"
+                            disabled={resendState === 'loading'}
+                          >
+                            {resendState === 'loading' && <i className="fa-solid fa-spinner fa-spin mr-2"></i>}
+                            Reenviar correo de verificación
+                          </button>
+                          {resendState !== 'idle' && resendMessage && (
+                            <p className={`text-xs mt-2 ${resendState === 'error' ? 'text-red-600' : 'text-green-700'}`}>
+                              {resendMessage}
+                            </p>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

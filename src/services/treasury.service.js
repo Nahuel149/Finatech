@@ -22,9 +22,522 @@ const BALANCE_METADATA = {
   },
 };
 
+const LINKED_BALANCE_CONFIG = {
+  usd: {
+    id: 'usd',
+    label: 'Caja USD',
+    currency: 'USD',
+    accountingLabel: 'Caja Moneda Extranjera USD',
+  },
+  cash: {
+    id: 'cash',
+    label: 'Efectivo (ARS)',
+    currency: 'ARS',
+    accountingLabel: 'Caja General ARS',
+  },
+  transfers: {
+    id: 'transfers',
+    label: 'Transferencias (ARS)',
+    currency: 'ARS',
+    accountingLabel: 'Transferencias Bancarias ARS',
+  },
+};
+
+const DEFAULT_VARIATION_WINDOW_DAYS = 7;
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+
 const MOVEMENT_MEDIUMS = ['cash', 'transfer', 'deposit'];
 const MOVEMENT_TYPES = ['incoming', 'outgoing'];
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'];
+
+const getBalanceConfig = (key) => {
+  if (!key) {
+    return null;
+  }
+  const normalized = String(key).toLowerCase();
+  return LINKED_BALANCE_CONFIG[normalized] || null;
+};
+
+const parseDateFilter = (value, { endOfDay = false } = {}) => {
+  if (!value) {
+    return null;
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  if (endOfDay) {
+    date.setHours(23, 59, 59, 999);
+  }
+  return date;
+};
+
+const buildMovementMatch = (key, filters = {}) => {
+  const match = {
+    balanceKey: key,
+  };
+
+  const normalizedType =
+    typeof filters.type === 'string' && MOVEMENT_TYPES.includes(filters.type.toLowerCase())
+      ? filters.type.toLowerCase()
+      : null;
+
+  if (normalizedType) {
+    match.type = normalizedType;
+  }
+
+  const dateFrom = parseDateFilter(filters.dateFrom);
+  const dateTo = parseDateFilter(filters.dateTo, { endOfDay: true });
+
+  if (dateFrom || dateTo) {
+    match.movementAt = {};
+    if (dateFrom) {
+      match.movementAt.$gte = dateFrom;
+    }
+    if (dateTo) {
+      match.movementAt.$lte = dateTo;
+    }
+  }
+
+  if (filters.contactId && mongoose.Types.ObjectId.isValid(filters.contactId)) {
+    match.contact = new mongoose.Types.ObjectId(filters.contactId);
+  }
+
+  return match;
+};
+
+const fetchMovementTotalsForBalance = async (key, filters = {}) => {
+  const match = buildMovementMatch(key, filters);
+  const pipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: '$type',
+        amount: { $sum: '$amount' },
+      },
+    },
+  ];
+
+  const groupedTotals = await TreasuryMovement.aggregate(pipeline);
+
+  const totals = groupedTotals.reduce(
+    (acc, entry) => {
+      if (entry._id === 'incoming') {
+        acc.incoming = roundAmount(entry.amount);
+      } else if (entry._id === 'outgoing') {
+        acc.outgoing = roundAmount(entry.amount);
+      }
+      return acc;
+    },
+    { incoming: 0, outgoing: 0 }
+  );
+
+  totals.net = roundAmount(totals.incoming - totals.outgoing);
+  return totals;
+};
+
+const computeVariationForBalance = async (key, { days = DEFAULT_VARIATION_WINDOW_DAYS } = {}) => {
+  const windowDays = Math.max(Number(days) || DEFAULT_VARIATION_WINDOW_DAYS, 1);
+  const now = new Date();
+  const currentWindowStart = new Date(now.getTime() - windowDays * MS_IN_DAY);
+  const previousWindowStart = new Date(currentWindowStart.getTime() - windowDays * MS_IN_DAY);
+
+  const [currentTotals, previousTotals] = await Promise.all([
+    fetchMovementTotalsForBalance(key, {
+      dateFrom: currentWindowStart.toISOString(),
+      dateTo: now.toISOString(),
+    }),
+    fetchMovementTotalsForBalance(key, {
+      dateFrom: previousWindowStart.toISOString(),
+      dateTo: currentWindowStart.toISOString(),
+    }),
+  ]);
+
+  const currentNet = currentTotals.net;
+  const previousNet = previousTotals.net;
+
+  let variationPercentage = null;
+  if (Math.abs(previousNet) > 0) {
+    variationPercentage = roundAmount(((currentNet - previousNet) / Math.abs(previousNet)) * 100);
+  } else if (Math.abs(currentNet) > 0) {
+    variationPercentage = 100;
+  } else {
+    variationPercentage = 0;
+  }
+
+  const direction =
+    variationPercentage > 0 ? 'up' : variationPercentage < 0 ? 'down' : 'flat';
+
+  return {
+    windowDays,
+    percentage: variationPercentage,
+    direction,
+    currentNet,
+    previousNet,
+  };
+};
+
+const fetchRecentMovementsForBalance = async (key, limit = 3, filters = {}) => {
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 3, 1), 20);
+  const match = buildMovementMatch(key, filters);
+
+  const movements = await TreasuryMovement.find(match)
+    .sort({ movementAt: -1 })
+    .limit(sanitizedLimit)
+    .lean();
+
+  if (!movements.length) {
+    return [];
+  }
+
+  const contactIds = movements
+    .map((movement) => movement.contact)
+    .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    .map((id) => id.toString());
+
+  const contacts = contactIds.length
+    ? await Client.find({ _id: { $in: contactIds } })
+        .select({ fullName: 1, shortName: 1, contactType: 1, status: 1, email: 1 })
+        .lean()
+    : [];
+
+  return movements.map((movement) => formatTreasuryMovement(movement, contacts));
+};
+
+const fetchContactSummariesForBalance = async (key, limit = 3, filters = {}) => {
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 3, 1), 20);
+  const match = buildMovementMatch(key, filters);
+  match.contact = { $ne: null };
+
+  const pipeline = [
+    { $match: match },
+    {
+      $group: {
+        _id: '$contact',
+        incoming: {
+          $sum: {
+            $cond: [{ $eq: ['$type', 'incoming'] }, '$amount', 0],
+          },
+        },
+        outgoing: {
+          $sum: {
+            $cond: [{ $eq: ['$type', 'outgoing'] }, '$amount', 0],
+          },
+        },
+        lastMovementAt: { $max: '$movementAt' },
+        count: { $sum: 1 },
+      },
+    },
+    { $sort: { lastMovementAt: -1 } },
+    { $limit: sanitizedLimit },
+  ];
+
+  const grouped = await TreasuryMovement.aggregate(pipeline);
+
+  if (!grouped.length) {
+    return [];
+  }
+
+  const contactIds = grouped
+    .map((entry) => entry._id)
+    .filter((id) => id && mongoose.Types.ObjectId.isValid(id));
+
+  const contacts = await Client.find({ _id: { $in: contactIds } })
+    .select({ fullName: 1, shortName: 1, contactType: 1, status: 1, email: 1 })
+    .lean();
+
+  const contactMap = new Map(
+    contacts.map((contact) => [contact._id ? contact._id.toString() : contact.id, contact])
+  );
+
+  return grouped.map((entry) => {
+    const contactDoc = contactMap.get(entry._id.toString());
+    const formattedContact = contactDoc ? formatContact(contactDoc) : { id: entry._id.toString() };
+    return {
+      contact: {
+        ...formattedContact,
+        email: contactDoc?.email || null,
+      },
+      totals: {
+        incoming: roundAmount(entry.incoming || 0),
+        outgoing: roundAmount(entry.outgoing || 0),
+        net: roundAmount((entry.incoming || 0) - (entry.outgoing || 0)),
+      },
+      lastMovementAt: entry.lastMovementAt ? new Date(entry.lastMovementAt).toISOString() : null,
+      movementCount: entry.count || 0,
+    };
+  });
+};
+
+const fetchAccountingSummaryForBalance = async (key) => {
+  const config = getBalanceConfig(key);
+  if (!config) {
+    return null;
+  }
+
+  const pipeline = [
+    {
+      $match: {
+        ledger: 'general',
+        'counterpart.key': key,
+        currency: config.currency,
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        balance: { $sum: '$amount' },
+        lastOperationAt: { $max: '$createdAt' },
+      },
+    },
+  ];
+
+  const [summary] = await CurrentAccountMovement.aggregate(pipeline);
+
+  const balance = summary ? roundAmount(summary.balance || 0) : 0;
+  const lastOperationAt = summary?.lastOperationAt
+    ? new Date(summary.lastOperationAt).toISOString()
+    : null;
+
+  let state = 'sin_movimientos';
+  if (lastOperationAt) {
+    const lastOperationDate = new Date(lastOperationAt);
+    const diffDays = (Date.now() - lastOperationDate.getTime()) / MS_IN_DAY;
+    state = diffDays <= DEFAULT_VARIATION_WINDOW_DAYS ? 'activo' : 'inactivo';
+  }
+
+  return {
+    accountName: config.accountingLabel,
+    currency: config.currency,
+    balance,
+    lastOperationAt,
+    state,
+  };
+};
+
+const fetchRecentActivityForBalance = async (key, limit = 5) => {
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 5, 1), 25);
+
+  const activityEntries = await CurrentAccountMovement.find({
+    'counterpart.key': key,
+  })
+    .sort({ createdAt: -1 })
+    .limit(sanitizedLimit)
+    .lean();
+
+  if (!activityEntries.length) {
+    return [];
+  }
+
+  const contactIds = activityEntries
+    .map((entry) => entry.contact)
+    .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    .map((id) => id.toString());
+
+  const contacts = contactIds.length
+    ? await Client.find({ _id: { $in: contactIds } })
+        .select({ fullName: 1, shortName: 1, contactType: 1, status: 1 })
+        .lean()
+    : [];
+
+  const contactMap = new Map(
+    contacts.map((contact) => [contact._id ? contact._id.toString() : contact.id, contact])
+  );
+
+  return activityEntries.map((entry) => {
+    const contactDoc = entry.contact ? contactMap.get(entry.contact.toString()) : null;
+    return {
+      id: entry._id ? entry._id.toString() : null,
+      createdAt: entry.createdAt ? new Date(entry.createdAt).toISOString() : null,
+      ledger: entry.ledger,
+      stage: entry.stage,
+      amount: roundAmount(entry.amount || 0),
+      currency: entry.currency,
+      direction: entry.amount >= 0 ? 'positive' : 'negative',
+      operation: entry.operation
+        ? {
+            id:
+              entry.operation.id && typeof entry.operation.id === 'object'
+                ? entry.operation.id.toString()
+                : entry.operation.id || null,
+            code: entry.operation.code || null,
+            type: entry.operation.type || null,
+            source: entry.operation.source || null,
+          }
+        : null,
+      counterpart: entry.counterpart || null,
+      contact: contactDoc ? formatContact(contactDoc) : null,
+    };
+  });
+};
+
+const buildLinkedBalanceSummaryEntry = async (config, baseBalanceMap, options = {}) => {
+  const {
+    recentMovementsLimit = 3,
+    contactLimit = 3,
+    activityLimit = 5,
+    variationWindowDays = DEFAULT_VARIATION_WINDOW_DAYS,
+  } = options;
+
+  const baseBalance = baseBalanceMap.get(config.id) || {
+    id: config.id,
+    label: config.label,
+    currency: config.currency,
+    amount: 0,
+    status: 'ok',
+    updatedAt: new Date().toISOString(),
+  };
+
+  const [variation, totals, recentMovements, contacts, accounting, activity] = await Promise.all([
+    computeVariationForBalance(config.id, { days: variationWindowDays }),
+    fetchMovementTotalsForBalance(config.id),
+    fetchRecentMovementsForBalance(config.id, recentMovementsLimit),
+    fetchContactSummariesForBalance(config.id, contactLimit),
+    fetchAccountingSummaryForBalance(config.id),
+    fetchRecentActivityForBalance(config.id, activityLimit),
+  ]);
+
+  return {
+    id: config.id,
+    label: config.label,
+    currency: config.currency,
+    amount: roundAmount(baseBalance.amount || 0),
+    status: baseBalance.status || 'ok',
+    updatedAt: baseBalance.updatedAt || new Date().toISOString(),
+    variation,
+    totals,
+    recentMovements,
+    contacts,
+    accounting,
+    activity,
+  };
+};
+
+const getLinkedBalancesSummary = async (options = {}) => {
+  const balances = await getTreasuryBalances();
+  const balanceMap = new Map(balances.map((balance) => [balance.id, balance]));
+
+  const configs = Object.values(LINKED_BALANCE_CONFIG);
+  const entries = await Promise.all(
+    configs.map((config) => buildLinkedBalanceSummaryEntry(config, balanceMap, options))
+  );
+
+  return {
+    generatedAt: new Date().toISOString(),
+    balances: entries,
+  };
+};
+
+const getLinkedBalanceDetail = async (keyInput, options = {}) => {
+  const config = getBalanceConfig(keyInput);
+  if (!config) {
+    throw new AppError('La cuenta indicada no existe.', 404);
+  }
+
+  const {
+    dateFrom,
+    dateTo,
+    type,
+    contactId,
+    page = 1,
+    limit = 20,
+    recentMovementsLimit = 3,
+    contactLimit = 5,
+    activityLimit = 8,
+  } = options;
+
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
+  const sanitizedPage = Math.max(Number(page) || 1, 1);
+
+  if (contactId && !mongoose.Types.ObjectId.isValid(contactId)) {
+    throw new AppError('El contacto indicado no es válido.', 400);
+  }
+
+  const match = buildMovementMatch(config.id, { dateFrom, dateTo, type, contactId });
+
+  const [totalItems, movements] = await Promise.all([
+    TreasuryMovement.countDocuments(match),
+    TreasuryMovement.find(match)
+      .sort({ movementAt: -1 })
+      .skip((sanitizedPage - 1) * sanitizedLimit)
+      .limit(sanitizedLimit)
+      .lean(),
+  ]);
+
+  const contactIds = movements
+    .map((movement) => movement.contact)
+    .filter((id) => id && mongoose.Types.ObjectId.isValid(id))
+    .map((id) => id.toString());
+
+  const contacts = contactIds.length
+    ? await Client.find({ _id: { $in: contactIds } })
+        .select({ fullName: 1, shortName: 1, contactType: 1, status: 1, email: 1 })
+        .lean()
+    : [];
+
+  const formattedMovements = movements.map((movement) =>
+    formatTreasuryMovement(movement, contacts)
+  );
+
+  const [totals, overallTotals, variation, summaryEntry] = await Promise.all([
+    fetchMovementTotalsForBalance(config.id, { dateFrom, dateTo, type, contactId }),
+    fetchMovementTotalsForBalance(config.id),
+    computeVariationForBalance(config.id),
+    (async () => {
+      const baseBalances = await getTreasuryBalances();
+      const baseMap = new Map(baseBalances.map((balance) => [balance.id, balance]));
+      return buildLinkedBalanceSummaryEntry(config, baseMap, {
+        recentMovementsLimit,
+        contactLimit,
+        activityLimit,
+      });
+    })(),
+  ]);
+
+  const [contactsBreakdown, recentActivity, recentMovements] = await Promise.all([
+    fetchContactSummariesForBalance(config.id, contactLimit, { dateFrom, dateTo, type, contactId }),
+    fetchRecentActivityForBalance(config.id, activityLimit),
+    fetchRecentMovementsForBalance(config.id, recentMovementsLimit, { dateFrom, dateTo, type }),
+  ]);
+
+  return {
+    balance: {
+      id: summaryEntry.id,
+      label: summaryEntry.label,
+      currency: summaryEntry.currency,
+      amount: summaryEntry.amount,
+      status: summaryEntry.status,
+      updatedAt: summaryEntry.updatedAt,
+      variation,
+    },
+    filters: {
+      dateFrom: dateFrom || null,
+      dateTo: dateTo || null,
+      type: typeof type === 'string' ? type : null,
+      contactId: contactId || null,
+      defaults: {
+        dateFrom: new Date(Date.now() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY)
+          .toISOString()
+          .split('T')[0],
+        dateTo: new Date().toISOString().split('T')[0],
+      },
+    },
+    totals,
+    overallTotals,
+    movements: {
+      items: formattedMovements,
+      pagination: {
+        page: sanitizedPage,
+        limit: sanitizedLimit,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / sanitizedLimit)),
+      },
+    },
+    contacts: contactsBreakdown,
+    activity: recentActivity,
+    recentMovements,
+  };
+};
 
 const roundAmount = (value) => {
   const numeric = Number(value);
@@ -1090,3 +1603,5 @@ exports.getTreasuryMovementById = getTreasuryMovementById;
 exports.compensateTreasuryMovement = compensateTreasuryMovement;
 exports.cancelTreasuryMovement = cancelTreasuryMovement;
 exports.suggestCompensationsForMovement = suggestCompensationsForMovement;
+exports.getLinkedBalancesSummary = getLinkedBalancesSummary;
+exports.getLinkedBalanceDetail = getLinkedBalanceDetail;

@@ -33,3 +33,156 @@ code {
 .animate-spin {
   animation: spin 1s linear infinite;
 }
+
+/* Treasury animations and helpers */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in forwards;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.chip-removable {
+  animation: slideIn 0.2s ease-out;
+}
+
+.table-row:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.table-row:hover {
+  background-color: #e3f2fd;
+}
+
+.positive-amount {
+  color: #198754;
+}
+
+.negative-amount {
+  color: #dc3545;
+}
+
+.neutral-amount {
+  color: #6c757d;
+}
+
+.modal-overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+.radio-card {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.radio-card:hover {
+  border-color: #0066cc;
+  background-color: #f8faff;
+}
+
+.radio-card.selected {
+  border-color: #0066cc;
+  background-color: #f0f8ff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.drop-zone {
+  border: 2px dashed #d1d5db;
+  transition: all 0.3s ease;
+}
+
+.drop-zone.dragover {
+  border-color: #0066cc;
+  background-color: #f0f8ff;
+}
+
+.file-item {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.table-row-selectable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.table-row-selectable:hover {
+  background-color: #f8f9fa;
+}
+
+.table-row-selectable.selected {
+  background-color: #f0f8ff;
+  border-left: 4px solid #0066cc;
+}
+
+.movement-card {
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.movement-card:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.movement-card.selected {
+  border-color: #0066cc;
+  background-color: #f0f8ff;
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.overlay {
+  background-color: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+.detail-panel {
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.slide-in-right {
+  animation: slideInRight 0.3s ease-out;
+}

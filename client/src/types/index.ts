@@ -11,6 +11,7 @@ export * from './dashboard';
 export * from './transfer';
 export * from './client';
 export * from './transaction';
+export * from './treasury';
 
 // Form Data Types
 export interface LoginFormData {

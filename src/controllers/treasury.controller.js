@@ -6,6 +6,8 @@ const {
   compensateTreasuryMovement,
   cancelTreasuryMovement,
   suggestCompensationsForMovement,
+  getLinkedBalancesSummary,
+  getLinkedBalanceDetail,
 } = require('../services/treasury.service');
 
 const parseFilters = (query) => {
@@ -25,6 +27,31 @@ const balances = async (_req, res, next) => {
   try {
     const balancesData = await getTreasuryBalances();
     res.json({ balances: balancesData });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const linkedBalancesSummary = async (_req, res, next) => {
+  try {
+    const summary = await getLinkedBalancesSummary();
+    res.json(summary);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const linkedBalanceDetail = async (req, res, next) => {
+  try {
+    const result = await getLinkedBalanceDetail(req.params.balanceKey || req.params.id, {
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      type: req.query.type,
+      contactId: req.query.contactId,
+      page: req.query.page,
+      limit: req.query.limit,
+    });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -119,4 +146,6 @@ module.exports = {
   compensate,
   cancel,
   suggestions,
+  linkedBalancesSummary,
+  linkedBalanceDetail,
 };

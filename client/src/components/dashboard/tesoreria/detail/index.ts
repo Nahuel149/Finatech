@@ -1,0 +1,1 @@
+export { MovementDetailPanel } from './MovementDetailPanel';

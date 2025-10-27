@@ -1,5 +1,15 @@
 const { Router } = require('express');
-const { balances, list, create, detail, compensate, cancel, suggestions } = require('../controllers/treasury.controller');
+const {
+  balances,
+  list,
+  create,
+  detail,
+  compensate,
+  cancel,
+  suggestions,
+  linkedBalancesSummary,
+  linkedBalanceDetail,
+} = require('../controllers/treasury.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 
@@ -8,6 +18,12 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/balances', requirePermission('access-treasury'), balances);
+router.get('/linked-balances', requirePermission('access-treasury'), linkedBalancesSummary);
+router.get(
+  '/linked-balances/:balanceKey',
+  requirePermission('access-treasury'),
+  linkedBalanceDetail
+);
 
 router.get(
   '/movements/:movementId/suggestions',
