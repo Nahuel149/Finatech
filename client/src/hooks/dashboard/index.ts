@@ -15,3 +15,5 @@ export * from './useCompensateTreasuryMovement';
 export * from './useReconciliationSuggestions';
 export * from './useLinkedTreasuryBalances';
 export * from './useLinkedBalanceDetail';
+export * from './useGlobalBalancesOverview';
+export * from './useContactBalanceDetail';

@@ -45,6 +45,11 @@ const LINKED_BALANCE_CONFIG = {
 
 const DEFAULT_VARIATION_WINDOW_DAYS = 7;
 const MS_IN_DAY = 24 * 60 * 60 * 1000;
+const DEFAULT_GLOBAL_BALANCES_LIMIT = 15;
+const GLOBAL_BALANCE_SORT_FIELDS = new Set(['balance', 'name', 'variation', 'lastMovement']);
+const BALANCE_STATE_VALUES = ['positive', 'negative', 'zero'];
+const CONTACT_BALANCE_DEFAULT_LIMIT = 20;
+const CONTACT_BALANCE_SORT_FIELDS = new Set(['date', 'amount', 'type']);
 
 const MOVEMENT_MEDIUMS = ['cash', 'transfer', 'deposit'];
 const MOVEMENT_TYPES = ['incoming', 'outgoing'];
@@ -425,6 +430,938 @@ const getLinkedBalancesSummary = async (options = {}) => {
   return {
     generatedAt: new Date().toISOString(),
     balances: entries,
+  };
+};
+
+const computeVariationPercentage = (currentValue = 0, previousValue = 0) => {
+  const current = Number(currentValue) || 0;
+  const previous = Number(previousValue) || 0;
+
+  if (previous === 0) {
+    if (current === 0) {
+      return 0;
+    }
+    return 100;
+  }
+
+  const raw = ((current - previous) / Math.abs(previous)) * 100;
+  return roundAmount(raw);
+};
+
+const directionFromVariation = (value) => {
+  if (value > 0) return 'up';
+  if (value < 0) return 'down';
+  return 'flat';
+};
+
+const resolveAccountLabel = (key, currency) => {
+  const config = getBalanceConfig(key);
+  if (config) {
+    return config.label;
+  }
+
+  if (!key) {
+    return currency === 'USD' ? 'General USD' : 'General';
+  }
+
+  const normalized = String(key)
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized
+    .split(' ')
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join(' ');
+};
+
+const computeBalanceState = (amount) => {
+  if (amount > 0) return 'positive';
+  if (amount < 0) return 'negative';
+  return 'zero';
+};
+
+const buildOverviewMatch = (filters = {}) => {
+  const match = {
+    ledger: 'contact',
+  };
+
+  if (filters.currency) {
+    match.currency = String(filters.currency).toUpperCase();
+  }
+
+  if (filters.accountKey) {
+    match.accountKey = String(filters.accountKey).toLowerCase();
+  }
+
+  if (filters.counterpartKey) {
+    match['counterpart.key'] = String(filters.counterpartKey).toLowerCase();
+  }
+
+  const dateFilters = {};
+  if (filters.dateFrom) {
+    const from = parseDateFilter(filters.dateFrom);
+    if (from) {
+      dateFilters.$gte = from;
+    }
+  }
+  if (filters.dateTo) {
+    const to = parseDateFilter(filters.dateTo, { endOfDay: true });
+    if (to) {
+      dateFilters.$lte = to;
+    }
+  }
+  if (Object.keys(dateFilters).length) {
+    match.createdAt = dateFilters;
+  }
+
+  return match;
+};
+
+const getGlobalBalancesOverview = async (query = {}) => {
+  const {
+    currency,
+    accountKey,
+    search,
+    contactType,
+    balanceState,
+    dateFrom,
+    dateTo,
+    page = 1,
+    limit = DEFAULT_GLOBAL_BALANCES_LIMIT,
+    sortBy = 'balance',
+    sortDirection = 'desc',
+  } = query;
+
+  const numericPage = Math.max(Number(page) || 1, 1);
+  const numericLimit = Math.min(Math.max(Number(limit) || DEFAULT_GLOBAL_BALANCES_LIMIT, 1), 100);
+  const normalizedSort =
+    typeof sortBy === 'string' && GLOBAL_BALANCE_SORT_FIELDS.has(sortBy)
+      ? sortBy
+      : 'balance';
+  const ascending = String(sortDirection).toLowerCase() === 'asc';
+
+  const now = new Date();
+  const currentWindowStart = new Date(now.getTime() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY);
+  const previousWindowStart = new Date(currentWindowStart.getTime() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY);
+
+  const match = buildOverviewMatch({
+    currency,
+    accountKey,
+    counterpartKey: accountKey,
+    dateFrom,
+    dateTo,
+  });
+
+  const pipeline = [
+    { $match: match },
+    {
+      $addFields: {
+        overviewAccountKey: {
+          $ifNull: ['$counterpart.key', { $ifNull: ['$accountKey', 'general'] }],
+        },
+      },
+    },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: {
+          contact: '$contact',
+          currency: '$currency',
+          accountKey: '$overviewAccountKey',
+        },
+        balance: { $sum: '$amount' },
+        lastMovementAt: { $first: '$createdAt' },
+        lastOperationCode: { $first: '$operation.code' },
+        lastOperationType: { $first: '$operation.type' },
+        currentWindowAmount: {
+          $sum: {
+            $cond: [
+              { $gte: ['$createdAt', currentWindowStart] },
+              '$amount',
+              0,
+            ],
+          },
+        },
+        previousWindowAmount: {
+          $sum: {
+            $cond: [
+              {
+                $and: [
+                  { $gte: ['$createdAt', previousWindowStart] },
+                  { $lt: ['$createdAt', currentWindowStart] },
+                ],
+              },
+              '$amount',
+              0,
+            ],
+          },
+        },
+      },
+    },
+  ];
+
+  const rawRows = await CurrentAccountMovement.aggregate(pipeline);
+
+  const contactIds = rawRows
+    .map((row) => row._id.contact)
+    .filter((value) => value && mongoose.Types.ObjectId.isValid(value))
+    .map((value) => value.toString());
+
+  const contacts = contactIds.length
+    ? await Client.find({ _id: { $in: contactIds } })
+        .select({ fullName: 1, shortName: 1, contactType: 1, status: 1, cuit: 1 })
+        .lean()
+    : [];
+
+  const contactMap = new Map(
+    contacts.map((contact) => [contact._id ? contact._id.toString() : '', contact])
+  );
+
+  const appliedSearch = typeof search === 'string' ? search.trim().toLowerCase() : '';
+  const normalizedBalanceFilter = BALANCE_STATE_VALUES.includes(balanceState)
+    ? balanceState
+    : null;
+  const normalizedContactType =
+    typeof contactType === 'string' && contactType.trim().length
+      ? contactType.trim().toLowerCase()
+      : null;
+
+  const formattedRows = rawRows.map((row) => {
+    const contactId =
+      row._id.contact && mongoose.Types.ObjectId.isValid(row._id.contact)
+        ? row._id.contact.toString()
+        : null;
+
+    const contactDoc = contactId ? contactMap.get(contactId) : null;
+    const fullName =
+      contactDoc?.fullName || contactDoc?.shortName || (contactId ? 'Contacto sin nombre' : 'Saldo general');
+
+    const amount = roundAmount(row.balance || 0);
+    const state = computeBalanceState(amount);
+    const variationChange = computeVariationPercentage(
+      row.currentWindowAmount,
+      row.previousWindowAmount
+    );
+
+    const accountKeyValue = row._id.accountKey || 'general';
+    const currencyValue = row._id.currency || 'ARS';
+    const label = resolveAccountLabel(accountKeyValue, currencyValue);
+    const meta = BALANCE_METADATA[accountKeyValue] || {};
+
+    return {
+      id: `${accountKeyValue}-${contactId || 'general'}-${currencyValue}`.toLowerCase(),
+      accountKey: accountKeyValue,
+      accountLabel: label,
+      accountStatus: meta.status || 'ok',
+      currency: currencyValue,
+      amount,
+      balanceState: state,
+      variation: {
+        percentage: variationChange,
+        direction: directionFromVariation(variationChange),
+        currentWindowAmount: roundAmount(row.currentWindowAmount || 0),
+        previousWindowAmount: roundAmount(row.previousWindowAmount || 0),
+      },
+      lastMovementAt: row.lastMovementAt ? new Date(row.lastMovementAt).toISOString() : null,
+      lastOperation: {
+        code: row.lastOperationCode || null,
+        type: row.lastOperationType || null,
+      },
+      contact: contactId
+        ? {
+            id: contactId,
+            fullName,
+            shortName: contactDoc?.shortName || null,
+            contactType: contactDoc?.contactType || 'client',
+            status: contactDoc?.status || 'active',
+            cuit: contactDoc?.cuit || null,
+          }
+        : {
+            id: null,
+            fullName,
+            shortName: fullName,
+            contactType: 'general',
+            status: 'active',
+            cuit: null,
+          },
+    };
+  });
+
+  const filteredBySearch = appliedSearch
+    ? formattedRows.filter((row) => {
+        const haystack = [
+          row.contact?.fullName || '',
+          row.contact?.shortName || '',
+          row.contact?.cuit || '',
+          row.accountLabel,
+          row.lastOperation?.code || '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(appliedSearch);
+      })
+    : formattedRows;
+
+  const filteredByState = normalizedBalanceFilter
+    ? filteredBySearch.filter((row) => row.balanceState === normalizedBalanceFilter)
+    : filteredBySearch;
+
+  const fullyFiltered = normalizedContactType
+    ? filteredByState.filter(
+        (row) =>
+          (row.contact?.contactType || '').toLowerCase() === normalizedContactType ||
+          (normalizedContactType === 'cliente' && row.contact?.contactType === 'client') ||
+          (normalizedContactType === 'proveedor' && row.contact?.contactType === 'provider')
+      )
+    : filteredByState;
+
+  const sortMultiplier = ascending ? 1 : -1;
+  const sortedRows = [...fullyFiltered].sort((a, b) => {
+    switch (normalizedSort) {
+      case 'name': {
+        const nameA = (a.contact?.fullName || '').toLowerCase();
+        const nameB = (b.contact?.fullName || '').toLowerCase();
+        if (nameA < nameB) return -1 * sortMultiplier;
+        if (nameA > nameB) return 1 * sortMultiplier;
+        return 0;
+      }
+      case 'variation': {
+        const valueA = a.variation?.percentage ?? 0;
+        const valueB = b.variation?.percentage ?? 0;
+        return (valueA - valueB) * sortMultiplier;
+      }
+      case 'lastMovement': {
+        const dateA = a.lastMovementAt ? new Date(a.lastMovementAt).getTime() : 0;
+        const dateB = b.lastMovementAt ? new Date(b.lastMovementAt).getTime() : 0;
+        return (dateA - dateB) * sortMultiplier;
+      }
+      case 'balance':
+      default: {
+        return (a.amount - b.amount) * sortMultiplier;
+      }
+    }
+  });
+
+  const totalItems = sortedRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / numericLimit));
+  const startIndex = (numericPage - 1) * numericLimit;
+  const paginatedRows = sortedRows.slice(startIndex, startIndex + numericLimit);
+
+  const summaryByAccount = new Map();
+  const currencies = new Set();
+  const accountKeys = new Map();
+  const contactTypesSet = new Set();
+  const balanceStatesCount = {
+    positive: 0,
+    negative: 0,
+    zero: 0,
+  };
+
+  for (const row of fullyFiltered) {
+    currencies.add(row.currency);
+    accountKeys.set(row.accountKey, row.accountLabel);
+    if (row.contact?.contactType) {
+      contactTypesSet.add(row.contact.contactType);
+    }
+    if (BALANCE_STATE_VALUES.includes(row.balanceState)) {
+      balanceStatesCount[row.balanceState] += 1;
+    }
+
+    if (!summaryByAccount.has(row.accountKey)) {
+      summaryByAccount.set(row.accountKey, {
+        id: row.accountKey,
+        label: row.accountLabel,
+        currency: row.currency,
+        status: row.accountStatus || 'ok',
+        amount: 0,
+        updatedAt: row.lastMovementAt,
+        currentWindowAmount: 0,
+        previousWindowAmount: 0,
+      });
+    }
+    const entry = summaryByAccount.get(row.accountKey);
+    entry.amount = roundAmount((entry.amount || 0) + row.amount);
+    entry.currentWindowAmount = roundAmount(
+      (entry.currentWindowAmount || 0) + (row.variation?.currentWindowAmount || 0)
+    );
+    entry.previousWindowAmount = roundAmount(
+      (entry.previousWindowAmount || 0) + (row.variation?.previousWindowAmount || 0)
+    );
+    if (
+      row.lastMovementAt &&
+      (!entry.updatedAt || new Date(row.lastMovementAt).getTime() > new Date(entry.updatedAt).getTime())
+    ) {
+      entry.updatedAt = row.lastMovementAt;
+    }
+  }
+
+  const summaryCards = Array.from(summaryByAccount.values()).map((entry) => {
+    const variationPercentage = computeVariationPercentage(
+      entry.currentWindowAmount,
+      entry.previousWindowAmount
+    );
+    return {
+      id: entry.id,
+      label: entry.label,
+      currency: entry.currency,
+      amount: roundAmount(entry.amount),
+      status: entry.status,
+      updatedAt: entry.updatedAt,
+      variation: {
+        percentage: variationPercentage,
+        direction: directionFromVariation(variationPercentage),
+        windowDays: DEFAULT_VARIATION_WINDOW_DAYS,
+      },
+    };
+  });
+
+  summaryCards.sort((a, b) => {
+    const order = ['transfers', 'cash', 'usd'];
+    const indexA = order.indexOf(a.id);
+    const indexB = order.indexOf(b.id);
+    if (indexA === -1 && indexB === -1) {
+      return a.label.localeCompare(b.label);
+    }
+    if (indexA === -1) return 1;
+    if (indexB === -1) return -1;
+    return indexA - indexB;
+  });
+
+  const totalBalance = roundAmount(
+    fullyFiltered.reduce((acc, row) => acc + (row.amount || 0), 0)
+  );
+
+  const totalsByCurrency = Array.from(currencies).map((currencyValue) => ({
+    currency: currencyValue,
+    total: roundAmount(
+      fullyFiltered
+        .filter((row) => row.currency === currencyValue)
+        .reduce((acc, row) => acc + (row.amount || 0), 0)
+    ),
+  }));
+
+  const filterOptions = {
+    currencies: Array.from(currencies).map((value) => ({
+      value,
+      label: value,
+    })),
+    accountKeys: Array.from(accountKeys.entries()).map(([value, label]) => ({
+      value,
+      label,
+    })),
+    balanceStates: BALANCE_STATE_VALUES.map((value) => ({
+      value,
+      label:
+        value === 'positive'
+          ? 'Saldos positivos'
+          : value === 'negative'
+          ? 'Saldos negativos'
+          : 'Saldos en cero',
+    })),
+    contactTypes: Array.from(contactTypesSet).map((value) => ({
+      value,
+      label:
+        value === 'client'
+          ? 'Cliente'
+          : value === 'provider'
+          ? 'Proveedor'
+          : value.charAt(0).toUpperCase() + value.slice(1),
+    })),
+  };
+
+  return {
+    generatedAt: new Date().toISOString(),
+    summaryCards,
+    filters: filterOptions,
+    table: {
+      items: paginatedRows,
+      pagination: {
+        page: numericPage,
+        limit: numericLimit,
+        totalItems,
+        totalPages,
+      },
+    },
+    stats: {
+      totalBalance,
+      balanceStates: balanceStatesCount,
+      totalsByCurrency,
+    },
+    appliedFilters: {
+      currency: currency || null,
+      accountKey: accountKey || null,
+      contactType: normalizedContactType,
+      balanceState: normalizedBalanceFilter,
+      search: appliedSearch || null,
+      dateFrom: dateFrom || null,
+      dateTo: dateTo || null,
+    },
+  };
+};
+
+const escapeRegex = (value = '') => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const STATUS_LABELS = {
+  registered: 'Registrada',
+  settled: 'Compensada',
+  pending: 'Pendiente',
+};
+
+const mapStageToStatus = (stage, metadataStatus) => {
+  const normalizedStage = typeof stage === 'string' ? stage.toLowerCase() : '';
+  const normalizedMetadata = typeof metadataStatus === 'string' ? metadataStatus.toLowerCase() : '';
+
+  if (normalizedMetadata === 'pending') {
+    return { key: 'pending', label: STATUS_LABELS.pending };
+  }
+
+  if (normalizedStage === 'settlement') {
+    return { key: 'settled', label: STATUS_LABELS.settled };
+  }
+
+  if (normalizedStage === 'registration') {
+    return { key: 'registered', label: STATUS_LABELS.registered };
+  }
+
+  if (normalizedStage) {
+    return {
+      key: normalizedStage,
+      label: STATUS_LABELS[normalizedStage] || normalizedStage,
+    };
+  }
+
+  if (normalizedMetadata) {
+    return {
+      key: normalizedMetadata,
+      label: STATUS_LABELS[normalizedMetadata] || normalizedMetadata,
+    };
+  }
+
+  return { key: 'unknown', label: 'Desconocido' };
+};
+
+const normalizeContactStatusFilter = (value) => {
+  if (!value) {
+    return null;
+  }
+  const normalized = String(value).toLowerCase();
+
+  if (['registrada', 'registered', 'registration'].includes(normalized)) {
+    return { stage: 'registration' };
+  }
+  if (['compensada', 'settled', 'settlement', 'compensado'].includes(normalized)) {
+    return { stage: 'settlement' };
+  }
+  if (['pendiente', 'pending'].includes(normalized)) {
+    return { metadataStatus: 'pending' };
+  }
+  return { stage: normalized };
+};
+
+const buildContactMovementMatch = (contactId, filters = {}) => {
+  const match = {
+    ledger: 'contact',
+    contact: contactId,
+  };
+
+  if (filters.accountKey) {
+    match.accountKey = String(filters.accountKey).toLowerCase();
+  }
+
+  if (filters.currency) {
+    match.currency = String(filters.currency).toUpperCase();
+  }
+
+  const statusFilter = normalizeContactStatusFilter(filters.status);
+  const andConditions = [];
+
+  if (statusFilter?.stage) {
+    match.stage = statusFilter.stage;
+  }
+  if (statusFilter?.metadataStatus) {
+    andConditions.push({ 'metadata.status': statusFilter.metadataStatus });
+  }
+
+  if (filters.operationType) {
+    andConditions.push({
+      'operation.type': {
+        $regex: new RegExp(escapeRegex(filters.operationType), 'i'),
+      },
+    });
+  }
+
+  if (filters.dateFrom || filters.dateTo) {
+    const range = {};
+    const from = parseDateFilter(filters.dateFrom);
+    const to = parseDateFilter(filters.dateTo, { endOfDay: true });
+    if (from) {
+      range.$gte = from;
+    }
+    if (to) {
+      range.$lte = to;
+    }
+    if (Object.keys(range).length) {
+      match.createdAt = range;
+    }
+  }
+
+  if (filters.search) {
+    const regex = new RegExp(escapeRegex(filters.search), 'i');
+    andConditions.push({
+      $or: [
+        { 'operation.code': regex },
+        { 'operation.type': regex },
+        { 'operation.source': regex },
+        { 'metadata.reference': regex },
+        { reference: regex },
+      ],
+    });
+  }
+
+  if (andConditions.length) {
+    match.$and = andConditions;
+  }
+
+  return match;
+};
+
+const buildContactFilterOptions = (operationTypes = [], currencies = [], stages = [], metadataStatuses = []) => {
+  const operationTypeOptions = operationTypes
+    .filter(Boolean)
+    .map((value) => ({ value, label: value }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const currencyOptions = currencies
+    .filter(Boolean)
+    .map((value) => ({ value, label: value }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  const statusKeys = new Set();
+  stages.filter(Boolean).forEach((stage) => {
+    const { key } = mapStageToStatus(stage);
+    if (key !== 'unknown') {
+      statusKeys.add(key);
+    }
+  });
+  metadataStatuses.filter(Boolean).forEach((metadataStatus) => {
+    const { key } = mapStageToStatus(null, metadataStatus);
+    if (key !== 'unknown') {
+      statusKeys.add(key);
+    }
+  });
+
+  const statusOptions = Array.from(statusKeys)
+    .map((key) => ({ value: key, label: STATUS_LABELS[key] || key }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+
+  return {
+    operationTypes: operationTypeOptions,
+    currencies: currencyOptions,
+    statuses: statusOptions,
+  };
+};
+
+const getContactBalanceDetail = async (contactIdInput, query = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(contactIdInput)) {
+    throw new AppError('El contacto indicado no es válido.', 400, {
+      code: 'INVALID_CONTACT_ID',
+    });
+  }
+
+  const contact = await Client.findById(contactIdInput)
+    .select({ fullName: 1, shortName: 1, contactType: 1, status: 1, cuit: 1 })
+    .lean();
+
+  if (!contact) {
+    throw new AppError('El contacto indicado no existe.', 404, {
+      code: 'CONTACT_NOT_FOUND',
+    });
+  }
+
+  const contactId = new mongoose.Types.ObjectId(contactIdInput);
+
+  const {
+    currency,
+    operationType,
+    status,
+    dateFrom,
+    dateTo,
+    search,
+    accountKey,
+    page = 1,
+    limit = CONTACT_BALANCE_DEFAULT_LIMIT,
+    sortBy = 'date',
+    sortDirection = 'desc',
+  } = query;
+
+  const numericPage = Math.max(Number(page) || 1, 1);
+  const numericLimit = Math.min(Math.max(Number(limit) || CONTACT_BALANCE_DEFAULT_LIMIT, 1), 100);
+  const normalizedSortBy = CONTACT_BALANCE_SORT_FIELDS.has(sortBy) ? sortBy : 'date';
+  const normalizedSortDirection = sortDirection === 'asc' ? 'asc' : 'desc';
+
+  const filters = {
+    currency,
+    operationType,
+    status,
+    dateFrom,
+    dateTo,
+    search,
+    accountKey,
+  };
+
+  const match = buildContactMovementMatch(contactId, filters);
+
+  const sortStage = {};
+  if (normalizedSortBy === 'amount') {
+    sortStage.amount = normalizedSortDirection === 'asc' ? 1 : -1;
+    sortStage.createdAt = normalizedSortDirection === 'asc' ? 1 : -1;
+  } else if (normalizedSortBy === 'type') {
+    sortStage['operation.type'] = normalizedSortDirection === 'asc' ? 1 : -1;
+    sortStage.createdAt = normalizedSortDirection === 'asc' ? 1 : -1;
+  } else {
+    sortStage.createdAt = normalizedSortDirection === 'asc' ? 1 : -1;
+  }
+
+  const skip = (numericPage - 1) * numericLimit;
+
+  const [totalItems, operations, aggregatedTotals, totalsByCurrency, filterSource] = await Promise.all([
+    CurrentAccountMovement.countDocuments(match),
+    CurrentAccountMovement.find(match)
+      .sort(sortStage)
+      .skip(skip)
+      .limit(numericLimit)
+      .lean(),
+    CurrentAccountMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: null,
+          balance: { $sum: '$amount' },
+          incoming: {
+            $sum: {
+              $cond: [{ $gt: ['$amount', 0] }, '$amount', 0],
+            },
+          },
+          incomingCount: {
+            $sum: {
+              $cond: [{ $gt: ['$amount', 0] }, 1, 0],
+            },
+          },
+          outgoing: {
+            $sum: {
+              $cond: [{ $lt: ['$amount', 0] }, '$amount', 0],
+            },
+          },
+          outgoingCount: {
+            $sum: {
+              $cond: [{ $lt: ['$amount', 0] }, 1, 0],
+            },
+          },
+          lastMovementAt: { $max: '$createdAt' },
+        },
+      },
+    ]),
+    CurrentAccountMovement.aggregate([
+      { $match: match },
+      {
+        $group: {
+          _id: '$currency',
+          total: { $sum: '$amount' },
+        },
+      },
+      { $sort: { _id: 1 } },
+    ]),
+    CurrentAccountMovement.aggregate([
+      {
+        $match: buildContactMovementMatch(contactId, {
+          accountKey,
+        }),
+      },
+      {
+        $group: {
+          _id: null,
+          operationTypes: { $addToSet: '$operation.type' },
+          currencies: { $addToSet: '$currency' },
+          stages: { $addToSet: '$stage' },
+          metadataStatuses: { $addToSet: '$metadata.status' },
+        },
+      },
+    ]),
+  ]);
+
+  const totalsEntry = aggregatedTotals[0] || {
+    balance: 0,
+    incoming: 0,
+    incomingCount: 0,
+    outgoing: 0,
+    outgoingCount: 0,
+    lastMovementAt: null,
+  };
+
+  const totals = {
+    balance: roundAmount(totalsEntry.balance || 0),
+    incoming: {
+      amount: roundAmount(totalsEntry.incoming || 0),
+      count: totalsEntry.incomingCount || 0,
+    },
+    outgoing: {
+      amount: roundAmount(Math.abs(totalsEntry.outgoing || 0)),
+      count: totalsEntry.outgoingCount || 0,
+    },
+    net: roundAmount((totalsEntry.incoming || 0) + (totalsEntry.outgoing || 0)),
+    lastMovementAt: totalsEntry.lastMovementAt
+      ? new Date(totalsEntry.lastMovementAt).toISOString()
+      : null,
+  };
+
+  const totalsByCurrencyList = totalsByCurrency.map((entry) => ({
+    currency: entry._id,
+    total: roundAmount(entry.total || 0),
+  }));
+
+  const optionsDoc = filterSource[0] || {
+    operationTypes: [],
+    currencies: [],
+    stages: [],
+    metadataStatuses: [],
+  };
+
+  const filterOptions = buildContactFilterOptions(
+    optionsDoc.operationTypes,
+    optionsDoc.currencies,
+    optionsDoc.stages,
+    optionsDoc.metadataStatuses
+  );
+
+  const operationsList = operations.map((operation) => {
+    const amount = roundAmount(operation.amount || 0);
+    const isIncoming = amount >= 0;
+    const status = mapStageToStatus(operation.stage, operation.metadata?.status);
+    return {
+      id: operation._id ? operation._id.toString() : null,
+      createdAt: operation.createdAt ? new Date(operation.createdAt).toISOString() : null,
+      currency: operation.currency,
+      amount,
+      direction: isIncoming ? 'incoming' : 'outgoing',
+      operation: {
+        type: operation.operation?.type || operation.metadata?.operationType || 'Operación',
+        code: operation.operation?.code || null,
+        source: operation.operation?.source || null,
+      },
+      status,
+    };
+  });
+
+  let variation = null;
+  if (!dateFrom && !dateTo) {
+    const now = new Date();
+    const currentWindowStart = new Date(now.getTime() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY);
+    const previousWindowStart = new Date(currentWindowStart.getTime() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY);
+
+    const baseMatchWithoutDate = buildContactMovementMatch(contactId, {
+      currency,
+      operationType,
+      status,
+      search,
+      accountKey,
+    });
+    if (baseMatchWithoutDate.createdAt) {
+      delete baseMatchWithoutDate.createdAt;
+    }
+
+    const currentMatch = {
+      ...baseMatchWithoutDate,
+      createdAt: { $gte: currentWindowStart },
+    };
+
+    const previousMatch = {
+      ...baseMatchWithoutDate,
+      createdAt: {
+        $gte: previousWindowStart,
+        $lt: currentWindowStart,
+      },
+    };
+
+    const [currentWindowTotals, previousWindowTotals] = await Promise.all([
+      CurrentAccountMovement.aggregate([
+        { $match: currentMatch },
+        {
+          $group: {
+            _id: null,
+            net: { $sum: '$amount' },
+          },
+        },
+      ]),
+      CurrentAccountMovement.aggregate([
+        { $match: previousMatch },
+        {
+          $group: {
+            _id: null,
+            net: { $sum: '$amount' },
+          },
+        },
+      ]),
+    ]);
+
+    const currentNet = currentWindowTotals[0]?.net || 0;
+    const previousNet = previousWindowTotals[0]?.net || 0;
+    const variationPercentage = computeVariationPercentage(currentNet, previousNet);
+    variation = {
+      windowDays: DEFAULT_VARIATION_WINDOW_DAYS,
+      percentage: variationPercentage,
+      direction: directionFromVariation(variationPercentage),
+      currentPeriodNet: roundAmount(currentNet),
+      previousPeriodNet: roundAmount(previousNet),
+    };
+  }
+
+  return {
+    contact: {
+      id: contact._id ? contact._id.toString() : contactIdInput,
+      fullName: contact.fullName,
+      shortName: contact.shortName || contact.fullName,
+      contactType: contact.contactType || 'client',
+      status: contact.status || 'active',
+      cuit: contact.cuit || null,
+      updatedAt: totals.lastMovementAt,
+    },
+    summary: {
+      balance: {
+        amount: totals.balance,
+        currency: currency ? String(currency).toUpperCase() : totalsByCurrencyList[0]?.currency || 'ARS',
+      },
+      variation,
+      totals,
+    },
+    filters: {
+      options: filterOptions,
+      applied: {
+        currency: currency || null,
+        operationType: operationType || null,
+        status: status || null,
+        dateFrom: dateFrom || null,
+        dateTo: dateTo || null,
+        search: search || null,
+      },
+    },
+    table: {
+      items: operationsList,
+      pagination: {
+        page: numericPage,
+        limit: numericLimit,
+        totalItems,
+        totalPages: Math.max(1, Math.ceil(totalItems / numericLimit)),
+      },
+      sort: {
+        sortBy: normalizedSortBy,
+        sortDirection: normalizedSortDirection,
+      },
+    },
+    stats: {
+      totalsByCurrency: totalsByCurrencyList,
+      totalOperations: totalItems,
+    },
   };
 };
 
@@ -1605,3 +2542,5 @@ exports.cancelTreasuryMovement = cancelTreasuryMovement;
 exports.suggestCompensationsForMovement = suggestCompensationsForMovement;
 exports.getLinkedBalancesSummary = getLinkedBalancesSummary;
 exports.getLinkedBalanceDetail = getLinkedBalanceDetail;
+exports.getGlobalBalancesOverview = getGlobalBalancesOverview;
+exports.getContactBalanceDetail = getContactBalanceDetail;

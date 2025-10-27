@@ -54,8 +54,38 @@ const loginValidators = [
   body('rememberMe').optional().isBoolean().withMessage('Recordarme debe ser un booleano.').toBoolean(),
 ];
 
+const challengeTokenPresenceValidator = body().custom((_, { req }) => {
+  const challengeToken = req.body.challengeToken;
+  const challengeId = req.body.challengeId;
+  if (typeof challengeToken === 'string' && challengeToken.trim().length > 0) {
+    return true;
+  }
+  if (typeof challengeId === 'string' && challengeId.trim().length > 0) {
+    return true;
+  }
+  throw new Error('Se requiere el token del desafío de dos pasos.');
+});
+
+const challengeTokenFormatValidator = body('challengeToken')
+  .optional()
+  .isString()
+  .withMessage('El token del desafío debe ser una cadena.')
+  .trim()
+  .notEmpty()
+  .withMessage('El token del desafío no puede estar vacío.');
+
+const challengeIdFormatValidator = body('challengeId')
+  .optional()
+  .isString()
+  .withMessage('El token del desafío debe ser una cadena.')
+  .trim()
+  .notEmpty()
+  .withMessage('El token del desafío no puede estar vacío.');
+
 const twoFactorValidators = [
-  body('challengeToken').isString().withMessage('Se requiere el token del desafío de dos pasos.'),
+  challengeTokenPresenceValidator,
+  challengeTokenFormatValidator,
+  challengeIdFormatValidator,
   body('code')
     .isString()
     .matches(/^\d{6}$/)
@@ -63,7 +93,9 @@ const twoFactorValidators = [
 ];
 
 const twoFactorResendValidators = [
-  body('challengeToken').isString().withMessage('Se requiere el token del desafío de dos pasos.'),
+  challengeTokenPresenceValidator,
+  challengeTokenFormatValidator,
+  challengeIdFormatValidator,
 ];
 
 const resendVerificationValidators = [
@@ -117,5 +149,11 @@ router.post('/recover', authLimiter, ...recoverValidators, validateRequest, reco
 router.get('/reset/validate', authLimiter, validateResetToken);
 
 router.post('/reset', authLimiter, ...resetPasswordValidators, validateRequest, resetPassword);
+
+// Test CSRF-protected endpoint
+router.post('/test-csrf', (req, res) => {
+  console.log('[ROUTE] test-csrf route reached');
+  res.json({ status: 'ok', message: 'CSRF protection working', body: req.body });
+});
 
 module.exports = router;

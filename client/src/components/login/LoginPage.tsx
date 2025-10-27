@@ -169,7 +169,7 @@ export const LoginPage: React.FC = () => {
       {/* Main Content */}
       <main className="flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md">
-          <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200 flex flex-col">
             {/* Login Form */}
             <LoginForm
               onSubmit={handleLoginSubmit}
@@ -188,6 +188,20 @@ export const LoginPage: React.FC = () => {
               onClick={handleGoogleClick}
               isLoading={isLoading}
             />
+
+            {/* Register Link */}
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg text-center">
+              <p className="text-sm text-gray-600">
+                ¿No tenés cuenta?{' '}
+                <button
+                  type="button"
+                  onClick={handleCreateAccountClick}
+                  className="text-primary hover:underline font-medium"
+                >
+                  Crear cuenta
+                </button>
+              </p>
+            </div>
           </div>
         </div>
       </main>

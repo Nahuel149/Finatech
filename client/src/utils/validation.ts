@@ -33,13 +33,13 @@ export const validateLoginForm = (email: string, password: string): FormErrors =
   const errors: FormErrors = {};
   
   if (!email.trim()) {
-    errors.email = 'Email is required';
+    errors.email = 'El email es requerido';
   } else if (!validateEmail(email)) {
-    errors.email = 'Please enter a valid email address';
+    errors.email = 'Por favor ingresá un email válido';
   }
   
   if (!password) {
-    errors.password = 'Password is required';
+    errors.password = 'La contraseña es requerida';
   }
   
   return errors;
@@ -56,31 +56,31 @@ export const validateRegistrationForm = (
   const errors: FormErrors = {};
   
   if (!fullName.trim()) {
-    errors.fullName = 'Full name is required';
+    errors.fullName = 'El nombre completo es requerido';
   } else if (!validateFullName(fullName)) {
-    errors.fullName = 'Please enter a valid full name (letters and spaces only)';
+    errors.fullName = 'Por favor ingresá un nombre válido (solo letras y espacios)';
   }
   
   if (!email.trim()) {
-    errors.email = 'Email is required';
+    errors.email = 'El email es requerido';
   } else if (!validateEmail(email)) {
-    errors.email = 'Please enter a valid email address';
+    errors.email = 'Por favor ingresá un email válido';
   }
   
   if (!password) {
-    errors.password = 'Password is required';
+    errors.password = 'La contraseña es requerida';
   } else if (!isPasswordValid(password)) {
-    errors.password = 'Password does not meet requirements';
+    errors.password = 'La contraseña no cumple con los requisitos';
   }
   
   if (!confirmPassword) {
-    errors.confirmPassword = 'Please confirm your password';
+    errors.confirmPassword = 'Por favor confirmá tu contraseña';
   } else if (password !== confirmPassword) {
-    errors.confirmPassword = 'Passwords do not match';
+    errors.confirmPassword = 'Las contraseñas no coinciden';
   }
   
   if (!agreeToTerms) {
-    errors.agreeToTerms = 'You must accept the terms and conditions';
+    errors.agreeToTerms = 'Debés aceptar los términos y condiciones';
   }
   
   return errors;
@@ -91,9 +91,9 @@ export const validateTwoFactorCode = (code: string): FormErrors => {
   const errors: FormErrors = {};
   
   if (!code.trim()) {
-    errors.code = 'Verification code is required';
+    errors.code = 'El código de verificación es requerido';
   } else if (!/^\d{6}$/.test(code.trim())) {
-    errors.code = 'Please enter a valid 6-digit code';
+    errors.code = 'Por favor ingresá un código válido de 6 dígitos';
   }
   
   return errors;

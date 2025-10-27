@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "src/server.js",
   "scripts": {
-    "dev": "nodemon src/server.js",
+    "dev": "nodemon --config nodemon.json src/server.js",
     "start": "node src/server.js",
     "build": "cd client && npm install && npm run build",
     "lint": "echo \"No linter configured\"",

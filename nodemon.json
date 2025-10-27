@@ -1,0 +1,9 @@
+{
+  "watch": ["src"],
+  "ext": "js,json",
+  "ignore": [
+    "client/build",
+    "client/node_modules",
+    "node_modules"
+  ]
+}

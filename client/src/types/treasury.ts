@@ -195,6 +195,194 @@ export interface TreasuryLinkedBalancesSummaryResponse {
   balances: TreasuryLinkedBalanceSummaryEntry[];
 }
 
+export type TreasuryBalanceState = 'positive' | 'negative' | 'zero';
+
+export interface TreasuryGlobalBalanceVariation {
+  percentage: number;
+  direction: 'up' | 'down' | 'flat';
+  windowDays: number;
+  currentWindowAmount: number;
+  previousWindowAmount: number;
+}
+
+export interface TreasuryGlobalBalanceContact {
+  id: string | null;
+  fullName: string;
+  shortName: string | null;
+  contactType: string | null;
+  status: string | null;
+  cuit: string | null;
+}
+
+export interface TreasuryGlobalBalanceRow {
+  id: string;
+  accountKey: string;
+  accountLabel: string;
+  accountStatus: string;
+  currency: string;
+  amount: number;
+  balanceState: TreasuryBalanceState;
+  variation: TreasuryGlobalBalanceVariation;
+  lastMovementAt: string | null;
+  lastOperation: {
+    code: string | null;
+    type: string | null;
+  } | null;
+  contact: TreasuryGlobalBalanceContact;
+}
+
+export interface TreasuryGlobalBalanceSummaryCard {
+  id: string;
+  label: string;
+  currency: string;
+  amount: number;
+  status: string;
+  updatedAt: string | null;
+  variation: {
+    percentage: number;
+    direction: 'up' | 'down' | 'flat';
+    windowDays: number;
+  };
+}
+
+export interface TreasuryGlobalBalancesFilterOption {
+  value: string;
+  label: string;
+}
+
+export interface TreasuryGlobalBalancesFilters {
+  currencies: TreasuryGlobalBalancesFilterOption[];
+  accountKeys: TreasuryGlobalBalancesFilterOption[];
+  balanceStates: TreasuryGlobalBalancesFilterOption[];
+  contactTypes: TreasuryGlobalBalancesFilterOption[];
+}
+
+export interface TreasuryGlobalBalancesStats {
+  totalBalance: number;
+  balanceStates: Record<TreasuryBalanceState, number>;
+  totalsByCurrency: Array<{
+    currency: string;
+    total: number;
+  }>;
+}
+
+export interface TreasuryGlobalBalancesOverviewResponse {
+  generatedAt: string;
+  summaryCards: TreasuryGlobalBalanceSummaryCard[];
+  filters: TreasuryGlobalBalancesFilters;
+  table: {
+    items: TreasuryGlobalBalanceRow[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    };
+  };
+  stats: TreasuryGlobalBalancesStats;
+  appliedFilters: {
+    currency: string | null;
+    accountKey: string | null;
+    contactType: string | null;
+    balanceState: TreasuryBalanceState | null;
+    search: string | null;
+    dateFrom: string | null;
+    dateTo: string | null;
+  };
+}
+
+export interface TreasuryContactBalanceSummaryTotals {
+  amount: number;
+  count: number;
+}
+
+export interface TreasuryContactBalanceSummary {
+  balance: {
+    amount: number;
+    currency: string;
+  };
+  variation: {
+    windowDays: number;
+    percentage: number;
+    direction: 'up' | 'down' | 'flat';
+    currentPeriodNet: number;
+    previousPeriodNet: number;
+  } | null;
+  totals: {
+    balance: number;
+    incoming: TreasuryContactBalanceSummaryTotals;
+    outgoing: TreasuryContactBalanceSummaryTotals;
+    net: number;
+    lastMovementAt: string | null;
+  };
+}
+
+export interface TreasuryContactBalanceOperation {
+  id: string | null;
+  createdAt: string | null;
+  currency: string;
+  amount: number;
+  direction: 'incoming' | 'outgoing';
+  operation: {
+    type: string;
+    code: string | null;
+    source: string | null;
+  };
+  status: {
+    key: string;
+    label: string;
+  };
+}
+
+export interface TreasuryContactBalanceFilterOptions {
+  operationTypes: TreasuryGlobalBalancesFilterOption[];
+  currencies: TreasuryGlobalBalancesFilterOption[];
+  statuses: TreasuryGlobalBalancesFilterOption[];
+}
+
+export interface TreasuryContactBalanceFiltersApplied {
+  currency: string | null;
+  operationType: string | null;
+  status: string | null;
+  dateFrom: string | null;
+  dateTo: string | null;
+  search: string | null;
+}
+
+export interface TreasuryContactBalanceDetailResponse {
+  contact: {
+    id: string;
+    fullName: string;
+    shortName: string;
+    contactType: string;
+    status: string;
+    cuit: string | null;
+    updatedAt: string | null;
+  };
+  summary: TreasuryContactBalanceSummary;
+  filters: {
+    options: TreasuryContactBalanceFilterOptions;
+    applied: TreasuryContactBalanceFiltersApplied;
+  };
+  table: {
+    items: TreasuryContactBalanceOperation[];
+    pagination: {
+      page: number;
+      limit: number;
+      totalItems: number;
+      totalPages: number;
+    };
+    sort: {
+      sortBy: 'date' | 'amount' | 'type';
+      sortDirection: 'asc' | 'desc';
+    };
+  };
+  stats: {
+    totalsByCurrency: Array<{ currency: string; total: number }>;
+    totalOperations: number;
+  };
+}
+
 export interface TreasuryLinkedBalanceDetailFilters {
   dateFrom: string | null;
   dateTo: string | null;

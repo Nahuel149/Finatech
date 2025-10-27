@@ -9,6 +9,8 @@ const {
   suggestions,
   linkedBalancesSummary,
   linkedBalanceDetail,
+  globalOverview,
+  contactBalanceDetail,
 } = require('../controllers/treasury.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
@@ -18,6 +20,12 @@ const router = Router();
 router.use(requireAuth);
 
 router.get('/balances', requirePermission('access-treasury'), balances);
+router.get('/balances/overview', requirePermission('access-treasury'), globalOverview);
+router.get(
+  '/balances/contacts/:contactId',
+  requirePermission('access-treasury'),
+  contactBalanceDetail
+);
 router.get('/linked-balances', requirePermission('access-treasury'), linkedBalancesSummary);
 router.get(
   '/linked-balances/:balanceKey',

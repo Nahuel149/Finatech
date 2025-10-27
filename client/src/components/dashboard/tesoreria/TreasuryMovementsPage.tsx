@@ -140,7 +140,7 @@ export const TreasuryMovementsPage: React.FC = () => {
   };
 
   const handleSelectBalanceStripe = (balanceId: string) => {
-    navigate(`/dashboard/tesoreria/saldos?balance=${balanceId}`);
+    navigate(`/dashboard/tesoreria/saldos?account=${balanceId}`);
   };
 
   const handleOpenSettings = () => {

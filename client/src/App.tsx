@@ -8,7 +8,12 @@ import { DashboardOperacionesPage } from './components/dashboard/operaciones/Das
 import { OperationWizardStep1Page } from './components/dashboard/operaciones/wizard/OperationWizardStep1Page';
 import { OperationWizardStep2Page } from './components/dashboard/operaciones/wizard/OperationWizardStep2Page';
 import { OperationWizardStep3Page } from './components/dashboard/operaciones/wizard/OperationWizardStep3Page';
-import { TreasuryMovementsPage, LinkedBalancesPage } from './components/dashboard/tesoreria';
+import {
+  TreasuryMovementsPage,
+  LinkedBalancesPage,
+  GlobalBalancesPage,
+  ContactBalanceDetailPage,
+} from './components/dashboard/tesoreria';
 import {
   TransferPesosFlow,
   TransferPesosBuilderPage,
@@ -28,7 +33,12 @@ const App: React.FC = () => {
           <Route path="/recover" element={<RecoveryPage />} />
           <Route path="/dashboard" element={<DashboardOperacionesPage />} />
           <Route path="/dashboard/tesoreria" element={<TreasuryMovementsPage />} />
-          <Route path="/dashboard/tesoreria/saldos" element={<LinkedBalancesPage />} />
+          <Route path="/dashboard/tesoreria/saldos" element={<GlobalBalancesPage />} />
+          <Route path="/dashboard/tesoreria/saldos/vinculados" element={<LinkedBalancesPage />} />
+          <Route
+            path="/dashboard/tesoreria/saldos/contacto/:contactId"
+            element={<ContactBalanceDetailPage />}
+          />
           <Route
             path="/dashboard/tesoreria/movimientos/:movementId"
             element={<TreasuryMovementsPage />}

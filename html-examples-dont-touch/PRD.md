@@ -836,6 +836,7 @@ Al posicionar el cursor o tocar el widget, se muestra un tooltip o mini panel co
 Al hacer clic, se accede al módulo de visualización de saldos.
 
 2. Módulo de visualización de saldos (detalle general y por contacto)
+Estado: Implementado (React vista general consumiendo /api/treasury/balances/overview).
 Al ingresar, el usuario visualizará una vista general con las cuentas principales del sistema:
 
 A cobrar en USD
@@ -884,6 +885,7 @@ Rango de fechas de operación
 Saldos positivos, negativos o en cero
 
 2.2. Detalle por contacto
+Estado: Implementado (detalle React conectado a `/api/treasury/balances/contacts/:contactId`).
 Al seleccionar un contacto desde la tabla, el sistema mostrará una vista de detalle con:
 
 Saldo total del contacto

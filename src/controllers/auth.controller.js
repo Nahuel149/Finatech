@@ -122,10 +122,14 @@ const login = async (req, res, next) => {
     const result = await loginWithEmail({ email, password, rememberMe }, context);
 
     if (result.type === 'two_factor_required') {
+      const challengeToken = result.challengeToken;
       res.json({
-        type: result.type,
-        challengeToken: result.challengeToken,
-        expiresAt: result.expiresAt,
+        success: true,
+        requiresTwoFactor: true,
+        challengeId: challengeToken,
+        challengeToken,
+        challengeExpiresAt: result.expiresAt,
+        message: 'Se requiere la autenticación en dos pasos.',
       });
       return;
     }
@@ -136,7 +140,11 @@ const login = async (req, res, next) => {
     }
 
     res.json({
-      ...rest,
+      success: true,
+      requiresTwoFactor: false,
+      message: 'Inicio de sesión exitoso.',
+      type: rest.type,
+      sessionExpiresAt: session?.expiresAt,
       profile: buildProfile(user),
     });
   } catch (error) {
@@ -146,9 +154,10 @@ const login = async (req, res, next) => {
 
 const verifyTwoFactor = async (req, res, next) => {
   try {
-    const { challengeToken, code } = req.body;
+    const { challengeToken, challengeId, code } = req.body;
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
-    const result = await verifyTwoFactorChallenge({ challengeToken, code }, context);
+    const normalizedChallenge = challengeToken || challengeId;
+    const result = await verifyTwoFactorChallenge({ challengeToken: normalizedChallenge, code }, context);
     const { user, session, ...rest } = result;
 
     if (session?.sessionToken) {
@@ -156,7 +165,11 @@ const verifyTwoFactor = async (req, res, next) => {
     }
 
     res.json({
-      ...rest,
+      success: true,
+      requiresTwoFactor: false,
+      message: 'Autenticación de dos factores verificada.',
+      type: rest.type,
+      sessionExpiresAt: session?.expiresAt,
       profile: buildProfile(user),
     });
   } catch (error) {
@@ -177,10 +190,11 @@ const resendVerification = async (req, res, next) => {
 
 const resendTwoFactor = async (req, res, next) => {
   try {
-    const { challengeToken } = req.body;
+    const { challengeToken, challengeId } = req.body;
+    const normalizedChallenge = challengeToken || challengeId;
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
-    const result = await resendTwoFactorCode({ challengeToken }, context);
-    res.json(result);
+    const result = await resendTwoFactorCode({ challengeToken: normalizedChallenge }, context);
+    res.json({ success: true, ...result });
   } catch (error) {
     next(error);
   }

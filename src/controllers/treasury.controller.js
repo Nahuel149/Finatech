@@ -8,6 +8,8 @@ const {
   suggestCompensationsForMovement,
   getLinkedBalancesSummary,
   getLinkedBalanceDetail,
+  getGlobalBalancesOverview,
+  getContactBalanceDetail,
 } = require('../services/treasury.service');
 
 const parseFilters = (query) => {
@@ -138,6 +140,48 @@ const suggestions = async (req, res, next) => {
   }
 };
 
+const globalOverview = async (req, res, next) => {
+  try {
+    const result = await getGlobalBalancesOverview({
+      currency: req.query.currency,
+      accountKey: req.query.accountKey,
+      search: req.query.search,
+      contactType: req.query.contactType,
+      balanceState: req.query.balanceState,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      page: req.query.page,
+      limit: req.query.limit,
+      sortBy: req.query.sortBy,
+      sortDirection: req.query.sortDirection,
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const contactBalanceDetail = async (req, res, next) => {
+  try {
+    const result = await getContactBalanceDetail(req.params.contactId || req.params.id, {
+      currency: req.query.currency,
+      operationType: req.query.operationType,
+      status: req.query.status,
+      dateFrom: req.query.dateFrom,
+      dateTo: req.query.dateTo,
+      search: req.query.search,
+      accountKey: req.query.accountKey,
+      page: req.query.page,
+      limit: req.query.limit,
+      sortBy: req.query.sortBy,
+      sortDirection: req.query.sortDirection,
+    });
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   balances,
   list,
@@ -148,4 +192,6 @@ module.exports = {
   suggestions,
   linkedBalancesSummary,
   linkedBalanceDetail,
+  globalOverview,
+  contactBalanceDetail,
 };

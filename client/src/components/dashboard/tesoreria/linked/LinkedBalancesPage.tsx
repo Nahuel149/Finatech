@@ -174,11 +174,13 @@ export const LinkedBalancesPage: React.FC = () => {
     });
     setDetailPage(1);
     setDetailOpen(true);
-    navigate(`/dashboard/tesoreria/saldos?balance=${balanceId}`, { replace: false });
+    navigate(`/dashboard/tesoreria/saldos/vinculados?balance=${balanceId}`, {
+      replace: false,
+    });
   };
 
   const handleCloseDetail = () => {
-    navigate('/dashboard/tesoreria/saldos', { replace: true });
+    navigate('/dashboard/tesoreria/saldos/vinculados', { replace: true });
     setDetailOpen(false);
     setDetailBalanceId(null);
     setDetailFilters({

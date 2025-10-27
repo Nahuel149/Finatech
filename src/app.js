@@ -24,7 +24,26 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(ensureCsrfCookie());
 app.use(requestLogger);
-app.use('/api', csrfProtect);
+
+// Test endpoint (no middleware)
+app.get('/api/test', (_req, res) => {
+  res.json({ status: 'ok', message: 'Test endpoint working' });
+});
+
+// Public API routes (no CSRF protection needed)
+app.get('/api/config', (_req, res) => {
+  res.json({
+    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
+    googleMapsEnabled: Boolean(process.env.GOOGLE_MAPS_API_KEY),
+  });
+});
+
+// Apply CSRF protection to all API routes
+console.log('[APP] Applying CSRF protection to /api routes');
+app.use('/api', (req, res, next) => {
+  console.log(`[APP] CSRF middleware called for ${req.method} ${req.path}`);
+  return csrfProtect()(req, res, next);
+});
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
@@ -35,12 +54,6 @@ app.use('/api/geocoding', geocodingRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/current-accounts', currentAccountRoutes);
 app.use('/api/treasury', treasuryRoutes);
-app.get('/api/config', (_req, res) => {
-  res.json({
-    googleClientId: process.env.GOOGLE_CLIENT_ID || null,
-    googleMapsEnabled: Boolean(process.env.GOOGLE_MAPS_API_KEY),
-  });
-});
 
 // Serve React build files
 const buildDir = path.join(__dirname, '..', 'client', 'build');

@@ -144,22 +144,23 @@ export const Register: React.FC = () => {
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
         <div className="px-4 py-3">
-          <div className="grid grid-cols-3 items-center">
-            <div className="flex justify-start">
-              <button 
+          <div className="flex items-center">
+            <div className="flex-1" aria-hidden="true" />
+            <div className="flex-1 flex items-center justify-center">
+              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center mr-2">
+                <i className="fa-solid fa-chart-line text-white text-xs"></i>
+              </div>
+              <span className="text-lg font-bold text-text-primary">FinaTech</span>
+            </div>
+            <div className="flex-1 flex justify-end">
+              <button
+                type="button"
                 onClick={() => navigate('/login')}
                 className="text-primary hover:underline font-medium text-sm"
               >
                 Iniciar sesión
               </button>
             </div>
-            <div className="flex items-center justify-center">
-              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center mr-2">
-                <i className="fa-solid fa-chart-line text-white text-xs"></i>
-              </div>
-              <span className="text-lg font-bold text-text-primary">FinaTech</span>
-            </div>
-            <div aria-hidden="true" />
           </div>
         </div>
       </header>

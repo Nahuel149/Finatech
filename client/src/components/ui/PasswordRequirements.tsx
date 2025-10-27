@@ -11,16 +11,16 @@ export const PasswordRequirements: React.FC<PasswordRequirementsProps> = ({
   className = '',
 }) => {
   const requirementItems = [
-    { key: 'minLength', label: 'At least 8 characters', met: requirements.minLength },
-    { key: 'hasUppercase', label: 'One uppercase letter', met: requirements.hasUppercase },
-    { key: 'hasLowercase', label: 'One lowercase letter', met: requirements.hasLowercase },
-    { key: 'hasNumber', label: 'One number', met: requirements.hasNumber },
-    { key: 'hasSpecialChar', label: 'One special character', met: requirements.hasSpecialChar },
+    { key: 'minLength', label: 'Mínimo 8 caracteres', met: requirements.minLength },
+    { key: 'hasUppercase', label: 'Al menos una mayúscula', met: requirements.hasUppercase },
+    { key: 'hasLowercase', label: 'Al menos una minúscula', met: requirements.hasLowercase },
+    { key: 'hasNumber', label: 'Al menos un número', met: requirements.hasNumber },
+    { key: 'hasSpecialChar', label: 'Al menos un carácter especial', met: requirements.hasSpecialChar },
   ];
 
   return (
     <div className={`mt-2 ${className}`}>
-      <p className="text-sm text-gray-600 mb-2">Password must contain:</p>
+      <p className="text-sm text-gray-600 mb-2">La contraseña debe contener:</p>
       <ul className="space-y-1">
         {requirementItems.map((item) => (
           <li key={item.key} className="flex items-center text-sm">
