@@ -1,14 +1,11 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TransferOperation } from '../../../../types';
-import { formatCurrency, formatDateTime } from './utils';
-
-interface AccountingSummaryEntry {
-  label: string;
-  currency: string;
-  amount: number;
-  contact: string | null;
-}
+import {
+  AccountingSummaryEntry,
+  formatCurrency,
+  formatDateTime,
+} from './utils';
 
 interface AccountingSummary {
   timestamp?: string | null;
@@ -96,28 +93,35 @@ export const TransferAccountingPanel: React.FC<Props> = ({
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.entries.map((entry, index) => (
-                      <tr key={`${entry.label}-${index}`} className="border-b border-gray-100 last:border-b-0">
-                        <td className="px-4 py-4 text-sm text-text-primary">{entry.label}</td>
-                        <td className="px-4 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            {entry.currency}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-sm font-semibold text-danger">
-                          -{formatCurrency(entry.amount, entry.currency)}
-                        </td>
-                        <td className="px-4 py-4 text-sm text-gray-600">
-                          {entry.contact || '—'}
-                        </td>
-                        <td className="px-4 py-4">
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
-                            <i className="fa-solid fa-check mr-1" />
-                            Registrado
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
+                    {summary.entries.map((entry, index) => {
+                      const signedAmount = entry.amount === 0 ? 0 : entry.amount * entry.sign;
+                      const amountClass = entry.sign === 1 ? 'text-success' : 'text-danger';
+                      return (
+                        <tr
+                          key={`${entry.label}-${index}`}
+                          className="border-b border-gray-100 last:border-b-0"
+                        >
+                          <td className="px-4 py-4 text-sm text-text-primary">{entry.label}</td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {entry.currency}
+                            </span>
+                          </td>
+                          <td className={`px-4 py-4 text-sm font-semibold ${amountClass}`}>
+                            {formatCurrency(signedAmount, entry.currency)}
+                          </td>
+                          <td className="px-4 py-4 text-sm text-gray-600">
+                            {entry.contact || '—'}
+                          </td>
+                          <td className="px-4 py-4">
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                              <i className="fa-solid fa-check mr-1" />
+                              Registrado
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

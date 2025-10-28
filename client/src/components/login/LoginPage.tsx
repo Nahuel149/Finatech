@@ -72,6 +72,7 @@ export const LoginPage: React.FC = () => {
             callback: handleGoogleResponse,
             auto_select: false,
             cancel_on_tap_outside: true,
+            use_fedcm_for_prompt: true,
           });
           return true;
         } catch (error) {
@@ -180,13 +181,13 @@ export const LoginPage: React.FC = () => {
           callback: handleGoogleResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true,
         });
 
         // Try to show the prompt first
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // If prompt fails, just show an error message instead of creating another button
-            setLoginError('No se pudo mostrar el diálogo de Google. Intentá de nuevo.');
+          if (notification.isDismissedMoment() || notification.isSkippedMoment()) {
+            setLoginError('Se canceló el diálogo de Google. Intentá de nuevo.');
           }
           setIsGoogleLoading(false);
         });

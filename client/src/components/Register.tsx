@@ -61,6 +61,7 @@ export const Register: React.FC = () => {
             callback: handleGoogleResponse,
             auto_select: false,
             cancel_on_tap_outside: true,
+            use_fedcm_for_prompt: true,
           });
           return true;
         } catch (error) {
@@ -175,12 +176,12 @@ export const Register: React.FC = () => {
           callback: handleGoogleResponse,
           auto_select: false,
           cancel_on_tap_outside: true,
+          use_fedcm_for_prompt: true,
         });
 
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-            // If prompt fails, just show an error message instead of creating another button
-            setFormErrors({ general: 'No se pudo mostrar el diálogo de Google. Intentá de nuevo.' });
+          if (notification.isDismissedMoment() || notification.isSkippedMoment()) {
+            setFormErrors({ general: 'Se canceló el diálogo de Google. Intentá de nuevo.' });
           }
           setIsGoogleLoading(false);
         });

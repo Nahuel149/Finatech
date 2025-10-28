@@ -12,6 +12,7 @@ import { ContactOperationsTable } from './ContactOperationsTable';
 import { Alert } from '../../../ui';
 import { ClientSummary, TreasuryContactBalanceOperation } from '../../../../types';
 import { NewClientModal } from '../../../clients/NewClientModal';
+import { Footer } from '../../operaciones/Footer';
 
 const STATUS_LABEL_MAP: Record<string, string> = {
   registered: 'Registrada',
@@ -339,6 +340,8 @@ export const ContactBalanceDetailPage: React.FC = () => {
         ownerOptions={['Tesorería', 'Operaciones', 'Comercial']}
         defaultOwner="Tesorería"
       />
+
+      <Footer />
     </div>
   );
 };

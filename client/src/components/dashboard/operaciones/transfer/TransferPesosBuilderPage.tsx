@@ -352,6 +352,14 @@ export const TransferPesosBuilderPage: React.FC = () => {
     return 'pending';
   }, [draft.distributionLines.length, draft.totalAmount, progressDifference]);
 
+  const canConfirmDistribution =
+    !!draft.movementType &&
+    !!draft.direction &&
+    !!draft.totalAmount &&
+    draft.totalAmount > 0 &&
+    draft.distributionLines.length > 0 &&
+    progressStatus === 'complete';
+
   const handleAmountInputChange = (value: string) => {
     setAmountError(null);
     setAmountInput(value);
@@ -862,14 +870,12 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenConfirm}
-              className="px-8 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 bg-primary text-white hover:bg-blue-700"
-              disabled={
-                !draft.movementType ||
-                !draft.direction ||
-                !draft.totalAmount ||
-                draft.totalAmount <= 0 ||
-                !draft.distributionLines.length
-              }
+              className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+                canConfirmDistribution
+                  ? 'bg-primary text-white hover:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+              disabled={!canConfirmDistribution}
             >
               <span className="mr-2">Confirmar distribución</span>
               <i className="fa-solid fa-arrow-right" />

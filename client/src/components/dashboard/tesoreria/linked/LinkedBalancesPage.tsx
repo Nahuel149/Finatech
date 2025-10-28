@@ -16,6 +16,7 @@ import { LinkedBalancesSummarySection } from './LinkedBalancesSummarySection';
 import { LinkedBalancesMovementsSection } from './LinkedBalancesMovementsSection';
 import { LinkedBalancesAccountingSection } from './LinkedBalancesAccountingSection';
 import { LinkedBalanceDetailPanel } from './LinkedBalanceDetailPanel';
+import { Footer } from '../../operaciones/Footer';
 
 type ToastState = {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -360,6 +361,8 @@ export const LinkedBalancesPage: React.FC = () => {
           <Alert type={toast.type} message={toast.message} />
         </div>
       )}
+
+      <Footer />
     </div>
   );
 };

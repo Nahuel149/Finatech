@@ -14,6 +14,7 @@ import {
   TreasuryGlobalBalancesOverviewResponse,
 } from '../../../../types';
 import { useGlobalBalancesOverview } from '../../../../hooks';
+import { Footer } from '../../operaciones/Footer';
 
 type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -418,6 +419,8 @@ export const GlobalBalancesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 };

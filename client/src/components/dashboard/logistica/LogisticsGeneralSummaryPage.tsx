@@ -7,6 +7,7 @@ import { LogisticsSummaryStatsSection } from './LogisticsSummaryStatsSection';
 import { LogisticsRecentMovementsSection } from './LogisticsRecentMovementsSection';
 import { LogisticsActiveIncidentsSection } from './LogisticsActiveIncidentsSection';
 import { LogisticsQuickActionsSection } from './LogisticsQuickActionsSection';
+import { Footer } from '../operaciones/Footer';
 
 interface MovementData {
   id: string;
@@ -307,6 +308,8 @@ export const LogisticsGeneralSummaryPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      <Footer />
     </div>
   );
 };

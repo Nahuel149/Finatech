@@ -4,7 +4,7 @@ import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
-import { formatCurrency, formatDateTime } from './utils';
+import { buildAccountingEntries, formatCurrency, formatDateTime } from './utils';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
 import { emitDashboardBalanceRefresh } from '../../../../utils';
 
@@ -67,12 +67,7 @@ export const TransferPesosSuccessPage: React.FC = () => {
 
   const accountingSummary = {
     timestamp: lastOperation.confirmedAt || lastOperation.updatedAt || lastOperation.createdAt,
-    entries: lastOperation.distributionLines.map((line) => ({
-      label: line.method === 'USD' ? 'Cuentas a Cobrar USD' : 'Cuentas a Cobrar ARS',
-      currency: line.method === 'USD' ? 'USD' : 'ARS',
-      amount: line.amount,
-      contact: line.contactName || '—',
-    })),
+    entries: buildAccountingEntries(lastOperation),
   };
 
   return (

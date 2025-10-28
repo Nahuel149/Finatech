@@ -8,6 +8,7 @@ import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { FilterPanel } from './FilterPanel';
 import { OperationDetailPanel } from './OperationDetailPanel';
 import NewMovementModal from './NewMovementModal';
+import { Footer } from '../operaciones/Footer';
 
 interface FilterState {
   search: string;
@@ -256,6 +257,8 @@ export const LogisticaPanel: React.FC = () => {
         isOpen={isNewMovementModalOpen}
         onClose={handleCloseNewMovementModal}
       />
+
+      <Footer />
     </div>
   );
 };

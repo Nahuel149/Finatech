@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { DashboardNavbar } from './Navbar';
 import { BalanceStripe } from './BalanceStripe';
 import { OperationsHeader } from './OperationsHeader';
@@ -7,9 +7,6 @@ import { RecentValidations } from './RecentValidations';
 import { RecentOperationsTable } from './RecentOperationsTable';
 import { DashboardFooter } from './Footer';
 import { TransferPesosModal } from './TransferPesosModal';
-import { DashboardBalanceWidget } from './DashboardBalanceWidget';
-import { useUserPermissions } from '../../../hooks';
-
 export const DashboardOperacionesPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [transferOpen, setTransferOpen] = useState(false);

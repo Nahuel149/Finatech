@@ -41,16 +41,15 @@ export const FlowShortcuts: React.FC = () => {
             onClick: () => handleNavigate('/dashboard/operaciones/nueva?tipo=venta'),
           },
           {
-            id: 'shortcut-compound',
-            title: 'Liquidación',
-            subtitle: 'Compuesta',
+            id: 'shortcut-transfer-pesos',
+            title: 'Transferencia en pesos',
+            subtitle: 'Envia o recibe en ARS',
             icon: 'fa-layer-group',
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-500 bg-opacity-10',
-            description:
-              'Procesa múltiples operaciones relacionadas en una sola liquidación',
+            description: 'Entrante, saliente, distribución entre contactos',
             cta: 'Iniciar proceso',
-            onClick: () => handleNavigate('/dashboard/operaciones/nueva'),
+            onClick: () => handleNavigate('/dashboard/operaciones/transfer-pesos'),
           },
         ].map((shortcut) => (
           <div

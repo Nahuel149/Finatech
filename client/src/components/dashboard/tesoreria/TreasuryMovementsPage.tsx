@@ -17,6 +17,7 @@ import { ApiError, TreasuryMovement } from '../../../types';
 import { RegisterMovementModal } from './register';
 import { MovementDetailPanel } from './detail';
 import { ReconciliationModal } from './reconciliation';
+import { Footer } from '../operaciones/Footer';
 
 type ToastState = {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -302,6 +303,8 @@ export const TreasuryMovementsPage: React.FC = () => {
           <Alert type={toast.type} message={toast.message} />
         </div>
       )}
+
+      <Footer />
     </div>
   );
 };

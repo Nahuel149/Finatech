@@ -5,6 +5,7 @@ import { BalanceStripe } from '../operaciones/BalanceStripe';
 import { MovementDetailSidePanel } from './MovementDetailSidePanel';
 import CompletionConfirmationModal from './CompletionConfirmationModal';
 import { IncidentRegistrationModal } from './IncidentRegistrationModal';
+import { Footer } from '../operaciones/Footer';
 
 interface MovementDetailPageProps {
   movementId?: string;
@@ -176,6 +177,8 @@ export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movement
         onClose={() => setIsIncidentModalOpen(false)}
         movementId={movementId}
       />
+
+      <Footer />
     </div>
   );
 };
