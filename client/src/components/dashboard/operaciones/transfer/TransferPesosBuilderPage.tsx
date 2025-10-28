@@ -267,6 +267,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
     setLineContact,
     removeLine,
     reset,
+    saveDraft,
   } = useTransferPesos();
   const [amountInput, setAmountInput] = useState<string>('');
   const [step, setStep] = useState<BuilderStep>('config');
@@ -329,11 +330,25 @@ export const TransferPesosBuilderPage: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
+  const totalARS = useMemo(
+    () => draft.distributionLines
+      .filter(line => line.method === 'ARS')
+      .reduce((sum, line) => sum + (line.amount || 0), 0),
+    [draft.distributionLines]
+  );
+  
+  const totalUSD = useMemo(
+    () => draft.distributionLines
+      .filter(line => line.method === 'USD')
+      .reduce((sum, line) => sum + (line.amount || 0), 0),
+    [draft.distributionLines]
+  );
+
   const totalAssigned = useMemo(
     () => draft.distributionLines.reduce((sum, line) => sum + (line.amount || 0), 0),
     [draft.distributionLines]
   );
-
+  
   const progressDifference = useMemo(
     () => totalAssigned - (draft.totalAmount || 0),
     [draft.totalAmount, totalAssigned]
@@ -509,11 +524,19 @@ export const TransferPesosBuilderPage: React.FC = () => {
     navigate('/dashboard/operaciones');
   };
 
-  const handleSaveDraft = () => {
-    setToast({
-      type: 'info',
-      message: 'Próximamente podrás guardar borradores. Mantené la pestaña abierta.',
-    });
+  const handleSaveDraft = async () => {
+    const success = await saveDraft();
+    if (success) {
+      setToast({
+        type: 'success',
+        message: 'Borrador guardado exitosamente.',
+      });
+    } else {
+      setToast({
+        type: 'error',
+        message: 'Error al guardar el borrador. Intentá nuevamente.',
+      });
+    }
   };
 
   const currentStepIndex = STEP_INDEX[step];
@@ -713,9 +736,13 @@ export const TransferPesosBuilderPage: React.FC = () => {
           <div className="mb-6">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">Progreso de asignación</span>
-              <span className="text-sm text-gray-600">
-                {formatCurrency(totalAssigned)} de {formatCurrency(draft.totalAmount)}
-              </span>
+              <div className="text-sm text-gray-600">
+                <div>Total: {formatCurrency(draft.totalAmount)}</div>
+                <div className="text-xs mt-1">
+                  Distribuido: {formatCurrency(totalARS)}
+                  {totalUSD > 0 && <span> + {formatCurrency(totalUSD, 'USD')}</span>}
+                </div>
+              </div>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
@@ -838,7 +865,8 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <div className="text-sm text-gray-600">
               Total distribuido{' '}
               <span className="font-semibold text-text-primary">
-                {formatCurrency(totalAssigned)}
+                {formatCurrency(totalARS)}
+                {totalUSD > 0 && <span> + {formatCurrency(totalUSD, 'USD')}</span>}
               </span>
             </div>
           </div>

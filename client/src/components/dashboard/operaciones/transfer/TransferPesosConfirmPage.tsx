@@ -33,6 +33,7 @@ export const TransferPesosConfirmPage: React.FC = () => {
     draft,
     toPayload,
     setLastOperation,
+    saveDraft,
   } = useTransferPesos();
   const { execute, loading, error } = useCreateTransfer();
 
@@ -78,11 +79,19 @@ export const TransferPesosConfirmPage: React.FC = () => {
     navigate('/dashboard/operaciones/transfer-pesos?step=distribution');
   };
 
-  const handleSaveDraft = () => {
-    setToast({
-      type: 'info',
-      message: 'Pronto podrás guardar borradores desde esta etapa.',
-    });
+  const handleSaveDraft = async () => {
+    const success = await saveDraft();
+    if (success) {
+      setToast({
+        type: 'success',
+        message: 'Borrador guardado exitosamente.',
+      });
+    } else {
+      setToast({
+        type: 'error',
+        message: 'Error al guardar el borrador. Intentá nuevamente.',
+      });
+    }
   };
 
   const handleConfirm = async () => {

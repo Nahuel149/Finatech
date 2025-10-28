@@ -1,12 +1,18 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useCurrentUser } from '../../../hooks';
 
 interface Props {
   search: string;
   onSearchChange: (value: string) => void;
 }
 
-export const TreasuryNavbar: React.FC<Props> = ({ search, onSearchChange }) => (
+export const TreasuryNavbar: React.FC<Props> = ({ search, onSearchChange }) => {
+  const { user, loading } = useCurrentUser();
+  const displayName = user?.fullName?.trim() || (loading ? 'Cargando perfil…' : 'Usuario FinaTech');
+  const secondaryText = user?.email || (loading ? 'Sincronizando…' : 'Sin correo configurado');
+
+  return (
   <nav
     id="navbar"
     className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50"
@@ -33,13 +39,13 @@ export const TreasuryNavbar: React.FC<Props> = ({ search, onSearchChange }) => (
               <i className="fa-solid fa-vault mr-2" />
               Tesorería
             </span>
-            <button
-              type="button"
+            <Link
+              to="/dashboard/logistica"
               className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer"
             >
               <i className="fa-solid fa-truck mr-2" />
               Logística
-            </button>
+            </Link>
             <button
               type="button"
               className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer"
@@ -90,8 +96,8 @@ export const TreasuryNavbar: React.FC<Props> = ({ search, onSearchChange }) => (
                 className="w-8 h-8 rounded-full"
               />
               <div className="text-left">
-                <div className="text-sm font-medium text-text-primary">Juan Pérez</div>
-                <div className="text-xs text-gray-500">Operador Senior</div>
+                <div className="text-sm font-medium text-text-primary">{displayName}</div>
+                <div className="text-xs text-gray-500">{secondaryText}</div>
               </div>
               <i className="fa-solid fa-chevron-down text-gray-400 text-xs" />
             </button>
@@ -100,4 +106,5 @@ export const TreasuryNavbar: React.FC<Props> = ({ search, onSearchChange }) => (
       </div>
     </div>
   </nav>
-);
+  );
+};

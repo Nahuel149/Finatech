@@ -5,7 +5,9 @@ import {
   NotificationLevel,
   useNotifications,
   useAuth,
+  useCurrentUser,
 } from '../../../hooks';
+import { ApiError } from '../../../types';
 
 interface Props {
   search: string;
@@ -59,6 +61,8 @@ interface NotificationsDropdownProps {
   onSeeAll: () => void;
   onMarkAllRead: () => void;
   className?: string;
+  loading?: boolean;
+  error?: ApiError | null;
 }
 
 const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
@@ -68,6 +72,8 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   onSeeAll,
   onMarkAllRead,
   className = '',
+  loading = false,
+  error = null,
 }) => (
   <div
     className={`absolute right-0 mt-2 w-80 rounded-lg border border-gray-200 bg-white shadow-lg z-50 ${className}`}
@@ -85,7 +91,15 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       )}
     </div>
     <div className="max-h-80 overflow-y-auto">
-      {notifications.length === 0 ? (
+      {loading ? (
+        <div className="px-4 py-8 text-center text-sm text-gray-500">
+          Cargando notificaciones…
+        </div>
+      ) : error ? (
+        <div className="px-4 py-8 text-center text-sm text-danger">
+          No pudimos cargar las notificaciones.
+        </div>
+      ) : notifications.length === 0 ? (
         <div className="px-4 py-8 text-center text-sm text-gray-500">
           No tenés notificaciones pendientes.
         </div>
@@ -145,7 +159,17 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const mobileNotificationsRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuth();
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
+  const { user, loading: userLoading } = useCurrentUser();
+  const {
+    notifications,
+    unreadCount,
+    markAsRead,
+    markAllAsRead,
+    loading: notificationsLoading,
+    error: notificationsError,
+  } = useNotifications();
+  const displayName = user?.fullName?.trim() || (userLoading ? 'Cargando perfil…' : 'Usuario FinaTech');
+  const secondaryText = user?.email || (userLoading ? 'Sincronizando…' : 'Sin correo configurado');
 
   const activePath = useMemo(() => {
     const candidates = NAV_ITEMS.filter((item): item is NavItem & { path: string } => Boolean(item.path))
@@ -269,6 +293,8 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     onNotificationClick={handleNotificationClick}
                     onSeeAll={handleSeeAllNotifications}
                     onMarkAllRead={markAllAsRead}
+                    loading={notificationsLoading}
+                    error={notificationsError}
                   />
                 )}
               </div>
@@ -297,28 +323,24 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               className="w-10 h-10 rounded-full mr-3"
             />
             <div>
-              <div className="text-sm font-medium text-text-primary">Juan Pérez</div>
-              <div className="text-xs text-gray-500">Operador Senior</div>
+              <div className="text-sm font-medium text-text-primary">{displayName}</div>
+              <div className="text-xs text-gray-500">{secondaryText}</div>
             </div>
           </div>
           <div className="flex items-center space-x-3 mb-4">
             <button
               type="button"
-              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/dashboard/perfil');
-              }}
+              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+              disabled
+              aria-disabled="true"
             >
               Perfil
             </button>
             <button
               type="button"
-              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-700 hover:bg-gray-100"
-              onClick={() => {
-                setMobileMenuOpen(false);
-                navigate('/dashboard/configuracion');
-              }}
+              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+              disabled
+              aria-disabled="true"
             >
               Configuración
             </button>
@@ -468,6 +490,8 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     onNotificationClick={handleNotificationClick}
                     onSeeAll={handleSeeAllNotifications}
                     onMarkAllRead={markAllAsRead}
+                    loading={notificationsLoading}
+                    error={notificationsError}
                   />
                 )}
               </div>
@@ -484,36 +508,32 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     className="w-8 h-8 rounded-full"
                   />
                   <div className="text-left">
-                    <div className="text-sm font-medium text-text-primary">Juan Pérez</div>
-                    <div className="text-xs text-gray-500">Operador Senior</div>
+                    <div className="text-sm font-medium text-text-primary">{displayName}</div>
+                    <div className="text-xs text-gray-500">{secondaryText}</div>
                   </div>
                   <i className="fa-solid fa-chevron-down text-gray-400 text-xs" />
                 </button>
                 {accountMenuOpen && (
                   <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 bg-white shadow-lg z-50">
                     <div className="px-4 py-3 border-b border-gray-200">
-                      <p className="text-sm font-medium text-gray-900">Juan Pérez</p>
-                      <p className="text-xs text-gray-500">Operador Senior</p>
+                      <p className="text-sm font-medium text-gray-900">{displayName}</p>
+                      <p className="text-xs text-gray-500">{secondaryText}</p>
                     </div>
                     <div className="py-1">
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          navigate('/dashboard/perfil');
-                        }}
+                        className="flex w-full items-center px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+                        disabled
+                        aria-disabled="true"
                       >
                         <i className="fa-solid fa-user-gear mr-3 text-gray-400" />
                         Perfil
                       </button>
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-                        onClick={() => {
-                          setAccountMenuOpen(false);
-                          navigate('/dashboard/configuracion');
-                        }}
+                        className="flex w-full items-center px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+                        disabled
+                        aria-disabled="true"
                       >
                         <i className="fa-solid fa-sliders mr-3 text-gray-400" />
                         Configuración

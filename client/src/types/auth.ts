@@ -36,6 +36,23 @@ export interface User {
   updatedAt: Date;
 }
 
+export interface UserProfile {
+  id: string;
+  fullName: string;
+  email: string;
+  providers?: Array<{
+    provider: string;
+    providerId?: string;
+  }>;
+  isVerified?: boolean;
+  createdAt?: string | Date;
+  permissions?: string[];
+}
+
+export interface ProfileResponse {
+  profile?: UserProfile | null;
+}
+
 export interface LoginFormData {
   email: string;
   password: string;
@@ -59,6 +76,7 @@ export interface LoginResponse {
   success: boolean;
   message: string;
   user?: User;
+  profile?: UserProfile;
   requiresTwoFactor?: boolean;
   requiresVerification?: boolean;
   challengeId?: string;
@@ -68,7 +86,7 @@ export interface LoginResponse {
 export interface RegisterResponse {
   type?: 'pending_verification' | 'merged_google' | 'verified' | string;
   message: string;
-  profile?: User;
+  profile?: UserProfile;
   user?: User;
   success?: boolean;
 }
@@ -78,12 +96,14 @@ export interface TwoFactorResponse {
   message: string;
   user?: User;
   redirectUrl?: string;
+  profile?: UserProfile;
 }
 
 export interface GoogleAuthResponse {
   success: boolean;
   message: string;
   user?: User;
+  profile?: UserProfile;
   requiresTwoFactor?: boolean;
   redirectUrl?: string;
 }

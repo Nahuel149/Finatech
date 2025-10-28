@@ -16,42 +16,32 @@ export const LogisticaPanelHeader: React.FC<LogisticaPanelHeaderProps> = ({ onRe
   };
 
   return (
-    <header className="mb-8">
+    <header className="mb-8 mt-20">
       {/* Breadcrumbs */}
-      <nav className="mb-4 flex items-center text-sm text-gray-500" aria-label="Breadcrumb">
-        <ol className="flex items-center space-x-2">
-          <li>
-            <a href="/dashboard" className="hover:text-gray-700">
-              Dashboard
-            </a>
-          </li>
-          <li>
-            <ChevronRightIcon className="h-4 w-4" />
-          </li>
-          <li>
-            <span className="text-primary font-medium cursor-pointer">Logística</span>
-          </li>
-        </ol>
+      <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
+        <span className="text-primary font-medium cursor-pointer">Logística</span>
+        <ChevronRightIcon className="h-3 w-3 text-gray-400" />
+        <span>Panel principal</span>
       </nav>
 
-      {/* Header Content */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex-1">
-          <h1 className="text-xl font-bold text-text-primary mb-2 sm:text-2xl">
+      {/* Title and Description */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-text-primary mb-2">
             Panel de Logística
           </h1>
-          <p className="text-sm text-gray-600 sm:text-base">
-            Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes.
+          <p className="text-gray-600">
+            Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes
           </p>
         </div>
         
         <button
           id="register-action"
           type="button"
-          className="order-2 flex items-center justify-center gap-2 rounded-lg bg-primary px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-blue-700 lg:order-none lg:text-base"
+          className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
           onClick={handleRegisterNewMovement}
         >
-          <PlusIcon className="h-4 w-4" />
+          <PlusIcon className="h-4 w-4 mr-2" />
           Registrar nuevo movimiento logístico
         </button>
       </div>

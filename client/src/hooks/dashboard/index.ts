@@ -18,3 +18,4 @@ export * from './useLinkedBalanceDetail';
 export * from './useGlobalBalancesOverview';
 export * from './useContactBalanceDetail';
 export * from './useLatestMarketRate';
+export * from './useLogisticsOperations';

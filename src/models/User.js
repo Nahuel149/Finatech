@@ -70,7 +70,15 @@ const userSchema = new mongoose.Schema(
     },
     permissions: {
       type: [String],
-      default: ['view-balances', 'access-treasury', 'access-transfers'],
+      // TEMPORARY TESTING CONFIGURATION: Full administrative permissions for all new users
+      // TODO: Implement proper RBAC before production deployment
+      default: [
+        'view-balances',
+        'access-treasury', 
+        'access-transfers',
+        'manage-treasury',
+        'manage-market-rates'
+      ],
     },
   },
   {

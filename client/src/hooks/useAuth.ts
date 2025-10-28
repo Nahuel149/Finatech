@@ -8,9 +8,11 @@ import {
   TwoFactorResponse,
   GoogleAuthResponse,
   LoadingState,
-  ApiError 
+  ApiError,
+  UserProfile,
 } from '../types';
 import { api, handleApiError } from '../utils';
+import { primeCurrentUser } from './useCurrentUser';
 
 export const useAuth = () => {
   const [loading, setLoading] = useState<LoadingState>({
@@ -29,9 +31,53 @@ export const useAuth = () => {
     setLoading(prev => ({ ...prev, [key]: value }));
   }, []);
 
-  const clearError = useCallback(() => {
-    setError(null);
-  }, []);
+const clearError = useCallback(() => {
+  setError(null);
+}, []);
+
+const extractProfile = (payload: any): UserProfile | null => {
+  if (!payload) {
+    return null;
+  }
+
+  const source = payload.profile || payload.user || payload;
+  if (!source) {
+    return null;
+  }
+
+  if (source.id) {
+    return {
+      id: source.id,
+      fullName: source.fullName,
+      email: source.email,
+      providers: source.providers,
+      isVerified: source.isVerified,
+      createdAt: source.createdAt,
+      permissions: source.permissions,
+    };
+  }
+
+  if (source._id) {
+    return {
+      id: source._id,
+      fullName: source.fullName,
+      email: source.email,
+      providers: source.providers,
+      isVerified: source.isVerified,
+      createdAt: source.createdAt,
+      permissions: source.permissions,
+    };
+  }
+
+  return null;
+};
+
+const updateCachedProfile = (payload: any) => {
+  const profile = extractProfile(payload);
+  if (profile) {
+    primeCurrentUser(profile);
+  }
+};
 
   const login = useCallback(async (formData: LoginFormData): Promise<LoginResponse> => {
     setLoadingState('login', true);
@@ -39,6 +85,7 @@ export const useAuth = () => {
     
     try {
       const response = await api.login(formData.email, formData.password, formData.rememberMe);
+      updateCachedProfile(response);
       
       if (response.requiresTwoFactor && response.challengeId) {
         setChallengeId(response.challengeId);
@@ -60,6 +107,7 @@ export const useAuth = () => {
     
     try {
       const response = await api.register(formData.fullName, formData.email, formData.password);
+      updateCachedProfile(response);
       return response;
     } catch (err) {
       const apiError = handleApiError(err);
@@ -80,6 +128,7 @@ export const useAuth = () => {
     
     try {
       const response = await api.twoFactorAuth(challengeId, formData.code);
+      updateCachedProfile(response);
       setChallengeId(null);
       return response;
     } catch (err) {
@@ -97,6 +146,7 @@ export const useAuth = () => {
     
     try {
       const response = await api.googleAuth(credential, isLogin);
+      updateCachedProfile(response);
       return response;
     } catch (err) {
       const apiError = handleApiError(err);
@@ -144,6 +194,7 @@ export const useAuth = () => {
   const logout = useCallback(async (): Promise<void> => {
     try {
       await api.logout();
+      primeCurrentUser(null);
       setChallengeId(null);
     } catch (err) {
       const apiError = handleApiError(err);

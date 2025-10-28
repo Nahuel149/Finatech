@@ -2,22 +2,15 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
-import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
 import { buildAccountingEntries, formatCurrency, formatDateTime } from './utils';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
 import { emitDashboardBalanceRefresh } from '../../../../utils';
 
-interface ToastState {
-  type: 'success' | 'error' | 'warning' | 'info';
-  message: string;
-}
-
 export const TransferPesosSuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const { lastOperation, reset } = useTransferPesos();
   const [panelOpen, setPanelOpen] = useState(false);
-  const [toast, setToast] = useState<ToastState | null>(null);
 
   useEffect(() => {
     if (!lastOperation) {
@@ -30,12 +23,6 @@ export const TransferPesosSuccessPage: React.FC = () => {
       emitDashboardBalanceRefresh();
     }
   }, [lastOperation]);
-
-  useEffect(() => {
-    if (!toast) return;
-    const timer = window.setTimeout(() => setToast(null), 3200);
-    return () => window.clearTimeout(timer);
-  }, [toast]);
 
   if (!lastOperation) {
     return null;
@@ -50,10 +37,7 @@ export const TransferPesosSuccessPage: React.FC = () => {
     .reduce((sum, line) => sum + line.amount, 0);
 
   const handleViewDetail = () => {
-    setToast({
-      type: 'info',
-      message: 'Próximamente podrás acceder al detalle completo de la transferencia.',
-    });
+    navigate(`/dashboard/operaciones/transfer-pesos/detalle/${lastOperation.id}`);
   };
 
   const handleNewTransfer = () => {
@@ -222,12 +206,6 @@ export const TransferPesosSuccessPage: React.FC = () => {
           </div>
         </section>
       </main>
-
-      {toast && (
-        <div className="fixed top-4 right-4 z-[60] max-w-sm w-full">
-          <Alert type={toast.type} message={toast.message} />
-        </div>
-      )}
 
       <TransferAccountingPanel
         open={panelOpen}

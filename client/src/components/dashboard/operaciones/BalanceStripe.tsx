@@ -80,7 +80,7 @@ export const BalanceStripe: React.FC = () => {
                       className={`fa-solid ${iconForBalance(b.label, b.currency)} text-primary mr-2`}
                     ></i>
                     <span className="text-sm font-medium text-gray-600">
-                      {b.label} ({b.currency})
+                      {b.label}
                     </span>
                   </div>
                   <div className={`w-2 h-2 ${statusDotClass(b.status)} rounded-full`}></div>

@@ -1,282 +1,220 @@
 import React from 'react';
-import {
-  XMarkIcon,
-  DocumentIcon,
-  ClockIcon,
-  UserIcon,
-  TruckIcon,
-  CheckCircleIcon,
-} from '../../icons/HeroiconsOutline';
+import { LogisticsOperation } from '../../../types/logistics';
 
 interface OperationDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
-  operation: LogisticOperation | null;
-  isLoading?: boolean;
+  operation: LogisticsOperation | null;
 }
 
-interface LogisticOperation {
-  id: string;
-  type: string;
-  status: string;
-  contact: string;
-  responsible: string;
-  date: string;
-  amount: number;
-  description?: string;
-  timeline?: TimelineEvent[];
-  attachments?: Attachment[];
-}
+const formatAmount = (amount: number | null, currency: string) => {
+  if (amount === null || Number.isNaN(amount)) {
+    return '—';
+  }
+  
+  const normalizedCurrency = currency?.toUpperCase() || 'ARS';
+  
+  return new Intl.NumberFormat(normalizedCurrency === 'USD' ? 'en-US' : 'es-AR', {
+    style: 'currency',
+    currency: normalizedCurrency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
 
-interface TimelineEvent {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  user: string;
-  type: 'created' | 'updated' | 'completed' | 'cancelled';
-}
+const formatDateTime = (iso: string) =>
+  new Date(iso).toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  });
 
-interface Attachment {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  url: string;
-}
+const TIMELINE_STATE_CLASSES: Record<string, string> = {
+  completed: 'bg-primary text-white',
+  current: 'bg-yellow-100 text-yellow-700',
+  upcoming: 'bg-gray-200 text-gray-500',
+};
 
 export const OperationDetailPanel: React.FC<OperationDetailPanelProps> = ({
   isOpen,
   onClose,
   operation,
-  isLoading = false
 }) => {
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'pendiente': { color: 'bg-yellow-100 text-yellow-800', label: 'Pendiente' },
-      'en-transito': { color: 'bg-blue-100 text-blue-800', label: 'En tránsito' },
-      'completado': { color: 'bg-green-100 text-green-800', label: 'Completado' },
-      'anulado': { color: 'bg-red-100 text-red-800', label: 'Anulado' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pendiente;
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
+  if (!isOpen || !operation) {
+    return null;
+  }
 
-  const getTypeBadge = (type: string) => {
-    const typeConfig = {
-      'entrega': { color: 'bg-purple-100 text-purple-800', label: 'Entrega' },
-      'retiro': { color: 'bg-orange-100 text-orange-800', label: 'Retiro' },
-      'transferencia-interna': { color: 'bg-indigo-100 text-indigo-800', label: 'Transferencia interna' }
-    };
-    
-    const config = typeConfig[type as keyof typeof typeConfig] || typeConfig.entrega;
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
-
-  const getTimelineIcon = (type: string) => {
-    switch (type) {
-      case 'created':
-        return <ClockIcon className="h-4 w-4 text-blue-500" />;
-      case 'updated':
-        return <UserIcon className="h-4 w-4 text-yellow-500" />;
-      case 'completed':
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case 'cancelled':
-        return <XMarkIcon className="h-4 w-4 text-red-500" />;
+  const statusBadge = (() => {
+    switch (operation.status) {
+      case 'en-curso':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'completado':
+        return 'bg-green-100 text-green-800';
       default:
-        return <TruckIcon className="h-4 w-4 text-gray-500" />;
+        return 'bg-blue-100 text-blue-800';
     }
-  };
+  })();
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatAmount = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS'
-    }).format(amount);
-  };
-
-  if (!isOpen) return null;
+  const typeBadge = (() => {
+    switch (operation.type) {
+      case 'transferencia':
+      case 'transferencia-interna':
+        return 'bg-green-100 text-green-800';
+      case 'retiro':
+        return 'bg-purple-100 text-purple-800';
+      case 'custodia':
+        return 'bg-orange-100 text-orange-800';
+      default:
+        return 'bg-blue-100 text-blue-800';
+    }
+  })();
 
   return (
     <>
-      {/* Backdrop */}
-      <div 
-        className="fixed inset-0 z-40 bg-black bg-opacity-50"
-        onClick={onClose}
-      />
-      
-      {/* Panel */}
-      <div className="fixed right-0 top-0 z-50 h-full w-96 bg-white shadow-xl">
-        <div className="flex h-full flex-col">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 p-6">
-            <h3 className="text-lg font-semibold text-text-primary">
-              Detalle de operación
-            </h3>
-            <button
-              type="button"
-              className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-              onClick={onClose}
-            >
-              <XMarkIcon className="h-5 w-5" />
-            </button>
+      <div className="fixed inset-0 z-40 bg-black bg-opacity-40" onClick={onClose} />
+      <aside className="fixed inset-y-0 right-0 z-50 w-[420px] bg-white shadow-xl border-l border-gray-200 flex flex-col">
+        <div className="px-6 py-5 border-b border-gray-200 flex items-start justify-between">
+          <div>
+            <span className="text-xs uppercase text-gray-500 tracking-wide">Detalle de operación</span>
+            <h3 className="text-lg font-semibold text-text-primary">#{operation.id}</h3>
+            <div className="mt-2 flex items-center gap-2">
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeBadge}`}>
+                {operation.type === 'transferencia-interna' ? 'Transferencia interna' : operation.type.charAt(0).toUpperCase() + operation.type.slice(1)}
+              </span>
+              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge}`}>
+                {operation.status === 'en-curso' ? 'En curso' : operation.status === 'completado' ? 'Completado' : 'Pendiente'}
+              </span>
+            </div>
           </div>
+          <button
+            type="button"
+            className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            <i className="fa-solid fa-times" />
+          </button>
+        </div>
 
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+          <section>
+            <h4 className="text-sm font-medium text-text-primary mb-3">Resumen</h4>
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Monto</span>
+                <span className="text-base font-semibold text-text-primary">
+                  {formatAmount(operation.amount, operation.currency)}
+                </span>
               </div>
-            ) : operation ? (
-              <div className="p-6 space-y-6">
-                {/* Basic Info */}
-                <div>
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-sm font-medium text-gray-900">Información básica</h4>
-                    <span className="text-sm text-gray-500">#{operation.id}</span>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Tipo:</span>
-                      {getTypeBadge(operation.type)}
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Estado:</span>
-                      {getStatusBadge(operation.status)}
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Contacto:</span>
-                      <span className="text-sm font-medium text-gray-900">{operation.contact}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Responsable:</span>
-                      <span className="text-sm font-medium text-gray-900">{operation.responsible}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Fecha:</span>
-                      <span className="text-sm font-medium text-gray-900">{formatDate(operation.date)}</span>
-                    </div>
-                    
-                    <div className="flex justify-between">
-                      <span className="text-sm text-gray-500">Monto:</span>
-                      <span className="text-sm font-medium text-gray-900">{formatAmount(operation.amount)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Description */}
-                {operation.description && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-2">Descripción</h4>
-                    <p className="text-sm text-gray-600">{operation.description}</p>
-                  </div>
-                )}
-
-                {/* Timeline */}
-                {operation.timeline && operation.timeline.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-4">Historial de cambios</h4>
-                    <div className="space-y-4">
-                      {operation.timeline.map((event, index) => (
-                        <div key={event.id} className="flex space-x-3">
-                          <div className="flex-shrink-0">
-                            {getTimelineIcon(event.type)}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900">{event.title}</div>
-                            <div className="text-sm text-gray-500">{event.description}</div>
-                            <div className="text-xs text-gray-400 mt-1">
-                              {formatDate(event.date)} • {event.user}
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Attachments */}
-                {operation.attachments && operation.attachments.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-900 mb-4">Archivos adjuntos</h4>
-                    <div className="space-y-2">
-                      {operation.attachments.map((attachment) => (
-                        <div key={attachment.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <DocumentIcon className="h-5 w-5 text-gray-400" />
-                          <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 truncate">{attachment.name}</div>
-                            <div className="text-xs text-gray-500">{attachment.type} • {attachment.size}</div>
-                          </div>
-                          <button
-                            type="button"
-                            className="text-sm text-primary hover:text-blue-700"
-                            onClick={() => window.open(attachment.url, '_blank')}
-                          >
-                            Descargar
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Responsable</span>
+                <span className="text-sm font-medium text-text-primary">{operation.responsible}</span>
               </div>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                <div className="text-center">
-                  <TruckIcon className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                  <p>Selecciona una operación para ver los detalles</p>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Footer Actions */}
-          {operation && !isLoading && (
-            <div className="border-t border-gray-200 p-6">
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Editar
-                </button>
-                <button
-                  type="button"
-                  className="flex-1 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Actualizar estado
-                </button>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-500">Fecha de registro</span>
+                <span className="text-sm font-medium text-text-primary">{formatDateTime(operation.date)}</span>
               </div>
             </div>
+          </section>
+
+          <section>
+            <h4 className="text-sm font-medium text-text-primary mb-3">Contacto y recorrido</h4>
+            <div className="space-y-2 text-sm text-gray-600">
+              <div className="flex items-center">
+                <i className="fa-solid fa-user me-2 text-gray-400" />
+                <span>{operation.contact}</span>
+              </div>
+              <div className="flex items-start">
+                <i className="fa-solid fa-route me-2 text-gray-400 mt-0.5" />
+                <span>{operation.route}</span>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <h4 className="text-sm font-medium text-text-primary mb-3">Detalle</h4>
+            <p className="text-sm text-gray-600 leading-relaxed">{operation.notes}</p>
+          </section>
+
+          <section>
+            <h4 className="text-sm font-medium text-text-primary mb-3">Seguimiento</h4>
+            <div className="space-y-4">
+              {operation.timeline.map((step, index) => {
+                const badgeTone = TIMELINE_STATE_CLASSES[step.state] ?? TIMELINE_STATE_CLASSES.upcoming;
+                const lineClass = index === operation.timeline.length - 1 ? 'hidden' : 'block';
+
+                return (
+                  <div key={step.id} className="relative pl-10">
+                    <div className={`absolute left-0 top-0 w-8 h-8 rounded-full flex items-center justify-center ${badgeTone}`}>
+                      {step.state === 'completed' && <i className="fa-solid fa-check text-xs" />}
+                      {step.state === 'current' && <i className="fa-solid fa-location-arrow text-xs" />}
+                      {step.state === 'upcoming' && <i className="fa-solid fa-circle text-[10px]" />}
+                    </div>
+                    <div className={`absolute left-[14px] top-8 w-[2px] h-10 bg-gray-200 ${lineClass}`} />
+                    <div>
+                      <div className="text-sm font-medium text-text-primary">{step.title}</div>
+                      <div className="text-xs text-gray-500">{step.description}</div>
+                      <div className="text-xs text-gray-400 mt-1">{formatDateTime(step.date)} · {step.user}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+
+          {!!operation.attachments.length && (
+            <section>
+              <h4 className="text-sm font-medium text-text-primary mb-3">Adjuntos</h4>
+              <div className="space-y-2">
+                {operation.attachments.map((attachment) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100"
+                  >
+                    <div className="flex items-center">
+                      <i
+                        className={`fa-solid ${attachment.type === 'pdf' ? 'fa-file-pdf text-red-500' : 'fa-image text-blue-500'} mr-3`}
+                      />
+                      <div>
+                        <div className="text-sm font-medium text-text-primary">{attachment.name}</div>
+                        <div className="text-xs text-gray-500">{attachment.size}</div>
+                      </div>
+                    </div>
+                    <button type="button" className="text-primary hover:text-blue-700 text-sm">
+                      Ver archivo
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
           )}
         </div>
-      </div>
+
+        <div className="px-6 py-5 border-t border-gray-200 flex flex-col gap-3 sm:flex-row">
+          <button
+            type="button"
+            className="flex-1 py-2 px-4 border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors"
+          >
+            Editar operación
+          </button>
+          <button
+            type="button"
+            className="flex-1 py-2 px-4 bg-success text-white rounded-lg hover:bg-green-600 transition-colors"
+          >
+            Marcar completada
+          </button>
+          <button
+            type="button"
+            className="py-2 px-4 bg-danger text-white rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <i className="fa-solid fa-times" />
+          </button>
+        </div>
+      </aside>
     </>
   );
 };
+
+export default OperationDetailPanel;

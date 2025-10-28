@@ -9,3 +9,4 @@ export * from './useClientDetail';
 export * from './useCreateClient';
 export * from './useNotifications';
 export * from './useUserPermissions';
+export * from './useCurrentUser';

@@ -36,6 +36,33 @@ const getDefaultHeaders = (): Record<string, string> => {
   return headers;
 };
 
+const buildQueryString = (params?: Record<string, unknown>) => {
+  if (!params) {
+    return '';
+  }
+
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') {
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.forEach((entry) => {
+        if (entry !== undefined && entry !== null && entry !== '') {
+          searchParams.append(key, String(entry));
+        }
+      });
+      return;
+    }
+
+    searchParams.append(key, String(value));
+  });
+
+  const query = searchParams.toString();
+  return query ? `?${query}` : '';
+};
+
 const createApiError = (payload: ApiError & { status?: number; details?: any }) => {
   const error = new Error(payload.message) as Error & ApiError & {
     status?: number;
@@ -154,7 +181,11 @@ export const api = {
     
   // User profile
   getProfile: () =>
-    apiRequest('/api/auth/profile'),
+    apiRequest('/api/auth/me'),
+
+  // Logistics
+  getLogisticsOperations: (params?: Record<string, unknown>) =>
+    apiRequest(`/api/logistics/operations${buildQueryString(params)}`),
 };
 
 // Error handling utility

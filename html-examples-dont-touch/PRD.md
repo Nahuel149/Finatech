@@ -206,6 +206,8 @@ Implementar el layout base de la app:
 
 Navbar fijo arriba con: logo, menús: Operaciones, Tesorería, Logística, Transferencias en pesos; campana de notificaciones; y menú de usuario (avatar/nombre) con acciones mínimas: Perfil, Configuración, Cerrar sesión.
 
+Footer persistente: mantener el pie de página operativo (component Footer) visible en todas las vistas del dashboard, incluyendo Logística, para conservar accesos rápidos y consistencia de navegación.
+
 Resumen de saldos (debajo del navbar) con tres tarjetas:
 
 Saldo de transferencia (ARS)
@@ -1232,4 +1234,73 @@ Los movimientos no pueden modificarse si ya están compensados.
 Todos los movimientos deben tener referencia única y timestamp.
 
 Los saldos deben mantenerse consistentes y balanceados entre entradas y salidas.
+
+--
+
+Consistencia de Footer en Dashboards
+
+
+Description
+
+Estado: Implementado y auditado (enero 2025).
+
+Como desarrollador del sistema
+Quiero que todos los dashboards mantengan un footer consistente
+Para asegurar una experiencia de usuario uniforme y evitar regresiones futuras
+
+Descripción
+Todos los dashboards principales (Operaciones, Tesorería, Logística) deben utilizar el componente `DashboardFooter` compartido ubicado en `client/src/components/dashboard/operaciones/Footer.tsx`. Este componente está exportado tanto como `DashboardFooter` como `Footer` para compatibilidad.
+
+Criterios de aceptación
+
+CA1 – Componente footer compartido
+
+Dado que se desarrolla una nueva página de dashboard
+
+Cuando se implementa la interfaz
+
+Entonces debe importar y renderizar el componente `<Footer />` desde `../operaciones/Footer`.
+
+CA2 – Consistencia visual
+
+Dado que navego entre diferentes dashboards
+
+Cuando accedo a páginas de Operaciones, Tesorería o Logística
+
+Entonces el footer debe mantener el mismo diseño, contenido y comportamiento en todas las páginas.
+
+CA3 – Responsive design
+
+Dado que accedo desde diferentes dispositivos
+
+Cuando visualizo cualquier dashboard
+
+Entonces el footer debe adaptarse correctamente a pantallas desktop y móviles.
+
+CA4 – Excepciones documentadas
+
+Dado que una página requiere un footer especializado
+
+Cuando se implementa una excepción al footer estándar
+
+Entonces debe estar documentada en el código con comentarios explicativos del motivo.
+
+CA5 – Auditoría periódica
+
+Dado que se realizan cambios en el sistema
+
+Cuando se agregan nuevas páginas o se modifican existentes
+
+Entonces se debe verificar que el footer compartido esté correctamente implementado.
+
+Reglas de negocio
+- **Footer stays rule**: El footer debe permanecer consistente en todos los dashboards principales.
+- Páginas de flujos especializados (como wizards de transferencia) pueden usar footers alternativos si es necesario para la UX.
+- Cualquier modificación al componente `DashboardFooter` se aplica automáticamente a todos los dashboards.
+- El footer debe incluir información corporativa, enlaces de ayuda y versión del sistema.
+
+Implementación actual verificada:
+- ✅ Operaciones: `DashboardOperacionesPage.tsx` usa `<DashboardFooter />`
+- ✅ Tesorería: `TreasuryMovementsPage.tsx`, `GlobalBalancesPage.tsx`, `LinkedBalancesPage.tsx` usan `<Footer />`
+- ✅ Logística: `LogisticaPanel.tsx`, `LogisticsGeneralSummaryPage.tsx`, `MovementDetailPage.tsx` usan `<Footer />`
 

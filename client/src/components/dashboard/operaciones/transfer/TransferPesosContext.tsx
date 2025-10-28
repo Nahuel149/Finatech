@@ -46,6 +46,10 @@ interface TransferPesosContextValue {
   reset: () => void;
   setLastOperation: (operation: TransferOperation | null) => void;
   toPayload: () => TransferDistributionLineInput[] | null;
+  saveDraft: () => Promise<boolean>;
+  loadDraft: () => boolean;
+  hasSavedDraft: () => boolean;
+  clearSavedDraft: () => void;
 }
 
 const DEFAULT_STATE: TransferDraftState = {
@@ -54,6 +58,8 @@ const DEFAULT_STATE: TransferDraftState = {
   totalAmount: 0,
   distributionLines: [],
 };
+
+const DRAFT_STORAGE_KEY = 'transfer-pesos-draft';
 
 const TransferPesosContext = createContext<TransferPesosContextValue | undefined>(undefined);
 
@@ -196,6 +202,55 @@ export const TransferPesosProvider: React.FC<{ children: React.ReactNode }> = ({
     }));
   }, [draft]);
 
+  const saveDraft = useCallback(async () => {
+    try {
+      const draftToSave = {
+        ...draft,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftToSave));
+      return true;
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      return false;
+    }
+  }, [draft]);
+
+  const loadDraft = useCallback(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (savedDraft) {
+        const parsedDraft = JSON.parse(savedDraft);
+        // Remove the savedAt property before setting the draft
+        const { savedAt, ...draftState } = parsedDraft;
+        setDraft(draftState);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error('Error loading draft:', error);
+      return false;
+    }
+  }, []);
+
+  const hasSavedDraft = useCallback(() => {
+    try {
+      const savedDraft = localStorage.getItem(DRAFT_STORAGE_KEY);
+      return !!savedDraft;
+    } catch (error) {
+      console.error('Error checking saved draft:', error);
+      return false;
+    }
+  }, []);
+
+  const clearSavedDraft = useCallback(() => {
+    try {
+      localStorage.removeItem(DRAFT_STORAGE_KEY);
+    } catch (error) {
+      console.error('Error clearing saved draft:', error);
+    }
+  }, []);
+
   const value = useMemo<TransferPesosContextValue>(
     () => ({
       draft,
@@ -211,6 +266,10 @@ export const TransferPesosProvider: React.FC<{ children: React.ReactNode }> = ({
       reset,
       setLastOperation,
       toPayload,
+      saveDraft,
+      loadDraft,
+      hasSavedDraft,
+      clearSavedDraft,
     }),
     [
       draft,
@@ -226,6 +285,10 @@ export const TransferPesosProvider: React.FC<{ children: React.ReactNode }> = ({
       reset,
       setLastOperation,
       toPayload,
+      saveDraft,
+      loadDraft,
+      hasSavedDraft,
+      clearSavedDraft,
     ]
   );
 

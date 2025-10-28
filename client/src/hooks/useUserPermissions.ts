@@ -25,6 +25,9 @@ const extractPermissions = (payload: any): string[] => {
   if (Array.isArray(payload.user?.permissions)) {
     return payload.user.permissions;
   }
+  if (Array.isArray(payload.profile?.permissions)) {
+    return payload.profile.permissions;
+  }
   return [];
 };
 

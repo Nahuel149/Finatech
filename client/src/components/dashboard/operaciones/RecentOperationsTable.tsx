@@ -12,7 +12,7 @@ interface TableRow {
   clientName: string;
   clientIdentifier: string;
   clientInitials: string;
-  typeLabel: 'Compra' | 'Venta';
+  typeLabel: 'Compra' | 'Venta' | 'Liquidación';
   typeClassName: string;
   entersText: string;
   saleText: string;
@@ -23,11 +23,13 @@ interface TableRow {
   statusClassName: string;
 }
 
-const TYPE_BADGE_CLASS: Record<'Compra' | 'Venta', string> = {
+const TYPE_BADGE_CLASS: Record<'Compra' | 'Venta' | 'Liquidación', string> = {
   Compra:
     'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-success bg-opacity-10 text-success',
   Venta:
     'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-primary bg-opacity-10 text-primary',
+  Liquidación:
+    'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-orange-100 text-orange-800',
 };
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
@@ -168,12 +170,19 @@ const buildClientIdentifier = (operation: TransferOperation) => {
   return 'CUIT: —';
 };
 
-const getTypeLabel = (operation: TransferOperation): 'Compra' | 'Venta' =>
-  (operation.direction || '').toLowerCase() === 'incoming' ? 'Venta' : 'Compra';
+const getTypeLabel = (operation: TransferOperation): 'Compra' | 'Venta' | 'Liquidación' => {
+  // Por ahora, identificamos liquidaciones basándonos en el código de operación o algún patrón específico
+  // Esto puede ajustarse cuando se tenga más información sobre cómo identificar liquidaciones
+  if (operation.operationCode && operation.operationCode.includes('LIQ')) {
+    return 'Liquidación';
+  }
+  // Lógica original para compra/venta
+  return (operation.direction || '').toLowerCase() === 'incoming' ? 'Venta' : 'Compra';
+};
 
 const computeFinancials = (
   operation: TransferOperation,
-  typeLabel: 'Compra' | 'Venta',
+  typeLabel: 'Compra' | 'Venta' | 'Liquidación',
   marketRate: number | null
 ) => {
   const totals = sumByMethod(operation.distributionLines || []);
@@ -221,7 +230,7 @@ const computeFinancials = (
 const calculateMargin = (
   effectiveRate: number | null,
   marketRate: number | null,
-  typeLabel: 'Compra' | 'Venta'
+  typeLabel: 'Compra' | 'Venta' | 'Liquidación'
 ) => {
   if (!effectiveRate || !marketRate || Number.isNaN(effectiveRate) || effectiveRate <= 0) {
     return { marginLabel: '—', marginClassName: 'text-gray-600' };
@@ -352,6 +361,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                 <option value="all">Todos los tipos</option>
                 <option value="Compra">Compra</option>
                 <option value="Venta">Venta</option>
+                <option value="Liquidación">Liquidación</option>
               </select>
               <div className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
                 <i className="fa-solid fa-chevron-down text-gray-400" />

@@ -21,6 +21,7 @@ const buildProfile = (user) => {
     id: user._id.toString(),
     fullName: user.fullName,
     email: user.email,
+    permissions: Array.isArray(user.permissions) ? user.permissions : [],
     providers: Array.isArray(user.providers)
       ? user.providers.map((provider) => ({
           provider: provider.provider,

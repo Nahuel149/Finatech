@@ -130,6 +130,7 @@ export const TreasuryMovementsPage: React.FC = () => {
       ...prev,
       search: value,
     }));
+    applyFilters({ search: value });
   };
 
   const handleRegisterMovement = () => {
@@ -230,11 +231,11 @@ export const TreasuryMovementsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="bg-gray-50 min-h-screen flex flex-col">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleGlobalSearchChange} />
       <TreasuryBalanceStripe onSelectBalance={handleSelectBalanceStripe} />
 
-      <main id="treasury-container" className="pt-[220px] px-6 pb-24">
+      <main id="movimientos-container" className="pt-[220px] px-6 pb-24 flex-1">
         <TreasuryHeader
           onRegisterMovement={handleRegisterMovement}
           onOpenConciliation={handleOpenConciliation}

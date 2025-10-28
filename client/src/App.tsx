@@ -20,6 +20,7 @@ import {
   TransferPesosBuilderPage,
   TransferPesosConfirmPage,
   TransferPesosSuccessPage,
+  TransferPesosDetailPage,
 } from './components/dashboard/operaciones/transfer';
 import { LogisticaPage } from './components/dashboard/logistica/LogisticaPage';
 import { LogisticsGeneralSummaryPage } from './components/dashboard/logistica/LogisticsGeneralSummaryPage';
@@ -59,6 +60,7 @@ const App: React.FC = () => {
             <Route index element={<TransferPesosBuilderPage />} />
             <Route path="confirmacion" element={<TransferPesosConfirmPage />} />
             <Route path="completada" element={<TransferPesosSuccessPage />} />
+            <Route path="detalle/:operationId" element={<TransferPesosDetailPage />} />
           </Route>
           <Route path="/dashboard/operaciones/nueva" element={<OperationWizardStep1Page />} />
           <Route path="/dashboard/operaciones/nueva/liquidacion" element={<OperationWizardStep2Page />} />

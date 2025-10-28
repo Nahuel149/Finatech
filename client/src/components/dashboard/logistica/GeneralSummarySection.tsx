@@ -1,101 +1,96 @@
 import React from 'react';
-import {
-  ClockIcon,
-  TruckIcon,
-  ArrowsRightLeftIcon,
-  CheckCircleIcon,
-} from '../../icons/HeroiconsOutline';
+import { LogisticsMetrics } from '../../../types';
 
-interface SummaryCard {
-  id: string;
-  title: string;
-  count: number;
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  bgColor: string;
-  iconColor: string;
+interface GeneralSummarySectionProps {
+  metrics: LogisticsMetrics | null;
+  loading: boolean;
 }
 
-export const GeneralSummarySection: React.FC = () => {
-  const summaryData: SummaryCard[] = [
-    {
-      id: 'active-operations',
-      title: 'Operaciones activas',
-      count: 12,
-      description: 'En proceso de gestión',
-      icon: ClockIcon,
-      bgColor: 'bg-blue-50',
-      iconColor: 'text-blue-600'
-    },
-    {
-      id: 'pending-deliveries',
-      title: 'Entregas pendientes',
-      count: 8,
-      description: 'Programadas para hoy',
-      icon: TruckIcon,
-      bgColor: 'bg-orange-50',
-      iconColor: 'text-orange-600'
-    },
-    {
-      id: 'internal-transfers',
-      title: 'Transferencias internas',
-      count: 5,
-      description: 'Entre sucursales',
-      icon: ArrowsRightLeftIcon,
-      bgColor: 'bg-purple-50',
-      iconColor: 'text-purple-600'
-    },
-    {
-      id: 'completed-today',
-      title: 'Completadas hoy',
-      count: 23,
-      description: 'Operaciones finalizadas',
-      icon: CheckCircleIcon,
-      bgColor: 'bg-green-50',
-      iconColor: 'text-green-600'
-    }
-  ];
+const CARD_CONFIG = [
+  {
+    id: 'active-operations',
+    title: 'Operaciones activas',
+    description: 'En curso actualmente',
+    icon: 'fa-clipboard-list',
+    iconBackground: 'bg-blue-100',
+    metricKey: 'active' as const,
+  },
+  {
+    id: 'pending-deliveries',
+    title: 'Entregas pendientes',
+    description: 'A la espera de confirmación',
+    icon: 'fa-truck',
+    iconBackground: 'bg-orange-100',
+    metricKey: 'pendingDeliveries' as const,
+  },
+  {
+    id: 'internal-transfers',
+    title: 'Transferencias internas',
+    description: 'Movimientos físicos registrados',
+    icon: 'fa-sync',
+    iconBackground: 'bg-green-100',
+    metricKey: 'internalTransfers' as const,
+  },
+  {
+    id: 'completed-today',
+    title: 'Completadas hoy',
+    description: 'Últimas 24h',
+    icon: 'fa-check-circle',
+    iconBackground: 'bg-green-100',
+    metricKey: 'completedToday' as const,
+  },
+];
 
-  const handleCardClick = (cardId: string) => {
-    // Navigate to detailed view based on card type
-    window.location.href = '/dashboard/logistica/resumen-general';
-  };
+const resolveTrend = (metrics: LogisticsMetrics | null, key: keyof LogisticsMetrics['trends']) => {
+  if (!metrics) {
+    return { value: '—', icon: 'fa-minus', tone: 'text-gray-400' };
+  }
 
-  return (
-    <section className="mb-10">
-      <h2 className="text-lg font-semibold text-text-primary mb-6">Resumen general</h2>
-      
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-        {summaryData.map((card) => {
-          const IconComponent = card.icon;
-          
-          return (
-            <article
-              key={card.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => handleCardClick(card.id)}
-              aria-label="Ver resumen general"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  <p className="text-sm font-medium text-gray-600 mb-1">
-                    {card.title}
-                  </p>
-                  <p className="text-2xl font-bold text-text-primary mb-2">
-                    {card.count}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {card.description}
-                  </p>
+  const delta = metrics.trends[key];
+  if (typeof delta !== 'number') {
+    return { value: '—', icon: 'fa-minus', tone: 'text-gray-400' };
+  }
+
+  const tone = delta > 0 ? 'text-success' : delta < 0 ? 'text-danger' : 'text-gray-500';
+  const icon = delta > 0 ? 'fa-arrow-up' : delta < 0 ? 'fa-arrow-down' : 'fa-minus';
+  const formatted = `${delta > 0 ? '+' : ''}${delta}%`;
+  return { value: formatted, icon, tone };
+};
+
+export const GeneralSummarySection: React.FC<GeneralSummarySectionProps> = ({ metrics, loading }) => (
+  <section id="general-summary-section" className="mb-10">
+    <h2 className="text-lg font-semibold text-text-primary mb-4">Resumen general</h2>
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+      {CARD_CONFIG.map((card) => {
+        const value = metrics ? metrics[card.metricKey] : null;
+        const displayValue = loading && !metrics ? '—' : value ?? 0;
+        const trend = resolveTrend(metrics, card.metricKey);
+
+        return (
+          <div key={card.id} className="bg-white rounded-lg border border-gray-200 p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center">
+                <div className={`${card.iconBackground} w-12 h-12 rounded-lg flex items-center justify-center mr-4`}>
+                  <i className={`fa-solid ${card.icon} text-primary text-lg`} />
                 </div>
-                <div className={`flex h-12 w-12 items-center justify-center rounded-lg ${card.bgColor}`}>
-                  <IconComponent className={`h-6 w-6 ${card.iconColor}`} />
+                <div>
+                  <div className="text-sm font-medium text-gray-500">{card.title}</div>
+                  <div className="text-2xl font-bold text-text-primary">
+                    {typeof displayValue === 'number' ? displayValue : displayValue}
+                  </div>
                 </div>
               </div>
-            </article>
-          );
-        })}
-      </div>
-    </section>
-  );
-};
+              <div className={`flex items-center text-sm ${trend.tone}`}>
+                <i className={`fa-solid ${trend.icon} mr-1`} />
+                {trend.value}
+              </div>
+            </div>
+            <div className="text-xs text-gray-500">{card.description}</div>
+          </div>
+        );
+      })}
+    </div>
+  </section>
+);
+
+export default GeneralSummarySection;

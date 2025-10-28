@@ -44,6 +44,9 @@ export const NotificationsPage: React.FC = () => {
     unreadCount,
     markAsRead,
     markAllAsRead,
+    loading: notificationsLoading,
+    error: notificationsError,
+    refresh,
   } = useNotifications();
 
   const filteredNotifications = useMemo(() => {
@@ -152,6 +155,23 @@ export const NotificationsPage: React.FC = () => {
           <h2 className="text-sm font-semibold uppercase tracking-wide text-gray-500">
             No leídas
           </h2>
+          {notificationsLoading && (
+            <div className="mt-4 rounded-xl border border-gray-200 bg-white p-6 text-sm text-gray-500">
+              Cargando notificaciones…
+            </div>
+          )}
+          {notificationsError && !notificationsLoading && (
+            <div className="mt-4 rounded-xl border border-danger/30 bg-danger/5 p-6 text-sm text-danger">
+              No pudimos obtener las notificaciones.{' '}
+              <button
+                type="button"
+                className="font-medium underline"
+                onClick={() => refresh().catch(() => {})}
+              >
+                Reintentar
+              </button>
+            </div>
+          )}
           <div className="mt-4 space-y-4">
             {unreadOnly.length === 0 ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
