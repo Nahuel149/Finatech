@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
 import { TreasuryContactBalanceDetailResponse } from '../../types';
+import { subscribeDashboardBalanceRefresh } from '../../utils';
 
 export interface ContactBalanceDetailFilters {
   currency?: string | null;
@@ -148,6 +149,16 @@ export const useContactBalanceDetail = (
     }
     execute().catch(() => {});
   }, [endpoint, autoFetch, execute]);
+
+  useEffect(() => {
+    if (!autoFetch || !endpoint) {
+      return () => {};
+    }
+    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
+      execute().catch(() => {});
+    });
+    return unsubscribe;
+  }, [autoFetch, endpoint, execute]);
 
   return {
     data: data ?? DEFAULT_RESPONSE,

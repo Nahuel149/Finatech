@@ -5,6 +5,15 @@ Description
 
 Estado: Implementado en la aplicación React (registro local + Google, pendiente verificación, reenvío de correo).
 
+### Estado de correcciones (abril 2025)
+
+- Flujo de operaciones actualizado: se eliminó el campo "subtipo", se corrigió la dirección Compra/Venta (egreso ARS en compras, ingreso ARS en ventas) y el resumen refleja el nuevo cálculo del margen.
+- Tasa de mercado editable sólo para roles Tesorería/Admin con auditoría en `/api/rates/market`; UI con toggle “usar tasa del día”.
+- Cálculo de margen unificado `(t_mercado - t_operación) / t_mercado`, colores verde/rojo y tooltip con la fórmula.
+- Liquidaciones compuestas mantienen montos derivados: se deshabilita la edición directa de “Monto” y el acceso del navbar pasa a “Transferencias en pesos”.
+- Anulación de operaciones expone botón en el resumen final (sólo si la operación está registrada y sin liquidar), crea asiento inverso y registra auditoría.
+- Panel de saldos ahora se refresca en tiempo real: dashboard y widgets escuchan el SSE `/api/dashboard/balances/events`.
+
 Como visitante
 Quiero crear una cuenta usando email y contraseña o con mi cuenta de Google
 Para acceder a la plataforma y guardar mi progreso/configuración
@@ -189,13 +198,13 @@ Estructura principal de FinaTech
 Description
 
 Como usuario de FinaTech
-Quiero una interfaz con un navbar principal (Operaciones, Tesorería, Logística, Liquidaciones), una campana de notificaciones y un menú de cuenta
+Quiero una interfaz con un navbar principal (Operaciones, Tesorería, Logística, Transferencias en pesos), una campana de notificaciones y un menú de cuenta
 Para navegar entre secciones, ver rápidamente mis saldos clave y trabajar dentro del contenedor de contenido de cada módulo
 
 Descripción
 Implementar el layout base de la app:
 
-Navbar fijo arriba con: logo, menús: Operaciones, Tesorería, Logística, Liquidaciones; campana de notificaciones; y menú de usuario (avatar/nombre) con acciones mínimas: Perfil, Configuración, Cerrar sesión.
+Navbar fijo arriba con: logo, menús: Operaciones, Tesorería, Logística, Transferencias en pesos; campana de notificaciones; y menú de usuario (avatar/nombre) con acciones mínimas: Perfil, Configuración, Cerrar sesión.
 
 Resumen de saldos (debajo del navbar) con tres tarjetas:
 
@@ -211,11 +220,12 @@ Contenedor de contenido bajo los saldos, donde se renderiza la vista de cada sec
 Criterios de Aceptación
 CA1 – Navbar visible y fijo
 
+
 Dado que ingreso a la aplicación
 
 Cuando la página carga
 
-Entonces el navbar se ve en la parte superior, permanece fijo al hacer scroll y contiene: logo, menús (Operaciones, Tesorería, Logística, Liquidaciones), campana y menú de cuenta.
+Entonces el navbar se ve en la parte superior, permanece fijo al hacer scroll y contiene: logo, menús (Operaciones, Tesorería, Logística, Transferencias en pesos), campana y menú de cuenta.
 
 CA2 – Estado activo de menú y ruteo
 

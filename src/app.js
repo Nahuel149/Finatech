@@ -11,6 +11,7 @@ const geocodingRoutes = require('./routes/geocoding.routes');
 const logisticsRoutes = require('./routes/logistics.routes');
 const currentAccountRoutes = require('./routes/currentAccount.routes');
 const treasuryRoutes = require('./routes/treasury.routes');
+const ratesRoutes = require('./routes/rates.routes');
 const { requestLogger } = require('./middleware/requestLogger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { ensureCsrfCookie, csrfProtect } = require('./middleware/csrf');
@@ -54,6 +55,7 @@ app.use('/api/geocoding', geocodingRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/current-accounts', currentAccountRoutes);
 app.use('/api/treasury', treasuryRoutes);
+app.use('/api/rates', ratesRoutes);
 
 // Serve React build files
 const buildDir = path.join(__dirname, '..', 'client', 'build');

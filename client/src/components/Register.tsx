@@ -39,26 +39,57 @@ export const Register: React.FC = () => {
 
   const handleGoogleResponse = useCallback(async (response: any) => {
     if (response.credential) {
-      setIsLoading(true);
+      setIsGoogleLoading(true);
       try {
         await googleAuth(response.credential, false);
         setShowSuccessMessage(true);
       } catch (error: any) {
         setFormErrors({ general: error.message || 'Error con Google Sign-In' });
       } finally {
-        setIsLoading(false);
+        setIsGoogleLoading(false);
       }
     }
   }, [googleAuth]);
 
+  // Google Sign-In initialization with proper timing
   useEffect(() => {
-    if (typeof window !== 'undefined' && window.google) {
-      window.google.accounts.id.initialize({
-        client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '',
-        callback: handleGoogleResponse,
-      });
+    const initializeGoogleSignIn = () => {
+      if (typeof window !== 'undefined' && window.google?.accounts?.id && config?.googleClientId) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: config.googleClientId,
+            callback: handleGoogleResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true,
+          });
+          return true;
+        } catch (error) {
+          console.error('Error initializing Google Sign-In:', error);
+          return false;
+        }
+      }
+      return false;
+    };
+
+    // If config is available, try to initialize immediately
+    if (config?.googleClientId) {
+      if (initializeGoogleSignIn()) {
+        return; // Successfully initialized
+      }
+
+      // If Google script isn't loaded yet, wait for it
+      const checkGoogleScript = () => {
+        if (window.google?.accounts?.id) {
+          initializeGoogleSignIn();
+        } else {
+          // Check again in 100ms
+          setTimeout(checkGoogleScript, 100);
+        }
+      };
+
+      checkGoogleScript();
     }
-  }, [handleGoogleResponse]);
+  }, [config?.googleClientId, handleGoogleResponse]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value, type, checked } = e.target;
@@ -129,13 +160,38 @@ export const Register: React.FC = () => {
 
   const handleGoogleClick = () => {
     if (!config?.googleClientId) {
-      setFormErrors({ general: 'El inicio con Google no está disponible. Contactá al administrador.' });
+      setFormErrors({ general: 'Google Sign-In no está configurado. Contactá al administrador.' });
       return;
     }
 
     setIsGoogleLoading(true);
-    if (typeof window !== 'undefined' && window.google) {
-      window.google.accounts.id.prompt();
+    setFormErrors({});
+
+    if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+      try {
+        // Re-initialize if needed
+        window.google.accounts.id.initialize({
+          client_id: config.googleClientId,
+          callback: handleGoogleResponse,
+          auto_select: false,
+          cancel_on_tap_outside: true,
+        });
+
+        window.google.accounts.id.prompt((notification) => {
+          if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+            // If prompt fails, just show an error message instead of creating another button
+            setFormErrors({ general: 'No se pudo mostrar el diálogo de Google. Intentá de nuevo.' });
+          }
+          setIsGoogleLoading(false);
+        });
+      } catch (error) {
+        console.error('Error showing Google Sign-In prompt:', error);
+        setFormErrors({ general: 'Error al cargar Google Sign-In. Intentá de nuevo.' });
+        setIsGoogleLoading(false);
+      }
+    } else {
+      setFormErrors({ general: 'Google Sign-In no está disponible. Verificá tu conexión e intentá de nuevo.' });
+      setIsGoogleLoading(false);
     }
   };
 

@@ -4,6 +4,7 @@ import {
   TreasuryGlobalBalancesOverviewResponse,
   TreasuryBalanceState,
 } from '../../types';
+import { subscribeDashboardBalanceRefresh } from '../../utils';
 
 export interface GlobalBalancesFilters {
   currency?: string;
@@ -119,6 +120,13 @@ export const useGlobalBalancesOverview = (filters: GlobalBalancesFilters) => {
 
   useEffect(() => {
     execute().catch(() => {});
+  }, [execute]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
+      execute().catch(() => {});
+    });
+    return unsubscribe;
   }, [execute]);
 
   return {

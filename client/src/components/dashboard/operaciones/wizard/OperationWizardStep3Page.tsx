@@ -18,8 +18,10 @@ import { FinalValidationChecklist, ValidationItem } from './FinalValidationCheck
 import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
+import { apiRequest, handleApiError } from '../../../../utils/api';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
+import { emitDashboardBalanceRefresh } from '../../../../utils';
 
 const WIZARD_STEPS = [
   { label: 'Datos', description: 'Información de la operación' },
@@ -52,6 +54,11 @@ export const OperationWizardStep3Page: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successStateVisible, setSuccessStateVisible] = useState(false);
   const [showToast, setShowToast] = useState(false);
+  const [voidModalOpen, setVoidModalOpen] = useState(false);
+  const [voidReason, setVoidReason] = useState('');
+  const [voiding, setVoiding] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
+  const [voidSuccess, setVoidSuccess] = useState(false);
 
   useEffect(() => {
     if (!showToast) {
@@ -60,6 +67,14 @@ export const OperationWizardStep3Page: React.FC = () => {
     const timeout = window.setTimeout(() => setShowToast(false), 3000);
     return () => window.clearTimeout(timeout);
   }, [showToast]);
+
+  useEffect(() => {
+    if (draft?.status === 'voided') {
+      setVoidSuccess(true);
+    } else {
+      setVoidSuccess(false);
+    }
+  }, [draft?.status]);
 
   useEffect(() => {
     if (draft) {
@@ -98,6 +113,9 @@ export const OperationWizardStep3Page: React.FC = () => {
 
   const incomingCurrency = draft?.incomingAsset?.code ?? 'ARS';
   const outgoingCurrency = draft?.outgoingAsset?.code ?? 'USD';
+  const isVoided = draft?.status === 'voided';
+  const canVoid = draft?.status === 'registered';
+  const voidButtonDisabled = !canVoid || voiding;
 
   const marginValue = draft?.marginPercentage;
   const settlementPercentage = draft?.settlement?.totalPercentage ?? (draft?.settlement?.mode === 'simple' ? 100 : 0);
@@ -128,7 +146,8 @@ export const OperationWizardStep3Page: React.FC = () => {
     },
   ];
 
-  const canConfirm = validationItems.every((item) => item.passed) && Boolean(draft?.id);
+  const canConfirm =
+    validationItems.every((item) => item.passed) && Boolean(draft?.id) && !isVoided;
 
   const handleBackToStep = useCallback(
     (step: number) => {
@@ -166,6 +185,7 @@ export const OperationWizardStep3Page: React.FC = () => {
 
     try {
       await finalize();
+      emitDashboardBalanceRefresh();
       setSuccessMessage('Operación confirmada correctamente.');
       setSuccessStateVisible(true);
       await fetchDraft();
@@ -175,6 +195,45 @@ export const OperationWizardStep3Page: React.FC = () => {
       setFormError(apiError.message || 'No pudimos confirmar la operación.');
     }
   }, [canConfirm, draft?.id, fetchDraft, finalize]);
+
+  const handleOpenVoidModal = useCallback(() => {
+    setVoidReason('');
+    setVoidError(null);
+    setVoidModalOpen(true);
+  }, []);
+
+  const handleConfirmVoid = useCallback(async () => {
+    if (!draft?.id) {
+      setVoidError('No encontramos la operación para anular.');
+      return;
+    }
+    setVoiding(true);
+    setVoidError(null);
+    try {
+      await apiRequest(`/api/transactions/${draft.id}/void`, {
+        method: 'POST',
+        body: { reason: voidReason || null },
+      });
+      await fetchDraft();
+      setVoidModalOpen(false);
+      setVoidReason('');
+      emitDashboardBalanceRefresh();
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setVoidError(apiError.message || 'No pudimos anular la operación.');
+    } finally {
+      setVoiding(false);
+    }
+  }, [draft?.id, fetchDraft, voidReason]);
+
+  const handleCloseVoidModal = useCallback(() => {
+    if (voiding) {
+      return;
+    }
+    setVoidModalOpen(false);
+    setVoidReason('');
+    setVoidError(null);
+  }, [voiding]);
 
   const handleViewDetails = useCallback(() => {
     if (!draft?.id) {
@@ -212,6 +271,9 @@ export const OperationWizardStep3Page: React.FC = () => {
         {successMessage && (
           <Alert type="success" message={successMessage} className="mb-4" onClose={() => setSuccessMessage(null)} />
         )}
+        {voidSuccess && (
+          <Alert type="warning" message="La operación fue anulada. Las cuentas se revirtieron automáticamente." className="mb-4" />
+        )}
 
         {!isReady && draftLoading && (
           <div className="bg-white border border-gray-200 rounded-lg p-12 flex flex-col items-center justify-center shadow-sm">
@@ -238,7 +300,6 @@ export const OperationWizardStep3Page: React.FC = () => {
               clientDocument={clientSummary?.cuit}
               contact={clientSummary?.internalOwner}
               type={operationType}
-              subtype={draft?.subtype ?? ''}
               incomingAssetLabel={draft?.incomingAsset?.label ?? incomingCurrency}
               outgoingAssetLabel={draft?.outgoingAsset?.label ?? outgoingCurrency}
               incomingAmount={draft?.incomingAmount ?? 0}
@@ -248,6 +309,7 @@ export const OperationWizardStep3Page: React.FC = () => {
               apr={draft?.apr ?? 0}
               marketApr={draft?.marketApr ?? 0}
               marginPercentage={draft?.marginPercentage ?? 0}
+              clientLastMargin={clientSummary?.lastMarginPercentage ?? null}
               settlementMode={draft?.settlement?.mode ?? 'simple'}
               settlementSimpleMethod={draft?.settlement?.simpleMethod}
               settlementLines={draft?.settlement?.lines ?? []}
@@ -276,6 +338,8 @@ export const OperationWizardStep3Page: React.FC = () => {
             operationCode={draft?.operationCode ?? '—'}
             onViewDetails={handleViewDetails}
             onNewOperation={handleNewOperation}
+            onVoid={isVoided ? undefined : handleOpenVoidModal}
+            disableVoid={voidButtonDisabled}
           />
         )}
       </main>
@@ -286,6 +350,20 @@ export const OperationWizardStep3Page: React.FC = () => {
         open={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         onConfirm={handleConfirmCancel}
+      />
+
+      <VoidOperationModal
+        open={voidModalOpen}
+        reason={voidReason}
+        onReasonChange={(value) => {
+          setVoidReason(value);
+          setVoidError(null);
+        }}
+        onConfirm={handleConfirmVoid}
+        onClose={handleCloseVoidModal}
+        loading={voiding}
+        error={voidError}
+        canConfirm={voidReason.trim().length > 0}
       />
 
       {showToast && (
@@ -307,6 +385,86 @@ export const OperationWizardStep3Page: React.FC = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+interface VoidOperationModalProps {
+  open: boolean;
+  reason: string;
+  onReasonChange: (value: string) => void;
+  onConfirm: () => void;
+  onClose: () => void;
+  loading: boolean;
+  error: string | null;
+  canConfirm: boolean;
+}
+
+const VoidOperationModal: React.FC<VoidOperationModalProps> = ({
+  open,
+  reason,
+  onReasonChange,
+  onConfirm,
+  onClose,
+  loading,
+  error,
+  canConfirm,
+}) => {
+  if (!open) {
+    return null;
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-lg shadow-2xl w-full max-w-lg overflow-hidden"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className="px-6 py-4 border-b border-gray-200">
+          <h2 className="text-lg font-semibold text-text-primary">Anular operación</h2>
+          <p className="text-sm text-gray-600">
+            Indicá el motivo de la anulación. Este registro quedará disponible en la auditoría.
+          </p>
+        </div>
+        <div className="px-6 py-6 space-y-4">
+          {error && <Alert type="error" message={error} />}
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="void-reason">
+              Motivo
+            </label>
+            <textarea
+              id="void-reason"
+              rows={4}
+              value={reason}
+              onChange={(event) => onReasonChange(event.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+              placeholder="Describí por qué se anula la operación"
+              disabled={loading}
+            />
+          </div>
+        </div>
+        <div className="px-6 py-4 border-t border-gray-200 flex justify-end space-x-3">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={loading}
+            className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={loading || !canConfirm}
+            className="px-4 py-2 text-sm text-white bg-danger rounded-lg hover:bg-red-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {loading ? 'Anulando...' : 'Confirmar anulación'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 };

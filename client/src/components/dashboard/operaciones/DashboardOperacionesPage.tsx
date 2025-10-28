@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { DashboardNavbar } from './Navbar';
 import { BalanceStripe } from './BalanceStripe';
 import { OperationsHeader } from './OperationsHeader';
@@ -7,6 +7,8 @@ import { RecentValidations } from './RecentValidations';
 import { RecentOperationsTable } from './RecentOperationsTable';
 import { DashboardFooter } from './Footer';
 import { TransferPesosModal } from './TransferPesosModal';
+import { DashboardBalanceWidget } from './DashboardBalanceWidget';
+import { useUserPermissions } from '../../../hooks';
 
 export const DashboardOperacionesPage: React.FC = () => {
   const [search, setSearch] = useState('');
@@ -18,7 +20,10 @@ export const DashboardOperacionesPage: React.FC = () => {
       <BalanceStripe />
 
       {/* Main container (offset for fixed navbar + stripe) */}
-      <main id="main-content" className="pt-[320px] lg:pt-[145px] px-4 lg:px-6 pb-8">
+      <main
+        id="main-container"
+        className="pt-[145px] px-6 pb-8"
+      >
         {/* Header */}
         <OperationsHeader onTransferPesos={() => setTransferOpen(true)} />
 
@@ -32,9 +37,11 @@ export const DashboardOperacionesPage: React.FC = () => {
         <RecentOperationsTable search={search} />
 
         {/* Placeholder sections to keep 1:1 structure */}
-        <section id="system-status" className="mb-8"></section>
-        <section id="other-section-1" className="mb-8"></section>
-        <section id="other-section-2" className="mb-8"></section>
+        <section id="system-status" className="mb-8" />
+        <section id="quick-actions" className="mb-8" />
+        <section id="market-info" className="mb-8" />
+        <section id="activity-timeline" className="mb-8" />
+        <section id="performance-metrics" className="mb-8" />
       </main>
 
       <DashboardFooter />

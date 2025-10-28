@@ -36,11 +36,6 @@ const transactionSchema = new mongoose.Schema(
       type: assetSchema,
       required: true,
     },
-    subtype: {
-      type: String,
-      trim: true,
-      required: true,
-    },
     apr: {
       type: Number,
       required: true,
@@ -67,7 +62,7 @@ const transactionSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['draft', 'pending', 'registered', 'completed', 'cancelled'],
+      enum: ['draft', 'pending', 'registered', 'completed', 'cancelled', 'voided'],
       default: 'draft',
     },
     currentStep: {
@@ -134,6 +129,45 @@ const transactionSchema = new mongoose.Schema(
     },
     completedAt: {
       type: Date,
+    },
+    accountingAudit: [
+      new mongoose.Schema(
+        {
+          action: {
+            type: String,
+            enum: ['settlement_completed', 'transaction_voided'],
+            required: true,
+          },
+          performedBy: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            default: null,
+          },
+          performedAt: {
+            type: Date,
+            default: () => new Date(),
+          },
+          metadata: {
+            type: mongoose.Schema.Types.Mixed,
+            default: {},
+          },
+        },
+        { _id: false }
+      ),
+    ],
+    voidedAt: {
+      type: Date,
+      default: null,
+    },
+    voidedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    voidReason: {
+      type: String,
+      trim: true,
+      default: null,
     },
   },
   {

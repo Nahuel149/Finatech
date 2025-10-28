@@ -62,16 +62,6 @@ export const IncidentDetailSidePanel: React.FC<IncidentDetailSidePanelProps> = (
 }) => {
   if (!isOpen) return null;
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
       {/* Backdrop */}

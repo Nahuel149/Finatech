@@ -1,16 +1,41 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
 const { getClientById } = require('./client.service');
-const { applyTransactionRegistration } = require('./currentAccount.service');
+const {
+  applyTransactionRegistration,
+  roundAmount,
+  extractCurrencyAndAmountFromTransaction,
+  reverseTransactionRegistration,
+} = require('./currentAccount.service');
+const { emitBalanceUpdated } = require('../utils/eventBus');
 
-const calculateMarginPercentage = (apr, marketApr) => {
-  const parsedApr = Number(apr);
-  const parsedMarketApr = Number(marketApr);
-  if (!Number.isFinite(parsedApr) || !Number.isFinite(parsedMarketApr) || parsedMarketApr === 0) {
+const calculateMarginPercentage = ({ type, incomingAmount, outgoingAmount, marketRate }) => {
+  const numericIncoming = Number(incomingAmount);
+  const numericOutgoing = Number(outgoingAmount);
+  const numericMarket = Number(marketRate);
+
+  if (
+    !Number.isFinite(numericIncoming) ||
+    !Number.isFinite(numericOutgoing) ||
+    !Number.isFinite(numericMarket) ||
+    numericIncoming <= 0 ||
+    numericOutgoing <= 0 ||
+    numericMarket === 0
+  ) {
     return 0;
   }
-  const diff = parsedApr - parsedMarketApr;
-  return Number(((diff / parsedMarketApr) * 100).toFixed(4));
+
+  let operationRate;
+  if (type === 'buy') {
+    // Compra: ARS egresan, bien2 ingresa.
+    operationRate = numericOutgoing / numericIncoming;
+  } else {
+    // Venta: ARS ingresan, bien2 egresa.
+    operationRate = numericIncoming / numericOutgoing;
+  }
+
+  const diff = numericMarket - operationRate;
+  return Number(((diff / numericMarket) * 100).toFixed(4));
 };
 
 const normalizeAsset = ({ code, label }) => {
@@ -21,6 +46,109 @@ const normalizeAsset = ({ code, label }) => {
     code: String(code).trim(),
     label: String(label).trim(),
   };
+};
+
+const stripDiacritics = (value = '') =>
+  String(value)
+    .normalize('NFD')
+    .replace(/[^\w\s.-]/g, '')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const mapSettlementMethodToMovementType = (method) => {
+  const normalized = stripDiacritics(method).toLowerCase();
+  if (normalized.includes('usd') || normalized.includes('dolar')) {
+    return 'usd';
+  }
+  if (normalized.includes('efectivo') || normalized.includes('cash')) {
+    return 'cash';
+  }
+  if (
+    normalized.includes('deposito') ||
+    normalized.includes('transfer') ||
+    normalized.includes('banco') ||
+    normalized.includes('cheque')
+  ) {
+    return 'transfer';
+  }
+  return 'transfer';
+};
+
+const resolveSettlementSlices = (transaction, totalAmount) => {
+  const safeTotal = roundAmount(totalAmount);
+  if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
+    return [];
+  }
+
+  const fallbackMethod = transaction?.settlement?.simpleMethod || 'Transferencia';
+
+  if (!transaction?.settlement || transaction.settlement.mode === 'simple') {
+    return [
+      {
+        method: fallbackMethod,
+        movementType: mapSettlementMethodToMovementType(fallbackMethod),
+        amount: safeTotal,
+      },
+    ];
+  }
+
+  const lines = Array.isArray(transaction.settlement.lines)
+    ? transaction.settlement.lines
+    : [];
+
+  if (lines.length === 0) {
+    return [
+      {
+        method: fallbackMethod,
+        movementType: mapSettlementMethodToMovementType(fallbackMethod),
+        amount: safeTotal,
+      },
+    ];
+  }
+
+  const amounts = lines.map((line) => {
+    const baseValue = Number(line.value);
+    if (!Number.isFinite(baseValue) || baseValue <= 0) {
+      return 0;
+    }
+
+    const allocationType = line.allocationType === 'amount' ? 'amount' : 'percentage';
+    if (allocationType === 'amount') {
+      return roundAmount(baseValue);
+    }
+
+    const percentage = Number(line.computedPercentage ?? baseValue);
+    if (!Number.isFinite(percentage) || percentage <= 0) {
+      return 0;
+    }
+    return roundAmount((percentage / 100) * safeTotal);
+  });
+
+  const assignedTotal = amounts.reduce((sum, value) => sum + value, 0);
+  let difference = roundAmount(safeTotal - assignedTotal);
+
+  if (Math.abs(difference) > Math.max(0.5, safeTotal * 0.02)) {
+    throw new Error('La liquidación no coincide con el monto total de la operación.');
+  }
+
+  if (amounts.length > 0 && Math.abs(difference) > 0) {
+    const lastIndex = amounts.length - 1;
+    amounts[lastIndex] = roundAmount(amounts[lastIndex] + difference);
+    difference = roundAmount(
+      safeTotal - amounts.reduce((sum, value) => sum + value, 0)
+    );
+  }
+
+  if (Math.abs(difference) > 0.05) {
+    throw new Error('No pudimos balancear la liquidación con el monto total.');
+  }
+
+  return lines
+    .map((line, index) => ({
+      method: line.method,
+      movementType: mapSettlementMethodToMovementType(line.method),
+      amount: amounts[index],
+    }))
+    .filter((slice) => Number.isFinite(slice.amount) && slice.amount > 0);
 };
 
 const formatTransaction = (transaction) => {
@@ -38,7 +166,6 @@ const formatTransaction = (transaction) => {
     type: transaction.type,
     incomingAsset: transaction.incomingAsset,
     outgoingAsset: transaction.outgoingAsset,
-    subtype: transaction.subtype,
     apr: transaction.apr,
     marketApr: transaction.marketApr,
     incomingAmount: transaction.incomingAmount,
@@ -48,6 +175,9 @@ const formatTransaction = (transaction) => {
     currentStep: transaction.currentStep,
     operationCode: transaction.operationCode || null,
     completedAt: transaction.completedAt || null,
+    voidedAt: transaction.voidedAt || null,
+    voidedBy: transaction.voidedBy ? transaction.voidedBy.toString() : null,
+    voidReason: transaction.voidReason || null,
     settlement: transaction.settlement
       ? {
           mode: transaction.settlement.mode,
@@ -70,6 +200,14 @@ const formatTransaction = (transaction) => {
           totalPercentage: 0,
           isComplete: false,
         },
+    accountingAudit: Array.isArray(transaction.accountingAudit)
+      ? transaction.accountingAudit.map((entry) => ({
+          action: entry.action,
+          performedAt: entry.performedAt ? entry.performedAt.toISOString() : null,
+          performedBy: entry.performedBy ? entry.performedBy.toString() : null,
+          metadata: entry.metadata || {},
+        }))
+      : [],
     createdAt: transaction.createdAt,
     updatedAt: transaction.updatedAt,
   };
@@ -81,7 +219,6 @@ const createTransactionDraft = async (payload, context = {}) => {
     type,
     incomingAsset,
     outgoingAsset,
-    subtype,
     apr,
     marketApr,
     incomingAmount,
@@ -100,8 +237,6 @@ const createTransactionDraft = async (payload, context = {}) => {
   const numericMarketApr = Number(marketApr);
   const numericIncoming = Number(incomingAmount);
   const numericOutgoing = Number(outgoingAmount);
-  const subtypeValue = typeof subtype === 'string' ? subtype.trim() : '';
-
   if (!Number.isFinite(numericApr) || !Number.isFinite(numericMarketApr)) {
     throw new Error('APR values are required');
   }
@@ -114,20 +249,20 @@ const createTransactionDraft = async (payload, context = {}) => {
     throw new Error('Amounts must be greater than 0');
   }
 
-  if (!subtypeValue) {
-    throw new Error('Subtype is required');
-  }
-
-  const marginPercentage = calculateMarginPercentage(numericApr, numericMarketApr);
-
   const normalizedType = type === 'sell' ? 'sell' : 'buy';
+  const marginPercentage = calculateMarginPercentage({
+    type: normalizedType,
+    incomingAmount: numericIncoming,
+    outgoingAmount: numericOutgoing,
+    marketRate: numericMarketApr,
+  });
+
 
   const transaction = await Transaction.create({
     client: clientId,
     type: normalizedType,
     incomingAsset: incoming,
     outgoingAsset: outgoing,
-    subtype: subtypeValue,
     apr: numericApr,
     marketApr: numericMarketApr,
     incomingAmount: numericIncoming,
@@ -186,7 +321,6 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
     type,
     incomingAsset,
     outgoingAsset,
-    subtype,
     apr,
     marketApr,
     incomingAmount,
@@ -205,7 +339,6 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
   const numericMarketApr = Number(marketApr);
   const numericIncoming = Number(incomingAmount);
   const numericOutgoing = Number(outgoingAmount);
-  const subtypeValue = typeof subtype === 'string' ? subtype.trim() : '';
 
   if (!Number.isFinite(numericApr) || !Number.isFinite(numericMarketApr)) {
     throw new Error('APR values are required');
@@ -216,19 +349,19 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
   if (!Number.isFinite(numericOutgoing) || numericOutgoing <= 0) {
     throw new Error('Outgoing amount must be greater than 0');
   }
-  if (!subtypeValue) {
-    throw new Error('Subtype is required');
-  }
-
-  const marginPercentage = calculateMarginPercentage(numericApr, numericMarketApr);
 
   const normalizedType = type === 'sell' ? 'sell' : 'buy';
+  const marginPercentage = calculateMarginPercentage({
+    type: normalizedType,
+    incomingAmount: numericIncoming,
+    outgoingAmount: numericOutgoing,
+    marketRate: numericMarketApr,
+  });
 
   transaction.client = clientId;
   transaction.type = normalizedType;
   transaction.incomingAsset = incoming;
   transaction.outgoingAsset = outgoing;
-  transaction.subtype = subtypeValue;
   transaction.apr = numericApr;
   transaction.marketApr = numericMarketApr;
   transaction.incomingAmount = numericIncoming;
@@ -437,6 +570,7 @@ const finalizeTransaction = async (id, context = {}) => {
 
   const session = await mongoose.startSession();
   let formatted;
+  let registrationResult = null;
 
   try {
     await session.withTransaction(async () => {
@@ -458,17 +592,100 @@ const finalizeTransaction = async (id, context = {}) => {
       transaction.completedAt = new Date();
       transaction.lastUpdatedBy = context.userId || transaction.lastUpdatedBy || null;
 
-      await transaction.save({ session });
-
-      await applyTransactionRegistration(transaction, {
+      registrationResult = await applyTransactionRegistration(transaction, {
         session,
         userId: context.userId,
       });
+
+      await transaction.save({ session });
 
       formatted = formatTransaction(transaction);
     });
   } finally {
     session.endSession();
+  }
+
+  if (registrationResult) {
+    emitBalanceUpdated({
+      source: 'transaction_registration',
+      transactionId: formatted?.id || id,
+      operationCode: formatted?.operationCode || null,
+      currency: registrationResult.currency,
+      delta: registrationResult.delta,
+    });
+  }
+
+  return formatted;
+};
+
+const voidTransaction = async (id, reason = '', context = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw new Error('Invalid transaction identifier');
+  }
+
+  const session = await mongoose.startSession();
+  let formatted;
+  let reversalResult = null;
+
+  try {
+    await session.withTransaction(async () => {
+      const transaction = await Transaction.findById(id).session(session);
+      if (!transaction) {
+        throw new Error('Transaction not found');
+      }
+
+      if (transaction.status === 'voided') {
+        formatted = formatTransaction(transaction);
+        return;
+      }
+
+      if (transaction.status === 'completed') {
+        throw new Error('No podés anular una operación que ya fue liquidada.');
+      }
+
+      if (transaction.status !== 'registered' && transaction.status !== 'draft' && transaction.status !== 'pending') {
+        throw new Error('El estado actual de la operación no permite anularla.');
+      }
+
+      if (transaction.status === 'registered') {
+        reversalResult = await reverseTransactionRegistration(transaction, {
+          session,
+          userId: context.userId,
+        });
+      }
+
+      transaction.status = 'voided';
+      transaction.voidedAt = new Date();
+      transaction.voidedBy = context.userId || null;
+      transaction.voidReason = reason ? String(reason).trim() || null : null;
+
+      if (!Array.isArray(transaction.accountingAudit)) {
+        transaction.accountingAudit = [];
+      }
+      transaction.accountingAudit.push({
+        action: 'transaction_voided',
+        performedBy: context.userId || null,
+        performedAt: new Date(),
+        metadata: {
+          reason: transaction.voidReason,
+        },
+      });
+
+      await transaction.save({ session });
+      formatted = formatTransaction(transaction);
+    });
+  } finally {
+    session.endSession();
+  }
+
+  if (reversalResult && formatted) {
+    emitBalanceUpdated({
+      source: 'transaction_void',
+      transactionId: formatted.id,
+      operationCode: formatted.operationCode,
+      currency: reversalResult.currency,
+      delta: reversalResult.delta,
+    });
   }
 
   return formatted;
@@ -483,4 +700,10 @@ module.exports = {
   updateTransactionSettlement,
   advanceTransactionStep,
   finalizeTransaction,
+  __testHelpers: {
+    stripDiacritics,
+    mapSettlementMethodToMovementType,
+    resolveSettlementSlices,
+  },
+  voidTransaction,
 };

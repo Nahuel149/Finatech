@@ -48,19 +48,19 @@ export const BalanceStripe: React.FC = () => {
   return (
     <div
       id="balance-stripe"
-      className="fixed top-[61px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-30"
+      className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
-      <div className="px-4 py-3 lg:px-6 lg:py-4">
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+      <div className="px-6 py-4">
+        <div className="grid grid-cols-3 gap-6">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="h-4 w-32 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
                     <div className="w-2 h-2 bg-gray-300 rounded-full"></div>
                   </div>
-                  <div className="h-6 w-40 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse mb-1" />
+                  <div className="h-8 w-40 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse mb-1" />
                   <div className="h-3 w-24 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
                 </div>
               ))}
@@ -72,20 +72,20 @@ export const BalanceStripe: React.FC = () => {
               <div
                 key={b.id}
                 id={`balance-${b.id}`}
-                className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm lg:p-4"
+                className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center">
                     <i
-                      className={`fa-solid ${iconForBalance(b.label, b.currency)} text-primary mr-2 text-sm lg:text-base`}
+                      className={`fa-solid ${iconForBalance(b.label, b.currency)} text-primary mr-2`}
                     ></i>
-                    <span className="text-xs lg:text-sm font-medium text-gray-600">
+                    <span className="text-sm font-medium text-gray-600">
                       {b.label} ({b.currency})
                     </span>
                   </div>
                   <div className={`w-2 h-2 ${statusDotClass(b.status)} rounded-full`}></div>
                 </div>
-                <div className="text-lg lg:text-2xl font-bold text-text-primary mb-1">
+                <div className="text-2xl font-bold text-text-primary mb-1">
                   {formatAmount(b.amount, b.currency)}
                 </div>
                 <div className="text-xs text-gray-500">Actualizado {formatTime(b.updatedAt)}</div>
@@ -95,7 +95,7 @@ export const BalanceStripe: React.FC = () => {
           {!loading && error && (
             <>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="bg-white rounded-lg border border-gray-200 p-3 shadow-sm lg:p-4">
+                <div key={i} className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center">
                       <i className="fa-solid fa-wallet text-primary mr-2"></i>

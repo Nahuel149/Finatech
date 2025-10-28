@@ -336,7 +336,8 @@ export const ContactBalanceDetailPage: React.FC = () => {
         onClose={() => setCreateContactOpen(false)}
         onCreated={handleNewContactCreated}
         defaultType="client"
-        ownerLabel="Tesorería"
+        ownerOptions={['Tesorería', 'Operaciones', 'Comercial']}
+        defaultOwner="Tesorería"
       />
     </div>
   );

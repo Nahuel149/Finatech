@@ -115,7 +115,7 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   onRemove,
   onRequestNewClient,
 }) => {
-  const { query, setQuery, suggestions, loading } = useClientSearch();
+  const { setQuery, suggestions, loading } = useClientSearch();
   const [searchValue, setSearchValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
 
@@ -883,7 +883,8 @@ export const TransferPesosBuilderPage: React.FC = () => {
         onClose={handleCloseClientModal}
         onCreated={handleClientCreated}
         defaultType="client"
-        ownerLabel="Tesorería"
+        ownerOptions={['Tesorería', 'Operaciones', 'Comercial']}
+        defaultOwner="Tesorería"
       />
 
       {toast && (

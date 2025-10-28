@@ -4,12 +4,16 @@ interface Props {
   operationCode: string;
   onViewDetails: () => void;
   onNewOperation: () => void;
+  onVoid?: () => void;
+  disableVoid?: boolean;
 }
 
 export const CompletionSuccessState: React.FC<Props> = ({
   operationCode,
   onViewDetails,
   onNewOperation,
+  onVoid,
+  disableVoid = false,
 }) => (
   <div
     id="success-state"
@@ -43,6 +47,17 @@ export const CompletionSuccessState: React.FC<Props> = ({
         <i className="fa-solid fa-plus mr-2" />
         Registrar otra operación
       </button>
+      {onVoid && (
+        <button
+          type="button"
+          onClick={onVoid}
+          disabled={disableVoid}
+          className="px-6 py-3 bg-white border border-danger/40 text-danger rounded-lg hover:bg-danger/5 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          <i className="fa-solid fa-ban mr-2" />
+          Anular operación
+        </button>
+      )}
     </div>
   </div>
 );

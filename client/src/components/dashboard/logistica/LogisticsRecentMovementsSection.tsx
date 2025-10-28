@@ -82,8 +82,8 @@ export const LogisticsRecentMovementsSection: React.FC<LogisticsRecentMovementsS
 
     // Sort
     filtered.sort((a, b) => {
-      let aValue: number | string;
-      let bValue: number | string;
+      let aValue: number | string = '';
+      let bValue: number | string = '';
 
       if (sortField === 'date') {
         aValue = new Date(a.date).getTime();

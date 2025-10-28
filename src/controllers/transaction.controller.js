@@ -8,6 +8,7 @@ const {
   updateTransactionSettlement,
   advanceTransactionStep,
   finalizeTransaction,
+  voidTransaction,
 } = require('../services/transaction.service');
 
 const createDraft = async (req, res, next) => {
@@ -113,6 +114,21 @@ const finalizeDraft = async (req, res, next) => {
   }
 };
 
+const voidDraft = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body || {};
+    const context = {
+      userId: req.user?._id || req.user?.id || null,
+    };
+    const transaction = await voidTransaction(id, reason, context);
+    const payload = await buildWizardDraftResponse(transaction);
+    res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createDraft,
   getDraft,
@@ -120,4 +136,5 @@ module.exports = {
   updateSettlement,
   advanceDraftStep,
   finalizeDraft,
+  voidDraft,
 };

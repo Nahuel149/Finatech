@@ -8,6 +8,9 @@ declare global {
           initialize: (config: {
             client_id: string;
             callback: (response: any) => void;
+            auto_select?: boolean;
+            cancel_on_tap_outside?: boolean;
+            use_fedcm_for_prompt?: boolean;
           }) => void;
           renderButton: (
             element: HTMLElement | null,
@@ -17,9 +20,19 @@ declare global {
               width?: string | number;
               text?: 'signin_with' | 'signup_with' | 'continue_with' | 'signin';
               shape?: 'rectangular' | 'pill' | 'circle' | 'square';
+              locale?: string;
             }
           ) => void;
-          prompt: () => void;
+          prompt: (callback?: (notification: {
+            isNotDisplayed: () => boolean;
+            isSkippedMoment: () => boolean;
+            isDismissedMoment: () => boolean;
+            getDismissedReason: () => string;
+            getMomentType: () => string;
+          }) => void) => void;
+          disableAutoSelect: () => void;
+          storeCredential: (credential: any) => void;
+          cancel: () => void;
         };
       };
     };

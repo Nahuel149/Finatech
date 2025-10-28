@@ -3,6 +3,7 @@ import React from 'react';
 interface Props {
   marginPercent: number;
   marketRate: number;
+  operationType: 'buy' | 'sell';
   loading?: boolean;
 }
 
@@ -15,12 +16,16 @@ const formatPercent = (value: number) => {
   return `${prefix}${formatted}%`;
 };
 
-export const MarginIndicator: React.FC<Props> = ({ marginPercent, marketRate, loading = false }) => {
+export const MarginIndicator: React.FC<Props> = ({ marginPercent, marketRate, operationType, loading = false }) => {
   const isPositive = marginPercent >= 0;
   const containerClasses = isPositive
     ? 'bg-success bg-opacity-10 border border-success'
     : 'bg-danger bg-opacity-10 border border-danger';
   const textClasses = isPositive ? 'text-success' : 'text-danger';
+  const operationHint =
+    operationType === 'buy'
+      ? 'Compra: t_operación = ARS pagados / unidad del bien.'
+      : 'Venta: t_operación = ARS recibidos / unidad del bien.';
 
   return (
     <div id="margin-indicator" className="mb-6">
@@ -40,6 +45,9 @@ export const MarginIndicator: React.FC<Props> = ({ marginPercent, marketRate, lo
           </div>
           <div className={`text-sm mt-1 ${textClasses}`}>
             (vs mercado: TC ${marketRate.toFixed(2)})
+          </div>
+          <div className="text-xs text-gray-600 mt-3">
+            Fórmula: (t_mercado - t_operación) / t_mercado. {operationHint}
           </div>
         </div>
       )}

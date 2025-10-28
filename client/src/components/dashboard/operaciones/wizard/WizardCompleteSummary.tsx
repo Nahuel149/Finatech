@@ -46,7 +46,6 @@ interface OperationSummaryProps {
   clientDocument?: string | null;
   contact?: string | null;
   type: 'buy' | 'sell';
-  subtype: string;
   incomingAssetLabel: string;
   outgoingAssetLabel: string;
   incomingAmount: number;
@@ -56,6 +55,7 @@ interface OperationSummaryProps {
   apr: number;
   marketApr: number;
   marginPercentage: number;
+  clientLastMargin?: number | null;
   settlementMode: 'simple' | 'compound';
   settlementSimpleMethod?: string | null;
   settlementLines: Array<{
@@ -193,7 +193,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
   clientDocument,
   contact,
   type,
-  subtype,
+  clientLastMargin,
   incomingAssetLabel,
   outgoingAssetLabel,
   incomingAmount,
@@ -214,6 +214,10 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
   const outgoingLabel = formatCurrency(outgoingAmount, outgoingCurrency);
 
   const summaryTypeLabel = type === 'buy' ? 'Compra' : 'Venta';
+  const lastMarginLabel =
+    typeof clientLastMargin === 'number' && Number.isFinite(clientLastMargin)
+      ? formatPercentage(clientLastMargin)
+      : '—';
 
   return (
     <div id="summary-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -226,7 +230,8 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
           <InlineItem label="Cliente" value={clientName} />
           {clientDocument && <InlineItem label="Documento" value={clientDocument} />}
           <InlineItem label="Contacto" value={contact || '—'} />
-          <InlineItem label="Tipo" value={`${summaryTypeLabel} (${subtype})`} />
+          <InlineItem label="Tipo" value={summaryTypeLabel} />
+          <InlineItem label="Último margen (cliente)" value={lastMarginLabel} />
           <InlineItem
             label={type === 'buy' ? 'Entra' : 'Sale'}
             value={`${incomingLabel} (${incomingAssetLabel})`}

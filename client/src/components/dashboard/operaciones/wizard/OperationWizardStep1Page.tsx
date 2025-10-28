@@ -9,7 +9,10 @@ import {
 import {
   useClientsList,
   useTransactionDraft,
+  useLatestMarketRate,
 } from '../../../../hooks/dashboard';
+import { useUserPermissions } from '../../../../hooks';
+import { apiRequest, handleApiError } from '../../../../utils/api';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';
@@ -17,7 +20,6 @@ import { WizardHeader } from './WizardHeader';
 import { ClientSelection } from './ClientSelection';
 import { OperationTypeSelector } from './OperationTypeSelector';
 import { AssetSelection, AssetOption } from './AssetSelection';
-import { SubtypeSelector } from './SubtypeSelector';
 import { ExchangeRatesSection } from './ExchangeRatesSection';
 import { AmountSection } from './AmountSection';
 import { MarginIndicator } from './MarginIndicator';
@@ -26,13 +28,6 @@ import { WizardActions } from './WizardActions';
 import { NewClientModal } from '../../../clients/NewClientModal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
-
-const SUBTYPE_OPTIONS = [
-  'USD Billete',
-  'USD Transferencia',
-  'Cheque diferido',
-  'Transferencia bancaria',
-];
 
 const VALIDATION_ITEMS = [
   'TC dentro de límites establecidos',
@@ -54,13 +49,9 @@ const ASSET_CATALOG: AssetOption[] = [
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
-  buy: { incoming: 'ARS', outgoing: 'USD' },
-  sell: { incoming: 'USD', outgoing: 'ARS' },
+  buy: { incoming: 'USD', outgoing: 'ARS' },
+  sell: { incoming: 'ARS', outgoing: 'USD' },
 };
-
-const SECONDARY_ASSET_LABEL = 'BTC';
-const SECONDARY_ASSET_DEFAULT_RATE = 0.0000215;
-const SECONDARY_ASSET_DEFAULT_MARKET_RATE = 0.000021;
 
 const formatMargin = (value?: number | null) => {
   if (value === null || value === undefined || Number.isNaN(value)) {
@@ -126,17 +117,12 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [outgoingAssetCode, setOutgoingAssetCode] = useState<string>(
     ASSET_DEFAULTS[initialOperationType].outgoing,
   );
-  const [subtype, setSubtype] = useState<string>(SUBTYPE_OPTIONS[0]);
   const [apr, setApr] = useState<number>(833.5);
   const [marketApr, setMarketApr] = useState<number>(830.0);
-  const [incomingAmount, setIncomingAmount] = useState<number>(125000.0);
-  const [outgoingAmount, setOutgoingAmount] = useState<number>(150.0);
-  const [secondaryRate, setSecondaryRate] = useState<number>(
-    SECONDARY_ASSET_DEFAULT_RATE,
-  );
-  const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(
-    SECONDARY_ASSET_DEFAULT_MARKET_RATE,
-  );
+  const [incomingAmount, setIncomingAmount] = useState<number>(operationType === 'buy' ? 150.0 : 125000.0);
+  const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
+  const [secondaryRate, setSecondaryRate] = useState<number>(1);
+  const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(1);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
@@ -156,6 +142,43 @@ export const OperationWizardStep1Page: React.FC = () => {
     saveDraft,
     advanceStep,
   } = useTransactionDraft(draftId);
+  const { permissions } = useUserPermissions();
+  const normalizedPermissions = useMemo(
+    () =>
+      permissions.map((permission) =>
+        permission.trim().toLowerCase().replace(/\s+/g, '-')
+      ),
+    [permissions]
+  );
+  const canEditMarketRate = useMemo(
+    () =>
+      normalizedPermissions.some((permission) =>
+        ['admin', 'tesoreria', 'tesorería', 'tesoreria-admin', 'manage-market-rates'].includes(
+          permission
+        )
+      ),
+    [normalizedPermissions]
+  );
+  const [useCustomMarketRate, setUseCustomMarketRate] = useState(false);
+  const [autoMarketRate, setAutoMarketRate] = useState<number>(marketApr);
+  const { data: latestMarketRate, refresh: refreshMarketRate } = useLatestMarketRate({
+    baseAsset: 'USD',
+    quoteAsset: 'ARS',
+    enabled: canEditMarketRate && !useCustomMarketRate,
+  });
+
+  useEffect(() => {
+    if (!canEditMarketRate && useCustomMarketRate) {
+      setUseCustomMarketRate(false);
+      setMarketApr(autoMarketRate);
+    }
+  }, [autoMarketRate, canEditMarketRate, useCustomMarketRate]);
+
+  useEffect(() => {
+    if (!useCustomMarketRate && latestMarketRate?.rate) {
+      setMarketApr(latestMarketRate.rate);
+    }
+  }, [latestMarketRate, useCustomMarketRate]);
 
   // Hydrate form with draft data when available
   useEffect(() => {
@@ -169,18 +192,16 @@ export const OperationWizardStep1Page: React.FC = () => {
     const defaults = ASSET_DEFAULTS[normalizedType];
     setIncomingAssetCode(draft.incomingAsset?.code || defaults.incoming);
     setOutgoingAssetCode(draft.outgoingAsset?.code || defaults.outgoing);
-    setSubtype(draft.subtype || SUBTYPE_OPTIONS[0]);
     setApr(sanitizeNumber(draft.apr));
     setMarketApr(sanitizeNumber(draft.marketApr));
+    setAutoMarketRate(sanitizeNumber(draft.marketApr));
     setIncomingAmount(sanitizeNumber(draft.incomingAmount));
     setOutgoingAmount(sanitizeNumber(draft.outgoingAmount));
 
     const metadata = parseNotes(draft.notes);
     if (metadata) {
-      setSecondaryRate(sanitizeNumber(metadata.rate) || SECONDARY_ASSET_DEFAULT_RATE);
-      setSecondaryMarketRate(
-        sanitizeNumber(metadata.marketRate) || SECONDARY_ASSET_DEFAULT_MARKET_RATE,
-      );
+      setSecondaryRate(sanitizeNumber(metadata.rate) || 1);
+      setSecondaryMarketRate(sanitizeNumber(metadata.marketRate) || 1);
     }
 
     if (draft.client) {
@@ -197,13 +218,24 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   // Keep outgoing amount in sync with incoming amount and APR
   useEffect(() => {
-    if (apr > 0) {
-      const computed = Number((incomingAmount / apr).toFixed(2));
-      setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
-    } else {
+    if (apr <= 0) {
       setOutgoingAmount(0);
+      return;
     }
-  }, [incomingAmount, apr]);
+
+    const computed =
+      operationType === 'buy'
+        ? Number((incomingAmount * apr).toFixed(2))
+        : Number((incomingAmount / apr).toFixed(2));
+
+    setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
+  }, [incomingAmount, apr, operationType]);
+
+  useEffect(() => {
+    if (!useCustomMarketRate) {
+      setAutoMarketRate(marketApr);
+    }
+  }, [marketApr, useCustomMarketRate]);
 
   // When the preset type changes via query params (e.g. shortcuts)
   // We only need to react when the preset query parameter changes; setters are stable.
@@ -234,16 +266,49 @@ export const OperationWizardStep1Page: React.FC = () => {
     if (!marketApr || marketApr === 0) {
       return 0;
     }
-    return ((apr - marketApr) / marketApr) * 100;
-  }, [apr, marketApr]);
+    if (!incomingAmount || !outgoingAmount) {
+      return 0;
+    }
+    const operationRate =
+      operationType === 'buy'
+        ? outgoingAmount / incomingAmount
+        : incomingAmount / outgoingAmount;
+    return ((marketApr - operationRate) / marketApr) * 100;
+  }, [incomingAmount, marketApr, operationType, outgoingAmount]);
+
+  const secondaryAssetLabel = useMemo(
+    () => findAssetLabel(outgoingAssetCode),
+    [outgoingAssetCode]
+  );
+  const showSecondaryRates = outgoingAssetCode !== 'USD';
+
+  useEffect(() => {
+    if (!showSecondaryRates) {
+      setSecondaryRate(1);
+      setSecondaryMarketRate(1);
+    }
+  }, [showSecondaryRates]);
 
   const handleOperationTypeChange = useCallback(
     (type: TransactionType) => {
       setOperationType(type);
       setIncomingAssetCode(ASSET_DEFAULTS[type].incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS[type].outgoing);
+      setIncomingAmount(outgoingAmount);
+      setOutgoingAmount(incomingAmount);
     },
-    [],
+    [incomingAmount, outgoingAmount],
+  );
+
+  const handleToggleMarketRateMode = useCallback(
+    (enabled: boolean) => {
+      setUseCustomMarketRate(enabled);
+      if (!enabled) {
+        setMarketApr(autoMarketRate);
+        refreshMarketRate().catch(() => {});
+      }
+    },
+    [autoMarketRate, refreshMarketRate],
   );
 
   const handleNewClientCreated = useCallback(
@@ -256,6 +321,15 @@ export const OperationWizardStep1Page: React.FC = () => {
   );
 
   const buildPayload = useCallback((): TransactionDraftPayload => {
+    const secondaryCode = outgoingAssetCode;
+    const notesPayload = showSecondaryRates
+      ? encodeNotes(
+          Number(secondaryRate),
+          Number(secondaryMarketRate),
+          secondaryCode,
+        )
+      : undefined;
+
     const payload: TransactionDraftPayload = {
       clientId,
       type: operationType,
@@ -267,16 +341,11 @@ export const OperationWizardStep1Page: React.FC = () => {
         code: outgoingAssetCode,
         label: findAssetLabel(outgoingAssetCode),
       },
-      subtype,
       apr: Number(apr),
       marketApr: Number(marketApr),
       incomingAmount: Number(incomingAmount),
       outgoingAmount: Number(outgoingAmount),
-      notes: encodeNotes(
-        Number(secondaryRate),
-        Number(secondaryMarketRate),
-        SECONDARY_ASSET_LABEL,
-      ),
+      notes: notesPayload,
     };
     return payload;
   }, [
@@ -290,16 +359,12 @@ export const OperationWizardStep1Page: React.FC = () => {
     outgoingAssetCode,
     secondaryMarketRate,
     secondaryRate,
-    subtype,
+    showSecondaryRates,
   ]);
 
   const validateForm = useCallback(() => {
     if (!clientId) {
       setFormError('Seleccioná un cliente antes de continuar.');
-      return false;
-    }
-    if (!subtype.trim()) {
-      setFormError('Indicá el subtipo de la operación.');
       return false;
     }
     if (!Number.isFinite(apr) || apr <= 0) {
@@ -316,7 +381,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     }
     setFormError(null);
     return true;
-  }, [apr, clientId, incomingAmount, marketApr, subtype]);
+  }, [apr, clientId, incomingAmount, marketApr]);
 
   const executeSave = useCallback(
     async (navigateToNext: boolean) => {
@@ -327,6 +392,26 @@ export const OperationWizardStep1Page: React.FC = () => {
       try {
         const payload = buildPayload();
         const savedDraft = await saveDraft(payload);
+
+        if (useCustomMarketRate && canEditMarketRate) {
+          try {
+            await apiRequest('/api/rates/market', {
+              method: 'PUT',
+              body: {
+                baseAsset: 'USD',
+                quoteAsset: 'ARS',
+                rate: Number(marketApr),
+                validFrom: new Date().toISOString(),
+                source: 'MANUAL',
+              },
+            });
+          } catch (err) {
+            const apiError = handleApiError(err);
+            setFormError(apiError.message || 'No pudimos registrar la tasa personalizada.');
+            return;
+          }
+        }
+
         setSuccessMessage('Borrador guardado correctamente.');
         setFormError(null);
 
@@ -343,7 +428,16 @@ export const OperationWizardStep1Page: React.FC = () => {
         setFormError(apiError.message || 'Ocurrió un error al guardar la operación.');
       }
     },
-    [advanceStep, buildPayload, navigate, saveDraft, validateForm],
+    [
+      advanceStep,
+      buildPayload,
+      canEditMarketRate,
+      marketApr,
+      navigate,
+      saveDraft,
+      useCustomMarketRate,
+      validateForm,
+    ],
   );
 
   const handleSaveDraft = useCallback(() => executeSave(false), [executeSave]);
@@ -426,11 +520,6 @@ export const OperationWizardStep1Page: React.FC = () => {
                 disabled={busy}
               />
 
-              <SubtypeSelector
-                value={subtype}
-                options={SUBTYPE_OPTIONS}
-                onChange={setSubtype}
-              />
             </div>
 
             <div>
@@ -438,10 +527,15 @@ export const OperationWizardStep1Page: React.FC = () => {
                 arsRate={apr}
                 onArsRateChange={setApr}
                 arsMarketRate={marketApr}
+                onArsMarketRateChange={setMarketApr}
                 assetRate={secondaryRate}
                 onAssetRateChange={setSecondaryRate}
                 assetMarketRate={secondaryMarketRate}
-                assetLabel={SECONDARY_ASSET_LABEL}
+                assetLabel={secondaryAssetLabel}
+                showSecondaryRates={showSecondaryRates}
+                canEditMarketRate={canEditMarketRate}
+                useCustomMarketRate={useCustomMarketRate}
+                onToggleMarketRateMode={handleToggleMarketRateMode}
                 disabled={busy}
               />
               <AmountSection
@@ -455,6 +549,7 @@ export const OperationWizardStep1Page: React.FC = () => {
               <MarginIndicator
                 marginPercent={marginPercent}
                 marketRate={marketApr}
+                operationType={operationType}
                 loading={busy}
               />
               <ValidationChecklist items={VALIDATION_ITEMS} loading={busy} />
@@ -479,7 +574,8 @@ export const OperationWizardStep1Page: React.FC = () => {
         onClose={() => setIsNewClientModalOpen(false)}
         onCreated={handleNewClientCreated}
         defaultType="client"
-        ownerLabel="Operaciones"
+        ownerOptions={['Operaciones', 'Tesorería', 'Comercial', 'Backoffice']}
+        defaultOwner="Operaciones"
       />
     </div>
   );

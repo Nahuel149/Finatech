@@ -79,7 +79,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
 
                 <div className="col-span-2">
                   <div className="flex rounded-lg border border-gray-300 overflow-hidden">
-                    {(['percentage', 'amount'] as CompoundLine['allocationType'][]).map((type) => (
+                    {(['percentage'] as CompoundLine['allocationType'][]).map((type) => (
                       <button
                         key={type}
                         type="button"
@@ -103,7 +103,8 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                     min="0"
                     step={line.allocationType === 'percentage' ? '0.1' : '0.01'}
                     value={Number.isFinite(line.value) ? line.value : ''}
-                    disabled={disabled}
+                    disabled={disabled || line.allocationType === 'amount'}
+                    readOnly={line.allocationType === 'amount'}
                     onChange={(event) =>
                       onLineChange(line.id, {
                         value: Number(event.target.value),

@@ -120,28 +120,38 @@ const extractCurrencyAndAmountFromTransaction = (transaction) => {
     return null;
   }
 
-  const prioritize = (codes = []) => (assetField, amountField) => {
-    const asset = transaction[assetField];
-    const amount = transaction[amountField];
-    if (!asset || !asset.code) {
-      return null;
-    }
-    const normalizedCode = asset.code.toUpperCase();
-    if (!codes.includes(normalizedCode)) {
-      return null;
-    }
-    return { currency: normalizedCode, amount: Number(amount) };
-  };
+  const candidates = [
+    {
+      currency: transaction.incomingAsset?.code,
+      amount: Number(transaction.incomingAmount),
+    },
+    {
+      currency: transaction.outgoingAsset?.code,
+      amount: Number(transaction.outgoingAmount),
+    },
+  ];
 
-  const tryUsd = prioritize(['USD']);
-  const tryArs = prioritize(['ARS']);
+  const pick = (code) =>
+    candidates.find(
+      (candidate) =>
+        candidate &&
+        candidate.currency &&
+        candidate.currency.toUpperCase() === code &&
+        Number.isFinite(candidate.amount) &&
+        candidate.amount > 0
+    );
 
-  return (
-    tryUsd('incomingAsset', 'incomingAmount') ||
-    tryUsd('outgoingAsset', 'outgoingAmount') ||
-    tryArs('incomingAsset', 'incomingAmount') ||
-    tryArs('outgoingAsset', 'outgoingAmount')
-  );
+  const ars = pick('ARS');
+  if (ars) {
+    return { currency: 'ARS', amount: ars.amount };
+  }
+
+  const usd = pick('USD');
+  if (usd) {
+    return { currency: 'USD', amount: usd.amount };
+  }
+
+  return null;
 };
 
 const applyTransactionRegistration = async (transaction, { session, userId } = {}) => {
@@ -152,7 +162,7 @@ const applyTransactionRegistration = async (transaction, { session, userId } = {
 
   const currency = info.currency;
   const amount = roundAmount(info.amount);
-  const delta = transaction.type === 'buy' ? amount : -amount;
+  const delta = transaction.type === 'buy' ? -amount : amount;
 
   const operationRef = {
     id: transaction._id,
@@ -164,7 +174,6 @@ const applyTransactionRegistration = async (transaction, { session, userId } = {
   const metadata = {
     incomingAsset: transaction.incomingAsset?.code || null,
     outgoingAsset: transaction.outgoingAsset?.code || null,
-    subtype: transaction.subtype || null,
   };
 
   await adjustAccountBalance(ACCOUNT_KEY, currency, delta, { session, userId });
@@ -202,6 +211,78 @@ const applyTransactionRegistration = async (transaction, { session, userId } = {
       currency,
       amount: delta,
       stage: 'registration',
+      operation: operationRef,
+      counterpart: {
+        type: 'account',
+        key: ACCOUNT_KEY,
+      },
+      metadata,
+      performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+    });
+  }
+
+  await registerMovements(movements, { session });
+  return { currency, delta };
+};
+
+const reverseTransactionRegistration = async (transaction, { session, userId } = {}) => {
+  const info = extractCurrencyAndAmountFromTransaction(transaction);
+  if (!info || !Number.isFinite(info.amount) || info.amount <= 0) {
+    return null;
+  }
+
+  const currency = info.currency;
+  const amount = roundAmount(info.amount);
+  const delta = transaction.type === 'buy' ? amount : -amount;
+
+  const operationRef = {
+    id: transaction._id,
+    code: transaction.operationCode || null,
+    type: transaction.type || null,
+    source: 'transaction',
+  };
+
+  const metadata = {
+    incomingAsset: transaction.incomingAsset?.code || null,
+    outgoingAsset: transaction.outgoingAsset?.code || null,
+    reversal: true,
+  };
+
+  await adjustAccountBalance(ACCOUNT_KEY, currency, delta, { session, userId });
+
+  const movements = [
+    {
+      ledger: 'general',
+      accountKey: ACCOUNT_KEY,
+      currency,
+      amount: delta,
+      stage: 'reversal',
+      operation: operationRef,
+      counterpart: {
+        type: 'contact',
+        id: mongoose.Types.ObjectId.isValid(transaction.client)
+          ? transaction.client
+          : null,
+      },
+      metadata,
+      performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+    },
+  ];
+
+  const contactId =
+    transaction.client && typeof transaction.client === 'object' && transaction.client._id
+      ? transaction.client._id
+      : transaction.client;
+
+  if (contactId && mongoose.Types.ObjectId.isValid(contactId)) {
+    await adjustContactBalance(contactId, currency, delta, { session, userId });
+    movements.push({
+      ledger: 'contact',
+      accountKey: ACCOUNT_KEY,
+      contact: contactId,
+      currency,
+      amount: delta,
+      stage: 'reversal',
       operation: operationRef,
       counterpart: {
         type: 'account',
@@ -923,6 +1004,7 @@ const getContactBalanceDetail = async ({
 module.exports = {
   ACCOUNT_KEY,
   applyTransactionRegistration,
+  reverseTransactionRegistration,
   applyTreasurySettlement,
   adjustAccountBalance,
   adjustContactBalance,
@@ -930,4 +1012,6 @@ module.exports = {
   listCurrentAccountMovements,
   listContactBalancesDetailed,
   getContactBalanceDetail,
+  roundAmount,
+  extractCurrencyAndAmountFromTransaction,
 };

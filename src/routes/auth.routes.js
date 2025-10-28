@@ -46,7 +46,17 @@ const registerValidators = [
     .withMessage('Debés aceptar los términos y condiciones.'),
 ];
 
-const googleValidators = [body('idToken').isString().withMessage('Se requiere el token de Google ID.')];
+const googleValidators = [
+  body().custom((value, { req }) => {
+    const { idToken, credential } = req.body;
+    if (!idToken && !credential) {
+      throw new Error('Se requiere el token de Google ID (idToken o credential).');
+    }
+    return true;
+  }),
+  body('idToken').optional().isString().withMessage('El idToken debe ser una cadena.'),
+  body('credential').optional().isString().withMessage('El credential debe ser una cadena.'),
+];
 
 const loginValidators = [
   body('email').isEmail().withMessage('Ingresá un correo electrónico válido.').normalizeEmail(),

@@ -7,6 +7,7 @@ const {
   updateSettlement,
   advanceDraftStep,
   finalizeDraft,
+  voidDraft,
 } = require('../controllers/transaction.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { validateRequest } = require('../middleware/validateRequest');
@@ -25,7 +26,6 @@ router.post(
   body('type').isIn(['buy', 'sell']).withMessage('Type must be buy or sell'),
   ...assetValidators('incomingAsset'),
   ...assetValidators('outgoingAsset'),
-  body('subtype').isString().trim().notEmpty().withMessage('Subtype is required'),
   body('apr').isFloat().withMessage('APR is required'),
   body('marketApr').isFloat().withMessage('Market APR is required'),
   body('incomingAmount').isFloat({ gt: 0 }).withMessage('Incoming amount must be greater than 0'),
@@ -41,7 +41,6 @@ router.put(
   body('type').isIn(['buy', 'sell']).withMessage('Type must be buy or sell'),
   ...assetValidators('incomingAsset'),
   ...assetValidators('outgoingAsset'),
-  body('subtype').isString().trim().notEmpty().withMessage('Subtype is required'),
   body('apr').isFloat().withMessage('APR is required'),
   body('marketApr').isFloat().withMessage('Market APR is required'),
   body('incomingAmount').isFloat({ gt: 0 }).withMessage('Incoming amount must be greater than 0'),
@@ -91,6 +90,14 @@ router.patch(
 );
 
 router.post('/draft/:id/finalize', requireAuth, finalizeDraft);
+
+router.post(
+  '/:id/void',
+  requireAuth,
+  body('reason').optional().isString().trim().isLength({ max: 500 }).withMessage('El motivo debe tener hasta 500 caracteres.'),
+  validateRequest,
+  voidDraft
+);
 
 router.get('/:id', requireAuth, getDraft);
 

@@ -98,9 +98,10 @@ const verifyEmail = async (req, res, next) => {
 
 const googleAuth = async (req, res, next) => {
   try {
-    const { idToken } = req.body;
+    const { idToken, credential } = req.body;
+    const token = idToken || credential;
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
-    const result = await registerWithGoogle({ idToken }, context);
+    const result = await registerWithGoogle({ idToken: token }, context);
     const { user, session, ...rest } = result;
     if (session?.sessionToken) {
       attachAuthCookie(res, session.sessionToken, { remember: session.rememberMe });

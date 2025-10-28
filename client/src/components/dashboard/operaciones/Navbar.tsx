@@ -5,9 +5,7 @@ import {
   NotificationLevel,
   useNotifications,
   useAuth,
-  useUserPermissions,
 } from '../../../hooks';
-import { DashboardBalanceWidget } from './DashboardBalanceWidget';
 
 interface Props {
   search: string;
@@ -148,28 +146,15 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const accountMenuRef = useRef<HTMLDivElement>(null);
   const { logout } = useAuth();
   const { notifications, unreadCount, markAsRead, markAllAsRead } = useNotifications();
-  const { permissions, loading: permissionsLoading } = useUserPermissions();
 
   const activePath = useMemo(() => {
-    if (location.pathname.startsWith('/dashboard/tesoreria')) return '/dashboard/tesoreria';
-    if (location.pathname.startsWith('/dashboard')) return '/dashboard';
-    return location.pathname;
+    const candidates = NAV_ITEMS.filter((item): item is NavItem & { path: string } => Boolean(item.path))
+      .sort((a, b) => (b.path!.length - a.path!.length));
+    const matched = candidates.find((item) =>
+      location.pathname.startsWith(item.path)
+    );
+    return matched?.path ?? location.pathname;
   }, [location.pathname]);
-
-  const normalizedPermissions = useMemo(
-    () => permissions.map((perm) => perm.trim().toLowerCase().replace(/\s+/g, '-')),
-    [permissions]
-  );
-
-  const canViewBalances = useMemo(
-    () =>
-      normalizedPermissions.some((permission) =>
-        ['ver-saldos', 'view-saldos', 'view-balances'].includes(permission)
-      ),
-    [normalizedPermissions]
-  );
-
-  const showBalanceWidget = !permissionsLoading && canViewBalances;
 
   const handleNavigate = () => {
     setMobileMenuOpen(false);
@@ -339,10 +324,11 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             </button>
             <button
               type="button"
-              className="flex-1 rounded-lg border border-danger/30 text-danger py-2 text-sm hover:bg-danger/10"
+              className="flex-1 rounded-lg border border-danger/30 text-danger py-2 text-sm hover:bg-danger/10 flex items-center justify-center space-x-2"
               onClick={handleLogout}
             >
-              Salir
+              <i className="fa-solid fa-right-from-bracket text-xs" />
+              <span>Cerrar sesión</span>
             </button>
           </div>
 
@@ -460,11 +446,6 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             </div>
 
             <div id="navbar-right" className="flex items-center space-x-4">
-              {showBalanceWidget && (
-                <div className="hidden lg:block">
-                  <DashboardBalanceWidget canView={showBalanceWidget} />
-                </div>
-              )}
               <div ref={desktopNotificationsRef} className="relative">
                 <button
                   type="button"
@@ -541,10 +522,10 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     <div className="border-t border-gray-200 py-1">
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                        className="flex w-full items-center px-4 py-2 text-sm text-danger hover:bg-gray-100"
                         onClick={handleLogout}
                       >
-                        <i className="fa-solid fa-arrow-right-from-bracket mr-3" />
+                        <i className="fa-solid fa-right-from-bracket mr-3" />
                         Cerrar sesión
                       </button>
                     </div>
