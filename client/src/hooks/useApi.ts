@@ -19,7 +19,6 @@ export const useApi = <T = any>(
   endpointRef.current = endpoint;
 
   const execute = useCallback(async (config: Partial<RequestConfig> = {}): Promise<T> => {
-    console.log(`[useApi] Execute called for endpoint: ${endpointRef.current} at ${new Date().toISOString()}`);
     setLoading(true);
     setError(null);
 
@@ -45,8 +44,6 @@ export const useApi = <T = any>(
       setLoading(false);
     }
   }, []); // No dependencies - function is completely stable
-  
-  console.log(`[useApi] Hook called for endpoint: ${endpoint}, execute function created:`, execute.toString().slice(0, 50) + '...');
 
   const reset = useCallback(() => {
     setData(null);

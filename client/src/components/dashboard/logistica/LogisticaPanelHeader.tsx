@@ -25,12 +25,12 @@ export const LogisticaPanelHeader: React.FC<LogisticaPanelHeaderProps> = ({ onRe
       </nav>
 
       {/* Title and Description */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-text-primary mb-2">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">
             Panel de Logística
           </h1>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600">
             Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes
           </p>
         </div>
@@ -38,11 +38,12 @@ export const LogisticaPanelHeader: React.FC<LogisticaPanelHeaderProps> = ({ onRe
         <button
           id="register-action"
           type="button"
-          className="flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="mobile-button touch-friendly flex items-center justify-center px-4 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base w-full lg:w-auto"
           onClick={handleRegisterNewMovement}
         >
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Registrar nuevo movimiento logístico
+          <PlusIcon className="h-4 w-4 mr-2 flex-shrink-0" />
+          <span className="sm:hidden">Registrar movimiento</span>
+          <span className="hidden sm:inline">Registrar nuevo movimiento logístico</span>
         </button>
       </div>
     </header>

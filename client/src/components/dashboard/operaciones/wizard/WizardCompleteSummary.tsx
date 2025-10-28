@@ -226,7 +226,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
         subTitle={`Última actualización: ${formatDate(lastUpdated)}`}
         onEdit={onEditStep1}
       >
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <InlineItem label="Cliente" value={clientName} />
           {clientDocument && <InlineItem label="Documento" value={clientDocument} />}
           <InlineItem label="Contacto" value={contact || '—'} />
@@ -257,7 +257,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
 
       <SummaryCard
         title="Liquidación"
-        subTitle={`Modalidad ${settlementMode === 'simple' ? 'simple' : 'compuesta'}`}
+        subTitle={`Modalidad ${settlementMode === 'simple' ? 'simple' : 'transferencias en pesos'}`}
         onEdit={onEditStep2}
       >
         {settlementMode === 'simple' ? (
@@ -271,7 +271,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
         title="Resumen financiero"
         subTitle="Balance de la operación"
       >
-        <div className="grid grid-cols-2 gap-4 text-sm text-gray-700">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center text-gray-500 text-xs uppercase tracking-wide mb-2">
               <i className="fa-solid fa-arrow-down mr-2" />

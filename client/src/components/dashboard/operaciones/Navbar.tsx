@@ -6,8 +6,10 @@ import {
   useNotifications,
   useAuth,
   useCurrentUser,
+  useUserPermissions,
 } from '../../../hooks';
 import { ApiError } from '../../../types';
+import { DashboardBalanceWidget } from './DashboardBalanceWidget';
 
 interface Props {
   search: string;
@@ -168,6 +170,8 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     loading: notificationsLoading,
     error: notificationsError,
   } = useNotifications();
+  const { permissions } = useUserPermissions();
+  const canViewBalances = permissions.includes('view-balances');
   const displayName = user?.fullName?.trim() || (userLoading ? 'Cargando perfil…' : 'Usuario FinaTech');
   const secondaryText = user?.email || (userLoading ? 'Sincronizando…' : 'Sin correo configurado');
 
@@ -468,6 +472,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             </div>
 
             <div id="navbar-right" className="flex items-center space-x-4">
+              <DashboardBalanceWidget canView={canViewBalances} />
               <div ref={desktopNotificationsRef} className="relative">
                 <button
                   type="button"

@@ -34,16 +34,16 @@ const MOVEMENT_TYPE_OPTIONS: Array<{
   icon: string;
 }> = [
   {
-    id: 'transfer',
-    title: 'Transferencia bancaria',
-    description: 'Impacta en saldos de transferencias',
-    icon: 'fa-money-check-dollar',
+    id: 'cash',
+    title: 'Efectivo',
+    description: 'Movimiento de dinero en efectivo',
+    icon: 'fa-money-bills',
   },
   {
-    id: 'cash',
-    title: 'Efectivo en caja',
-    description: 'Impacta en saldos de caja física',
-    icon: 'fa-vault',
+    id: 'transfer',
+    title: 'Transferencia',
+    description: 'Transferencia bancaria',
+    icon: 'fa-building-columns',
   },
 ];
 
@@ -80,8 +80,31 @@ const METHOD_LABEL: Record<MovementMethod, string> = {
 
 const sanitizeAmountInput = (value: string) => {
   if (!value) return 0;
-  const normalized = value.replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
-  const parsed = parseFloat(normalized);
+  
+  // Remove all non-numeric characters except comma and dot
+  let cleaned = value.replace(/[^\d,.-]/g, '');
+  
+  // Handle different decimal separator scenarios
+  if (cleaned.includes(',') && cleaned.includes('.')) {
+    // If both comma and dot are present, assume dot is thousands separator and comma is decimal
+    // Example: 1.234,56 -> 1234.56
+    const lastCommaIndex = cleaned.lastIndexOf(',');
+    const lastDotIndex = cleaned.lastIndexOf('.');
+    
+    if (lastCommaIndex > lastDotIndex) {
+      // Comma is the decimal separator
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+    } else {
+      // Dot is the decimal separator
+      cleaned = cleaned.replace(/,/g, '');
+    }
+  } else if (cleaned.includes(',')) {
+    // Only comma present - treat as decimal separator
+    cleaned = cleaned.replace(',', '.');
+  }
+  // If only dots present, treat as decimal separator (already correct)
+  
+  const parsed = parseFloat(cleaned);
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
@@ -377,8 +400,42 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
   const handleAmountInputChange = (value: string) => {
     setAmountError(null);
-    setAmountInput(value);
-    const numericValue = sanitizeAmountInput(value);
+    
+    // Allow user to type naturally, but limit to reasonable input
+    let processedValue = value;
+    
+    // Remove any characters that aren't digits, comma, or dot
+    processedValue = processedValue.replace(/[^\d,.-]/g, '');
+    
+    // Prevent multiple decimal separators
+    const commaCount = (processedValue.match(/,/g) || []).length;
+    const dotCount = (processedValue.match(/\./g) || []).length;
+    
+    // If user is typing and there are multiple decimal separators, keep only the last one
+    if (commaCount > 1) {
+      const lastCommaIndex = processedValue.lastIndexOf(',');
+      processedValue = processedValue.substring(0, lastCommaIndex).replace(/,/g, '') + processedValue.substring(lastCommaIndex);
+    }
+    
+    // Limit decimal places to 2
+    if (processedValue.includes(',')) {
+      const parts = processedValue.split(',');
+      if (parts[1] && parts[1].length > 2) {
+        processedValue = parts[0] + ',' + parts[1].substring(0, 2);
+      }
+    } else if (processedValue.includes('.') && !processedValue.includes(',')) {
+      const parts = processedValue.split('.');
+      // Only treat as decimal if it's the last dot and there are 1-2 digits after it
+      if (parts.length === 2 && parts[1].length <= 2 && !/\d{4,}/.test(parts[0])) {
+        if (parts[1].length > 2) {
+          processedValue = parts[0] + '.' + parts[1].substring(0, 2);
+        }
+      }
+    }
+    
+    setAmountInput(processedValue);
+    
+    const numericValue = sanitizeAmountInput(processedValue);
     if (Number.isFinite(numericValue)) {
       setTotalAmount(numericValue);
     } else {
@@ -546,14 +603,14 @@ export const TransferPesosBuilderPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[200px] px-6 pb-32 max-w-5xl mx-auto">
+      <main className="pt-[220px] px-6 pb-32 max-w-5xl mx-auto">
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-2xl font-bold text-text-primary">Transferencia en pesos</h1>
               <p className="text-gray-600">
-                Definí el tipo de movimiento, distribuí por contactos y confirmá la operación
+                Registra un movimiento de efectivo o transferencia bancaria
               </p>
             </div>
             <div className="bg-white border border-gray-200 rounded-lg px-4 py-3 shadow-sm">
@@ -577,7 +634,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
         </header>
 
         {/* Step 1 */}
-        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8">
+        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-10 mb-12 mt-8">
           <div className="flex items-center mb-6">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
               <span className="text-white font-semibold text-sm">1</span>
@@ -585,56 +642,80 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <h2 className="text-lg font-semibold text-text-primary">Configuración</h2>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {MOVEMENT_TYPE_OPTIONS.map((option) => {
-              const selected = draft.movementType === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setMovementType(option.id)}
-                  className={`radio-card border-2 rounded-lg p-4 text-left transition-all ${
-                    selected ? 'border-primary shadow-lg selected' : 'border-gray-200 hover:border-primary'
-                  }`}
-                >
-                  <div className="flex items-center mb-2">
-                    <div className="w-10 h-10 bg-primary bg-opacity-10 rounded-lg flex items-center justify-center mr-3">
-                      <i className={`fa-solid ${option.icon} text-primary`} />
-                    </div>
-                    <div>
-                      <div className="font-medium text-text-primary">{option.title}</div>
-                      <div className="text-sm text-gray-600">{option.description}</div>
+          {/* Movement Type */}
+          <div className="mb-10">
+            <h3 className="text-sm font-medium text-gray-700 mb-6">Tipo de movimiento</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {MOVEMENT_TYPE_OPTIONS.map((option) => {
+                const selected = draft.movementType === option.id;
+                return (
+                  <div
+                    key={option.id}
+                    className={`radio-card border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      selected ? 'border-primary shadow-lg selected' : 'border-gray-200 hover:border-primary'
+                    }`}
+                    onClick={() => setMovementType(option.id)}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id={option.id}
+                        name="movement-type"
+                        value={option.id}
+                        checked={selected}
+                        onChange={() => setMovementType(option.id)}
+                        className="mr-3"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <i className={`fa-solid ${option.icon} text-primary mr-2`} />
+                          <span className="font-medium text-text-primary">{option.title}</span>
+                        </div>
+                        <p className="text-sm text-gray-600">{option.description}</p>
+                      </div>
                     </div>
                   </div>
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-            {DIRECTION_OPTIONS.map((option) => {
-              const selected = draft.direction === option.id;
-              return (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => setDirection(option.id)}
-                  className={`radio-card border-2 rounded-lg p-4 text-left transition-all ${
-                    selected ? 'border-primary shadow-lg selected' : 'border-gray-200 hover:border-primary'
-                  }`}
-                >
-                  <div className="flex items-center mb-2">
-                    <div className={`w-10 h-10 ${option.backgroundClass} rounded-lg flex items-center justify-center mr-3`}>
-                      <i className={`fa-solid ${option.icon} ${option.toneClass}`} />
-                    </div>
-                    <div>
-                      <div className="font-medium text-text-primary">{option.title}</div>
-                      <div className="text-sm text-gray-600">{option.description}</div>
+          {/* Direction */}
+          <div className="mb-10">
+            <h3 className="text-sm font-medium text-gray-700 mb-6">Dirección</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {DIRECTION_OPTIONS.map((option) => {
+                const selected = draft.direction === option.id;
+                return (
+                  <div
+                    key={option.id}
+                    className={`radio-card border-2 rounded-lg p-4 cursor-pointer transition-all ${
+                      selected ? 'border-primary shadow-lg selected' : 'border-gray-200 hover:border-primary'
+                    }`}
+                    onClick={() => setDirection(option.id)}
+                  >
+                    <div className="flex items-center">
+                      <input
+                        type="radio"
+                        id={option.id}
+                        name="direction"
+                        value={option.id}
+                        checked={selected}
+                        onChange={() => setDirection(option.id)}
+                        className="mr-3"
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center mb-2">
+                          <i className={`fa-solid ${option.icon} ${option.toneClass} mr-2`} />
+                          <span className="font-medium text-text-primary">{option.title}</span>
+                        </div>
+                        <p className="text-sm text-gray-600">{option.description}</p>
+                      </div>
                     </div>
                   </div>
-                </button>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
 
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
@@ -876,7 +957,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
         <div className="px-6 py-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between max-w-5xl mx-auto space-y-3 md:space-y-0">
+          <div className="flex items-center justify-between max-w-4xl mx-auto">
             <div className="flex items-center space-x-4">
               <button
                 type="button"
@@ -884,7 +965,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
                 className="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium"
               >
                 <i className="fa-solid fa-arrow-left mr-2" />
-                Cancelar
+                Atrás
               </button>
               <button
                 type="button"
@@ -898,15 +979,15 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenConfirm}
-              className={`px-8 py-3 rounded-lg font-medium transition-colors flex items-center justify-center space-x-2 ${
+              className={`px-8 py-3 rounded-lg font-medium transition-colors ${
                 canConfirmDistribution
                   ? 'bg-primary text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
               disabled={!canConfirmDistribution}
             >
-              <span className="mr-2">Confirmar distribución</span>
-              <i className="fa-solid fa-arrow-right" />
+              <span>Confirmar distribución</span>
+              <i className="fa-solid fa-arrow-right ml-2" />
             </button>
           </div>
         </div>

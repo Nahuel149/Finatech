@@ -3,10 +3,14 @@ import {
   LoginFormData, 
   RegisterFormData, 
   TwoFactorFormData,
+  PasswordRecoveryFormData,
+  PasswordResetFormData,
   LoginResponse, 
   RegisterResponse, 
   TwoFactorResponse,
   GoogleAuthResponse,
+  PasswordRecoveryResponse,
+  PasswordResetResponse,
   LoadingState,
   ApiError,
   UserProfile,
@@ -22,6 +26,8 @@ export const useAuth = () => {
     googleAuth: false,
     resendVerification: false,
     resendTwoFactor: false,
+    passwordRecovery: false,
+    passwordReset: false,
   });
   
   const [error, setError] = useState<ApiError | null>(null);
@@ -191,6 +197,38 @@ const updateCachedProfile = (payload: any) => {
     }
   }, [challengeId, setLoadingState]);
 
+  const requestPasswordReset = useCallback(async (data: PasswordRecoveryFormData): Promise<PasswordRecoveryResponse> => {
+    setLoadingState('passwordRecovery', true);
+    setError(null);
+    
+    try {
+      const response = await api.requestPasswordReset(data.email);
+      return response;
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError);
+      throw apiError;
+    } finally {
+      setLoadingState('passwordRecovery', false);
+    }
+  }, [setLoadingState]);
+
+  const resetPassword = useCallback(async (data: PasswordResetFormData): Promise<PasswordResetResponse> => {
+    setLoadingState('passwordReset', true);
+    setError(null);
+    
+    try {
+      const response = await api.resetPassword(data.token, data.newPassword);
+      return response;
+    } catch (err) {
+      const apiError = handleApiError(err);
+      setError(apiError);
+      throw apiError;
+    } finally {
+      setLoadingState('passwordReset', false);
+    }
+  }, [setLoadingState]);
+
   const logout = useCallback(async (): Promise<void> => {
     try {
       await api.logout();
@@ -213,6 +251,8 @@ const updateCachedProfile = (payload: any) => {
     googleAuth,
     resendVerification,
     resendTwoFactor,
+    requestPasswordReset,
+    resetPassword,
     logout,
     clearError,
   };

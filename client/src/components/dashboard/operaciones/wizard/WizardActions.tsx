@@ -42,6 +42,7 @@ export const WizardActions: React.FC<Props> = ({
         onClick={onSaveDraft}
         className="px-6 py-3 bg-white border border-gray-300 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
         disabled={saving || disableSave}
+        title="Guardar los datos sin avanzar al siguiente paso"
       >
         <i className="fa-solid fa-floppy-disk mr-2" />
         Guardar borrador
@@ -61,6 +62,7 @@ export const WizardActions: React.FC<Props> = ({
       onClick={onContinue}
       className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
       disabled={saving || disableContinue}
+      title="Guardar los datos y continuar al siguiente paso"
     >
       {saving ? (
         <>

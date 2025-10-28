@@ -200,22 +200,23 @@ export const Register: React.FC = () => {
     <div className="bg-gray-50 min-h-screen">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-4 py-3">
+        <div className="px-4 py-3 md:px-4 md:py-3">
           <div className="flex items-center">
             <div className="flex-1" aria-hidden="true" />
             <div className="flex-1 flex items-center justify-center">
               <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center mr-2">
                 <i className="fa-solid fa-chart-line text-white text-xs"></i>
               </div>
-              <span className="text-lg font-bold text-text-primary">FinaTech</span>
+              <span className="text-lg font-bold text-text-primary md:text-lg">FinaTech</span>
             </div>
             <div className="flex-1 flex justify-end">
               <button
                 type="button"
                 onClick={() => navigate('/login')}
-                className="text-primary hover:underline font-medium text-sm"
+                className="text-primary hover:underline font-medium text-sm touch-friendly md:text-sm"
               >
-                Iniciar sesión
+                <span className="hidden sm:inline">Iniciar sesión</span>
+                <span className="sm:hidden">Ingresar</span>
               </button>
             </div>
           </div>
@@ -223,21 +224,21 @@ export const Register: React.FC = () => {
       </header>
 
       {/* Main Registration Form */}
-      <main className="px-4 py-6">
+      <main className="px-4 py-6 md:px-4 md:py-6">
         <div className="max-w-md mx-auto">
           <div className="bg-white rounded-lg shadow-lg border border-gray-200 w-full">
-            <div className="p-6">
+            <div className="p-4 md:p-6">
               {/* Form Title */}
-              <div className="text-center mb-6">
-                <h1 className="text-xl font-bold text-text-primary mb-2">Crear cuenta</h1>
-                <p className="text-gray-600 text-sm">Completá los datos para registrarte en FinaTech</p>
+              <div className="text-center mb-6 md:mb-6">
+                <h1 className="text-xl font-bold text-text-primary mb-2 md:text-xl md:mb-2">Crear cuenta</h1>
+                <p className="text-gray-600 text-sm md:text-sm">Completá los datos para registrarte en FinaTech</p>
               </div>
 
               {/* Registration Form */}
-              <form onSubmit={handleSubmit} className="space-y-6" noValidate>
+              <form onSubmit={handleSubmit} className="space-y-5 md:space-y-6" noValidate>
                 {/* Full Name Field */}
                 <div>
-                  <label htmlFor="fullName" className="block text-sm font-medium text-text-primary mb-2">
+                  <label htmlFor="fullName" className="block text-sm font-medium text-text-primary mb-2 md:text-sm md:mb-2">
                     Nombre completo
                   </label>
                   <input 
@@ -246,12 +247,12 @@ export const Register: React.FC = () => {
                     name="fullName"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
                     placeholder="Ingresá tu nombre completo"
                     required
                   />
                   {formErrors.fullName && (
-                    <div className="mt-1 text-sm text-danger">
+                    <div className="mt-1 text-sm text-danger md:text-sm">
                       <i className="fa-solid fa-exclamation-circle mr-1"></i>
                       {formErrors.fullName}
                     </div>
@@ -260,8 +261,8 @@ export const Register: React.FC = () => {
 
                 {/* Email Field */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2">
-                    Email
+                  <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2 md:text-sm md:mb-2">
+                    Correo electrónico
                   </label>
                   <input 
                     type="email" 
@@ -269,12 +270,12 @@ export const Register: React.FC = () => {
                     name="email"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
-                    placeholder="tu@email.com"
+                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
+                    placeholder="ejemplo@correo.com"
                     required
                   />
                   {formErrors.email && (
-                    <div className="mt-1 text-sm text-danger">
+                    <div className="mt-1 text-sm text-danger md:text-sm">
                       <i className="fa-solid fa-exclamation-circle mr-1"></i>
                       {formErrors.email}
                     </div>
@@ -283,7 +284,7 @@ export const Register: React.FC = () => {
 
                 {/* Password Field */}
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2">
+                  <label htmlFor="password" className="block text-sm font-medium text-text-primary mb-2 md:text-sm md:mb-2">
                     Contraseña
                   </label>
                   <div className="relative">
@@ -293,42 +294,42 @@ export const Register: React.FC = () => {
                       name="password"
                       value={formData.password}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
+                      className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:pr-10 md:text-sm"
                       placeholder="Mínimo 8 caracteres"
                       required
                     />
                     <button 
                       type="button" 
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 touch-friendly"
                     >
                       <i className={`fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                     </button>
                   </div>
                   
                   {/* Password Requirements */}
-                  <div className="mt-3 space-y-1">
-                    <div className="text-xs text-gray-600 mb-2">La contraseña debe contener:</div>
-                    <div className={`flex items-center text-xs ${formData.password.length >= 8 ? 'text-success' : 'text-gray-500'}`}>
+                  <div className="mt-3 space-y-1 md:mt-3 md:space-y-1">
+                    <div className="text-xs text-gray-600 mb-2 md:text-xs md:mb-2">La contraseña debe contener:</div>
+                    <div className={`flex items-center text-xs md:text-xs ${formData.password.length >= 8 ? 'text-success' : 'text-gray-500'}`}>
                       <i className={`fa-solid ${formData.password.length >= 8 ? 'fa-check' : 'fa-circle'} text-xs mr-2`}></i>
                       Mínimo 8 caracteres
                     </div>
-                    <div className={`flex items-center text-xs ${/[A-Z]/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
+                    <div className={`flex items-center text-xs md:text-xs ${/[A-Z]/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
                       <i className={`fa-solid ${/[A-Z]/.test(formData.password) ? 'fa-check' : 'fa-circle'} text-xs mr-2`}></i>
                       Al menos una mayúscula
                     </div>
-                    <div className={`flex items-center text-xs ${/[a-z]/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
+                    <div className={`flex items-center text-xs md:text-xs ${/[a-z]/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
                       <i className={`fa-solid ${/[a-z]/.test(formData.password) ? 'fa-check' : 'fa-circle'} text-xs mr-2`}></i>
                       Al menos una minúscula
                     </div>
-                    <div className={`flex items-center text-xs ${/\d/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
+                    <div className={`flex items-center text-xs md:text-xs ${/\d/.test(formData.password) ? 'text-success' : 'text-gray-500'}`}>
                       <i className={`fa-solid ${/\d/.test(formData.password) ? 'fa-check' : 'fa-circle'} text-xs mr-2`}></i>
                       Al menos un número
                     </div>
                   </div>
                   
                   {formErrors.password && (
-                    <div className="mt-1 text-sm text-danger">
+                    <div className="mt-1 text-sm text-danger md:text-sm">
                       <i className="fa-solid fa-exclamation-circle mr-1"></i>
                       {formErrors.password}
                     </div>
@@ -337,7 +338,7 @@ export const Register: React.FC = () => {
 
                 {/* Confirm Password Field */}
                 <div>
-                  <label htmlFor="confirmPassword" className="block text-sm font-medium text-text-primary mb-2">
+                  <label htmlFor="confirmPassword" className="block text-sm md:text-sm font-medium text-text-primary mb-2">
                     Confirmar contraseña
                   </label>
                   <div className="relative">
@@ -347,14 +348,14 @@ export const Register: React.FC = () => {
                       name="confirmPassword"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
-                      className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
+                      className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly"
                       placeholder="Repetí tu contraseña"
                       required
                     />
                     <button 
                       type="button" 
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600"
+                      className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 touch-friendly"
                     >
                       <i className={`fa-solid ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`}></i>
                     </button>
@@ -376,14 +377,14 @@ export const Register: React.FC = () => {
                       name="agreeToTerms"
                       checked={formData.agreeToTerms}
                       onChange={handleInputChange}
-                      className="mt-1 h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                      className="mt-1 h-4 w-4 md:h-4 md:w-4 text-primary focus:ring-primary border-gray-300 rounded touch-friendly"
                       required
                     />
-                    <label htmlFor="agreeToTerms" className="ml-3 text-sm text-gray-600">
+                    <label htmlFor="agreeToTerms" className="ml-3 text-sm md:text-sm text-gray-600">
                       Acepto los{' '}
-                      <a className="text-primary hover:underline" href="/terms" target="_blank" rel="noopener noreferrer">términos</a>{' '}
+                      <a className="text-primary hover:underline touch-friendly" href="/terms" target="_blank" rel="noopener noreferrer">términos</a>{' '}
                       y{' '}
-                      <a className="text-primary hover:underline" href="/terms" target="_blank" rel="noopener noreferrer">condiciones</a>{' '}
+                      <a className="text-primary hover:underline touch-friendly" href="/terms" target="_blank" rel="noopener noreferrer">condiciones</a>{' '}
                       de uso de la plataforma
                     </label>
                   </div>
@@ -397,20 +398,20 @@ export const Register: React.FC = () => {
 
                 {/* General Error */}
                 {formErrors.general && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="p-3 md:p-3 bg-red-50 border border-red-200 rounded-lg">
                     <div className="flex items-center">
                       <i className="fa-solid fa-exclamation-circle text-danger mr-2"></i>
-                      <span className="text-sm text-red-700">{formErrors.general}</span>
+                      <span className="text-sm md:text-sm text-red-700">{formErrors.general}</span>
                     </div>
                   </div>
                 )}
 
                 {/* Success Message */}
                 {showSuccessMessage && (
-                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="p-3 md:p-3 bg-green-50 border border-green-200 rounded-lg">
                     <div className="flex items-center">
                       <i className="fa-solid fa-check-circle text-success mr-2"></i>
-                      <span className="text-sm text-green-700">¡Registro exitoso con Google! Serás redirigido al panel principal.</span>
+                      <span className="text-sm md:text-sm text-green-700">¡Registro exitoso con Google! Serás redirigido al panel principal.</span>
                     </div>
                   </div>
                 )}
@@ -419,7 +420,7 @@ export const Register: React.FC = () => {
                 <button 
                   type="submit" 
                   disabled={isLoading}
-                  className="w-full bg-primary text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                  className="w-full bg-primary text-white py-3 md:py-3 px-4 md:px-4 rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm md:text-sm mobile-button touch-friendly"
                 >
                   <span>{isLoading ? 'Registrando...' : 'Registrarme'}</span>
                   {isLoading && <i className="fa-solid fa-spinner fa-spin ml-2"></i>}
@@ -427,12 +428,12 @@ export const Register: React.FC = () => {
               </form>
 
               {/* Separator */}
-              <div className="my-6">
+              <div className="my-6 md:my-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-full border-t border-gray-300"></div>
                   </div>
-                  <div className="relative flex justify-center text-sm">
+                  <div className="relative flex justify-center text-sm md:text-sm">
                     <span className="px-2 bg-white text-gray-500">o</span>
                   </div>
                 </div>
@@ -443,7 +444,7 @@ export const Register: React.FC = () => {
                 type="button" 
                 onClick={handleGoogleClick}
                 disabled={isGoogleLoading}
-                className="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors flex items-center justify-center text-sm disabled:opacity-50"
+                className="w-full bg-white border border-gray-300 text-gray-700 py-3 md:py-3 px-4 md:px-4 rounded-lg font-medium hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors flex items-center justify-center text-sm md:text-sm disabled:opacity-50 mobile-button touch-friendly"
                 aria-label="Registrarse con Google"
               >
                 <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
@@ -457,19 +458,19 @@ export const Register: React.FC = () => {
 
               {/* Success / Verification Message */}
               {registerResult && (
-                <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="mt-6 md:mt-6 p-4 md:p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-start">
                     <i className="fa-solid fa-check-circle text-success mr-3 mt-1"></i>
                     <div className="flex-1">
-                      <h3 className="text-sm font-medium text-green-800">
+                      <h3 className="text-sm md:text-sm font-medium text-green-800">
                         {registerResult.type === 'pending_verification' ? '¡Registro exitoso!' : 'Cuenta vinculada'}
                       </h3>
-                      <p className="text-sm text-green-700 mt-1">
+                      <p className="text-sm md:text-sm text-green-700 mt-1">
                         {registerResult.message || 'Revisá tu correo para conocer los próximos pasos.'}
                       </p>
                       {registerResult.type === 'pending_verification' && lastSubmittedEmail && (
                         <div className="mt-3">
-                          <p className="text-xs text-green-700 mb-2">
+                          <p className="text-xs md:text-xs text-green-700 mb-2">
                             Si no recibiste el correo de verificación, podés reenviarlo.
                           </p>
                           <button
@@ -489,14 +490,14 @@ export const Register: React.FC = () => {
                                 setResendMessage(error?.message || 'No pudimos reenviar el correo. Intentá nuevamente.');
                               }
                             }}
-                            className="inline-flex items-center px-3 py-2 bg-white border border-green-300 text-green-700 rounded-md text-xs font-medium hover:bg-green-50 disabled:opacity-60"
+                            className="inline-flex items-center px-3 py-2 md:px-3 md:py-2 bg-white border border-green-300 text-green-700 rounded-md text-xs md:text-xs font-medium hover:bg-green-50 disabled:opacity-60 touch-friendly"
                             disabled={resendState === 'loading'}
                           >
                             {resendState === 'loading' && <i className="fa-solid fa-spinner fa-spin mr-2"></i>}
                             Reenviar correo de verificación
                           </button>
                           {resendState !== 'idle' && resendMessage && (
-                            <p className={`text-xs mt-2 ${resendState === 'error' ? 'text-red-600' : 'text-green-700'}`}>
+                            <p className={`text-xs md:text-xs mt-2 ${resendState === 'error' ? 'text-red-600' : 'text-green-700'}`}>
                               {resendMessage}
                             </p>
                           )}
@@ -509,23 +510,23 @@ export const Register: React.FC = () => {
 
               {/* Existing Email Message */}
               {showExistingEmailMessage && (
-                <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div className="mt-6 md:mt-6 p-4 md:p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <div className="flex items-center">
                     <i className="fa-solid fa-info-circle text-yellow-600 mr-3"></i>
                     <div>
-                      <h3 className="text-sm font-medium text-yellow-800">Email ya registrado</h3>
-                      <p className="text-sm text-yellow-700 mt-1">
+                      <h3 className="text-sm md:text-sm font-medium text-yellow-800">Email ya registrado</h3>
+                      <p className="text-sm md:text-sm text-yellow-700 mt-1">
                         El email ya está registrado. 
                         <button 
                           onClick={() => navigate('/login')}
-                          className="underline hover:no-underline cursor-pointer ml-1"
+                          className="underline hover:no-underline cursor-pointer ml-1 touch-friendly"
                         >
                           Iniciá sesión
                         </button> 
                         o 
                         <button 
                           onClick={() => navigate('/recover')}
-                          className="underline hover:no-underline cursor-pointer ml-1"
+                          className="underline hover:no-underline cursor-pointer ml-1 touch-friendly"
                         >
                           recuperá tu contraseña
                         </button>.
@@ -537,12 +538,12 @@ export const Register: React.FC = () => {
             </div>
 
             {/* Login Link */}
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg text-center">
-              <p className="text-sm text-gray-600">
+            <div className="px-6 md:px-6 py-4 md:py-4 bg-gray-50 border-t border-gray-200 rounded-b-lg text-center">
+              <p className="text-sm md:text-sm text-gray-600">
                 ¿Ya tenés cuenta? 
                 <button 
                   onClick={() => navigate('/login')}
-                  className="text-primary hover:underline font-medium ml-1"
+                  className="text-primary hover:underline font-medium ml-1 touch-friendly"
                 >
                   Iniciar sesión
                 </button>

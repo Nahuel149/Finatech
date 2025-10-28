@@ -55,10 +55,13 @@ export const ExchangeRatesSection: React.FC<Props> = ({
         </label>
       </div>
     )}
-    <div className="grid grid-cols-2 gap-4">
+    
+
+
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">
-          TC contra USD (ARS)
+          TC operación USD→ARS
         </label>
         <input
           type="number"
@@ -71,7 +74,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
       </div>
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">
-          TC de mercado contra USD (ARS)
+          TC mercado USD→ARS
         </label>
         <input
           type="number"
@@ -89,10 +92,16 @@ export const ExchangeRatesSection: React.FC<Props> = ({
       </div>
     </div>
     {showSecondaryRates && (
-      <div className="grid grid-cols-2 gap-4 mt-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            TC contra USD ({assetLabel})
+            <div className="flex items-center">
+              TC operación {assetLabel}→USD
+              <i 
+                className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help" 
+                title={`Doble cambio vía USD - Como ${assetLabel} ≠ USD, se requiere puente USD. Se muestran las tasas: ${assetLabel}→USD y USD→ARS mercado.`}
+              />
+            </div>
           </label>
           <input
             type="number"
@@ -105,7 +114,13 @@ export const ExchangeRatesSection: React.FC<Props> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            TC de mercado contra USD ({assetLabel})
+            <div className="flex items-center">
+              TC mercado {assetLabel}→USD
+              <i 
+                 className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help" 
+                 title={`Doble cambio vía USD - Como ${assetLabel} ≠ USD, se requiere puente USD. Se muestran las tasas: ${assetLabel}→USD y USD→ARS mercado.`}
+               />
+            </div>
           </label>
           <input
             type="number"

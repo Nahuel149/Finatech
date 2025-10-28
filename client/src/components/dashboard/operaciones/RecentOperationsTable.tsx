@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useTransferOperations, useLatestMarketRate } from '../../../hooks';
 import { TransferOperation } from '../../../types';
+import { Button } from '../../shared/design-system';
 
 interface Props {
   search?: string;
@@ -14,8 +16,8 @@ interface TableRow {
   clientInitials: string;
   typeLabel: 'Compra' | 'Venta' | 'Liquidación';
   typeClassName: string;
-  entersText: string;
-  saleText: string;
+  receivesText: string;
+  paysText: string;
   rateLabel: string;
   marginLabel: string;
   marginClassName: string;
@@ -176,8 +178,10 @@ const getTypeLabel = (operation: TransferOperation): 'Compra' | 'Venta' | 'Liqui
   if (operation.operationCode && operation.operationCode.includes('LIQ')) {
     return 'Liquidación';
   }
-  // Lógica original para compra/venta
-  return (operation.direction || '').toLowerCase() === 'incoming' ? 'Venta' : 'Compra';
+  // Lógica corregida para compra/venta desde perspectiva de tesorería:
+  // Compra: Cliente compra USD, paga ARS → ARS entra a tesorería (direction: 'incoming')
+  // Venta: Cliente vende USD, recibe ARS → ARS sale de tesorería (direction: 'outgoing')
+  return (operation.direction || '').toLowerCase() === 'incoming' ? 'Compra' : 'Venta';
 };
 
 const computeFinancials = (
@@ -202,15 +206,17 @@ const computeFinancials = (
   let saleAmount = 0;
 
   if (typeLabel === 'Venta') {
+    // Sell: Client receives ARS, pays USD
+    entersCurrency = 'ARS';
+    saleCurrency = 'USD';
+    entersAmount = arsAmount || (usdAmount && marketRate ? usdAmount * marketRate : totalAmount);
+    saleAmount = usdAmount || (entersAmount && marketRate ? entersAmount / marketRate : 0);
+  } else {
+    // Buy: Client receives USD, pays ARS
     entersCurrency = 'USD';
     saleCurrency = 'ARS';
     saleAmount = arsAmount || (usdAmount && marketRate ? usdAmount * marketRate : totalAmount);
     entersAmount = usdAmount || (saleAmount && marketRate ? saleAmount / marketRate : 0);
-  } else {
-    entersCurrency = 'ARS';
-    saleCurrency = 'USD';
-    entersAmount = arsAmount || totalAmount;
-    saleAmount = usdAmount || (entersAmount && marketRate ? entersAmount / marketRate : 0);
   }
 
   const effectiveRate =
@@ -221,8 +227,8 @@ const computeFinancials = (
       : marketRate || null;
 
   return {
-    entersText: formatCurrencyLabel(entersAmount, entersCurrency),
-    saleText: formatCurrencyLabel(saleAmount, saleCurrency),
+    receivesText: formatCurrencyLabel(entersAmount, entersCurrency),
+    paysText: formatCurrencyLabel(saleAmount, saleCurrency),
     effectiveRate: effectiveRate && Number.isFinite(effectiveRate) ? effectiveRate : null,
   };
 };
@@ -253,7 +259,7 @@ const formatTableRows = (
 ): TableRow[] =>
   operations.map((operation) => {
     const typeLabel = getTypeLabel(operation);
-    const { entersText, saleText, effectiveRate } = computeFinancials(
+    const { receivesText, paysText, effectiveRate } = computeFinancials(
       operation,
       typeLabel,
       marketRate
@@ -274,8 +280,8 @@ const formatTableRows = (
       clientInitials: getInitials(clientName),
       typeLabel,
       typeClassName: TYPE_BADGE_CLASS[typeLabel],
-      entersText,
-      saleText,
+      receivesText,
+      paysText,
       rateLabel: formatRateLabel(effectiveRate),
       marginLabel,
       marginClassName,
@@ -285,6 +291,7 @@ const formatTableRows = (
   });
 
 export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
+  const navigate = useNavigate();
   const transferOptions = useMemo(() => ({ limit: 10, skip: 0, query: search }), [search]);
   const { items, loading, error, refresh } = useTransferOperations(transferOptions);
   const [clientFilter, setClientFilter] = useState<string>('all');
@@ -292,6 +299,11 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
   const { data: latestMarketRate } = useLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
 
   const latestRate = latestMarketRate?.rate ?? null;
+
+  const handleViewDetail = (operationId: string) => {
+    // Navigate to the transfer details page
+    navigate(`/dashboard/operaciones/transfer-pesos/detalle/${operationId}`);
+  };
 
   const rows = useMemo(() => formatTableRows(items, latestRate), [items, latestRate]);
 
@@ -384,7 +396,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                   Tipo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Bien entra/sale
+                  Cliente recibe/paga
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   TC Efectivo
@@ -449,13 +461,13 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                     <div className="flex flex-col items-center space-y-3">
                       <i className="fa-solid fa-triangle-exclamation text-danger text-lg" />
                       <p>Ocurrió un error al cargar las operaciones.</p>
-                      <button
-                        type="button"
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={() => refresh().catch(() => {})}
-                        className="text-primary hover:text-blue-700 font-medium"
                       >
                         Reintentar
-                      </button>
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -493,8 +505,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                       <span className={row.typeClassName}>{row.typeLabel}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      <div>{row.entersText}</div>
-                      <div>{row.saleText}</div>
+                      <div>{row.receivesText}</div>
+                      <div>{row.paysText}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       {row.rateLabel}
@@ -506,12 +518,22 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                       <span className={row.statusClassName}>{row.statusLabel}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <button type="button" className="text-primary hover:text-blue-700 mr-3">
-                        Ver
-                      </button>
-                      <button type="button" className="text-gray-600 hover:text-gray-900">
-                        Editar
-                      </button>
+                      <div className="flex space-x-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleViewDetail(row.id)}
+                        >
+                          Ver
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-gray-600 hover:text-gray-900"
+                        >
+                          Editar
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}

@@ -72,6 +72,16 @@ export interface TwoFactorFormData {
   challengeId?: string;
 }
 
+export interface PasswordRecoveryFormData {
+  email: string;
+}
+
+export interface PasswordResetFormData {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export interface LoginResponse {
   success: boolean;
   message: string;
@@ -106,6 +116,16 @@ export interface GoogleAuthResponse {
   profile?: UserProfile;
   requiresTwoFactor?: boolean;
   redirectUrl?: string;
+}
+
+export interface PasswordRecoveryResponse {
+  success: boolean;
+  message: string;
+}
+
+export interface PasswordResetResponse {
+  success: boolean;
+  message: string;
 }
 
 export interface ConfigResponse {
@@ -148,6 +168,8 @@ export interface LoadingState {
   googleAuth: boolean;
   resendVerification: boolean;
   resendTwoFactor: boolean;
+  passwordRecovery: boolean;
+  passwordReset: boolean;
 }
 
 // Additional types for exact HTML replication

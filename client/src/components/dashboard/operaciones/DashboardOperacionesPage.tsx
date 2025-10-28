@@ -12,14 +12,14 @@ export const DashboardOperacionesPage: React.FC = () => {
   const [transferOpen, setTransferOpen] = useState(false);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
       {/* Main container (offset for fixed navbar + stripe) */}
       <main
         id="main-container"
-        className="pt-[145px] px-6 pb-8"
+        className="flex-grow pt-[145px] px-6 pb-8"
       >
         {/* Header */}
         <OperationsHeader onTransferPesos={() => setTransferOpen(true)} />

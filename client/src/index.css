@@ -154,6 +154,171 @@ code {
   animation: slideInRight 0.3s ease-out;
 }
 
+/* Mobile Responsive Utilities */
+@media (max-width: 767px) {
+  /* Mobile-specific touch targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Mobile navigation */
+  .mobile-nav-hidden {
+    display: none;
+  }
+  
+  /* Mobile spacing adjustments */
+  .mobile-px {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+  
+  .mobile-py {
+    padding-top: 0.75rem;
+    padding-bottom: 0.75rem;
+  }
+  
+  /* Mobile text sizing */
+  .mobile-text-sm {
+    font-size: 0.875rem;
+    line-height: 1.25rem;
+  }
+  
+  .mobile-text-xs {
+    font-size: 0.75rem;
+    line-height: 1rem;
+  }
+  
+  /* Mobile layout utilities */
+  .mobile-full-width {
+    width: 100%;
+  }
+  
+  .mobile-stack {
+    flex-direction: column;
+  }
+  
+  .mobile-center {
+    text-align: center;
+  }
+  
+  /* Mobile table responsiveness */
+  .mobile-table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table-card {
+    display: block;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 1rem;
+    background: white;
+  }
+  
+  /* Mobile modal adjustments */
+  .mobile-modal {
+    margin: 0;
+    max-height: 100vh;
+    border-radius: 0;
+  }
+  
+  .mobile-modal-content {
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+  }
+  
+  /* Mobile form adjustments */
+  .mobile-form-group {
+    margin-bottom: 1rem;
+  }
+  
+  .mobile-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+  
+  /* Mobile button adjustments */
+  .mobile-button {
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    min-height: 44px;
+  }
+  
+  .mobile-button-small {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+    min-height: 36px;
+  }
+  
+  /* Mobile card adjustments */
+  .mobile-card {
+    margin: 0.5rem;
+    border-radius: 0.5rem;
+  }
+  
+  /* Mobile sidebar/drawer */
+  .mobile-drawer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: white;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+  
+  .mobile-drawer.open {
+    transform: translateX(0);
+  }
+  
+  /* Mobile header adjustments */
+  .mobile-header {
+    padding: 0.75rem 1rem;
+    min-height: 60px;
+  }
+  
+  /* Mobile content spacing */
+  .mobile-content {
+    padding-top: 60px; /* Account for fixed header */
+    padding-bottom: 1rem;
+  }
+}
+
+/* Touch-friendly interactions for all screen sizes */
+.touch-friendly {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+}
+
+/* Exception for checkboxes - they should maintain their normal size */
+input[type="checkbox"].touch-friendly {
+  min-height: auto;
+  min-width: auto;
+}
+
+/* Prevent text selection on touch devices for UI elements */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 767px) {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
 @keyframes slideInRight {
   from {
     opacity: 0;

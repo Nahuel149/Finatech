@@ -15,7 +15,7 @@ const inactiveClasses = 'border-gray-300 text-gray-600 hover:border-primary hove
 export const OperationTypeSelector: React.FC<Props> = ({ value, onChange, disabled = false }) => (
   <div id="operation-type" className="mb-6">
     <label className="block text-sm font-medium text-text-primary mb-2">Tipo de operación</label>
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
       <button
         type="button"
         onClick={() => onChange('buy')}

@@ -306,11 +306,15 @@ export const OperationWizardStep2Page: React.FC = () => {
       try {
         const updated = await updateSettlement(payload);
         setFormError(null);
-        setSuccessMessage('Liquidación guardada correctamente.');
+        
+        if (navigateToSummary) {
+          setSuccessMessage('Liquidación guardada. Continuando al resumen...');
+        } else {
+          setSuccessMessage('Liquidación guardada correctamente.');
+        }
 
         if (navigateToSummary && updated?.id) {
           await advanceStep(3);
-          setSuccessMessage('Liquidación guardada. Podés continuar al resumen.');
           navigate(
             `/dashboard/operaciones/nueva/resumen?draftId=${updated.id}&tipo=${
               updated.type === 'sell' ? 'venta' : 'compra'
@@ -350,11 +354,11 @@ export const OperationWizardStep2Page: React.FC = () => {
     : hasCompoundLines && hasValidCompoundValues && isCompoundComplete;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="pt-[185px] px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[185px] px-6 pb-8 max-w-6xl mx-auto">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={1}
@@ -388,7 +392,7 @@ export const OperationWizardStep2Page: React.FC = () => {
         {isReady && (
           <section
             id="step-2-settlement"
-            className="relative bg-white rounded-lg border border-gray-200 shadow-sm p-8"
+            className="relative bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6 lg:p-8"
           >
             {busy && (
               <div className="absolute inset-0 bg-white bg-opacity-65 z-10 flex flex-col items-center justify-center rounded-lg">

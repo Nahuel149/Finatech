@@ -251,11 +251,11 @@ export const OperationWizardStep3Page: React.FC = () => {
   const isReady = Boolean(draft);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="pt-[185px] px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[185px] px-6 pb-8 max-w-6xl mx-auto">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={2}

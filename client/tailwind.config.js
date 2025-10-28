@@ -5,6 +5,14 @@ module.exports = {
     "./public/index.html"
   ],
   theme: {
+    screens: {
+      'xs': '475px',
+      'sm': '640px',
+      'md': '768px',
+      'lg': '1024px',
+      'xl': '1280px',
+      '2xl': '1536px',
+    },
     extend: {
       colors: {
         primary: {
@@ -26,6 +34,17 @@ module.exports = {
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+      },
+      spacing: {
+        '18': '4.5rem',
+        '88': '22rem',
+        '128': '32rem',
+      },
+      minHeight: {
+        'screen-mobile': 'calc(100vh - 4rem)',
+      },
+      maxWidth: {
+        'mobile': '100vw',
       },
     },
   },

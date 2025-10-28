@@ -1,4 +1,5 @@
 import React from 'react';
+import { Button } from '../../shared/design-system';
 
 interface Props {
   onRegisterMovement: () => void;
@@ -22,37 +23,43 @@ export const TreasuryHeader: React.FC<Props> = ({
 
     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
       <div>
-        <h1 className="text-2xl font-bold text-text-primary mb-2">Tesorería</h1>
-        <p className="text-gray-600">
+        <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">Tesorería</h1>
+        <p className="text-sm sm:text-base text-gray-600">
           Registro y control de movimientos de fondos en efectivo y transferencias
         </p>
       </div>
 
-      <div className="flex items-center space-x-3">
-        <button
-          type="button"
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3 sm:gap-0">
+        <Button
+          variant="outline"
+          size="md"
           onClick={onOpenSettings}
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          icon="fa-solid fa-cog"
+          className="mobile-button touch-friendly"
         >
-          <i className="fa-solid fa-cog mr-2" />
-          Configuración
-        </button>
-        <button
-          type="button"
+          <span className="hidden sm:inline">Configuración</span>
+          <span className="sm:hidden">Config.</span>
+        </Button>
+        <Button
+          variant="outline"
+          size="md"
           onClick={onOpenConciliation}
-          className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+          icon="fa-solid fa-balance-scale"
+          className="mobile-button touch-friendly"
         >
-          <i className="fa-solid fa-balance-scale mr-2" />
-          Conciliar operaciones
-        </button>
-        <button
-          type="button"
+          <span className="hidden sm:inline">Conciliar operaciones</span>
+          <span className="sm:hidden">Conciliar</span>
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
           onClick={onRegisterMovement}
-          className="flex items-center px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
+          icon="fa-solid fa-plus"
+          className="mobile-button touch-friendly font-medium"
         >
-          <i className="fa-solid fa-plus mr-2" />
-          Registrar movimiento
-        </button>
+          <span className="hidden sm:inline">Registrar movimiento</span>
+          <span className="sm:hidden">Registrar</span>
+        </Button>
       </div>
     </div>
   </section>

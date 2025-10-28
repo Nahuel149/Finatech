@@ -49,8 +49,8 @@ const ASSET_CATALOG: AssetOption[] = [
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
-  buy: { incoming: 'USD', outgoing: 'ARS' },
-  sell: { incoming: 'ARS', outgoing: 'USD' },
+  buy: { incoming: 'USD', outgoing: 'ARS' },  // Compra: entrada de bien2 (USD), salida de pesos (ARS)
+  sell: { incoming: 'ARS', outgoing: 'USD' }, // Venta: entrada de pesos (ARS), salida de bien2 (USD)
 };
 
 const formatMargin = (value?: number | null) => {
@@ -97,6 +97,23 @@ const findAssetLabel = (code: string) =>
 
 const sanitizeNumber = (value: number) =>
   Number.isFinite(value) ? Number(value) : 0;
+
+// Genera labels contextuales según las reglas de negocio
+const getAmountLabels = (operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => {
+  if (operationType === 'buy') {
+    // Compra: entrada de bien2, salida de pesos
+    return {
+      enterLabel: `Recibes (${incomingAsset})`,
+      exitLabel: `Pagas (${outgoingAsset})`
+    };
+  } else {
+    // Venta: entrada de pesos, salida de bien2
+    return {
+      enterLabel: `Recibes (${incomingAsset})`,
+      exitLabel: `Entregas (${outgoingAsset})`
+    };
+  }
+};
 
 export const OperationWizardStep1Page: React.FC = () => {
   const navigate = useNavigate();
@@ -223,10 +240,12 @@ export const OperationWizardStep1Page: React.FC = () => {
       return;
     }
 
+    // For buy operations: USD -> ARS, so multiply by rate
+    // For sell operations: ARS -> USD, so divide by rate
     const computed =
       operationType === 'buy'
-        ? Number((incomingAmount * apr).toFixed(2))
-        : Number((incomingAmount / apr).toFixed(2));
+        ? Number((incomingAmount * apr).toFixed(2))  // USD * (ARS/USD) = ARS
+        : Number((incomingAmount / apr).toFixed(2)); // ARS / (ARS/USD) = USD
 
     setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
   }, [incomingAmount, apr, operationType]);
@@ -245,10 +264,16 @@ export const OperationWizardStep1Page: React.FC = () => {
       setOperationType('sell');
       setIncomingAssetCode(ASSET_DEFAULTS.sell.incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS.sell.outgoing);
+      // Reset amounts for sell operation
+      setIncomingAmount(125000.0); // ARS amount
+      setOutgoingAmount(150.0); // USD amount
     } else if (presetType === 'compra') {
       setOperationType('buy');
       setIncomingAssetCode(ASSET_DEFAULTS.buy.incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS.buy.outgoing);
+      // Reset amounts for buy operation
+      setIncomingAmount(150.0); // USD amount
+      setOutgoingAmount(125000.0); // ARS amount
     }
   }, [presetType]);
 
@@ -262,25 +287,46 @@ export const OperationWizardStep1Page: React.FC = () => {
     [activeClient],
   );
 
+  const showSecondaryRates = outgoingAssetCode !== 'USD';
+
+  const effectiveMarketRate = useMemo(() => {
+    if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
+      // Double exchange: ARS ↔ USD ↔ bien2
+      // Effective ARS/bien2 market rate = (ARS/USD) / (bien2/USD)
+      return marketApr / secondaryMarketRate;
+    }
+    return marketApr;
+  }, [marketApr, showSecondaryRates, secondaryMarketRate]);
+
   const marginPercent = useMemo(() => {
-    if (!marketApr || marketApr === 0) {
+    if (!effectiveMarketRate || effectiveMarketRate === 0) {
       return 0;
     }
     if (!incomingAmount || !outgoingAmount) {
       return 0;
     }
-    const operationRate =
-      operationType === 'buy'
-        ? outgoingAmount / incomingAmount
-        : incomingAmount / outgoingAmount;
-    return ((marketApr - operationRate) / marketApr) * 100;
-  }, [incomingAmount, marketApr, operationType, outgoingAmount]);
+
+    // Calcular t_operacion como ARS/bien2 según las reglas
+    let operationRate: number;
+    
+    if (operationType === 'buy') {
+      // Compra: t_operacion = ARS pagados por unidad del bien2
+      // outgoingAmount (ARS) / incomingAmount (bien2) = ARS/bien2
+      operationRate = outgoingAmount / incomingAmount;
+    } else {
+      // Venta: t_operacion = ARS recibidos por unidad del bien2
+      // incomingAmount (ARS) / outgoingAmount (bien2) = ARS/bien2
+      operationRate = incomingAmount / outgoingAmount;
+    }
+
+    // Aplicar la fórmula: margen = (t_mercado - t_operacion) / t_mercado
+    return ((effectiveMarketRate - operationRate) / effectiveMarketRate) * 100;
+  }, [incomingAmount, effectiveMarketRate, operationType, outgoingAmount]);
 
   const secondaryAssetLabel = useMemo(
     () => findAssetLabel(outgoingAssetCode),
     [outgoingAssetCode]
   );
-  const showSecondaryRates = outgoingAssetCode !== 'USD';
 
   useEffect(() => {
     if (!showSecondaryRates) {
@@ -294,10 +340,10 @@ export const OperationWizardStep1Page: React.FC = () => {
       setOperationType(type);
       setIncomingAssetCode(ASSET_DEFAULTS[type].incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS[type].outgoing);
-      setIncomingAmount(outgoingAmount);
-      setOutgoingAmount(incomingAmount);
+      // Don't swap amounts when changing operation type to prevent accumulation
+      // The useEffect will recalculate the outgoing amount based on the new operation type
     },
-    [incomingAmount, outgoingAmount],
+    [],
   );
 
   const handleToggleMarketRateMode = useCallback(
@@ -412,7 +458,11 @@ export const OperationWizardStep1Page: React.FC = () => {
           }
         }
 
-        setSuccessMessage('Borrador guardado correctamente.');
+        if (navigateToNext) {
+          setSuccessMessage('Datos guardados. Continuando al siguiente paso...');
+        } else {
+          setSuccessMessage('Borrador guardado correctamente.');
+        }
         setFormError(null);
 
         if (navigateToNext && savedDraft?.id) {
@@ -447,11 +497,11 @@ export const OperationWizardStep1Page: React.FC = () => {
   const busy = draftLoading || saving;
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="pt-[165px] px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[165px] px-6 pb-8 max-w-6xl mx-auto">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={0}
@@ -483,7 +533,7 @@ export const OperationWizardStep1Page: React.FC = () => {
 
         <section
           id="step-1-data"
-          className="relative bg-white rounded-lg border border-gray-200 shadow-sm p-8"
+          className="relative bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6 lg:p-8"
         >
           {busy && (
             <div className="absolute inset-0 bg-white bg-opacity-75 z-10 flex flex-col items-center justify-center rounded-lg">
@@ -492,7 +542,7 @@ export const OperationWizardStep1Page: React.FC = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             <div>
               <ClientSelection
                 value={clientId}
@@ -542,13 +592,12 @@ export const OperationWizardStep1Page: React.FC = () => {
                 enterAmount={incomingAmount}
                 onEnterAmountChange={setIncomingAmount}
                 exitAmount={outgoingAmount}
-                enterLabel={`Entra (${incomingAssetCode})`}
-                exitLabel={`Sale (${outgoingAssetCode})`}
+                {...getAmountLabels(operationType, incomingAssetCode, outgoingAssetCode)}
                 disabled={busy}
               />
               <MarginIndicator
                 marginPercent={marginPercent}
-                marketRate={marketApr}
+                marketRate={effectiveMarketRate}
                 operationType={operationType}
                 loading={busy}
               />

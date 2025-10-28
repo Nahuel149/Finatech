@@ -174,6 +174,25 @@ export const api = {
     apiRequest('/api/auth/logout', {
       method: 'POST',
     }),
+
+  // Password recovery endpoints
+  requestPasswordReset: (email: string) =>
+    apiRequest('/api/auth/recover', {
+      method: 'POST',
+      body: { email },
+    }),
+
+  validateResetToken: (token: string) =>
+    apiRequest('/api/auth/reset/validate', {
+      method: 'POST',
+      body: { token },
+    }),
+
+  resetPassword: (token: string, password: string) =>
+    apiRequest('/api/auth/reset', {
+      method: 'POST',
+      body: { token, password },
+    }),
     
   // Configuration
   getConfig: () =>

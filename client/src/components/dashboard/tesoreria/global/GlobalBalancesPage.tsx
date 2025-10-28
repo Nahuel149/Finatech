@@ -364,6 +364,7 @@ export const GlobalBalancesPage: React.FC = () => {
           loading={loading}
           onSelectCard={overview.summaryCards.length ? handleSelectAccount : undefined}
           activeAccountKey={filters.accountKey || null}
+          onRefresh={refresh}
         />
 
         <GlobalBalancesFilters

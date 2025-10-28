@@ -25,9 +25,9 @@ export const AssetSelection: React.FC<Props> = ({
   disabled = false,
 }) => (
   <div id="asset-selection" className="mb-6">
-    <div className="grid grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-2">Bien que entra</label>
+        <label className="block text-sm font-medium text-text-primary mb-2">Cliente recibe</label>
         <select
           value={enterValue}
           onChange={(event) => onEnterChange(event.target.value)}
@@ -42,7 +42,7 @@ export const AssetSelection: React.FC<Props> = ({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-2">Bien que sale</label>
+        <label className="block text-sm font-medium text-text-primary mb-2">Cliente paga</label>
         <select
           value={exitValue}
           onChange={(event) => onExitChange(event.target.value)}

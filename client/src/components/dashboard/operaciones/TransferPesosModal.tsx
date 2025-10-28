@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useClientSearch, useCreateTransfer } from '../../../hooks';
 import { CreateTransferResponse, MovementDirection, MovementMethod } from '../../../types';
+import { Button } from '../../shared/design-system';
 
 interface Props {
   open: boolean;
@@ -78,14 +79,18 @@ export const TransferPesosModal: React.FC<Props> = ({ open, onClose, onSuccess }
       <div className="relative bg-white w-full max-w-2xl rounded-lg shadow-lg">
         <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h3 className="text-lg font-semibold text-text-primary">Transferir pesos</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-text-primary">
-            <i className="fa-solid fa-times" />
-          </button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onClose}
+            icon="fa-solid fa-times"
+            aria-label="Cerrar modal"
+          />
         </div>
 
         <form onSubmit={handleSubmit} className="px-6 py-4">
           {/* Direction & Total */}
-          <div className="grid grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <div>
               <label className="block text-sm text-gray-600 mb-1">Dirección</label>
               <select
@@ -187,9 +192,14 @@ export const TransferPesosModal: React.FC<Props> = ({ open, onClose, onSuccess }
 
                 {/* Remove */}
                 <div className="col-span-1 flex items-end">
-                  <button type="button" onClick={() => removeLine(idx)} className="text-danger hover:underline">
-                    <i className="fa-solid fa-trash" />
-                  </button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => removeLine(idx)}
+                    icon="fa-solid fa-trash"
+                    className="text-danger hover:text-red-700"
+                    aria-label="Eliminar línea"
+                  />
                 </div>
               </div>
             ))}
@@ -198,16 +208,22 @@ export const TransferPesosModal: React.FC<Props> = ({ open, onClose, onSuccess }
           {/* Footer actions */}
           <div className="flex items-center justify-end space-x-3 mt-4">
             {error && <div className="text-sm text-danger">{String(error)}</div>}
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 rounded-lg text-text-primary hover:bg-gray-50">
+            <Button
+              variant="outline"
+              size="md"
+              onClick={onClose}
+            >
               Cancelar
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
               disabled={creating || totalMismatch || !lines.some((l) => l.contactId && parseFloat(l.amount || '0') > 0)}
-              className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              loading={creating}
             >
               {creating ? 'Registrando…' : 'Registrar transferencia'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

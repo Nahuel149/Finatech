@@ -83,7 +83,7 @@ export const TransferPesosDetailPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar search="" onSearchChange={() => {}} />
         <BalanceStripe />
-        <main className="pt-[200px] px-6 pb-32 max-w-4xl mx-auto">
+        <main className="pt-[240px] px-6 pb-32 max-w-4xl mx-auto">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-12 text-center text-gray-600">
             Cargando los datos de la transferencia…
           </div>
@@ -97,7 +97,7 @@ export const TransferPesosDetailPage: React.FC = () => {
       <div className="min-h-screen bg-gray-50">
         <DashboardNavbar search="" onSearchChange={() => {}} />
         <BalanceStripe />
-        <main className="pt-[200px] px-6 pb-32 max-w-4xl mx-auto">
+        <main className="pt-[240px] px-6 pb-32 max-w-4xl mx-auto">
           <div className="mb-6">
             <Alert
               type="error"
@@ -108,7 +108,7 @@ export const TransferPesosDetailPage: React.FC = () => {
           </div>
           <button
             type="button"
-            onClick={() => navigate('/dashboard/operaciones')}
+            onClick={() => navigate('/dashboard')}
             className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
           >
             Volver a Operaciones
@@ -135,21 +135,21 @@ export const TransferPesosDetailPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[200px] px-6 pb-32 max-w-4xl mx-auto space-y-6">
-        <header className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <p className="text-xs uppercase text-gray-500 tracking-wide mb-1">
+      <main className="pt-[240px] px-6 pb-32 max-w-4xl mx-auto space-y-8">
+        <header className="bg-white rounded-lg border border-gray-200 shadow-sm p-10">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div className="space-y-3">
+              <p className="text-xs uppercase text-gray-500 tracking-wide mb-2">
                 Transferencia en pesos
               </p>
-              <h1 className="text-2xl font-bold text-text-primary mb-2">
+              <h1 className="text-2xl font-bold text-text-primary mb-3">
                 {operation.operationCode || operation.id}
               </h1>
               <p className="text-gray-600">
                 Registrada el {formatDateTime(operation.confirmedAt || operation.createdAt)}
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
               <button
                 type="button"
                 onClick={() => setPanelOpen(true)}
@@ -160,7 +160,7 @@ export const TransferPesosDetailPage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/dashboard/operaciones')}
+                onClick={() => navigate('/dashboard')}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
               >
                 Volver a Operaciones
@@ -169,73 +169,73 @@ export const TransferPesosDetailPage: React.FC = () => {
           </div>
         </header>
 
-        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
+        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+          <h2 className="text-lg font-semibold text-text-primary mb-6 flex items-center">
             <i className="fa-solid fa-gear text-primary mr-3" />
             Configuración
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
-            <div>
-              <span className="text-gray-600 block mb-1">Tipo de movimiento</span>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-sm">
+            <div className="space-y-2">
+              <span className="text-gray-600 block mb-2">Tipo de movimiento</span>
               <span className="text-text-primary font-semibold">
                 {MOVEMENT_TYPE_TEXT[operation.movementType] || operation.movementType}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600 block mb-1">Dirección</span>
+            <div className="space-y-2">
+              <span className="text-gray-600 block mb-2">Dirección</span>
               <span className="text-text-primary font-semibold">
                 {DIRECTION_TEXT[operation.direction] || operation.direction}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600 block mb-1">Estado</span>
+            <div className="space-y-2">
+              <span className="text-gray-600 block mb-2">Estado</span>
               <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
                 {operation.status === 'registered' ? 'Registrada' : operation.status}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600 block mb-1">Moneda</span>
+            <div className="space-y-2">
+              <span className="text-gray-600 block mb-2">Moneda</span>
               <span className="text-text-primary font-semibold">{operation.currency}</span>
             </div>
           </div>
         </section>
 
-        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-semibold text-text-primary mb-4 flex items-center">
+        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+          <h2 className="text-lg font-semibold text-text-primary mb-6 flex items-center">
             <i className="fa-solid fa-dollar-sign text-primary mr-3" />
             Monto total
           </h2>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-8">
             <div className="text-3xl font-bold text-blue-900">
               {formatCurrency(operation.totalAmount)}
             </div>
-            <div className="text-sm text-blue-700 mt-2">Pesos argentinos</div>
+            <div className="text-sm text-blue-700 mt-3">Pesos argentinos</div>
           </div>
         </section>
 
-        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <div className="flex items-center justify-between mb-4">
+        <section className="bg-white rounded-lg border border-gray-200 shadow-sm p-8">
+          <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-semibold text-text-primary flex items-center">
               <i className="fa-solid fa-users text-primary mr-3" />
               Distribución a contactos
             </h2>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             {operation.distributionLines.map((line) => (
               <div
                 key={line.lineId}
-                className="flex flex-col md:flex-row md:items-center md:justify-between p-4 bg-gray-50 rounded-lg"
+                className="flex flex-col md:flex-row md:items-center md:justify-between p-6 bg-gray-50 rounded-lg"
               >
                 <div className="flex items-center space-x-4">
-                  <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white">
+                  <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center text-white">
                     <i
                       className={`fa-solid ${
                         line.contactType === 'provider' ? 'fa-building' : 'fa-user'
                       } text-sm`}
                     />
                   </div>
-                  <div>
+                  <div className="space-y-1">
                     <div className="font-medium text-text-primary">
                       {line.contactName || 'Contacto sin definir'}
                     </div>
@@ -244,7 +244,7 @@ export const TransferPesosDetailPage: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="text-right mt-3 md:mt-0">
+                <div className="text-right mt-4 md:mt-0 space-y-1">
                   <div className="font-semibold text-text-primary">
                     {line.method === 'USD'
                       ? formatCurrency(line.amount, 'USD')
@@ -256,22 +256,22 @@ export const TransferPesosDetailPage: React.FC = () => {
             ))}
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-center justify-between md:justify-start md:space-x-2">
+          <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+            <div className="flex items-center justify-between md:justify-start md:space-x-3 p-4 bg-gray-50 rounded-lg">
               <span className="text-gray-600">Total distribuido ARS:</span>
               <span className="font-semibold text-text-primary">
                 {formatCurrency(totalARS)}
               </span>
             </div>
-            <div className="flex items-center justify-between md:justify-start md:space-x-2">
+            <div className="flex items-center justify-between md:justify-start md:space-x-3 p-4 bg-gray-50 rounded-lg">
               <span className="text-gray-600">Total distribuido USD:</span>
               <span className="font-semibold text-text-primary">
                 {formatCurrency(totalUSD, 'USD')}
               </span>
             </div>
-            <div className="flex items-center justify-between md:justify-start md:space-x-2">
-              <span className="text-gray-600">Total general:</span>
-              <span className="font-semibold text-text-primary">
+            <div className="flex items-center justify-between md:justify-start md:space-x-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <span className="text-blue-700 font-medium">Total general:</span>
+              <span className="font-bold text-blue-900">
                 {formatCurrency(operation.totalAmount)}
               </span>
             </div>

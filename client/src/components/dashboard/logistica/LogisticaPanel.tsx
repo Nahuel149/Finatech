@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { Footer } from '../operaciones/Footer';
 import { Alert } from '../../ui';
@@ -217,14 +218,16 @@ const logisticsOperations: LogisticsOperation[] = [
   },
 ];
 
-const LogisticsBalanceStripe: React.FC = () => (
+const LogisticsBalanceStripe: React.FC<{ onBalanceClick?: () => void }> = ({ onBalanceClick }) => (
   <div className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
     <div className="px-6 py-4">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         {LOGISTICS_BALANCES.map((card) => (
           <div
             key={card.id}
-            className="bg-white rounded-lg border border-gray-200 px-4 py-3 shadow-sm flex items-center"
+            className="bg-white rounded-lg border border-gray-200 px-4 py-3 shadow-sm flex items-center cursor-pointer hover:shadow-md transition-shadow"
+            title={`Última actualización: ${card.updatedAt}`}
+            onClick={onBalanceClick}
           >
             <div className={`${card.bg} w-11 h-11 rounded-lg flex items-center justify-center mr-3`}>
               <i className={`fa-solid ${card.icon} text-primary`} />
@@ -242,12 +245,17 @@ const LogisticsBalanceStripe: React.FC = () => (
 );
 
 export const LogisticaPanel: React.FC = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<LogisticsOperation | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  const handleBalanceClick = () => {
+    navigate('/dashboard/tesoreria/saldos');
+  };
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
 
   useEffect(() => {
@@ -335,7 +343,7 @@ export const LogisticaPanel: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar search={searchTerm} onSearchChange={handleSearchChange} />
-      <LogisticsBalanceStripe />
+      <LogisticsBalanceStripe onBalanceClick={handleBalanceClick} />
 
       <main className="pt-40 pb-8 max-w-7xl mx-auto px-6">
         <header className="mb-8 mt-20">

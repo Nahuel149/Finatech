@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const numberToInputValue = (value: number) => (Number.isNaN(value) ? '' : value);
+const numberToInputValue = (value: number) => (Number.isNaN(value) || value === 0 ? '' : value);
 
 export const AmountSection: React.FC<Props> = ({
   enterAmount,
@@ -18,31 +18,41 @@ export const AmountSection: React.FC<Props> = ({
   enterLabel,
   exitLabel,
   disabled = false,
-}) => (
-  <div id="amount-input" className="mb-6">
-    <label className="block text-sm font-medium text-text-primary mb-2">Monto</label>
-    <div className="grid grid-cols-2 gap-4">
-      <div>
-        <label className="block text-xs text-gray-500 mb-1">{enterLabel}</label>
-        <input
-          type="number"
-          step="0.01"
-          value={numberToInputValue(enterAmount)}
-          onChange={(event) => onEnterAmountChange(parseFloat(event.target.value) || 0)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled}
-        />
-      </div>
-      <div>
-        <label className="block text-xs text-gray-500 mb-1">{exitLabel}</label>
-        <input
-          type="number"
-          step="0.01"
-          value={numberToInputValue(exitAmount)}
-          readOnly
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"
-        />
+}) => {
+  const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
+    // Select all text when focusing, especially useful when the field contains 0
+    event.target.select();
+  };
+
+  return (
+    <div id="amount-input" className="mb-6">
+      <label className="block text-sm font-medium text-text-primary mb-2">Monto</label>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">{enterLabel}</label>
+          <input
+            type="number"
+            step="0.01"
+            value={numberToInputValue(enterAmount)}
+            onChange={(event) => onEnterAmountChange(parseFloat(event.target.value) || 0)}
+            onFocus={handleFocus}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
+            placeholder="0"
+          />
+        </div>
+        <div>
+          <label className="block text-xs text-gray-500 mb-1">{exitLabel}</label>
+          <input
+            type="number"
+            step="0.01"
+            value={numberToInputValue(exitAmount)}
+            readOnly
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"
+            placeholder="0"
+          />
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
