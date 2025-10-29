@@ -5,6 +5,7 @@ export * from './useCreateTransfer';
 export * from './useClientSearch';
 export * from './useClientsList';
 export * from './useTransactionDraft';
+export * from './useAutoSaveDraft';
 export * from './useTreasuryBalances';
 export * from './useTreasuryMovements';
 export * from './useCreateTreasuryMovement';

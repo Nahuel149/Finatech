@@ -23,9 +23,9 @@ export const WizardActions: React.FC<Props> = ({
 }) => (
   <div
     id="step-1-actions"
-    className="flex items-center justify-between pt-6 border-t border-gray-200"
+    className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-6 border-t border-gray-200"
   >
-    <div className="flex space-x-3">
+    <div className="flex flex-col sm:flex-row gap-2 sm:space-x-3">
       {onBack && (
         <button
           type="button"
@@ -60,7 +60,7 @@ export const WizardActions: React.FC<Props> = ({
     <button
       type="button"
       onClick={onContinue}
-      className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-60 disabled:cursor-not-allowed"
+      className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
       disabled={saving || disableContinue}
       title="Guardar los datos y continuar al siguiente paso"
     >

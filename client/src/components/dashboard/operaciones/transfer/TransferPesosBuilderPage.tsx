@@ -361,7 +361,8 @@ export const TransferPesosBuilderPage: React.FC = () => {
     if (step === 'distribution' && draft.distributionLines.length === 0) {
       addLine();
     }
-  }, [step, draft.distributionLines.length, addLine]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step, draft.distributionLines.length]);
 
   useEffect(() => {
     if (!toast) return;
@@ -979,9 +980,9 @@ export const TransferPesosBuilderPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleCancel}
-                className="px-6 py-3 text-gray-700 hover:text-text-primary transition-colors font-medium"
+                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <i className="fa-solid fa-arrow-left mr-2" />
+                <i className="fa-solid fa-arrow-left" />
                 Atrás
               </button>
               <button

@@ -8,6 +8,7 @@ import {
 import {
   useClientsList,
   useTransactionDraft,
+  useAutoSaveDraft,
 } from '../../../../hooks/dashboard';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
@@ -91,24 +92,83 @@ export const OperationWizardStep2Page: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
+  // Auto-save hook for draft saving
+  const { 
+    autoSave: autoSaveDraft, 
+    forceSave,
+    hasUnsavedChanges 
+  } = useAutoSaveDraft({
+    debounceMs: 60000,
+    save: updateSettlement,
+    onSaveSuccess: () => {
+      setSuccessMessage('Borrador guardado automáticamente');
+      setTimeout(() => setSuccessMessage(null), 3000);
+    },
+    onSaveError: (error) => {
+      setFormError(error?.message || 'Error al guardar el borrador automáticamente');
+    },
+  });
+
+  // Build payload function for auto-save
+  const buildPayload = useCallback((): TransactionSettlementPayload => {
+    return settlementMode === 'simple'
+      ? {
+          mode: 'simple',
+          simpleMethod,
+        }
+      : {
+          mode: 'compound',
+          lines: compoundLines.map((line) => ({
+            method: line.method,
+            allocationType: line.allocationType,
+            value: Number(line.value),
+          })),
+        };
+  }, [settlementMode, simpleMethod, compoundLines]);
+
   useEffect(() => {
     if (draft) {
       const normalizedType: TransactionType = draft.type === 'sell' ? 'sell' : 'buy';
-      setOperationType(normalizedType);
-      setClientId(draft.clientId ?? '');
-      setSettlementMode(draft.settlement?.mode ?? 'simple');
-      setSimpleMethod(draft.settlement?.simpleMethod || DEFAULT_SIMPLE_METHOD);
+      if (normalizedType !== operationType) {
+        setOperationType(normalizedType);
+      }
+      
+      const newClientId = draft.clientId ?? '';
+      if (newClientId !== clientId) {
+        setClientId(newClientId);
+      }
+      
+      const newMode = draft.settlement?.mode ?? 'simple';
+      if (newMode !== settlementMode) {
+        setSettlementMode(newMode);
+      }
+      
+      const newMethod = draft.settlement?.simpleMethod || DEFAULT_SIMPLE_METHOD;
+      if (newMethod !== simpleMethod) {
+        setSimpleMethod(newMethod);
+      }
 
       if (draft.settlement?.mode === 'compound' && draft.settlement.lines.length > 0) {
-        setCompoundLines(
-          draft.settlement.lines.map((line, index) => ({
-            id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
-            method: line.method,
-            allocationType: line.allocationType,
-            value: line.value,
-          })),
-        );
-      } else {
+        const newCompoundLines = draft.settlement.lines.map((line, index) => ({
+          id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
+          method: line.method,
+          allocationType: line.allocationType,
+          value: line.value,
+        }));
+        
+        // Only update if the structure has changed (simplified comparison)
+        if (compoundLines.length !== newCompoundLines.length || 
+            compoundLines.some((line, index) => 
+              !newCompoundLines[index] || 
+              line.method !== newCompoundLines[index].method ||
+              line.allocationType !== newCompoundLines[index].allocationType ||
+              line.value !== newCompoundLines[index].value
+            )) {
+          setCompoundLines(newCompoundLines);
+        }
+      } else if (draft.settlement?.mode !== 'compound' && compoundLines.length > 0) {
+        // Only clear compound lines if the draft mode is not compound
+        // This prevents clearing when user switches to compound mode but draft hasn't been saved yet
         setCompoundLines([]);
       }
 
@@ -132,6 +192,14 @@ export const OperationWizardStep2Page: React.FC = () => {
       setOperationType('buy');
     }
   }, [presetTypeParam]);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (!draft?.id) return;
+    
+    const payload = buildPayload();
+    autoSaveDraft(payload);
+  }, [autoSaveDraft, buildPayload, settlementMode, simpleMethod, compoundLines, draft?.id]);
 
   const incomingAmount = draft?.incomingAmount ?? 0;
   const outgoingAmount = draft?.outgoingAmount ?? 0;
@@ -340,7 +408,12 @@ export const OperationWizardStep2Page: React.FC = () => {
   }, [navigate]);
 
   const handleSaveDraft = useCallback(() => handleSubmit(false), [handleSubmit]);
-  const handleContinue = useCallback(() => handleSubmit(true), [handleSubmit]);
+  
+  const handleContinue = useCallback(() => {
+    // handleSubmit(true) already validates and saves the final data.
+    // No need for additional forceSave or delay logic.
+    handleSubmit(true);
+  }, [handleSubmit]);
 
   const busy = draftLoading || saving;
   const isReady = Boolean(draft);
@@ -358,7 +431,7 @@ export const OperationWizardStep2Page: React.FC = () => {
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="flex-grow pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto overflow-x-hidden lg:overflow-x-visible">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={1}

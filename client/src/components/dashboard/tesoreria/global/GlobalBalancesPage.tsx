@@ -344,7 +344,7 @@ export const GlobalBalancesPage: React.FC = () => {
       <TreasuryNavbar search={globalSearch} onSearchChange={handleSearchChange} />
       <TreasuryBalanceStripe onSelectBalance={handleSelectAccount} />
 
-      <main id="saldos-container" className="pt-[220px] px-6 pb-24">
+      <main id="saldos-container" className="pt-[260px] md:pt-[220px] px-6 pb-24">
         <section id="page-header" className="mb-8">
           <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
             <span className="text-text-primary font-medium">Saldos</span>

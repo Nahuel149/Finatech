@@ -90,6 +90,8 @@ const sortValueToApi = (sort: string): ContactBalanceDetailFilters['sort'] => {
 };
 
 export const ContactBalanceDetailPage: React.FC = () => {
+  // Estabilizar opciones del responsable interno para evitar cambios de referencia
+  const OWNER_OPTIONS = React.useMemo(() => ['Tesorería', 'Operaciones', 'Comercial'], []);
   const navigate = useNavigate();
   const { contactId } = useParams<{ contactId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -337,7 +339,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
         onClose={() => setCreateContactOpen(false)}
         onCreated={handleNewContactCreated}
         defaultType="client"
-        ownerOptions={['Tesorería', 'Operaciones', 'Comercial']}
+        ownerOptions={OWNER_OPTIONS}
         defaultOwner="Tesorería"
       />
 

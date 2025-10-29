@@ -21,7 +21,7 @@ interface SummaryCardProps {
 
 const SummaryCard: React.FC<SummaryCardProps> = ({ title, subTitle, children, onEdit }) => (
   <div className="bg-white border border-gray-200 rounded-lg shadow-sm p-6 space-y-4">
-    <div className="flex items-start justify-between">
+    <div className="flex flex-col sm:flex-row items-start justify-between gap-2">
       <div>
         <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
         {subTitle && <p className="text-sm text-gray-500">{subTitle}</p>}
@@ -122,7 +122,7 @@ const SettlementSimple: React.FC<{ method?: string | null; amountLabel: string }
   amountLabel,
 }) => (
   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
       <div>
         <div className="text-sm text-blue-800">
           Método de liquidación
@@ -145,7 +145,7 @@ const SettlementCompound: React.FC<{
 }> = ({ lines, amountLabel }) => (
   <div className="space-y-4">
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500">
+      <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500 hidden md:block">
         <div className="grid grid-cols-12 gap-4">
           <div className="col-span-4">Método</div>
           <div className="col-span-3">Asignación</div>
@@ -156,9 +156,9 @@ const SettlementCompound: React.FC<{
       <div className="divide-y divide-gray-200">
         {lines.map((line) => (
           <div key={`${line.method}-${line.value}-${line.computedPercentage}`} className="px-4 py-3">
-            <div className="grid grid-cols-12 gap-4 text-sm text-gray-700">
-              <div className="col-span-4 font-medium text-text-primary">{line.method}</div>
-              <div className="col-span-3">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-sm text-gray-700">
+              <div className="md:col-span-4 font-medium text-text-primary">{line.method}</div>
+              <div className="md:col-span-3">
                 {line.allocationType === 'percentage'
                   ? `${line.value.toFixed(1)}%`
                   : `Monto fijo (${line.value.toLocaleString('es-AR', {
@@ -166,11 +166,11 @@ const SettlementCompound: React.FC<{
                       maximumFractionDigits: 2,
                     })})`}
               </div>
-              <div className="col-span-3">{line.value.toLocaleString('es-AR', {
+              <div className="md:col-span-3">{line.value.toLocaleString('es-AR', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2,
               })}</div>
-              <div className="col-span-2 font-semibold text-text-primary">
+              <div className="md:col-span-2 font-semibold text-text-primary">
                 {line.computedPercentage.toFixed(1)}%
               </div>
             </div>
@@ -178,7 +178,7 @@ const SettlementCompound: React.FC<{
         ))}
       </div>
     </div>
-    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 flex items-center justify-between">
+    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
       <div className="flex items-center">
         <i className="fa-solid fa-info-circle mr-2" />
         <span>La liquidación alcanza el 100% del monto acordado.</span>

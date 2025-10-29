@@ -42,7 +42,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
 }) => (
   <div id="compound-form" className={`${lines.length === 0 ? 'space-y-6' : 'space-y-6'}`}>
     <div className="bg-white border border-gray-200 rounded-lg">
-      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+      <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 hidden md:block">
         <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
           <div className="col-span-4">Método</div>
           <div className="col-span-2">Asignación</div>
@@ -60,8 +60,8 @@ export const CompoundSettlementForm: React.FC<Props> = ({
 
           return (
             <div key={line.id} className="px-4 py-4">
-              <div className="grid grid-cols-12 gap-4 items-center">
-                <div className="col-span-4">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div className="md:col-span-4">
                   <select
                     value={line.method}
                     onChange={(event) => onLineChange(line.id, { method: event.target.value })}
@@ -77,7 +77,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   </select>
                 </div>
 
-                <div className="col-span-2">
+                <div className="md:col-span-2">
                   <div className="flex rounded-lg border border-gray-300 overflow-hidden">
                     {(['percentage'] as CompoundLine['allocationType'][]).map((type) => (
                       <button
@@ -97,7 +97,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="col-span-3">
+                <div className="md:col-span-3">
                   <input
                     type="number"
                     min="0"
@@ -115,7 +115,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   />
                 </div>
 
-                <div className="col-span-2 text-sm text-gray-600">
+                <div className="md:col-span-2 text-sm text-gray-600">
                   <div className="flex flex-col">
                     <span className="font-semibold text-text-primary">
                       {formatAmount(amountValue)}
@@ -126,12 +126,12 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   </div>
                 </div>
 
-                <div className="col-span-1 text-right">
+                <div className="md:col-span-1 text-right">
                   <button
                     type="button"
                     onClick={() => onRemoveLine(line.id)}
                     disabled={disabled}
-                    className="text-gray-400 hover:text-danger transition-colors"
+                    className="text-gray-400 hover:text-danger transition-colors w-full md:w-auto"
                     aria-label="Eliminar línea"
                   >
                     <i className="fa-solid fa-trash" />

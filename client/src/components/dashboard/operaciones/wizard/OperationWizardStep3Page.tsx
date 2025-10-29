@@ -58,7 +58,6 @@ export const OperationWizardStep3Page: React.FC = () => {
   const [voidReason, setVoidReason] = useState('');
   const [voiding, setVoiding] = useState(false);
   const [voidError, setVoidError] = useState<string | null>(null);
-  const [voidSuccess, setVoidSuccess] = useState(false);
 
   useEffect(() => {
     if (!showToast) {
@@ -68,18 +67,14 @@ export const OperationWizardStep3Page: React.FC = () => {
     return () => window.clearTimeout(timeout);
   }, [showToast]);
 
-  useEffect(() => {
-    if (draft?.status === 'voided') {
-      setVoidSuccess(true);
-    } else {
-      setVoidSuccess(false);
-    }
-  }, [draft?.status]);
+
 
   useEffect(() => {
     if (draft) {
       const normalizedType: TransactionType = draft.type === 'sell' ? 'sell' : 'buy';
-      setOperationType(normalizedType);
+      if (normalizedType !== operationType) {
+        setOperationType(normalizedType);
+      }
 
       const client = draft.client;
       if (client) {
@@ -91,7 +86,7 @@ export const OperationWizardStep3Page: React.FC = () => {
         });
       }
     }
-  }, [draft, setClients]);
+  }, [draft, setClients, operationType]);
 
   useEffect(() => {
     if (presetTypeParam === 'venta') {
@@ -116,11 +111,12 @@ export const OperationWizardStep3Page: React.FC = () => {
   const isVoided = draft?.status === 'voided';
   const canVoid = draft?.status === 'registered';
   const voidButtonDisabled = !canVoid || voiding;
+  const voidSuccess = draft?.status === 'voided';
 
   const marginValue = draft?.marginPercentage;
   const settlementPercentage = draft?.settlement?.totalPercentage ?? (draft?.settlement?.mode === 'simple' ? 100 : 0);
 
-  const validationItems: ValidationItem[] = [
+  const validationItems: ValidationItem[] = useMemo(() => [
     {
       label: 'Margen dentro de parámetros permitidos',
       hint: 'Comparación contra los límites definidos por compliance.',
@@ -144,7 +140,7 @@ export const OperationWizardStep3Page: React.FC = () => {
       hint: 'Verificá que el cliente no tenga saldos impagos o movimientos rechazados.',
       passed: true,
     },
-  ];
+  ], [marginValue, settlementPercentage, draft?.settlement?.mode, draft?.settlement?.simpleMethod, clientSummary?.lastMarginPercentage]);
 
   const canConfirm =
     validationItems.every((item) => item.passed) && Boolean(draft?.id) && !isVoided;
@@ -255,7 +251,7 @@ export const OperationWizardStep3Page: React.FC = () => {
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="flex-grow pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto overflow-x-hidden lg:overflow-x-visible">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={2}

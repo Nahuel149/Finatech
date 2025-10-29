@@ -158,7 +158,8 @@ export const LinkedBalancesMovementsSection: React.FC<Props> = ({
 
       {!loading && activeBalance && (
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
-          <table className="w-full">
+          {/* Desktop/Tablet Table */}
+          <table className="w-full hidden md:table">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -241,8 +242,88 @@ export const LinkedBalancesMovementsSection: React.FC<Props> = ({
               )}
             </tbody>
           </table>
+          {/* Mobile Cards */}
+          <div className="md:hidden">
+            <div className="p-4 space-y-3">
+              {activeBalance.recentMovements?.length ? (
+                activeBalance.recentMovements.map((movement, index) => {
+                  const badge = typeBadge(movement);
+                  const status = statusBadge(movement.status);
+                  const movementKey =
+                    movement.id || movement.movementCode || movement.reference || `movement-${index}`;
 
-          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+                  return (
+                    <div
+                      key={movementKey}
+                      className="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center">
+                          <span className={badge.className}>
+                            <i className={`fa-solid ${badge.icon} mr-1`} />
+                            {badge.label}
+                          </span>
+                        </div>
+                        <div
+                          className={`text-base font-semibold ${
+                            movement.type === 'outgoing' ? 'text-danger' : 'text-success'
+                          }`}
+                          aria-label="Monto"
+                        >
+                          {formatAmount(movement)}
+                        </div>
+                      </div>
+
+                      <div className="text-sm text-text-primary space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Fecha</span>
+                          <span>{formatDateTime(movement.movementAt)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Medio</span>
+                          <span>{mediumLabel(movement.medium)}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Contacto</span>
+                          <span>{movement.contact?.fullName || '—'}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Estado</span>
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${status.className}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => onViewMovement(movement)}
+                          className="px-3 py-1.5 text-sm font-medium bg-primary text-white rounded-md hover:bg-blue-700 transition-colors"
+                        >
+                          Ver detalle
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <EmptyState />
+              )}
+            </div>
+
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-200">
+              <button
+                type="button"
+                onClick={() => onViewAll(activeBalance.id)}
+                className="text-primary hover:text-blue-700 text-sm font-medium"
+              >
+                Ver todos los movimientos →
+              </button>
+            </div>
+          </div>
+
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200 hidden md:block">
             <button
               type="button"
               onClick={() => onViewAll(activeBalance.id)}

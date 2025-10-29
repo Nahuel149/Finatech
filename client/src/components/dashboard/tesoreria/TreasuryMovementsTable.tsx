@@ -233,7 +233,113 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="overflow-x-auto">
+      {/* Mobile Card Layout */}
+      <div className="md:hidden px-4 py-4">
+        {loading ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-sm text-gray-500">
+            Cargando movimientos…
+          </div>
+        ) : error ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-sm text-danger">
+            No pudimos cargar los movimientos.
+            <button
+              type="button"
+              onClick={onRetry}
+              className="ml-1 text-primary hover:text-blue-700 underline"
+            >
+              Reintentar
+            </button>
+          </div>
+        ) : !items.length ? (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-sm text-gray-500">
+            No se encontraron movimientos con los filtros aplicados.
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {items.map((movement) => {
+              const dateInfo = formatDate(movement.movementAt);
+              const isCancelled = movement.status === 'cancelled';
+              const statusCls = statusBadgeClass(movement.status);
+              const currencyCls = currencyBadgeClass(movement.currency);
+
+              return (
+                <div
+                  key={movementCode(movement)}
+                  className="movement-card bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+                  onClick={() => onViewDetail(movement)}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="text-sm font-medium text-text-primary">{dateInfo.date}</div>
+                      <div className="text-xs text-gray-500">{dateInfo.time}</div>
+                    </div>
+                    <div className={`text-lg font-semibold ${amountClass(movement)}`}>{formatAmount(movement)}</div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 mb-2">
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currencyCls}`}>
+                      {movement.currency || '—'}
+                    </span>
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                      <i className={`fa-solid ${typeIcon(movement.type)} mr-1`} />
+                      {typeLabel(movement.type)} · {mediumLabel(movement.medium)}
+                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCls}`}>
+                      {statusLabel(movement.status)}
+                    </span>
+                  </div>
+
+                  <div className="text-sm text-text-primary mb-2">
+                    <div className="font-medium">{movement.contact?.fullName || movement.contact?.shortName || '—'}</div>
+                    <div className="text-xs text-primary">{linkedOperationCode(movement)}</div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onView(movement);
+                      }}
+                      className="mobile-button-small text-primary hover:text-blue-700 text-sm"
+                      aria-label="Ver movimiento"
+                    >
+                      <i className="fa-solid fa-eye" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (!isCancelled) onEdit(movement);
+                      }}
+                      className={`mobile-button-small text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'}`}
+                      aria-label="Editar movimiento"
+                      disabled={isCancelled}
+                    >
+                      <i className="fa-solid fa-edit" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        if (!isCancelled) onCancel(movement);
+                      }}
+                      className={`mobile-button-small text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-danger hover:text-red-700'}`}
+                      aria-label="Anular movimiento"
+                      disabled={isCancelled}
+                    >
+                      <i className="fa-solid fa-ban" />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table Layout */}
+      <div className="hidden md:block overflow-x-auto">
         <table id="movements-table" className="w-full">
           <thead className="bg-gray-50">
             <tr>

@@ -25,7 +25,10 @@ export const ClientSelection: React.FC<Props> = ({
   marginInfo,
   loading = false,
   error = null,
-}) => (
+}) => {
+  console.log('ClientSelection - value:', value, 'type:', typeof value, 'clients count:', clients.length);
+  
+  return (
   <div id="client-selection" className="mb-6">
     <label className="block text-sm font-medium text-text-primary mb-2">Cliente</label>
     <div className="flex space-x-3">
@@ -33,7 +36,10 @@ export const ClientSelection: React.FC<Props> = ({
         <div className="relative">
           <select
             value={value}
-            onChange={(event) => onChange(event.target.value)}
+            onChange={(event) => {
+              console.log('ClientSelection onChange - new value:', event.target.value);
+              onChange(event.target.value);
+            }}
             className="w-full appearance-none px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors pr-10"
             disabled={loading}
           >
@@ -73,4 +79,5 @@ export const ClientSelection: React.FC<Props> = ({
       </div>
     )}
   </div>
-);
+  );
+};

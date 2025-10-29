@@ -43,7 +43,7 @@ export const SimpleSettlementForm: React.FC<Props> = ({
     </div>
 
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-      <div className="flex items-center">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
         <i className="fa-solid fa-info-circle text-blue-600 mr-2" />
         <span className="text-sm text-blue-800">Este método aplicará al 100% de la operación</span>
       </div>

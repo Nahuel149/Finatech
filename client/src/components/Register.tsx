@@ -149,8 +149,18 @@ export const Register: React.FC = () => {
         agreeToTerms: false,
       });
     } catch (error: any) {
+      const code = error?.code;
       if (error.message?.includes('already exists') || error.message?.includes('already registered')) {
         setShowExistingEmailMessage(true);
+      } else if (
+        code === 'EMAIL_DELIVERY_TIMEOUT' ||
+        code === 'SMTP_CONNECTION_ERROR' ||
+        code === 'VERIFICATION_EMAIL_FAILED'
+      ) {
+        setFormErrors({
+          general:
+            'No pudimos enviar el correo de verificación por un problema temporal con el servicio de email. Probá nuevamente en unos minutos o usá “Reenviar verificación” si recibís el correo más tarde.',
+        });
       } else {
         setFormErrors({ general: error.message || 'Error al registrar usuario' });
       }

@@ -248,7 +248,35 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
       verification: verificationPayload,
     });
 
-    await sendVerificationEmail(user, plainToken);
+    try {
+      await sendVerificationEmail(user, plainToken);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send verification email on registration', error);
+      await logSecurityEvent({
+        user: user._id,
+        email: normalizedEmail,
+        eventType: 'registration',
+        provider: 'local',
+        status: 'error',
+        ...requestMetadata,
+        metadata: {
+          reason: 'verification_email_failed',
+          smtp: {
+            code: error.code,
+            message: error.message,
+          },
+        },
+      });
+
+      const appErr = new AppError(
+        'No se pudo enviar el email de verificación. Intentá nuevamente en unos minutos.',
+        502,
+        { code: error.code === 'ETIMEDOUT' ? 'EMAIL_DELIVERY_TIMEOUT' : 'SMTP_CONNECTION_ERROR' }
+      );
+      appErr.code = error.code === 'ETIMEDOUT' ? 'EMAIL_DELIVERY_TIMEOUT' : 'SMTP_CONNECTION_ERROR';
+      throw appErr;
+    }
     await logSecurityEvent({
       user: user._id,
       email: normalizedEmail,
@@ -306,9 +334,25 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to send verification email', error);
-    throw new AppError('No se pudo enviar el email de verificación.', 502, {
-      code: 'VERIFICATION_EMAIL_FAILED',
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'registration',
+      provider: 'local',
+      status: 'error',
+      ...requestMetadata,
+      metadata: {
+        reason: 'verification_email_failed',
+        smtp: { code: error.code, message: error.message },
+      },
     });
+    const appErr = new AppError(
+      'No se pudo enviar el email de verificación. Intentá nuevamente en unos minutos.',
+      502,
+      { code: error.code === 'ETIMEDOUT' ? 'EMAIL_DELIVERY_TIMEOUT' : 'VERIFICATION_EMAIL_FAILED' }
+    );
+    appErr.code = error.code === 'ETIMEDOUT' ? 'EMAIL_DELIVERY_TIMEOUT' : 'VERIFICATION_EMAIL_FAILED';
+    throw appErr;
   }
   await logSecurityEvent({
     user: user._id,

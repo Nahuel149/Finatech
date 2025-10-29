@@ -19,7 +19,7 @@ export const DashboardOperacionesPage: React.FC = () => {
       {/* Main container (offset for fixed navbar + stripe) */}
       <main
         id="main-container"
-        className="flex-grow pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-8"
+        className="flex-grow pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-8"
       >
         {/* Header */}
         <OperationsHeader onTransferPesos={() => setTransferOpen(true)} />

@@ -72,13 +72,12 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   onSearchAddress,
   onSelectAddress,
 }) => {
-  const normalizedOwnerOptions = useMemo(
-    () =>
-      Array.isArray(ownerOptions) && ownerOptions.length > 0
-        ? ownerOptions
-        : DEFAULT_OWNER_OPTIONS,
-    [ownerOptions]
-  );
+  const normalizedOwnerOptions = useMemo(() => {
+    if (Array.isArray(ownerOptions) && ownerOptions.length > 0) {
+      return ownerOptions;
+    }
+    return DEFAULT_OWNER_OPTIONS;
+  }, [ownerOptions]);
   
   const defaultOwnerValue = useMemo(() => {
     if (defaultOwner && normalizedOwnerOptions.includes(defaultOwner)) {
@@ -107,10 +106,21 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   // Reset form when modal closes
   useEffect(() => {
     if (!open) {
-      setForm({
-        ...initialFormState,
-        contactType: defaultType,
-        internalOwner: normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK,
+      const resetOwner = normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
+      setForm((prev) => {
+        // Only reset if the form has actually changed
+        const newForm = {
+          ...initialFormState,
+          contactType: defaultType,
+          internalOwner: resetOwner,
+        };
+        
+        // Check if form actually needs to be reset
+        if (JSON.stringify(prev) === JSON.stringify(newForm)) {
+          return prev;
+        }
+        
+        return newForm;
       });
       setAddressDetails(null);
       setError(null);
@@ -122,16 +132,20 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
 
   // Update form when defaultOwner changes (only when modal is open)
   useEffect(() => {
-    if (open && defaultOwner) {
-      const newOwner = normalizedOwnerOptions.includes(defaultOwner) 
-        ? defaultOwner 
-        : normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
-      
-      setForm(prev => ({
+    if (!open || !defaultOwner) return;
+    
+    const newOwner = normalizedOwnerOptions.includes(defaultOwner)
+      ? defaultOwner
+      : normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
+    
+    setForm((prev) => {
+      // Guard against unnecessary state updates to prevent render loops
+      if (prev.internalOwner === newOwner) return prev;
+      return {
         ...prev,
         internalOwner: newOwner,
-      }));
-    }
+      };
+    });
   }, [open, defaultOwner, normalizedOwnerOptions]);
 
   const canSubmit = useMemo(() => {

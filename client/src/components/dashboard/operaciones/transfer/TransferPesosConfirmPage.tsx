@@ -309,10 +309,11 @@ export const TransferPesosConfirmPage: React.FC = () => {
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex justify-between items-center">
             <button
-              onClick={handleBack}
-              className="flex items-center space-x-2 px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+              type="button"
+              onClick={() => navigate(-1)}
+              className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
-              <i className="fa-solid fa-arrow-left text-sm" />
+              <i className="fa-solid fa-arrow-left" />
               <span>Atrás</span>
             </button>
             

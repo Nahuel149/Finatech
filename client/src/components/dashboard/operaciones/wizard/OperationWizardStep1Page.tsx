@@ -10,6 +10,7 @@ import {
   useClientsList,
   useTransactionDraft,
   useLatestMarketRate,
+  useAutoSaveDraft,
 } from '../../../../hooks/dashboard';
 import { useUserPermissions } from '../../../../hooks';
 import { apiRequest, handleApiError } from '../../../../utils/api';
@@ -40,6 +41,8 @@ const WIZARD_STEPS = [
   { label: 'Liquidación', description: 'Método de pago' },
   { label: 'Resumen', description: 'Confirmación final' },
 ];
+
+const OWNER_OPTIONS = ['Operaciones', 'Tesorería', 'Comercial', 'Backoffice'];
 
 const ASSET_CATALOG: AssetOption[] = [
   { code: 'ARS', label: 'Pesos Argentinos (ARS)' },
@@ -126,6 +129,11 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [clientId, setClientId] = useState<string>('');
+  
+  // Debug: Track all clientId changes
+  useEffect(() => {
+    console.log('clientId state changed to:', clientId, 'type:', typeof clientId);
+  }, [clientId]);
   const [operationType, setOperationType] =
     useState<TransactionType>(initialOperationType);
   const [incomingAssetCode, setIncomingAssetCode] = useState<string>(
@@ -159,6 +167,19 @@ export const OperationWizardStep1Page: React.FC = () => {
     saveDraft,
     advanceStep,
   } = useTransactionDraft(draftId);
+  
+  // Auto-save hook for seamless draft saving
+  const { autoSave } = useAutoSaveDraft({
+    debounceMs: 60000, // Auto-save after 1 minute of inactivity
+    onSaveSuccess: () => {
+      console.log('Draft auto-saved successfully');
+    },
+    onSaveError: (error) => {
+      console.error('Auto-save failed:', error);
+      setFormError('Error al guardar automáticamente. Intenta guardar manualmente.');
+    },
+  });
+  
   const { permissions } = useUserPermissions();
   const normalizedPermissions = useMemo(
     () =>
@@ -203,22 +224,56 @@ export const OperationWizardStep1Page: React.FC = () => {
       return;
     }
 
-    setClientId(draft.clientId ?? '');
+    console.log('Hydrating form with draft data - draft.clientId:', draft.clientId, 'current clientId:', clientId);
+    
+    // Only set state if the draft value is different from the current state
+    if (draft.clientId && draft.clientId !== clientId) {
+      setClientId(draft.clientId);
+    }
+    
     const normalizedType: TransactionType = draft.type === 'sell' ? 'sell' : 'buy';
-    setOperationType(normalizedType);
+    if (normalizedType !== operationType) {
+      setOperationType(normalizedType);
+    }
+    
     const defaults = ASSET_DEFAULTS[normalizedType];
-    setIncomingAssetCode(draft.incomingAsset?.code || defaults.incoming);
-    setOutgoingAssetCode(draft.outgoingAsset?.code || defaults.outgoing);
-    setApr(sanitizeNumber(draft.apr));
-    setMarketApr(sanitizeNumber(draft.marketApr));
-    setAutoMarketRate(sanitizeNumber(draft.marketApr));
-    setIncomingAmount(sanitizeNumber(draft.incomingAmount));
-    setOutgoingAmount(sanitizeNumber(draft.outgoingAmount));
-
+    const draftIncomingCode = draft.incomingAsset?.code || defaults.incoming;
+    const draftOutgoingCode = draft.outgoingAsset?.code || defaults.outgoing;
+    
+    if (draftIncomingCode !== incomingAssetCode) {
+      setIncomingAssetCode(draftIncomingCode);
+    }
+    if (draftOutgoingCode !== outgoingAssetCode) {
+      setOutgoingAssetCode(draftOutgoingCode);
+    }
+    
+    const draftApr = sanitizeNumber(draft.apr);
+    const draftMarketApr = sanitizeNumber(draft.marketApr);
+    const draftIncomingAmount = sanitizeNumber(draft.incomingAmount);
+    const draftOutgoingAmount = sanitizeNumber(draft.outgoingAmount);
+    
+    if (draftApr !== apr) {
+      setApr(draftApr);
+    }
+    if (draftMarketApr !== marketApr) {
+      setMarketApr(draftMarketApr);
+      setAutoMarketRate(draftMarketApr);
+    }
+    if (draftIncomingAmount !== incomingAmount) {
+      setIncomingAmount(draftIncomingAmount);
+    }
+// removed overwriting outgoingAmount
     const metadata = parseNotes(draft.notes);
     if (metadata) {
-      setSecondaryRate(sanitizeNumber(metadata.rate) || 1);
-      setSecondaryMarketRate(sanitizeNumber(metadata.marketRate) || 1);
+      const draftSecondaryRate = sanitizeNumber(metadata.rate) || 1;
+      const draftSecondaryMarketRate = sanitizeNumber(metadata.marketRate) || 1;
+      
+      if (draftSecondaryRate !== secondaryRate) {
+        setSecondaryRate(draftSecondaryRate);
+      }
+      if (draftSecondaryMarketRate !== secondaryMarketRate) {
+        setSecondaryMarketRate(draftSecondaryMarketRate);
+      }
     }
 
     if (draft.client) {
@@ -231,7 +286,20 @@ export const OperationWizardStep1Page: React.FC = () => {
         return [clientToAdd, ...prev];
       });
     }
-  }, [draft, setClients]);
+  }, [
+    draft, 
+    setClients, 
+    clientId, 
+    operationType, 
+    incomingAssetCode, 
+    outgoingAssetCode, 
+    apr, 
+    marketApr, 
+    incomingAmount, 
+    outgoingAmount, 
+    secondaryRate, 
+    secondaryMarketRate
+  ]);
 
   // Keep outgoing amount in sync with incoming amount and APR
   useEffect(() => {
@@ -257,8 +325,6 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, [marketApr, useCustomMarketRate]);
 
   // When the preset type changes via query params (e.g. shortcuts)
-  // We only need to react when the preset query parameter changes; setters are stable.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (presetType === 'venta') {
       setOperationType('sell');
@@ -275,7 +341,7 @@ export const OperationWizardStep1Page: React.FC = () => {
       setIncomingAmount(150.0); // USD amount
       setOutgoingAmount(125000.0); // ARS amount
     }
-  }, [presetType]);
+  }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
 
   const activeClient = useMemo(
     () => findClientLabel(clients, clientId) ?? draft?.client ?? null,
@@ -335,37 +401,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     }
   }, [showSecondaryRates]);
 
-  const handleOperationTypeChange = useCallback(
-    (type: TransactionType) => {
-      setOperationType(type);
-      setIncomingAssetCode(ASSET_DEFAULTS[type].incoming);
-      setOutgoingAssetCode(ASSET_DEFAULTS[type].outgoing);
-      // Don't swap amounts when changing operation type to prevent accumulation
-      // The useEffect will recalculate the outgoing amount based on the new operation type
-    },
-    [],
-  );
-
-  const handleToggleMarketRateMode = useCallback(
-    (enabled: boolean) => {
-      setUseCustomMarketRate(enabled);
-      if (!enabled) {
-        setMarketApr(autoMarketRate);
-        refreshMarketRate().catch(() => {});
-      }
-    },
-    [autoMarketRate, refreshMarketRate],
-  );
-
-  const handleNewClientCreated = useCallback(
-    (client: ClientSummary) => {
-      setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
-      setClientId(client.id);
-      setIsNewClientModalOpen(false);
-    },
-    [setClients],
-  );
-
+  // Build payload function for auto-save
   const buildPayload = useCallback((): TransactionDraftPayload => {
     const secondaryCode = outgoingAssetCode;
     const notesPayload = showSecondaryRates
@@ -408,7 +444,55 @@ export const OperationWizardStep1Page: React.FC = () => {
     showSecondaryRates,
   ]);
 
+  // Auto-save draft when form data changes
+  useEffect(() => {
+    // Only auto-save if we have the minimum required data
+    if (clientId && incomingAmount && outgoingAmount && apr) {
+      const payload = buildPayload();
+      autoSave(payload);
+    }
+  }, [
+    autoSave,
+    buildPayload,
+    clientId,
+    incomingAmount,
+    outgoingAmount,
+    apr,
+  ]);
+
+  const handleOperationTypeChange = useCallback(
+    (type: TransactionType) => {
+      setOperationType(type);
+      setIncomingAssetCode(ASSET_DEFAULTS[type].incoming);
+      setOutgoingAssetCode(ASSET_DEFAULTS[type].outgoing);
+      // Don't swap amounts when changing operation type to prevent accumulation
+      // The useEffect will recalculate the outgoing amount based on the new operation type
+    },
+    [],
+  );
+
+  const handleToggleMarketRateMode = useCallback(
+    (enabled: boolean) => {
+      setUseCustomMarketRate(enabled);
+      if (!enabled) {
+        setMarketApr(autoMarketRate);
+        refreshMarketRate().catch(() => {});
+      }
+    },
+    [autoMarketRate, refreshMarketRate],
+  );
+
+  const handleNewClientCreated = useCallback(
+    (client: ClientSummary) => {
+      setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
+      setClientId(client.id);
+      setIsNewClientModalOpen(false);
+    },
+    [setClients],
+  );
+
   const validateForm = useCallback(() => {
+    console.log('validateForm - clientId:', clientId, 'type:', typeof clientId);
     if (!clientId) {
       setFormError('Seleccioná un cliente antes de continuar.');
       return false;
@@ -431,10 +515,6 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   const executeSave = useCallback(
     async (navigateToNext: boolean) => {
-      if (!validateForm()) {
-        return;
-      }
-
       try {
         const payload = buildPayload();
         const savedDraft = await saveDraft(payload);
@@ -466,7 +546,6 @@ export const OperationWizardStep1Page: React.FC = () => {
         setFormError(null);
 
         if (navigateToNext && savedDraft?.id) {
-          await advanceStep(2);
           navigate(
             `/dashboard/operaciones/nueva/liquidacion?draftId=${savedDraft.id}&tipo=${
               savedDraft.type === 'sell' ? 'venta' : 'compra'
@@ -479,29 +558,61 @@ export const OperationWizardStep1Page: React.FC = () => {
       }
     },
     [
-      advanceStep,
       buildPayload,
-      canEditMarketRate,
-      marketApr,
-      navigate,
       saveDraft,
       useCustomMarketRate,
-      validateForm,
+      canEditMarketRate,
+      marketApr,
+      setFormError,
+      setSuccessMessage,
+      navigate,
     ],
   );
 
-  const handleSaveDraft = useCallback(() => executeSave(false), [executeSave]);
-  const handleContinue = useCallback(() => executeSave(true), [executeSave]);
+  const [isExecuting, setIsExecuting] = useState(false);
+
+  const handleSaveDraft = useCallback(async () => {
+    if (isExecuting) return;
+    
+    // Validate form first, before setting executing state
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsExecuting(true);
+    try {
+      await executeSave(false);
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [executeSave, isExecuting, validateForm]);
+  
+  const handleContinue = useCallback(async () => {
+    if (isExecuting) return;
+    
+    // Validate form first, before setting executing state
+    if (!validateForm()) {
+      return;
+    }
+    
+    setIsExecuting(true);
+    try {
+      await executeSave(true);
+    } finally {
+      setIsExecuting(false);
+    }
+  }, [executeSave, isExecuting, validateForm]);
+  
   const handleCancel = useCallback(() => navigate('/dashboard'), [navigate]);
 
-  const busy = draftLoading || saving;
+  const busy = draftLoading || saving || isExecuting;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="flex-grow pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto overflow-x-hidden lg:overflow-x-visible">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={0}
@@ -546,7 +657,10 @@ export const OperationWizardStep1Page: React.FC = () => {
             <div>
               <ClientSelection
                 value={clientId}
-                onChange={setClientId}
+                onChange={(newClientId) => {
+                  console.log('OperationWizardStep1Page - setClientId called with:', newClientId, 'current clientId:', clientId);
+                  setClientId(newClientId);
+                }}
                 clients={clients}
                 onNewClient={() => setIsNewClientModalOpen(true)}
                 marginInfo={marginInfo}
@@ -623,7 +737,7 @@ export const OperationWizardStep1Page: React.FC = () => {
         onClose={() => setIsNewClientModalOpen(false)}
         onCreated={handleNewClientCreated}
         defaultType="client"
-        ownerOptions={['Operaciones', 'Tesorería', 'Comercial', 'Backoffice']}
+        ownerOptions={OWNER_OPTIONS}
         defaultOwner="Operaciones"
       />
     </div>

@@ -155,6 +155,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const desktopNotificationsRef = useRef<HTMLDivElement>(null);
@@ -251,6 +252,17 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     }
   };
 
+  const openSearchOnMobile = () => {
+    if (!mobileMenuOpen) {
+      setMobileMenuOpen(true);
+      // Focus the input shortly after opening the menu
+      setTimeout(() => mobileSearchInputRef.current?.focus(), 80);
+    } else {
+      // If already open, just focus
+      mobileSearchInputRef.current?.focus();
+    }
+  };
+
   return (
     <>
       {/* Mobile header */}
@@ -271,9 +283,11 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 type="button"
                 className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label="Buscar"
+                onClick={openSearchOnMobile}
               >
                 <i className="fa-solid fa-search text-lg" />
               </button>
+              <DashboardBalanceWidget canView={canViewBalances} />
               <div ref={mobileNotificationsRef} className="relative">
                 <button
                   type="button"
@@ -306,9 +320,9 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
                 className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
-                aria-label="Abrir menú"
+                aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
               >
-                <i className={`fa-solid ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-lg`} />
+                <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'} text-lg`} />
               </button>
             </div>
           </div>
@@ -317,7 +331,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
 
       <div
         id="mobile-menu"
-        className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden fixed top-[65px] left-0 right-0 bg-white border-b border-gray-200 z-40 shadow-lg max-h-[calc(100vh-65px)] overflow-y-auto`}
+        className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden fixed top-[65px] left-0 right-0 bg-white border-b border-gray-200 z-50 shadow-lg max-h-[calc(100vh-65px)] overflow-y-auto`}
       >
         <div className="px-4 py-4">
           <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
@@ -371,6 +385,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 onChange={(event) => onSearchChange(event.target.value)}
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50"
                 placeholder="Buscar operaciones, clientes..."
+                ref={mobileSearchInputRef}
               />
             </div>
           </div>
