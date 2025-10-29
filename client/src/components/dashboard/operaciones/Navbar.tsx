@@ -258,18 +258,18 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
         <div className="px-4 py-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center mr-2">
-                <i className="fa-solid fa-chart-line text-white text-xs"></i>
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                <i className="fa-solid fa-chart-line text-white text-sm"></i>
               </div>
-              <Link to="/dashboard" className="text-lg font-bold text-text-primary">
+              <Link to="/dashboard" className="text-xl font-bold text-text-primary">
                 FinaTech
               </Link>
             </div>
 
-            <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2">
               <button
                 type="button"
-                className="p-2 text-text-primary hover:text-primary transition-colors"
+                className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label="Buscar"
               >
                 <i className="fa-solid fa-search text-lg" />
@@ -277,7 +277,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               <div ref={mobileNotificationsRef} className="relative">
                 <button
                   type="button"
-                  className="relative p-2 text-text-primary hover:text-primary transition-colors"
+                  className="relative p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                   aria-label="Notificaciones"
                   aria-expanded={notificationsOpen}
                   onClick={() => setNotificationsOpen((prev) => !prev)}
@@ -291,7 +291,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 </button>
                 {notificationsOpen && (
                   <NotificationsDropdown
-                    className="top-full"
+                    className="top-full right-0 w-72"
                     notifications={notifications}
                     unreadCount={unreadCount}
                     onNotificationClick={handleNotificationClick}
@@ -305,10 +305,10 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="p-2 text-text-primary hover:text-primary transition-colors"
+                className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label="Abrir menú"
               >
-                <i className="fa-solid fa-bars text-lg" />
+                <i className={`fa-solid ${mobileMenuOpen ? 'fa-times' : 'fa-bars'} text-lg`} />
               </button>
             </div>
           </div>
@@ -317,71 +317,77 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
 
       <div
         id="mobile-menu"
-        className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden fixed top-[61px] left-0 right-0 bg-white border-b border-gray-200 z-40 shadow-sm`}
+        className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden fixed top-[65px] left-0 right-0 bg-white border-b border-gray-200 z-40 shadow-lg max-h-[calc(100vh-65px)] overflow-y-auto`}
       >
-        <div className="px-4 py-3">
-          <div className="flex items-center mb-4 pb-4 border-b border-gray-200">
+        <div className="px-4 py-4">
+          <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
             <img
               src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
               alt="Usuario"
-              className="w-10 h-10 rounded-full mr-3"
+              className="w-12 h-12 rounded-full mr-4"
             />
-            <div>
-              <div className="text-sm font-medium text-text-primary">{displayName}</div>
-              <div className="text-xs text-gray-500">{secondaryText}</div>
+            <div className="flex-1">
+              <div className="text-base font-medium text-text-primary">{displayName}</div>
+              <div className="text-sm text-gray-500">{secondaryText}</div>
             </div>
           </div>
-          <div className="flex items-center space-x-3 mb-4">
+          <div className="grid grid-cols-1 gap-3 mb-6">
             <button
               type="button"
-              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-200 py-3 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
               disabled
               aria-disabled="true"
             >
+              <i className="fa-solid fa-user-gear mr-2" />
               Perfil
             </button>
             <button
               type="button"
-              className="flex-1 rounded-lg border border-gray-200 py-2 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
+              className="w-full rounded-lg border border-gray-200 py-3 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
               disabled
               aria-disabled="true"
             >
+              <i className="fa-solid fa-sliders mr-2" />
               Configuración
             </button>
             <button
               type="button"
-              className="flex-1 rounded-lg border border-danger/30 text-danger py-2 text-sm hover:bg-danger/10 flex items-center justify-center space-x-2"
+              className="w-full rounded-lg border border-danger/30 text-danger py-3 text-sm hover:bg-danger/10 flex items-center justify-center space-x-2"
               onClick={handleLogout}
             >
-              <i className="fa-solid fa-right-from-bracket text-xs" />
+              <i className="fa-solid fa-right-from-bracket text-sm" />
               <span>Cerrar sesión</span>
             </button>
           </div>
 
-          <div className="mb-4">
+          <div className="mb-6">
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <i className="fa-solid fa-search text-gray-400 text-sm" />
               </div>
               <input
                 type="text"
                 value={search}
                 onChange={(event) => onSearchChange(event.target.value)}
-                className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-sm"
-                placeholder="Buscar cliente u operación…"
+                className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50"
+                placeholder="Buscar operaciones, clientes..."
               />
             </div>
           </div>
 
           <div className="space-y-2">
+            <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 px-3">
+              Navegación
+            </div>
             {NAV_ITEMS.map((item) => {
-              const isActive = item.path && activePath.startsWith(item.path);
-              const commonClasses = 'flex items-center px-3 py-2 rounded-lg text-sm transition-colors';
+              const isActive = item.path === activePath;
+              const commonClasses = 'flex items-center px-4 py-3 rounded-lg text-sm transition-colors';
               if (!item.path) {
                 return (
-                  <div key={item.label} className={`${commonClasses} text-text-primary`}>
-                    <i className={`fa-solid ${item.icon} text-gray-500 mr-3`} />
-                    <span>{item.label}</span>
+                  <div key={item.label} className={`${commonClasses} text-gray-400 bg-gray-50 border border-gray-200`}>
+                    <i className={`fa-solid ${item.icon} text-gray-400 mr-4 text-base opacity-50`} />
+                    <span className="flex-1">{item.label}</span>
+                    <i className="fa-solid fa-lock text-xs" />
                   </div>
                 );
               }
@@ -393,12 +399,13 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   className={
                     commonClasses +
                     (isActive
-                      ? ' bg-primary bg-opacity-10 text-primary font-medium'
-                      : ' text-text-primary hover:text-primary hover:bg-primary hover:bg-opacity-10')
+                      ? ' bg-primary/10 text-primary font-medium border border-primary/20'
+                      : ' text-text-primary hover:text-primary hover:bg-primary/5 border border-gray-200')
                   }
                 >
-                  <i className={`fa-solid ${item.icon} ${isActive ? 'text-primary' : 'text-gray-500'} mr-3`} />
-                  <span>{item.label}</span>
+                  <i className={`fa-solid ${item.icon} ${isActive ? 'text-primary' : 'text-gray-500'} mr-4 text-base`} />
+                  <span className="flex-1">{item.label}</span>
+                  {isActive && <i className="fa-solid fa-chevron-right text-xs text-primary" />}
                 </Link>
               );
             })}
@@ -437,7 +444,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     );
                   }
 
-                  const isActive = activePath.startsWith(item.path);
+                  const isActive = item.path === activePath;
                   return (
                     <Link
                       key={item.path}

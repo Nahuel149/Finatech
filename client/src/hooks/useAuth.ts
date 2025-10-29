@@ -78,12 +78,12 @@ const extractProfile = (payload: any): UserProfile | null => {
   return null;
 };
 
-const updateCachedProfile = (payload: any) => {
+const updateCachedProfile = useCallback((payload: any) => {
   const profile = extractProfile(payload);
   if (profile) {
     primeCurrentUser(profile);
   }
-};
+}, []);
 
   const login = useCallback(async (formData: LoginFormData): Promise<LoginResponse> => {
     setLoadingState('login', true);
@@ -105,14 +105,20 @@ const updateCachedProfile = (payload: any) => {
     } finally {
       setLoadingState('login', false);
     }
-  }, [setLoadingState]);
+  }, [setLoadingState, updateCachedProfile]);
 
   const register = useCallback(async (formData: RegisterFormData): Promise<RegisterResponse> => {
     setLoadingState('register', true);
     setError(null);
     
     try {
-      const response = await api.register(formData.fullName, formData.email, formData.password);
+      const response = await api.register({
+        fullName: formData.fullName,
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        acceptTerms: formData.agreeToTerms,
+      });
       updateCachedProfile(response);
       return response;
     } catch (err) {
@@ -122,7 +128,7 @@ const updateCachedProfile = (payload: any) => {
     } finally {
       setLoadingState('register', false);
     }
-  }, [setLoadingState]);
+  }, [setLoadingState, updateCachedProfile]);
 
   const verifyTwoFactor = useCallback(async (formData: TwoFactorFormData): Promise<TwoFactorResponse> => {
     if (!challengeId) {
@@ -144,7 +150,7 @@ const updateCachedProfile = (payload: any) => {
     } finally {
       setLoadingState('twoFactor', false);
     }
-  }, [challengeId, setLoadingState]);
+  }, [challengeId, setLoadingState, updateCachedProfile]);
 
   const googleAuth = useCallback(async (credential: string, isLogin: boolean = true): Promise<GoogleAuthResponse> => {
     setLoadingState('googleAuth', true);
@@ -161,7 +167,7 @@ const updateCachedProfile = (payload: any) => {
     } finally {
       setLoadingState('googleAuth', false);
     }
-  }, [setLoadingState]);
+  }, [setLoadingState, updateCachedProfile]);
 
   const resendVerification = useCallback(async (email: string): Promise<void> => {
     setLoadingState('resendVerification', true);

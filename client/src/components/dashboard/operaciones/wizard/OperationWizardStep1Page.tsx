@@ -501,7 +501,7 @@ export const OperationWizardStep1Page: React.FC = () => {
       <DashboardNavbar search={search} onSearchChange={setSearch} />
       <BalanceStripe />
 
-      <main id="wizard-container" className="flex-grow pt-[165px] px-6 pb-8 max-w-6xl mx-auto">
+      <main id="wizard-container" className="flex-grow pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-8 max-w-6xl mx-auto">
         <WizardHeader
           steps={WIZARD_STEPS}
           currentStep={0}

@@ -279,6 +279,7 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
 export const TransferPesosBuilderPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const currentStepParam = searchParams.get('step');
   const {
     draft,
     setMovementType,
@@ -293,6 +294,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
     saveDraft,
   } = useTransferPesos();
   const [amountInput, setAmountInput] = useState<string>('');
+  const [amountFocused, setAmountFocused] = useState<boolean>(false);
   const [step, setStep] = useState<BuilderStep>('config');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [clientModalLineId, setClientModalLineId] = useState<string | null>(null);
@@ -300,29 +302,38 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
   const goToStep = useCallback(
     (nextStep: BuilderStep) => {
-      setStep(nextStep);
+      // Avoid redundant state and URL updates
+      setStep((prev) => (prev === nextStep ? prev : nextStep));
       if (nextStep === 'config') {
-        setSearchParams({}, { replace: true });
+        if (currentStepParam !== null) {
+          setSearchParams({}, { replace: true });
+        }
         return;
       }
 
-      const params = new URLSearchParams();
-      params.set('step', nextStep);
-      setSearchParams(params, { replace: true });
+      if (currentStepParam !== nextStep) {
+        const params = new URLSearchParams();
+        params.set('step', nextStep);
+        setSearchParams(params, { replace: true });
+      }
     },
-    [setSearchParams]
+    [setSearchParams, currentStepParam]
   );
 
+  // Keep local step in sync with the URL param value only when the value changes.
+  // Depending on react-router, the searchParams object identity may change each render;
+  // we track the primitive value to prevent an effect-triggered update loop.
   useEffect(() => {
-    const stepParam = searchParams.get('step');
-    if (stepParam === 'distribution' || stepParam === 'amount') {
-      setStep(stepParam as BuilderStep);
+    if (currentStepParam === 'distribution' || currentStepParam === 'amount') {
+      setStep((prev) => (prev === currentStepParam ? prev : (currentStepParam as BuilderStep)));
       return;
     }
-    setStep('config');
-  }, [searchParams]);
+    setStep((prev) => (prev === 'config' ? prev : 'config'));
+  }, [currentStepParam]);
 
+  // Reflect context amount in the input only when not actively typing
   useEffect(() => {
+    if (amountFocused) return;
     if (draft.totalAmount > 0) {
       setAmountInput(
         draft.totalAmount.toLocaleString('es-AR', {
@@ -333,13 +344,18 @@ export const TransferPesosBuilderPage: React.FC = () => {
     } else {
       setAmountInput('');
     }
-  }, [draft.totalAmount]);
+  }, [draft.totalAmount, amountFocused]);
 
   useEffect(() => {
     if (step === 'distribution' && (!draft.totalAmount || draft.totalAmount <= 0)) {
-      goToStep('amount');
+      setStep((prev) => (prev === 'amount' ? prev : 'amount'));
+      if (currentStepParam !== 'amount') {
+        const params = new URLSearchParams();
+        params.set('step', 'amount');
+        setSearchParams(params, { replace: true });
+      }
     }
-  }, [draft.totalAmount, step, goToStep]);
+  }, [draft.totalAmount, step, currentStepParam, setSearchParams]);
 
   useEffect(() => {
     if (step === 'distribution' && draft.distributionLines.length === 0) {
@@ -409,7 +425,6 @@ export const TransferPesosBuilderPage: React.FC = () => {
     
     // Prevent multiple decimal separators
     const commaCount = (processedValue.match(/,/g) || []).length;
-    const dotCount = (processedValue.match(/\./g) || []).length;
     
     // If user is typing and there are multiple decimal separators, keep only the last one
     if (commaCount > 1) {
@@ -476,6 +491,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
   };
 
   const handleAmountBlur = () => {
+    setAmountFocused(false);
     if (!amountInput.trim()) {
       setAmountError('Este campo es obligatorio.');
       setTotalAmount(0);
@@ -603,7 +619,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[220px] px-6 pb-32 max-w-5xl mx-auto">
+      <main className="pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-32 max-w-5xl mx-auto">
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -770,6 +786,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
                 value={amountInput}
                 onChange={(event) => handleAmountInputChange(event.target.value)}
                 onBlur={handleAmountBlur}
+                onFocus={() => setAmountFocused(true)}
                 placeholder="0,00"
                 className="amount-input w-full pl-8 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent text-lg"
                 inputMode="decimal"

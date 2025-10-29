@@ -11,39 +11,39 @@ export const FlowShortcuts: React.FC = () => {
   return (
     <section id="flow-shortcuts" className="mb-8">
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-2">Atajos de flujo</h2>
-        <p className="text-gray-600">Accesos rápidos a operaciones frecuentes</p>
+        <h2 className="text-lg lg:text-xl font-semibold text-text-primary mb-2">Atajos de flujo</h2>
+        <p className="text-gray-600 text-sm lg:text-base">Accesos rápidos a operaciones frecuentes</p>
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-6">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-6">
         {[
           {
             id: 'shortcut-buy',
             title: 'Compra',
-            subtitle: 'Egreso ARS, entrada de bien 2',
+            subtitle: 'Egreso ARS',
             icon: 'fa-arrow-down',
             iconColor: 'text-success',
             iconBg: 'bg-success bg-opacity-10',
             description:
-              'Sale de pesos (egreso ARS), entrada de bien 2 (p.ej. USD/oro/cheque)',
+              'Registra operación de compra de divisas con egreso de pesos argentinos',
             cta: 'Iniciar operación',
             onClick: () => handleNavigate('/dashboard/operaciones/nueva?tipo=compra'),
           },
           {
             id: 'shortcut-sell',
             title: 'Venta',
-            subtitle: 'Ingreso ARS, salida de bien 2',
+            subtitle: 'Ingreso ARS',
             icon: 'fa-arrow-up',
             iconColor: 'text-primary',
             iconBg: 'bg-primary bg-opacity-10',
             description:
-              'Entrada de pesos (ingreso ARS), salida de bien 2',
+              'Registra operación de venta de divisas con ingreso de pesos argentinos',
             cta: 'Iniciar operación',
             onClick: () => handleNavigate('/dashboard/operaciones/nueva?tipo=venta'),
           },
           {
             id: 'shortcut-transfer-pesos',
             title: 'Transferencia en pesos',
-            subtitle: 'Envia o recibe pesos',
+            subtitle: 'Envía o recibe pesos',
             icon: 'fa-layer-group',
             iconColor: 'text-orange-500',
             iconBg: 'bg-orange-500 bg-opacity-10',
@@ -64,21 +64,21 @@ export const FlowShortcuts: React.FC = () => {
                 shortcut.onClick();
               }
             }}
-            className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-md transition-shadow cursor-pointer group"
+            className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 hover:shadow-md transition-shadow cursor-pointer group"
           >
-            <div className="flex items-center mb-4">
+            <div className="flex items-center mb-3 lg:mb-4">
               <div
-                className={`w-12 h-12 ${shortcut.iconBg} rounded-lg flex items-center justify-center mr-4 group-hover:bg-opacity-20 transition-colors`}
+                className={`w-10 h-10 lg:w-12 lg:h-12 ${shortcut.iconBg} rounded-lg flex items-center justify-center mr-3 lg:mr-4 group-hover:bg-opacity-20 transition-colors`}
               >
-                <i className={`fa-solid ${shortcut.icon} ${shortcut.iconColor} text-xl`} />
+                <i className={`fa-solid ${shortcut.icon} ${shortcut.iconColor} text-lg lg:text-xl`} />
               </div>
               <div>
-                <h3 className="text-lg font-semibold text-text-primary">{shortcut.title}</h3>
-                <p className="text-sm text-gray-600">{shortcut.subtitle}</p>
+                <h3 className="text-base lg:text-lg font-semibold text-text-primary">{shortcut.title}</h3>
+                <p className="text-xs lg:text-sm text-gray-600">{shortcut.subtitle}</p>
               </div>
             </div>
-            <p className="text-gray-600 mb-4">{shortcut.description}</p>
-            <div className="flex items-center text-primary text-sm font-medium">
+            <p className="text-gray-600 mb-3 lg:mb-4 text-sm lg:text-base">{shortcut.description}</p>
+            <div className="flex items-center text-primary text-xs lg:text-sm font-medium">
               {shortcut.cta}
               <i className="fa-solid fa-arrow-right ml-2" />
             </div>

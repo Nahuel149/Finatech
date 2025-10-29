@@ -88,8 +88,8 @@ export const LinkedBalancesAccountingSection: React.FC<Props> = ({
     }));
 
   return (
-    <section id="accounting-accounts-section" className="mb-8">
-      <h2 className="text-lg font-semibold text-text-primary mb-4">Integración contable</h2>
+    <section id="accounting-accounts-section" className="mb-10 lg:mb-12">
+      <h2 className="text-lg font-semibold text-text-primary mb-6 lg:mb-8">Integración contable</h2>
 
       {loading && <AccountingSkeleton />}
 

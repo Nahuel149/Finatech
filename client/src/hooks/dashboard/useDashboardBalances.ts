@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { apiRequest, handleApiError, subscribeDashboardBalanceRefresh } from '../../utils';
 import { ApiError, DashboardBalancesResponse, TreasuryBalance } from '../../types';
 
@@ -25,14 +25,32 @@ let pollTimer: number | null = null;
 let refreshUnsubscribe: (() => void) | null = null;
 let inFlight: Promise<void> | null = null;
 let currentPollInterval = DEFAULT_POLL_INTERVAL_MS;
+let cachedSnapshot: DashboardBalancesState | null = null;
+let lastStateHash: string | null = null;
 
 const notify = () => {
   listeners.forEach((listener) => listener());
 };
 
+const createStateHash = (state: DashboardBalancesState): string => {
+  return JSON.stringify({
+    balances: state.balances.map(b => ({ id: b.id, amount: b.amount, status: b.status, updatedAt: b.updatedAt })),
+    loading: state.loading,
+    error: state.error?.message || null
+  });
+};
+
 const setState = (partial: Partial<DashboardBalancesState>) => {
-  state = { ...state, ...partial };
-  notify();
+  const newState = { ...state, ...partial };
+  const newHash = createStateHash(newState);
+  
+  // Only update if state actually changed
+  if (newHash !== lastStateHash) {
+    state = newState;
+    lastStateHash = newHash;
+    cachedSnapshot = null; // Invalidate cache when state changes
+    notify();
+  }
 };
 
 const fetchBalances = async (): Promise<void> => {
@@ -83,7 +101,24 @@ const start = (pollInterval: number = DEFAULT_POLL_INTERVAL_MS) => {
     }
   }
 
-  fetchBalances().catch(() => {});
+  // Defer the initial fetch to the next tick to avoid triggering
+  // synchronous store updates during subscription mount, which can
+  // produce nested update loops in React's passive effects.
+  if (typeof window !== 'undefined') {
+    // Use microtask if available, otherwise fallback to setTimeout(0)
+    try {
+      (window as any).queueMicrotask?.(() => {
+        fetchBalances().catch(() => {});
+      });
+    } catch {
+      window.setTimeout(() => {
+        fetchBalances().catch(() => {});
+      }, 0);
+    }
+  } else {
+    // In non-browser environments, just call asynchronously
+    Promise.resolve().then(() => fetchBalances().catch(() => {}));
+  }
 
   if (pollTimer === null && typeof window !== 'undefined' && pollInterval > 0) {
     pollTimer = window.setInterval(() => {
@@ -115,11 +150,13 @@ const stop = () => {
 };
 
 const subscribe = (listener: () => void, pollInterval: number = DEFAULT_POLL_INTERVAL_MS) => {
+  const wasEmpty = listeners.size === 0;
   listeners.add(listener);
-  if (listeners.size === 1) {
+  if (wasEmpty) {
+    // Only start when the first listener subscribes
     start(pollInterval);
-  } else {
-    // If there are already listeners but poll interval changed, restart with new interval
+  } else if (pollInterval !== currentPollInterval) {
+    // Restart if the poll interval changes
     start(pollInterval);
   }
   return () => {
@@ -128,8 +165,19 @@ const subscribe = (listener: () => void, pollInterval: number = DEFAULT_POLL_INT
   };
 };
 
-const noopSubscribe = () => () => {};
-const getSnapshot = () => state;
+// Cache the snapshot to prevent unnecessary re-renders
+const getSnapshot = (): DashboardBalancesState => {
+  if (!cachedSnapshot) {
+    // Create a deep copy to ensure immutability
+    cachedSnapshot = {
+      balances: [...state.balances],
+      loading: state.loading,
+      error: state.error
+    };
+  }
+  return cachedSnapshot;
+};
+
 const getDisabledSnapshot = (): DashboardBalancesState => ({
   balances: [],
   loading: false,
@@ -141,17 +189,25 @@ export const useDashboardBalances = (
 ) => {
   const { enabled = true, pollInterval = DEFAULT_POLL_INTERVAL_MS } = options;
 
-  const snapshot = useSyncExternalStore(
-    enabled ? (listener) => subscribe(listener, pollInterval) : noopSubscribe,
-    enabled ? getSnapshot : getDisabledSnapshot,
-    getSnapshot
+  // Memoize subscribe function to avoid resubscription on every render
+  const subscribeFn = useCallback(
+    (listener: () => void) => {
+      if (!enabled) return () => {};
+      return subscribe(listener, pollInterval);
+    },
+    [enabled, pollInterval]
   );
 
-  useEffect(() => {
-    if (enabled) {
-      fetchBalances().catch(() => {});
-    }
+  // Use stable getSnapshot functions
+  const getSnapshotFn = useCallback(() => {
+    return enabled ? getSnapshot() : getDisabledSnapshot();
   }, [enabled]);
+
+  const snapshot = useSyncExternalStore(
+    subscribeFn,
+    getSnapshotFn,
+    getSnapshotFn
+  );
 
   return {
     balances: snapshot.balances,

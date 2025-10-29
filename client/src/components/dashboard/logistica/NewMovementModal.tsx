@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { XMarkIcon } from '../../icons/HeroiconsOutline';
 import MovementDataForm from './MovementDataForm';
 import AssociationsDocumentsForm from './AssociationsDocumentsForm';
@@ -17,8 +17,22 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
     type: '',
     reference: ''
   });
+  const [mounted, setMounted] = useState(false);
 
-  if (!isOpen) return null;
+  // Mantener el orden de Hooks y evitar llamadas condicionales
+  useEffect(() => {
+    // Habilitar animación de entrada solo cuando el modal está abierto
+    setMounted(isOpen);
+    return () => setMounted(false);
+  }, [isOpen]);
+
+  const handleClose = () => {
+    // play exit animation briefly before unmount
+    setMounted(false);
+    setTimeout(() => {
+      onClose();
+    }, 180);
+  };
 
   const handleSaveDraft = () => {
     // TODO: Implement save draft functionality
@@ -42,26 +56,36 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-40">
-        <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+      {/* No renderizar contenido cuando el modal está cerrado */}
+      {!isOpen ? null : (
+      <div
+        className={`fixed inset-0 flex items-center justify-center p-5 bg-black/40 backdrop-blur-sm z-[100] transition-opacity duration-200 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}
+        onClick={handleClose}
+      >
+        <div
+          className={`bg-white rounded-lg shadow-2xl border border-gray-200/60 max-w-4xl w-full max-h-[calc(100vh-40px)] flex flex-col transform transition-all duration-200 ease-out ${mounted ? 'scale-100 translate-y-0' : 'scale-95 translate-y-1'}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 border-b border-gray-200 gap-4">
+            <div className="flex-1">
               {/* Breadcrumb */}
-              <nav className="text-sm text-gray-500 mb-2">
-                <span>Logística</span>
-                <span className="mx-2">/</span>
-                <span>Panel principal</span>
-                <span className="mx-2">/</span>
-                <span className="text-gray-900">Registrar nuevo movimiento</span>
+              <nav className="text-sm text-gray-500 mb-2 overflow-x-auto">
+                <div className="flex items-center space-x-2 whitespace-nowrap">
+                  <span>Logística</span>
+                  <span>/</span>
+                  <span>Panel principal</span>
+                  <span>/</span>
+                  <span className="text-gray-900">Registrar nuevo movimiento</span>
+                </div>
               </nav>
-              <h2 className="text-xl font-semibold text-gray-900">
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
                 Registrar nuevo movimiento logístico
               </h2>
             </div>
             <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              onClick={handleClose}
+              className="text-gray-400 hover:text-gray-600 transition-colors self-end sm:self-auto p-2"
               aria-label="Cerrar modal"
             >
               <XMarkIcon className="w-6 h-6" />
@@ -69,8 +93,8 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
           </div>
 
           {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-            <div className="space-y-8">
+          <div className="p-4 sm:p-6 overflow-y-auto flex-1">
+            <div className="space-y-6 sm:space-y-8">
               {/* Movement Data Form */}
               <MovementDataForm />
 
@@ -86,9 +110,9 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-end space-x-3 p-6 border-t border-gray-200 bg-gray-50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
             <button
-              onClick={onClose}
+              onClick={handleClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
             >
               Cancelar
@@ -108,6 +132,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
           </div>
         </div>
       </div>
+      )}
 
       {/* Completion Confirmation Modal */}
       <CompletionConfirmationModal

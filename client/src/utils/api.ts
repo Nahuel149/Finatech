@@ -140,10 +140,16 @@ export const api = {
       body: { email, password, rememberMe },
     }),
     
-  register: (fullName: string, email: string, password: string) =>
+  register: (payload: {
+    fullName: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    acceptTerms: boolean;
+  }) =>
     apiRequest('/api/auth/register', {
       method: 'POST',
-      body: { fullName, email, password },
+      body: payload,
     }),
     
   googleAuth: (credential: string, isLogin: boolean = true) =>

@@ -117,7 +117,7 @@ export const TransferPesosConfirmPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[220px] px-6 pb-24 max-w-4xl mx-auto">
+      <main className="pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-24 max-w-4xl mx-auto">
         {/* SECTION: Header and Breadcrumbs */}
         <section className="mb-8">
           {/* Breadcrumbs */}

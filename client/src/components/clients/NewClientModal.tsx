@@ -79,6 +79,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
         : DEFAULT_OWNER_OPTIONS,
     [ownerOptions]
   );
+  
   const defaultOwnerValue = useMemo(() => {
     if (defaultOwner && normalizedOwnerOptions.includes(defaultOwner)) {
       return defaultOwner;
@@ -86,11 +87,11 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     return normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
   }, [defaultOwner, normalizedOwnerOptions]);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState(() => ({
     ...initialFormState,
     contactType: defaultType,
     internalOwner: defaultOwnerValue,
-  });
+  }));
   const [addressDetails, setAddressDetails] = useState<AddressDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,12 +104,13 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     setSuggestions(addressSuggestions);
   }, [addressSuggestions]);
 
+  // Reset form when modal closes
   useEffect(() => {
     if (!open) {
       setForm({
         ...initialFormState,
         contactType: defaultType,
-        internalOwner: defaultOwnerValue,
+        internalOwner: normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK,
       });
       setAddressDetails(null);
       setError(null);
@@ -116,7 +118,21 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       setLoading(false);
       setSuggestions([]);
     }
-  }, [open, defaultType, defaultOwnerValue]);
+  }, [open, defaultType, normalizedOwnerOptions]);
+
+  // Update form when defaultOwner changes (only when modal is open)
+  useEffect(() => {
+    if (open && defaultOwner) {
+      const newOwner = normalizedOwnerOptions.includes(defaultOwner) 
+        ? defaultOwner 
+        : normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
+      
+      setForm(prev => ({
+        ...prev,
+        internalOwner: newOwner,
+      }));
+    }
+  }, [open, defaultOwner, normalizedOwnerOptions]);
 
   const canSubmit = useMemo(() => {
     if (!form.firstName.trim() || !form.lastName.trim()) return false;

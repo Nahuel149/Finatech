@@ -43,14 +43,6 @@ const variationMeta = (direction: string) => {
   }
 };
 
-const contactIcon = (type?: string | null) => {
-  const normalized = (type || '').toLowerCase();
-  if (normalized === 'provider') return 'fa-handshake';
-  if (normalized === 'general') return 'fa-chart-line';
-  if (normalized === 'company' || normalized === 'empresa') return 'fa-building';
-  return 'fa-user';
-};
-
 const formatCurrency = (amount: number, currency: string) => {
   // Format the number with proper thousands separators and decimal places
   const formattedAmount = Math.abs(amount).toLocaleString('es-AR', { 

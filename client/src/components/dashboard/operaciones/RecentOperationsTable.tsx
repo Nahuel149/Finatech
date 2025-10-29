@@ -334,23 +334,23 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
   return (
     <section id="recent-operations" className="mb-8">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-4 lg:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h2 className="text-xl font-semibold text-text-primary mb-1">Últimas operaciones</h2>
-              <p className="text-gray-600">Registro de operaciones más recientes</p>
+              <h2 className="text-lg lg:text-xl font-semibold text-text-primary mb-1">Últimas operaciones</h2>
+              <p className="text-gray-600 text-sm lg:text-base">Registro de operaciones más recientes</p>
             </div>
             <button type="button" className="text-primary hover:underline font-medium">
               Ver historial completo
             </button>
           </div>
 
-          <div id="quick-filters" className="flex flex-wrap gap-3 md:gap-4">
+          <div id="quick-filters" className="grid grid-cols-1 gap-3 lg:flex lg:flex-wrap lg:gap-4">
             <div className="relative">
               <select
                 value={clientFilter}
                 onChange={(event) => setClientFilter(event.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 lg:px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm lg:text-base w-full lg:w-auto"
               >
                 <option value="all">Todos los clientes</option>
                 {clientOptions.map((client) => (
@@ -368,7 +368,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
               <select
                 value={typeFilter}
                 onChange={(event) => setTypeFilter(event.target.value)}
-                className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent"
+                className="appearance-none bg-white border border-gray-300 rounded-lg px-3 lg:px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm lg:text-base w-full lg:w-auto"
               >
                 <option value="all">Todos los tipos</option>
                 <option value="Compra">Compra</option>
@@ -382,7 +382,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden lg:block overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -539,6 +540,123 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                 ))}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="lg:hidden">
+          {loading &&
+            Array.from({ length: 3 }).map((_, index) => (
+              <div key={`mobile-skeleton-${index}`} className="p-4 border-b border-gray-200 animate-pulse">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 rounded-full bg-gray-200 mr-3" />
+                    <div>
+                      <div className="h-4 w-24 rounded bg-gray-200 mb-1" />
+                      <div className="h-3 w-20 rounded bg-gray-200" />
+                    </div>
+                  </div>
+                  <div className="h-5 w-16 rounded bg-gray-200" />
+                </div>
+                <div className="space-y-2">
+                  <div className="h-3 w-32 rounded bg-gray-200" />
+                  <div className="h-3 w-28 rounded bg-gray-200" />
+                  <div className="h-3 w-24 rounded bg-gray-200" />
+                </div>
+                <div className="flex justify-between items-center mt-3">
+                  <div className="h-5 w-20 rounded bg-gray-200" />
+                  <div className="flex space-x-2">
+                    <div className="h-6 w-12 rounded bg-gray-200" />
+                    <div className="h-6 w-12 rounded bg-gray-200" />
+                  </div>
+                </div>
+              </div>
+            ))}
+
+          {!loading && error && (
+            <div className="p-6 text-center text-sm text-gray-600">
+              <div className="flex flex-col items-center space-y-3">
+                <i className="fa-solid fa-triangle-exclamation text-danger text-lg" />
+                <p>Ocurrió un error al cargar las operaciones.</p>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => refresh().catch(() => {})}
+                >
+                  Reintentar
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!loading && !error && filteredRows.length === 0 && (
+            <div className="p-6 text-center text-sm text-gray-600">
+              No se encontraron operaciones con los filtros seleccionados.
+            </div>
+          )}
+
+          {!loading &&
+            !error &&
+            filteredRows.map((row) => (
+              <div key={`mobile-${row.id}`} className="p-4 border-b border-gray-200 hover:bg-gray-50">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center">
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                      <span className="text-blue-600 text-sm font-medium">
+                        {row.clientInitials}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-sm font-medium text-text-primary">{row.clientName}</div>
+                      <div className="text-xs text-gray-500">{row.clientIdentifier}</div>
+                    </div>
+                  </div>
+                  <span className={row.typeClassName}>{row.typeLabel}</span>
+                </div>
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Fecha:</span>
+                    <span className="text-text-primary">{row.dateLabel}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">TC Efectivo:</span>
+                    <span className="font-medium text-text-primary">{row.rateLabel}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Margen:</span>
+                    <span className={row.marginClassName}>{row.marginLabel}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Recibe/Paga:</span>
+                    <div className="text-right">
+                      <div className="text-xs">{row.receivesText}</div>
+                      <div className="text-xs">{row.paysText}</div>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center mt-3">
+                  <span className={row.statusClassName}>{row.statusLabel}</span>
+                  <div className="flex space-x-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleViewDetail(row.id)}
+                      className="text-xs"
+                    >
+                      Ver
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="text-gray-600 hover:text-gray-900 text-xs"
+                    >
+                      Editar
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))}
         </div>
       </div>
     </section>

@@ -88,9 +88,9 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
     <div className="fixed inset-0 z-50 overflow-hidden">
       <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
       
-      <div className="absolute right-0 top-0 h-full w-full max-w-2xl bg-white shadow-xl overflow-y-auto">
+      <div className="absolute right-0 top-0 h-full w-full sm:max-w-2xl lg:max-w-4xl bg-white shadow-xl overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 z-10">
+        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 z-10">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <nav className="flex items-center space-x-2 text-sm text-gray-500">
@@ -105,7 +105,7 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
           </div>
           
           <div className="mt-4">
-            <h1 className="text-xl font-bold text-gray-900">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-900">
               {isLoading ? 'Cargando...' : `Movimiento ${movement?.id}`}
             </h1>
           </div>
@@ -116,12 +116,12 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
           </div>
         ) : (
-          <div className="px-6 py-6 space-y-8">
+          <div className="px-4 sm:px-6 py-6 space-y-6 sm:space-y-8">
             {/* Movement Summary */}
-            <div className="bg-gray-50 rounded-lg p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumen del movimiento</h2>
+            <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Resumen del movimiento</h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">ID</label>
                   <p className="mt-1 text-sm text-gray-900">{movement.id}</p>
@@ -164,7 +164,7 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
                 {movement.status !== 'completado' && movement.status !== 'anulado' && (
                   <button
                     onClick={onMarkAsCompleted}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium w-full sm:w-auto"
                   >
                     Marcar como completado
                   </button>
@@ -174,7 +174,7 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
 
             {/* Status Timeline */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Cronología de estados</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Cronología de estados</h2>
               
               <div className="space-y-4">
                 {movement.timeline?.map((event: any, index: number) => (
@@ -182,8 +182,8 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
                     <div className="flex-shrink-0 mt-1">
                       {getTimelineIcon(event.type)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
                         <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
                         <span className="text-xs text-gray-500">{formatDate(event.date)}</span>
                       </div>
@@ -197,10 +197,10 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
 
             {/* Operational Details */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Detalles operativos</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Detalles operativos</h2>
               
-              <div className="bg-gray-50 rounded-lg p-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700">Origen</label>
                     <p className="mt-1 text-sm text-gray-900">{movement.origin}</p>
@@ -240,72 +240,74 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
 
             {/* Associated Items */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Ítems asociados</h2>
-                <button className="flex items-center px-3 py-2 text-sm text-primary border border-primary rounded-lg hover:bg-blue-50 transition-colors">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Ítems asociados</h2>
+                <button className="flex items-center justify-center px-3 py-2 text-sm text-primary border border-primary rounded-lg hover:bg-blue-50 transition-colors">
                   <PlusIcon className="h-4 w-4 mr-2" />
                   Agregar ítem
                 </button>
               </div>
               
               <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Descripción
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Identificador
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Cantidad
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {movement.associatedItems?.map((item: any) => (
-                      <tr key={item.id}>
-                        <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
-                        <td className="px-4 py-3 text-sm text-gray-500">{item.identifier}</td>
-                        <td className="px-4 py-3 text-sm text-gray-500">
-                          {item.quantity} {item.unit}
-                        </td>
-                        <td className="px-4 py-3 text-sm">
-                          <div className="flex space-x-2">
-                            <button className="text-blue-600 hover:text-blue-800">
-                              <EyeIcon className="h-4 w-4" />
-                            </button>
-                            <button className="text-gray-600 hover:text-gray-800">
-                              <PencilIcon className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
+                <div className="overflow-x-auto">
+                  <table className="w-full min-w-[600px]">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Descripción
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Identificador
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Cantidad
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Acciones
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {movement.associatedItems?.map((item: any) => (
+                        <tr key={item.id}>
+                          <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">{item.identifier}</td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {item.quantity} {item.unit}
+                          </td>
+                          <td className="px-4 py-3 text-sm">
+                            <div className="flex space-x-2">
+                              <button className="text-blue-600 hover:text-blue-800">
+                                <EyeIcon className="h-4 w-4" />
+                              </button>
+                              <button className="text-gray-600 hover:text-gray-800">
+                                <PencilIcon className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
             {/* Attached Documents */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Documentos adjuntos</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Documentos adjuntos</h2>
               
               <div className="space-y-3">
                 {movement.attachments?.map((attachment: any) => (
-                  <div key={attachment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div key={attachment.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
-                      <DocumentIcon className="h-8 w-8 text-gray-400" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">{attachment.name}</p>
+                      <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{attachment.name}</p>
                         <p className="text-xs text-gray-500">{attachment.type} • {attachment.size}</p>
                       </div>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-2 flex-shrink-0">
                       <button className="text-blue-600 hover:text-blue-800 text-sm">
                         Ver
                       </button>
@@ -320,9 +322,9 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
 
             {/* Audit and Registry */}
             <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Auditoría y registro</h2>
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Auditoría y registro</h2>
               
-              <div className="bg-gray-50 rounded-lg p-6 space-y-3">
+              <div className="bg-gray-50 rounded-lg p-4 sm:p-6 space-y-3">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Creado por</label>
                   <p className="mt-1 text-sm text-gray-900">
@@ -352,32 +354,32 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
         )}
 
         {/* Panel Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4">
-          <div className="flex flex-wrap gap-3">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
             <button
               onClick={onClose}
-              className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
+              className="flex items-center justify-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
             >
               Volver a Logística
             </button>
             
             <button
               onClick={onEdit}
-              className="flex items-center px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+              className="flex items-center justify-center px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
             >
               Editar movimiento
             </button>
             
             <button
               onClick={onCancel}
-              className="flex items-center px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
+              className="flex items-center justify-center px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
             >
               Anular movimiento
             </button>
             
             <button
               onClick={onRegisterIncident}
-              className="flex items-center px-4 py-2 text-orange-600 border border-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
+              className="flex items-center justify-center px-4 py-2 text-orange-600 border border-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
             >
               <i className="fa-solid fa-exclamation-triangle mr-2"></i>
               Registrar incidencia
@@ -386,7 +388,7 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
             {movement && movement.status !== 'completado' && movement.status !== 'anulado' && (
               <button
                 onClick={onMarkAsCompleted}
-                className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors ml-auto"
+                className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors sm:ml-auto"
               >
                 Marcar como completado
               </button>

@@ -60,7 +60,7 @@ const resolveTrend = (metrics: LogisticsMetrics | null, key: keyof LogisticsMetr
 export const GeneralSummarySection: React.FC<GeneralSummarySectionProps> = ({ metrics, loading }) => (
   <section id="general-summary-section" className="mb-10">
     <h2 className="text-lg font-semibold text-text-primary mb-4">Resumen general</h2>
-    <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
       {CARD_CONFIG.map((card) => {
         const value = metrics ? metrics[card.metricKey] : null;
         const displayValue = loading && !metrics ? '—' : value ?? 0;

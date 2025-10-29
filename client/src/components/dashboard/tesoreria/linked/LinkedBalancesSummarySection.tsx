@@ -93,8 +93,8 @@ const SummarySkeleton: React.FC = () => (
         key={`summary-skeleton-${index}`}
         className="bg-white rounded-lg border border-gray-200 p-6 shadow-sm animate-pulse"
       >
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-4">
+        <div className="flex items-center justify-between mb-4 lg:mb-6">
+          <div className="flex items-center space-x-3 lg:space-x-4">
             <div className="w-12 h-12 bg-gray-100 rounded-lg" />
             <div>
               <div className="h-4 w-24 bg-gray-100 rounded mb-2" />
@@ -125,10 +125,10 @@ export const LinkedBalancesSummarySection: React.FC<Props> = ({
   }
 
   return (
-    <section id="balance-summary-section" className="mb-8">
-      <h2 className="text-lg font-semibold text-text-primary mb-4">Resumen de saldos</h2>
+    <section id="balance-summary-section" className="mb-10 lg:mb-12">
+      <h2 className="text-lg font-semibold text-text-primary mb-6 lg:mb-8">Resumen de saldos</h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
         {balances.map((balance) => {
           const iconConfig = ICON_MAP[balance.id] || ICON_MAP.cash;
           const variation = balance.variation || {
@@ -138,12 +138,12 @@ export const LinkedBalancesSummarySection: React.FC<Props> = ({
           return (
             <div
               key={balance.id}
-              className="bg-white rounded-lg border border-gray-200 p-6 transition-shadow hover:shadow-md"
+              className="bg-white rounded-lg border border-gray-200 p-4 lg:p-6 xl:p-8 transition-shadow hover:shadow-md"
             >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center">
+              <div className="flex items-center justify-between mb-4 lg:mb-6">
+                <div className="flex items-center space-x-3 lg:space-x-4">
                   <div
-                    className={`w-12 h-12 ${iconConfig.background} rounded-lg flex items-center justify-center mr-4`}
+                    className={`w-12 h-12 ${iconConfig.background} rounded-lg flex items-center justify-center`}
                   >
                     <i className={`fa-solid ${iconConfig.icon} ${iconConfig.iconColor} text-lg`} />
                   </div>

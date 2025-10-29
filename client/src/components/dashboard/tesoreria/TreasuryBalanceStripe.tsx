@@ -1,55 +1,33 @@
-import React, { useMemo } from 'react';
+import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useTreasuryBalances } from '../../../hooks';
+import { useDashboardBalances } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
+import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
 
 interface Props {
   onSelectBalance?: (balanceId: string) => void;
 }
 
-const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
-  const getStatusType = (status?: string): StatusType => {
-    switch ((status || '').toLowerCase()) {
-      case 'ok':
-        return 'ok';
-      case 'warning':
-        return 'warning';
-      case 'error':
-        return 'error';
-      default:
-        return 'unknown';
-    }
-  };
-
-  const getIcon = (label?: string, currency?: string) => {
-    if (label?.toLowerCase().includes('transfer')) return 'fa-money-bill-transfer';
-    if (label?.toLowerCase().includes('efectivo')) return 'fa-hand-holding-dollar';
-    if (currency === 'USD') return 'fa-dollar-sign';
-    return 'fa-wallet';
-  };
-
-  return {
-    id: balance.id,
-    label: balance.label || 'Balance',
-    amount: balance.amount || 0,
-    currency: balance.currency || 'ARS',
-    status: getStatusType(balance.status),
-    icon: getIcon(balance.label, balance.currency),
-    updatedAt: balance.updatedAt,
-  };
-};
-
-// Default fallback data with stable timestamps
-const DEFAULT_BALANCES = {
-  transfersARS: { id: 'transfers-ars', amount: 2847950, currency: 'ARS', status: 'ok', updatedAt: '2024-01-01T12:00:00.000Z', label: 'Transferencias (ARS)' },
-  cashARS: { id: 'cash-ars', amount: 456780.50, currency: 'ARS', status: 'ok', updatedAt: '2024-01-01T12:00:00.000Z', label: 'Efectivo (ARS)' },
-  cashUSD: { id: 'cash-usd', amount: 12450, currency: 'USD', status: 'error', updatedAt: '2024-01-01T12:00:00.000Z', label: 'Caja (USD)' }
-};
+const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => ({
+  id: balance.id,
+  label: balance.label,
+  amount: balance.amount,
+  currency: balance.currency,
+  status: balance.status as StatusType,
+  updatedAt: balance.updatedAt,
+});
 
 export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
   const navigate = useNavigate();
-  const { balances, loading, error, refresh } = useTreasuryBalances();
+  const { balances, loading, error, refresh } = useDashboardBalances({ pollInterval: 60000 });
+
+  useEffect(() => {
+    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
+      refresh().catch(() => {});
+    });
+    return unsubscribe;
+  }, [refresh]);
 
   const handleBalanceClick = () => {
     navigate('/dashboard/tesoreria/saldos');
@@ -63,27 +41,14 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
     }
   };
 
-  // Define the exact three balance cards as shown in the HTML reference
-  const balanceCards = useMemo((): BalanceCardData[] => {
-    // Map actual balance data to the three specific cards
-    const transfersARS = balances.find(b => b.id.includes('transfer') && b.currency === 'ARS') || DEFAULT_BALANCES.transfersARS;
-    const cashARS = balances.find(b => b.id.includes('efectivo') && b.currency === 'ARS') || DEFAULT_BALANCES.cashARS;
-    const cashUSD = balances.find(b => b.id.includes('caja') && b.currency === 'USD') || DEFAULT_BALANCES.cashUSD;
-
-    return [
-      mapBalanceToCardData({ ...transfersARS, label: 'Transferencias (ARS)' }),
-      mapBalanceToCardData({ ...cashARS, label: 'Efectivo (ARS)' }),
-      mapBalanceToCardData({ ...cashUSD, label: 'Caja (USD)' })
-    ];
-  }, [balances]);
-
   return (
     <div
-      id="balance-stripe"
+      id="treasury-balance-stripe"
       className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
-      <div className="px-6 py-4">
-        <div className="grid grid-cols-3 gap-6">
+      <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8">
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -93,28 +58,75 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
           )}
 
           {!loading && !error &&
-            balanceCards.map((card) => (
+            balances.map((balance: TreasuryBalance) => (
               <BalanceCard
-                key={card.id}
-                data={card}
-                onClick={() => handleCardClick(card.id)}
+                key={balance.id}
+                data={mapBalanceToCardData(balance)}
+                onClick={() => handleCardClick(balance.id)}
                 onRetry={refresh}
               />
             ))}
 
           {!loading && error && (
             <>
-              {balanceCards.map((card) => (
+              {[0, 1, 2].map((i) => (
                 <BalanceCard
-                  key={card.id}
-                  data={card}
+                  key={i}
+                  data={{
+                    id: `error-${i}`,
+                    label: 'Balance',
+                    amount: 0,
+                    currency: 'ARS',
+                    status: 'error',
+                  }}
                   error={true}
-                  onClick={() => handleCardClick(card.id)}
                   onRetry={refresh}
                 />
               ))}
             </>
           )}
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="lg:hidden">
+          <div className="flex flex-col gap-3 md:gap-4">
+            {loading && (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <BalanceCardSkeleton key={i} />
+                ))}
+              </>
+            )}
+
+            {!loading && !error &&
+              balances.map((balance: TreasuryBalance) => (
+                <BalanceCard
+                  key={balance.id}
+                  data={mapBalanceToCardData(balance)}
+                  onClick={() => handleCardClick(balance.id)}
+                  onRetry={refresh}
+                />
+              ))}
+
+            {!loading && error && (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <BalanceCard
+                    key={i}
+                    data={{
+                      id: `error-${i}`,
+                      label: 'Balance',
+                      amount: 0,
+                      currency: 'ARS',
+                      status: 'error',
+                    }}
+                    error={true}
+                    onRetry={refresh}
+                  />
+                ))}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -21,7 +21,6 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ token }) =
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [errorText, setErrorText] = useState('');
   const [success, setSuccess] = useState(false);
   const [invalidToken, setInvalidToken] = useState(false);
@@ -43,10 +42,6 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ token }) =
       setErrorText(message);
     },
   });
-
-  useEffect(() => {
-    setPasswordsMatch(newPassword === confirmPassword);
-  }, [newPassword, confirmPassword]);
 
   // Validate token on mount
   useEffect(() => {

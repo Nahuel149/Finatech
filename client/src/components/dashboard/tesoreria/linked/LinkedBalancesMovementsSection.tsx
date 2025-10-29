@@ -127,8 +127,8 @@ export const LinkedBalancesMovementsSection: React.FC<Props> = ({
     orderedBalances.find((balance) => balance.id === activeBalanceId) || orderedBalances[0];
 
   return (
-    <section id="recent-movements-section" className="mb-8">
-      <h2 className="text-lg font-semibold text-text-primary mb-4">
+    <section id="recent-movements-section" className="mb-10 lg:mb-12">
+      <h2 className="text-lg font-semibold text-text-primary mb-6 lg:mb-8">
         Movimientos recientes por cuenta
       </h2>
 

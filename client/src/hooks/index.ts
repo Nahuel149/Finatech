@@ -1,5 +1,6 @@
 // Export all hooks
 export { useDashboardBalances } from './dashboard/useDashboardBalances';
+export { useLatestMarketRate } from './dashboard/useLatestMarketRate';
 export * from './useAuth';
 export * from './useApi';
 export * from './useConfig';

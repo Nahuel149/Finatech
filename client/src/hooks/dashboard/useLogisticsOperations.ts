@@ -151,7 +151,7 @@ export const useLogisticsOperations = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination.limit, pagination.page]);
+  }, [filters, pagination]);
 
   useEffect(() => {
     fetchOperations();

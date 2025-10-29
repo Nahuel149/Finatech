@@ -8,41 +8,18 @@ import { OperationDetailPanel } from './OperationDetailPanel';
 import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
-import { PlusIcon, ChevronRightIcon } from '../../icons/HeroiconsOutline';
+import { PlusIcon } from '../../icons/HeroiconsOutline';
 import NewMovementModal from './NewMovementModal';
 import { LogisticsOperation, DEFAULT_LOGISTICS_FILTERS } from '../../../types/logistics';
+import { useDashboardBalances } from '../../../hooks';
+import { subscribeDashboardBalanceRefresh } from '../../../utils';
+import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
+import { TreasuryBalance, ApiError } from '../../../types';
 
 type ToastState = {
   type: 'success' | 'info';
   message: string;
 };
-
-const LOGISTICS_BALANCES = [
-  {
-    id: 'ars-transfers',
-    icon: 'fa-exchange-alt',
-    bg: 'bg-blue-100',
-    label: 'Transferencias (ARS)',
-    value: '$2.450.320,50',
-    updatedAt: '14:32',
-  },
-  {
-    id: 'ars-cash',
-    icon: 'fa-money-bills',
-    bg: 'bg-green-100',
-    label: 'Efectivo (ARS)',
-    value: '$1.875.450,00',
-    updatedAt: '14:28',
-  },
-  {
-    id: 'usd-cash',
-    icon: 'fa-dollar-sign',
-    bg: 'bg-yellow-100',
-    label: 'Caja (USD)',
-    value: 'USD 12.450,00',
-    updatedAt: '14:30',
-  },
-];
 
 const logisticsOperations: LogisticsOperation[] = [
   {
@@ -218,31 +195,121 @@ const logisticsOperations: LogisticsOperation[] = [
   },
 ];
 
-const LogisticsBalanceStripe: React.FC<{ onBalanceClick?: () => void }> = ({ onBalanceClick }) => (
-  <div className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
-    <div className="px-6 py-4">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        {LOGISTICS_BALANCES.map((card) => (
-          <div
-            key={card.id}
-            className="bg-white rounded-lg border border-gray-200 px-4 py-3 shadow-sm flex items-center cursor-pointer hover:shadow-md transition-shadow"
-            title={`Última actualización: ${card.updatedAt}`}
-            onClick={onBalanceClick}
-          >
-            <div className={`${card.bg} w-11 h-11 rounded-lg flex items-center justify-center mr-3`}>
-              <i className={`fa-solid ${card.icon} text-primary`} />
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-text-primary truncate">{card.label}</div>
-              <div className="text-2xl font-bold text-text-primary">{card.value}</div>
-              <div className="text-xs text-gray-500">Actualizado {card.updatedAt}</div>
-            </div>
+interface LogisticsBalanceStripeProps {
+  onBalanceClick?: () => void;
+  balances: TreasuryBalance[];
+  loading: boolean;
+  error: ApiError | null;
+  refresh: () => Promise<void>;
+  mapBalanceToCardData: (balance: TreasuryBalance) => BalanceCardData;
+}
+
+const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({ 
+  onBalanceClick, 
+  balances, 
+  loading, 
+  error, 
+  refresh, 
+  mapBalanceToCardData 
+}) => {
+  // Subscribe to balance refresh events
+  useEffect(() => {
+    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
+      refresh().catch(() => {});
+    });
+    return unsubscribe;
+  }, [refresh]);
+
+  return (
+    <div id="logistics-balance-stripe" className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
+      <div className="px-6 py-4">
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
+          {loading && (
+            <>
+              {[0, 1, 2].map((i) => (
+                <BalanceCardSkeleton key={i} />
+              ))}
+            </>
+          )}
+
+          {!loading && !error &&
+            balances.map((balance: TreasuryBalance) => (
+              <BalanceCard
+                key={balance.id}
+                data={mapBalanceToCardData(balance)}
+                onClick={onBalanceClick}
+                onRetry={refresh}
+              />
+            ))}
+
+          {!loading && error && (
+            <>
+              {[0, 1, 2].map((i) => (
+                <BalanceCard
+                  key={i}
+                  data={{
+                    id: `error-${i}`,
+                    label: 'Balance',
+                    amount: 0,
+                    currency: 'ARS',
+                    status: 'error',
+                    updatedAt: new Date().toISOString(),
+                  }}
+                  onClick={onBalanceClick}
+                  onRetry={refresh}
+                />
+              ))}
+            </>
+          )}
+        </div>
+
+        {/* Mobile Layout */}
+        <div className="lg:hidden">
+          <div className="flex flex-col gap-3 md:gap-4">
+            {loading && (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <BalanceCardSkeleton key={i} />
+                ))}
+              </>
+            )}
+
+            {!loading && !error &&
+              balances.map((balance: TreasuryBalance) => (
+                <BalanceCard
+                  key={balance.id}
+                  data={mapBalanceToCardData(balance)}
+                  onClick={onBalanceClick}
+                  onRetry={refresh}
+                />
+              ))}
+
+            {!loading && error && (
+              <>
+                {[0, 1, 2].map((i) => (
+                  <BalanceCard
+                    key={i}
+                    data={{
+                      id: `error-${i}`,
+                      label: 'Balance',
+                      amount: 0,
+                      currency: 'ARS',
+                      status: 'error',
+                      updatedAt: new Date().toISOString(),
+                    }}
+                    onClick={onBalanceClick}
+                    onRetry={refresh}
+                  />
+                ))}
+              </>
+            )}
           </div>
-        ))}
+        </div>
       </div>
     </div>
-  </div>
-);
+  );
+};
 
 export const LogisticaPanel: React.FC = () => {
   const navigate = useNavigate();
@@ -253,9 +320,24 @@ export const LogisticaPanel: React.FC = () => {
   const [selectedOperation, setSelectedOperation] = useState<LogisticsOperation | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
+  // Add dashboard balances hook for mobile layout
+  const { balances, loading, error, refresh } = useDashboardBalances();
+
+
+
   const handleBalanceClick = () => {
     navigate('/dashboard/tesoreria/saldos');
   };
+
+  // Add mapBalanceToCardData function for mobile layout
+  const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => ({
+    id: balance.id,
+    label: balance.label,
+    amount: balance.amount,
+    currency: balance.currency,
+    status: balance.status as StatusType,
+    updatedAt: balance.updatedAt,
+  });
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
 
   useEffect(() => {
@@ -263,6 +345,8 @@ export const LogisticaPanel: React.FC = () => {
     const timeout = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+
 
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
@@ -343,23 +427,24 @@ export const LogisticaPanel: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar search={searchTerm} onSearchChange={handleSearchChange} />
-      <LogisticsBalanceStripe onBalanceClick={handleBalanceClick} />
+      <LogisticsBalanceStripe 
+        onBalanceClick={handleBalanceClick}
+        balances={balances}
+        loading={loading}
+        error={error}
+        refresh={refresh}
+        mapBalanceToCardData={mapBalanceToCardData}
+      />
 
-      <main className="pt-40 pb-8 max-w-7xl mx-auto px-6">
-        <header className="mb-8 mt-20">
-          <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4" aria-label="Breadcrumb">
-            <span className="text-primary font-medium">Logística</span>
-            <ChevronRightIcon className="h-4 w-4 text-gray-400" />
-            <span>Panel principal</span>
-          </nav>
-
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-2">Panel de Logística</h1>
-              <p className="text-gray-600">
-                Monitoreá el estado de las operaciones logísticas, entregas y movimientos pendientes
-              </p>
-            </div>
+      <main className="pt-[220px] pb-8 max-w-7xl mx-auto px-4 sm:px-6">
+        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Logística</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">
+              Gestión integral de operaciones logísticas y movimientos de efectivo
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3">
             <button
               type="button"
               onClick={handleRegisterNewMovement}

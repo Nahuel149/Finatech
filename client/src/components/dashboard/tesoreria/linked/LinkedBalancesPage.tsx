@@ -255,8 +255,8 @@ export const LinkedBalancesPage: React.FC = () => {
       <TreasuryNavbar search={globalSearch} onSearchChange={setGlobalSearch} />
       <TreasuryBalanceStripe onSelectBalance={handleOpenDetail} />
 
-      <main id="linked-balances-container" className="pt-[220px] px-6 pb-24">
-        <section id="page-header" className="mb-8 mt-4">
+      <main id="linked-balances-container" className="pt-[220px] px-4 pb-32 lg:px-8 xl:px-12">
+        <section id="page-header" className="mb-10 mt-6 lg:mb-12 lg:mt-8">
           <nav
             id="breadcrumbs"
             className="flex items-center space-x-2 text-sm text-gray-600 mb-4"
