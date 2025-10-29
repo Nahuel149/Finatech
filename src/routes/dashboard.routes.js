@@ -3,6 +3,8 @@ const { getTreasuryBalances } = require('../services/treasury.service');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 const { subscribeBalanceUpdated } = require('../utils/eventBus');
+const { sendCached, buildUserAwareKey } = require('../utils/responseCache');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const router = Router();
 
@@ -80,42 +82,70 @@ router.get(
   }
 );
 
-router.get('/notifications', requireAuth, (_req, res) => {
-  const now = new Date();
-  const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
+// Tight read limiter to mitigate rapid refresh loops on notifications
+const notificationsLimiter = rateLimit({
+  windowMs: 5 * 1000,
+  max: 2,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userId = req.user?._id || req.user?.id;
+    const userKey = userId ? String(userId) : ipKeyGenerator(req.ip);
+    return `${userKey}:notifications`;
+  },
+  message: {
+    message: 'Demasiadas solicitudes a notificaciones en poco tiempo.',
+    code: 'RATE_LIMIT_NOTIFICATIONS',
+  },
+});
 
-  res.json({
-    notifications: [
-      {
-        id: 'notif-001',
-        title: 'Operación completada',
-        message: 'La operación #OP-2041 se registró exitosamente.',
-        createdAt: minutesAgo(5),
-        read: false,
-      },
-      {
-        id: 'notif-002',
-        title: 'Liquidación pendiente',
-        message: 'Liquidación LQ-9033 requiere tu revisión.',
-        createdAt: minutesAgo(18),
-        read: false,
-      },
-      {
-        id: 'notif-003',
-        title: 'Alerta de liquidez',
-        message: 'La cuenta USD Nación se acerca al mínimo operativo.',
-        createdAt: minutesAgo(42),
-        read: false,
-      },
-      {
-        id: 'notif-004',
-        title: 'Nueva documentación',
-        message: 'Cliente Gamma adjuntó documentación para validación.',
-        createdAt: minutesAgo(120),
-        read: true,
-      },
-    ],
-  });
+router.get('/notifications', requireAuth, notificationsLimiter, async (req, res, next) => {
+  try {
+    const now = new Date();
+    const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
+
+    const key = buildUserAwareKey(req, 'dashboard:notifications');
+    await sendCached({
+      req,
+      res,
+      key,
+      ttlMs: 10 * 1000, // cache for 10s to avoid hammering the route
+      compute: async () => ({
+        notifications: [
+          {
+            id: 'notif-001',
+            title: 'Operación completada',
+            message: 'La operación #OP-2041 se registró exitosamente.',
+            createdAt: minutesAgo(5),
+            read: false,
+          },
+          {
+            id: 'notif-002',
+            title: 'Liquidación pendiente',
+            message: 'Liquidación LQ-9033 requiere tu revisión.',
+            createdAt: minutesAgo(18),
+            read: false,
+          },
+          {
+            id: 'notif-003',
+            title: 'Alerta de liquidez',
+            message: 'La cuenta USD Nación se acerca al mínimo operativo.',
+            createdAt: minutesAgo(42),
+            read: false,
+          },
+          {
+            id: 'notif-004',
+            title: 'Nueva documentación',
+            message: 'Cliente Gamma adjuntó documentación para validación.',
+            createdAt: minutesAgo(120),
+            read: true,
+          },
+        ],
+      }),
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;

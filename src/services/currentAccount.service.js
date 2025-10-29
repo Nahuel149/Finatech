@@ -162,7 +162,8 @@ const applyTransactionRegistration = async (transaction, { session, userId } = {
 
   const currency = info.currency;
   const amount = roundAmount(info.amount);
-  const delta = transaction.type === 'buy' ? -amount : amount;
+  // Buy: client pays ARS (positive delta), Sell: client receives ARS (negative delta)
+  const delta = transaction.type === 'buy' ? amount : -amount;
 
   const operationRef = {
     id: transaction._id,

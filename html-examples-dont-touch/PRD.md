@@ -8,11 +8,116 @@ Estado: Implementado en la aplicación React (registro local + Google, pendiente
 ### Estado de correcciones (abril 2025)
 
 - Flujo de operaciones actualizado: se eliminó el campo "subtipo", se corrigió la dirección Compra/Venta (egreso ARS en compras, ingreso ARS en ventas) y el resumen refleja el nuevo cálculo del margen.
-- Tasa de mercado editable sólo para roles Tesorería/Admin con auditoría en `/api/rates/market`; UI con toggle “usar tasa del día”.
+- Tasa de mercado editable sólo para roles Tesorería/Admin con auditoría en `/api/rates/market`; UI con toggle "usar tasa del día".
 - Cálculo de margen unificado `(t_mercado - t_operación) / t_mercado`, colores verde/rojo y tooltip con la fórmula.
-- Liquidaciones compuestas mantienen montos derivados: se deshabilita la edición directa de “Monto” y el acceso del navbar pasa a “Transferencias en pesos”.
+- Liquidaciones compuestas mantienen montos derivados: se deshabilita la edición directa de "Monto" y el acceso del navbar se reemplaza por "Transferencias en pesos".
 - Anulación de operaciones expone botón en el resumen final (sólo si la operación está registrada y sin liquidar), crea asiento inverso y registra auditoría.
 - Panel de saldos ahora se refresca en tiempo real: dashboard y widgets escuchan el SSE `/api/dashboard/balances/events`.
+
+--
+
+Modificaciones en panel de operaciones
+
+
+Description
+
+Corregir inconsistencias funcionales en el flujo de operaciones, saldos, liquidaciones y tasas de cambio; mejorar la trazabilidad; y simplificar la UX según lo solicitado por negocio.
+
+Alcance
+Frontend (web app), Backend (API), DB (migraciones), Jobs de balance/ledger, permisos/UX.
+
+Cambios funcionales (detalle por requerimiento)
+
+**Quitar "subtipo" en carga de operaciones**
+
+Estado: ✅ Implementado
+
+UI: campo oculto; validaciones asociadas removidas.
+
+**Error al crear "nuevo cliente"**
+
+Estado: ✅ Corregido
+
+Funciona correctamente la actualización de saldos.
+
+**Compra/Venta invertidas**
+
+Estado: ✅ Implementado
+
+Regla aplicada:
+- Compra = sale de pesos (egreso ARS), entrada de bien 2 (p.ej. USD/oro/cheque).
+- Venta = entrada de pesos (ingreso ARS), salida de bien 2.
+
+UI: labels y ayudas contextuales corregidas.
+
+**Tasas del 2º bien cuando hay doble cambio vs USD**
+
+Estado: ✅ Implementado
+
+UI: si bien2 ≠ USD y requiere puente USD, se muestra:
+- tasa_bien2→USD y USD→ARS mercado
+
+**Signo del margen según tipo de operación**
+
+Estado: ✅ Implementado
+
+Fórmula: margen = (t_mercado - t_operacion) / t_mercado
+
+- Compra: si compramos más barato que mercado ⇒ margen positivo.
+- Venta: si vendemos más caro que mercado ⇒ margen positivo.
+
+Implementación: calcular siempre con la misma fórmula y ajustar el sentido según side comparando precio lado-correcto:
+- Compra: t_operacion = ARS/bién2 pagados por unidad del bien2.
+- Venta: t_operacion = ARS/bién2 recibidos por unidad del bien2.
+
+UI: color verde si margen ≥ 0; rojo si < 0. Tooltip con fórmula.
+
+**Tasa de mercado editable**
+
+Estado: ✅ Implementado
+
+UI: input editable con toggle "usar tasa del día" vs "personalizada".
+
+Permisos: solo roles Tesorería/Admin.
+
+API: PUT /tasas/mercado registra override con valid_from, source = MANUAL, user_id.
+
+Auditoría obligatoria.
+
+**Anular operaciones (sin eliminar)**
+
+Estado: ✅ Implementado
+
+Estado: nuevo status = ANULADA.
+
+Reglas:
+- Solo si no tiene liquidación asociada o si todas están también anuladas.
+- Crear asiento inverso para dejar saldo neto 0.
+- Mantener operation_id
+
+UI: botón "Anular", modal de confirmación con motivo.
+
+**Distribución de liquidación: "monto" no se puede editar**
+
+Estado: ✅ Implementado
+
+El campo "monto" en CompoundSettlementForm.tsx está configurado como no editable cuando allocationType es 'amount'. Actualmente solo se permite selección por porcentaje, efectivamente removiendo la opción de edición directa del monto.
+
+**Navegación: remover "Liquidaciones compuestas"**
+
+Estado: ✅ Implementado
+
+UI: se reemplazó el acceso por "Transferencias en pesos" en:
+- Navbar.tsx: navegación principal
+- TreasuryNavbar.tsx: navegación de tesorería
+
+Ruta: `/dashboard/operaciones/transfer-pesos` (misma ruta y permisos).
+
+**Responsable interno con desplegable (no texto libre)**
+
+Estado: ✅ Implementado
+
+Campo implementado como dropdown con opciones predefinidas en lugar de texto libre.
 
 Como visitante
 Quiero crear una cuenta usando email y contraseña o con mi cuenta de Google
@@ -204,7 +309,7 @@ Para navegar entre secciones, ver rápidamente mis saldos clave y trabajar dentr
 Descripción
 Implementar el layout base de la app:
 
-Navbar fijo arriba con: logo, menús: Operaciones, Tesorería, Logística, Transferencias en pesos; campana de notificaciones; y menú de usuario (avatar/nombre) con acciones mínimas: Perfil, Configuración, Cerrar sesión.
+Navbar fijo arriba con: logo, menús principales (Operaciones, Tesorería, Logística, Transferencias en pesos); campana de notificaciones; y menú de usuario (avatar/nombre) con acciones: Perfil, Configuración, Cerrar sesión.
 
 Footer persistente: mantener el pie de página operativo (component Footer) visible en todas las vistas del dashboard, incluyendo Logística, para conservar accesos rápidos y consistencia de navegación.
 
@@ -227,7 +332,7 @@ Dado que ingreso a la aplicación
 
 Cuando la página carga
 
-Entonces el navbar se ve en la parte superior, permanece fijo al hacer scroll y contiene: logo, menús (Operaciones, Tesorería, Logística, Transferencias en pesos), campana y menú de cuenta.
+Entonces el navbar se ve en la parte superior, permanece fijo al hacer scroll y contiene: logo, menús principales (Operaciones, Tesorería, Logística, Transferencias en pesos), campana y menú de cuenta.
 
 CA2 – Estado activo de menú y ruteo
 
@@ -330,8 +435,6 @@ Tipo de operación: compra o venta.
 
 Bien que entra y bien que sale (pueden ser divisas, activos físicos o instrumentos financieros).
 
-Subtipo (ej: USD billete, cheque diferido).
-
 TC contra USD.
 
 TC de mercado contra USD.
@@ -362,7 +465,7 @@ Cliente.
 
 Tipo de operación.
 
-Bienes que entran y salen (subtipo, TCs y montos).
+Bienes que entran y salen (TCs y montos).
 
 Margen (valor y %)
 
@@ -517,17 +620,17 @@ Entonces el wizard selecciona automáticamente ese cliente como contraparte de l
 
 --
 
-Carga de operación de transferencia pesos
+Carga de operación de transferencias en pesos
 
 
 Description
 
 Como operador de FinaTech
-Quiero poder registrar operaciones de tipo Transferencia en Pesos, especificando si son de efectivo o transferencia, y si son entrantes o salientes
+Quiero poder registrar operaciones de tipo "Transferencias en pesos", especificando si son de efectivo o transferencia bancaria, y si son entrantes o salientes
 Para reflejar correctamente los movimientos de fondos y su impacto en los saldos de la tesorería
 
 Descripción
-Se desarrollará una nueva operación denominada “Transferencia en Pesos”, incorporada al módulo de Operaciones dentro de la plataforma FinaTech.
+Se desarrollará una nueva operación denominada "Transferencias en pesos", incorporada al módulo de Operaciones dentro de la plataforma FinaTech.
 
 Esta funcionalidad permitirá al usuario cargar y registrar operaciones de transferencia de dinero en moneda local (ARS), pudiendo clasificarlas según su tipo y naturaleza, y distribuyendo el monto total entre uno o varios contactos (clientes o proveedores).
 
@@ -597,7 +700,7 @@ CA1 – Creación de nueva operación
 
 Dado que estoy en el módulo Operaciones
 
-Cuando selecciono “Transferencia en Pesos”
+Cuando selecciono "Transferencias en pesos"
 
 Entonces se abre la vista del flujo correspondiente para cargar la operación.
 
@@ -839,7 +942,7 @@ Caja en USD
 
 Efectivo en ARS
 
-Transferencias en ARS
+Transferencias en pesos
 
 Los valores se mostrarán con formato monetario y actualización periódica (por ejemplo, cada 60 segundos o cuando se curse una nueva operación).
 
@@ -949,7 +1052,7 @@ Dado que el usuario tiene permiso
 
 Cuando accede a cualquier sección del sistema
 
-Entonces visualiza permanentemente el widget con los tres saldos principales (Caja USD, Efectivo ARS, Transferencias ARS).
+Entonces visualiza permanentemente el widget con los tres saldos principales (Caja USD, Efectivo ARS, Transferencias en pesos).
 
 CA3 – Actualización en tiempo real
 
@@ -1149,7 +1252,7 @@ Caja en USD
 
 Caja en ARS
 
-Transferencias en ARS
+Transferencias en pesos
 
 Cada una con la posibilidad de ver movimientos recientes asociados.
 

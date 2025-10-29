@@ -6,7 +6,9 @@
     "dev": "nodemon --config nodemon.json src/server.js",
     "start": "node src/server.js",
     "build": "cd client && npm install && npm run build",
-    "lint": "echo \"No linter configured\"",
+    "lint": "npm run lint:server && npm run lint:client",
+    "lint:server": "eslint src --ext .js",
+    "lint:client": "cd client && npm run lint",
     "test": "npm run test:unit",
     "test:unit": "node --test tests/unit/**/*.test.js",
     "test:e2e": "playwright test"
@@ -29,6 +31,9 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
+    "eslint": "^8.57.1",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-n": "^17.23.1",
     "mongodb-memory-server": "^9.5.0",
     "nodemon": "^3.1.10"
   }

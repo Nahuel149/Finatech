@@ -5,6 +5,7 @@ const {
   getTransferOperationById,
   listTransferOperations,
 } = require('../services/transfer.service');
+const { sendCached } = require('../utils/responseCache');
 
 const createTransferOperation = async (req, res, next) => {
   try {
@@ -41,12 +42,24 @@ const fetchTransferOperation = async (req, res, next) => {
 const listTransferOperationsHandler = async (req, res, next) => {
   try {
     const { limit, skip, search, q } = req.query;
-    const operations = await listTransferOperations({
-      limit,
-      skip,
-      search: search || q,
+    const key = `${req.user?._id || req.user?.id || 'anon'}:transfers:pesos:list:${limit || ''}:${
+      skip || ''
+    }:${search || q || ''}`;
+
+    await sendCached({
+      req,
+      res,
+      key,
+      ttlMs: 5 * 1000,
+      compute: async () => {
+        const operations = await listTransferOperations({
+          limit,
+          skip,
+          search: search || q,
+        });
+        return { items: operations };
+      },
     });
-    res.json({ items: operations });
   } catch (error) {
     next(error);
   }

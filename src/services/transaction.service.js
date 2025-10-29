@@ -4,7 +4,6 @@ const { getClientById } = require('./client.service');
 const {
   applyTransactionRegistration,
   roundAmount,
-  extractCurrencyAndAmountFromTransaction,
   reverseTransactionRegistration,
 } = require('./currentAccount.service');
 const { emitBalanceUpdated } = require('../utils/eventBus');
@@ -537,10 +536,10 @@ const validateTransactionForFinalization = (transaction) => {
     throw new Error('La operación no tiene un cliente asignado.');
   }
   if (!Number.isFinite(Number(transaction.incomingAmount)) || Number(transaction.incomingAmount) <= 0) {
-    throw new Error('El monto del bien que ingresa debe ser mayor a cero.');
+    throw new Error('El monto que recibe el cliente debe ser mayor a cero.');
   }
   if (!Number.isFinite(Number(transaction.outgoingAmount)) || Number(transaction.outgoingAmount) <= 0) {
-    throw new Error('El monto del bien que sale debe ser mayor a cero.');
+    throw new Error('El monto que paga el cliente debe ser mayor a cero.');
   }
   if (!Number.isFinite(Number(transaction.apr)) || Number(transaction.apr) <= 0) {
     throw new Error('El tipo de cambio aplicado es inválido.');

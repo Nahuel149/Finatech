@@ -765,15 +765,31 @@ const requestPasswordReset = async ({ email }, context = {}) => {
     const { plainToken, resetPayload } = buildPasswordResetDetails();
     user.passwordReset = resetPayload;
     await user.save();
-    await sendPasswordResetEmail(user, plainToken);
-    await logSecurityEvent({
-      user: user._id,
-      email: normalizedEmail,
-      eventType: 'password_reset',
-      provider: user.primaryProvider() || 'local',
-      status: 'reset_requested',
-      ...requestMetadata,
-    });
+    try {
+      await sendPasswordResetEmail(user, plainToken);
+      await logSecurityEvent({
+        user: user._id,
+        email: normalizedEmail,
+        eventType: 'password_reset',
+        provider: user.primaryProvider() || 'local',
+        status: 'reset_requested',
+        ...requestMetadata,
+      });
+    } catch (error) {
+      // Do not leak transport errors to clients or allow account enumeration.
+      // Log the failure for observability and continue returning generic success.
+      // eslint-disable-next-line no-console
+      console.error('Failed to send password reset email', error);
+      await logSecurityEvent({
+        user: user._id,
+        email: normalizedEmail,
+        eventType: 'password_reset',
+        provider: user.primaryProvider() || 'local',
+        status: 'reset_email_failed',
+        metadata: { errorCode: error?.code, errorMessage: error?.message },
+        ...requestMetadata,
+      });
+    }
   }
 
   return {

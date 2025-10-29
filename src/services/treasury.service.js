@@ -1942,10 +1942,14 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
         if (contactCandidate && mongoose.Types.ObjectId.isValid(contactCandidate)) {
           const contactDoc = await Client.findById(contactCandidate).session(session);
           if (contactDoc) {
+            // Map transaction type to treasury direction: buy -> outgoing (ARS leaves), sell -> incoming (ARS enters)
+            const transactionType = normalized.operationLink.document.type;
+            const treasuryDirection = transactionType === 'buy' ? 'outgoing' : 'incoming';
+            
             const settlementPayload = {
               _id: movement._id,
               movementType: balanceMovementType,
-              direction: movement.type,
+              direction: treasuryDirection,
               currency: normalized.currency,
               totalAmount: normalized.amount,
               distributionLines: [

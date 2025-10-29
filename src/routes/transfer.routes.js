@@ -7,6 +7,7 @@ const {
 } = require('../controllers/transfer.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { validateRequest } = require('../middleware/validateRequest');
+const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const router = Router();
 
@@ -39,7 +40,23 @@ router.post(
   createTransferOperation
 );
 
-router.get('/pesos', requireAuth, listTransferOperations);
+const transfersReadLimiter = rateLimit({
+  windowMs: 3000,
+  max: 3,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => {
+    const userId = req.user?._id || req.user?.id;
+    const userKey = userId ? String(userId) : ipKeyGenerator(req.ip);
+    return `${userKey}:transfers:pesos:list`;
+  },
+  message: {
+    message: 'Demasiadas solicitudes de lista de transferencias en poco tiempo.',
+    code: 'RATE_LIMIT_TRANSFERS',
+  },
+});
+
+router.get('/pesos', requireAuth, transfersReadLimiter, listTransferOperations);
 
 router.get('/pesos/:id', requireAuth, fetchTransferOperation);
 

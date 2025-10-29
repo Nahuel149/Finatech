@@ -178,11 +178,14 @@ const getSnapshot = (): DashboardBalancesState => {
   return cachedSnapshot;
 };
 
-const getDisabledSnapshot = (): DashboardBalancesState => ({
+// Stable disabled snapshot - never changes
+const DISABLED_SNAPSHOT: DashboardBalancesState = {
   balances: [],
   loading: false,
   error: null,
-});
+};
+
+const getDisabledSnapshot = (): DashboardBalancesState => DISABLED_SNAPSHOT;
 
 export const useDashboardBalances = (
   options: UseDashboardBalancesOptions = {}
@@ -198,15 +201,11 @@ export const useDashboardBalances = (
     [enabled, pollInterval]
   );
 
-  // Use stable getSnapshot functions
-  const getSnapshotFn = useCallback(() => {
-    return enabled ? getSnapshot() : getDisabledSnapshot();
-  }, [enabled]);
-
+  // Use stable snapshot function references - don't recreate on every render
   const snapshot = useSyncExternalStore(
     subscribeFn,
-    getSnapshotFn,
-    getSnapshotFn
+    enabled ? getSnapshot : getDisabledSnapshot,
+    enabled ? getSnapshot : getDisabledSnapshot
   );
 
   return {
