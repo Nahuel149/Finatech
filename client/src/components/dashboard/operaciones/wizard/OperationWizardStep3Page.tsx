@@ -113,10 +113,6 @@ export const OperationWizardStep3Page: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successStateVisible, setSuccessStateVisible] = useState(false);
   const [showToast, setShowToast] = useState(false);
-  const [voidModalOpen, setVoidModalOpen] = useState(false);
-  const [voidReason, setVoidReason] = useState('');
-  const [voiding, setVoiding] = useState(false);
-  const [voidError, setVoidError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!showToast) {
@@ -189,7 +185,11 @@ export const OperationWizardStep3Page: React.FC = () => {
           (draft?.incomingAmount ?? 0) > 0 && (draft?.outgoingAmount ?? 0) > 0,
       },
       {
-        label: 'TC dentro de umbrales vs. mercado',
+        label: 'APR (tipo de cambio) mayor a 0',
+        passed: (draft?.apr ?? 0) > 0,
+      },
+      {
+        label: 'TC dentro de umbrales vs. mercado (±10%)',
         // Asumimos un umbral del 10% para el ejemplo
         passed:
           typeof marginValue === 'number' &&
@@ -208,6 +208,7 @@ export const OperationWizardStep3Page: React.FC = () => {
       clientSummary?.cuit,
       draft?.incomingAmount,
       draft?.outgoingAmount,
+      draft?.apr,
       draft?.settlement?.mode,
       draft?.settlement?.simpleMethod,
       marginValue,
@@ -270,10 +271,16 @@ export const OperationWizardStep3Page: React.FC = () => {
     setSuccessMessage(null);
 
     try {
-      await finalize(); // Llama al hook para finalizar
+      const confirmedDraft = await finalize(); // Llama al hook para finalizar
       emitDashboardBalanceRefresh();
+      // Redirige a la pantalla de detalle de la operación confirmada
+      if (confirmedDraft?.id) {
+        navigate(`/dashboard/operaciones/detalle/${confirmedDraft.id}`);
+        return; // Evita seguir ejecutando código innecesario
+      }
+      // Si por alguna razón no hay id, mostramos el estado de éxito interno
       setSuccessMessage('Operación confirmada correctamente.');
-      setSuccessStateVisible(true); // Muestra la pantalla de éxito
+      setSuccessStateVisible(true);
       await fetchDraft();
       setShowToast(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -302,9 +309,45 @@ export const OperationWizardStep3Page: React.FC = () => {
   }, [navigate]);
 
   const handleExportPDF = useCallback(() => {
-    console.log('Exportando a PDF...');
-    window.print();
-  }, []);
+    // Exporta únicamente la tarjeta de éxito (o el contenido principal) a PDF
+    const card = document.getElementById('success-card');
+
+    // Si no encontramos la tarjeta, hacemos un print tradicional como respaldo
+    if (!card) {
+      window.print();
+      return;
+    }
+
+    // Abrimos una nueva ventana emergente con solo el contenido relevante
+    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    if (!printWindow) {
+      window.print();
+      return;
+    }
+
+    // Construimos el HTML mínimo necesario, incluyendo los estilos de Tailwind y FontAwesome
+    // Ajusta la ruta al CSS si tu app lo sirve en un path distinto en producción
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Operación ${draft?.operationCode ?? ''}</title>
+          <link rel="stylesheet" href="/index.css" />
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-aEcp2S5XpjHaX18U9BMRQPzEebNFKWvH6L37kiRmX5zVscxG59Oo1ZBa6g6kK0bkZ37N3/QkpB+X1uiGykNcZA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+          <style>
+            @media print { .no-print { display: none !important; } }
+          </style>
+        </head>
+        <body class="p-8">
+          ${card.outerHTML}
+        </body>
+      </html>
+    `);
+
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    printWindow.close();
+  }, [draft?.operationCode]);
 
   const handleDuplicate = useCallback(() => {
     console.log(`Duplicando operación ${draft?.id}`);
@@ -361,12 +404,19 @@ export const OperationWizardStep3Page: React.FC = () => {
               </nav>
             </section>
 
-            {/* SECTION: Wizard Header (existente) */}
-            <WizardHeader
-              steps={WIZARD_STEPS}
-              currentStep={2} // Step 3 es índice 2
-              onBack={() => navigate('/dashboard')}
-            />
+            {/* SECTION: Wizard Header (Modificado para coincidir con HTML) */}
+            <section id="wizard-header" className="mb-8 mt-8">
+
+
+              {/* Progress Bar (Existente, ahora anidado) */}
+              <div className="mb-8">
+                <WizardHeader
+                  steps={WIZARD_STEPS}
+                  currentStep={2} // Step 3 es índice 2
+                  onBack={() => navigate('/dashboard')}
+                />
+              </div>
+            </section>
 
             {/* Alertas */}
             {draftError && (
@@ -858,12 +908,6 @@ export const OperationWizardStep3Page: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* El Modal "VoidOperationModal" no se usa en esta pantalla, 
-        sino en la de Éxito o Detalle, por lo que se omite aquí.
-        Si lo necesitas en la pantalla de éxito, debe ir dentro
-        del componente CompletionSuccessState o manejarse allí.
-      */}
     </div>
   );
 };
