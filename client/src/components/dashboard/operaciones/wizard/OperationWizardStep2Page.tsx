@@ -94,21 +94,21 @@ export const OperationWizardStep2Page: React.FC = () => {
 
 
   // Build payload function for auto-save
-  const buildPayload = useCallback((): TransactionSettlementPayload => {
-    return settlementMode === 'simple'
-      ? {
-          mode: 'simple',
-          simpleMethod,
-        }
-      : {
-          mode: 'compound',
-          lines: compoundLines.map((line) => ({
-            method: line.method,
-            allocationType: line.allocationType,
-            value: Number(line.value),
-          })),
-        };
-  }, [settlementMode, simpleMethod, compoundLines]);
+  // const buildPayload = useCallback((): TransactionSettlementPayload => {
+  //   return settlementMode === 'simple'
+  //     ? {
+  //         mode: 'simple',
+  //         simpleMethod,
+  //       }
+  //     : {
+  //         mode: 'compound',
+  //         lines: compoundLines.map((line) => ({
+  //           method: line.method,
+  //           allocationType: line.allocationType,
+  //           value: Number(line.value),
+  //         })),
+  //       };
+  // }, [settlementMode, simpleMethod, compoundLines]);
 
   useEffect(() => {
     if (draft) {

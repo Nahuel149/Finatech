@@ -131,7 +131,7 @@ const sendWithRetries = async (transport, mailOptions) => {
 };
 
 const sendEmail = async ({ to, subject, html, text }) => {
-  const from = process.env.EMAIL_FROM || 'no-reply@finatech.local';
+  const from = `"${process.env.SMTP_FROM_NAME}" <${process.env.SMTP_FROM_EMAIL}>`;
   let transport = await getTransport();
 
   if (!transport) {

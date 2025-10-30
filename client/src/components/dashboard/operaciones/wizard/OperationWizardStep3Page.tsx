@@ -20,7 +20,7 @@ import { WizardHeader } from './WizardHeader';
 import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
-import { apiRequest, handleApiError } from '../../../../utils/api';
+// import { apiRequest, handleApiError } from '../../../../utils/api';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
 import { emitDashboardBalanceRefresh } from '../../../../utils';
