@@ -3,6 +3,14 @@ const crypto = require('crypto');
 const CSRF_COOKIE_NAME = 'finatech_csrf';
 const CSRF_COOKIE_EXPIRY = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+// Lista de rutas que no requieren verificación CSRF
+const DEFAULT_EXCLUDED_PATHS = [
+  '/api/auth/google',
+  '/api/auth/login',
+  '/api/auth/register',
+  '/api/auth/recover',
+  '/api/auth/reset',
+];
 
 function generateCsrfToken() {
   return crypto.randomBytes(32).toString('hex');
@@ -50,7 +58,7 @@ function ensureCsrfCookie(options = {}) {
 }
 
 function csrfProtect(options = {}) {
-  const { cookieName = CSRF_COOKIE_NAME } = options;
+  const { cookieName = CSRF_COOKIE_NAME, excludedPaths = DEFAULT_EXCLUDED_PATHS } = options;
   
   return function(req, res, next) {
     console.log(`[CSRF] Processing ${req.method} ${req.path}`);
@@ -60,7 +68,12 @@ function csrfProtect(options = {}) {
       console.log('[CSRF] Safe method, skipping');
       return next();
     }
-
+    // Skip CSRF protection for excluded paths
+    const url = req.originalUrl || req.url;
+    if (excludedPaths.some((path) => url.startsWith(path))) {
+      console.log(`[CSRF] Excluded path ${url}, skipping`);
+      return next();
+    }
     console.log('[CSRF] Checking tokens...');
     const cookieToken = req.cookies?.[cookieName];
     const headerToken = req.get('X-CSRF-Token') || req.get('X-CSRF');
