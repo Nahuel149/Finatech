@@ -432,7 +432,10 @@ export const OperationWizardStep1Page: React.FC = () => {
   );
 
   const handleClientChange = useCallback((newClientId: string) => {
-    setClientId(newClientId);
+    // If ClientSelection sends undefined or null,
+    // default it back to an empty string to match the initial state.
+    // This prevents the state from changing and breaks the re-render loop.
+    setClientId(newClientId ?? '');
   }, []);
 
   const handleToggleMarketRateMode = useCallback(
