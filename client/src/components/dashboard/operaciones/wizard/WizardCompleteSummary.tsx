@@ -257,7 +257,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
 
       <SummaryCard
         title="Liquidación"
-        subTitle={`Modalidad ${settlementMode === 'simple' ? 'simple' : 'transferencias en pesos'}`}
+        subTitle={`Modalidad ${settlementMode === 'simple' ? 'simple' : 'múltiple'}`}
         onEdit={onEditStep2}
       >
         {settlementMode === 'simple' ? (

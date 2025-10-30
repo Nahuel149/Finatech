@@ -135,7 +135,7 @@ export const useTransactionDraft = (draftId?: string | null) => {
     setError(null);
     try {
       const response = await apiRequest<TransactionDraft>(
-        `/api/transactions/draft/${targetId}/finalize`,
+        `/api/transactions/${targetId}/confirm`,
         {
           method: 'POST',
         }

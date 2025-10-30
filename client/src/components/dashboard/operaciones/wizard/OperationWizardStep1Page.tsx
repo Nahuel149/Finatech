@@ -165,7 +165,6 @@ export const OperationWizardStep1Page: React.FC = () => {
     saving,
     error: draftError,
     saveDraft,
-    advanceStep,
   } = useTransactionDraft(draftId);
   
   // Auto-save hook for seamless draft saving
@@ -250,7 +249,6 @@ export const OperationWizardStep1Page: React.FC = () => {
     const draftApr = sanitizeNumber(draft.apr);
     const draftMarketApr = sanitizeNumber(draft.marketApr);
     const draftIncomingAmount = sanitizeNumber(draft.incomingAmount);
-    const draftOutgoingAmount = sanitizeNumber(draft.outgoingAmount);
     
     if (draftApr !== apr) {
       setApr(draftApr);
@@ -262,7 +260,6 @@ export const OperationWizardStep1Page: React.FC = () => {
     if (draftIncomingAmount !== incomingAmount) {
       setIncomingAmount(draftIncomingAmount);
     }
-// removed overwriting outgoingAmount
     const metadata = parseNotes(draft.notes);
     if (metadata) {
       const draftSecondaryRate = sanitizeNumber(metadata.rate) || 1;
@@ -286,20 +283,9 @@ export const OperationWizardStep1Page: React.FC = () => {
         return [clientToAdd, ...prev];
       });
     }
-  }, [
-    draft, 
-    setClients, 
-    clientId, 
-    operationType, 
-    incomingAssetCode, 
-    outgoingAssetCode, 
-    apr, 
-    marketApr, 
-    incomingAmount, 
-    outgoingAmount, 
-    secondaryRate, 
-    secondaryMarketRate
-  ]);
+  // We intentionally omit setClients from deps to avoid unnecessary re-runs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
 
   // Keep outgoing amount in sync with incoming amount and APR
   useEffect(() => {

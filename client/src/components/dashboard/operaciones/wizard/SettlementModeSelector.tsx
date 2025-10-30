@@ -40,7 +40,7 @@ export const SettlementModeSelector: React.FC<Props> = ({ mode, onChange, disabl
       >
         <div className="flex items-center mb-2">
           <i className={`mr-3 text-lg ${mode === 'compound' ? 'fa-solid fa-circle-dot' : 'fa-regular fa-circle'}`} />
-          <span className="font-semibold text-lg">Transferencias en pesos</span>
+          <span className="font-semibold text-lg">Múltiple</span>
         </div>
         <div className="text-sm opacity-80">Múltiples métodos de pago combinados</div>
       </button>

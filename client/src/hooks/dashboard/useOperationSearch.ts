@@ -16,7 +16,7 @@ const normalizeOperationToSuggestion = (operation: TransferOperation): Operation
   movementType: operation.movementType,
   status: operation.status,
   confirmedAt: operation.confirmedAt,
-  description: operation.distributionLines?.[0]?.contactName ?? null ?? undefined,
+  description: operation.distributionLines?.[0]?.contactName ?? null, // Use null as default instead of redundant null/undefined
 });
 
 interface UseOperationSearchOptions {

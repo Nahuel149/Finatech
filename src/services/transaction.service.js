@@ -409,12 +409,11 @@ const updateTransactionSettlement = async (id, payload = {}, context = {}) => {
       isComplete: true,
     };
   } else {
+    // CAMBIO: Usar el monto correcto (ARS) según el tipo de operación
     const baseAmount =
-      Number(transaction.incomingAmount) > 0
-        ? Number(transaction.incomingAmount)
-        : Number(transaction.outgoingAmount) > 0
+      transaction.type === 'buy'
         ? Number(transaction.outgoingAmount)
-        : null;
+        : Number(transaction.incomingAmount);
 
     if (!baseAmount || !Number.isFinite(baseAmount) || baseAmount <= 0) {
       throw new Error('La operación no tiene un monto base válido para calcular la liquidación');

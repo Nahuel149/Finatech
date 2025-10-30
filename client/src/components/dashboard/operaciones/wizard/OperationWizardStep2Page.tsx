@@ -95,9 +95,8 @@ export const OperationWizardStep2Page: React.FC = () => {
   // Auto-save hook for draft saving
   const { 
     autoSave: autoSaveDraft, 
-    forceSave,
-    hasUnsavedChanges 
-  } = useAutoSaveDraft({
+    // forceSave and hasUnsavedChanges removed as they are no longer needed
+   } = useAutoSaveDraft({
     debounceMs: 60000,
     save: updateSettlement,
     onSaveSuccess: () => {
@@ -183,7 +182,8 @@ export const OperationWizardStep2Page: React.FC = () => {
         });
       }
     }
-  }, [draft, setClients]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draft]);
 
   useEffect(() => {
     if (presetTypeParam === 'venta') {
@@ -206,8 +206,9 @@ export const OperationWizardStep2Page: React.FC = () => {
   const incomingCurrency = draft?.incomingAsset?.code ?? 'ARS';
   const outgoingCurrency = draft?.outgoingAsset?.code ?? 'USD';
 
-  const baseAmount = operationType === 'buy' ? incomingAmount : outgoingAmount;
-  const baseCurrency = operationType === 'buy' ? incomingCurrency : outgoingCurrency;
+  // CAMBIO: La liquidación se basa en el monto ARS
+  const baseAmount = operationType === 'buy' ? outgoingAmount : incomingAmount;
+  const baseCurrency = operationType === 'buy' ? outgoingCurrency : incomingCurrency;
 
   const formatAmount = useCallback(
     (amount: number) => `${formatCurrency(amount, baseCurrency)} ${baseCurrency}`,
