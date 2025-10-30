@@ -13,7 +13,7 @@ function ensureCsrfCookie(options = {}) {
     cookieName = CSRF_COOKIE_NAME,
     maxAge = CSRF_COOKIE_EXPIRY,
     path = '/',
-    sameSite = 'Lax',
+    sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
     secure = process.env.NODE_ENV === 'production',
     httpOnly = false
   } = options;
