@@ -57,18 +57,9 @@ app.use('/api/current-accounts', currentAccountRoutes);
 app.use('/api/treasury', treasuryRoutes);
 app.use('/api/rates', ratesRoutes);
 
-// Serve React build files
-const buildDir = path.join(__dirname, '..', 'client', 'build');
-app.use(express.static(buildDir));
-
-// Serve React app for specific routes (SPA routing)
-app.get(['/', '/login', '/register', '/dashboard'], (_req, res) => {
-  res.sendFile(path.join(buildDir, 'index.html'));
-});
-
-// Catch-all for other routes
-app.use((_req, res) => {
-  res.sendFile(path.join(buildDir, 'index.html'));
+// Simple health-check endpoint for Render
+app.get('/', (_req, res) => {
+  res.json({ status: 'ok', message: 'API running' });
 });
 
 app.use(errorHandler);

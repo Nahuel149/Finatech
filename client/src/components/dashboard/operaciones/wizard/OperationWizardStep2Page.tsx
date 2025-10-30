@@ -8,7 +8,6 @@ import {
 import {
   useClientsList,
   useTransactionDraft,
-  useAutoSaveDraft,
 } from '../../../../hooks/dashboard';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
@@ -92,21 +91,7 @@ export const OperationWizardStep2Page: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Auto-save hook for draft saving
-  const { 
-    autoSave: autoSaveDraft, 
-    // forceSave and hasUnsavedChanges removed as they are no longer needed
-   } = useAutoSaveDraft({
-    debounceMs: 60000,
-    save: updateSettlement,
-    onSaveSuccess: () => {
-      setSuccessMessage('Borrador guardado automáticamente');
-      setTimeout(() => setSuccessMessage(null), 3000);
-    },
-    onSaveError: (error) => {
-      setFormError(error?.message || 'Error al guardar el borrador automáticamente');
-    },
-  });
+
 
   // Build payload function for auto-save
   const buildPayload = useCallback((): TransactionSettlementPayload => {
@@ -193,13 +178,7 @@ export const OperationWizardStep2Page: React.FC = () => {
     }
   }, [presetTypeParam]);
 
-  // Auto-save effect
-  useEffect(() => {
-    if (!draft?.id) return;
-    
-    const payload = buildPayload();
-    autoSaveDraft(payload);
-  }, [autoSaveDraft, buildPayload, settlementMode, simpleMethod, compoundLines, draft?.id]);
+
 
   const incomingAmount = draft?.incomingAmount ?? 0;
   const outgoingAmount = draft?.outgoingAmount ?? 0;

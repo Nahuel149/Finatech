@@ -10,7 +10,6 @@ import {
   useClientsList,
   useTransactionDraft,
   useLatestMarketRate,
-  useAutoSaveDraft,
 } from '../../../../hooks/dashboard';
 import { useUserPermissions } from '../../../../hooks';
 import { apiRequest, handleApiError } from '../../../../utils/api';
@@ -167,17 +166,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     saveDraft,
   } = useTransactionDraft(draftId);
   
-  // Auto-save hook for seamless draft saving
-  const { autoSave } = useAutoSaveDraft({
-    debounceMs: 60000, // Auto-save after 1 minute of inactivity
-    onSaveSuccess: () => {
-      console.log('Draft auto-saved successfully');
-    },
-    onSaveError: (error) => {
-      console.error('Auto-save failed:', error);
-      setFormError('Error al guardar automáticamente. Intenta guardar manualmente.');
-    },
-  });
+
   
   const { permissions } = useUserPermissions();
   const normalizedPermissions = useMemo(
@@ -430,22 +419,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     showSecondaryRates,
   ]);
 
-  // Auto-save draft when form data changes
-  useEffect(() => {
-    // Only auto-save if we have the minimum required data
-    if (clientId && incomingAmount && outgoingAmount && apr) {
-      const payload = buildPayload();
-      autoSave(payload);
-    }
-  }, [
-    autoSave,
-    buildPayload,
-    clientId,
-    incomingAmount,
-    outgoingAmount,
-    apr,
-  ]);
-
+  // Auto-save draft effect removed
   const handleOperationTypeChange = useCallback(
     (type: TransactionType) => {
       setOperationType(type);
@@ -456,6 +430,10 @@ export const OperationWizardStep1Page: React.FC = () => {
     },
     [],
   );
+
+  const handleClientChange = useCallback((newClientId: string) => {
+    setClientId(newClientId);
+  }, []);
 
   const handleToggleMarketRateMode = useCallback(
     (enabled: boolean) => {
@@ -469,14 +447,23 @@ export const OperationWizardStep1Page: React.FC = () => {
   );
 
   const handleNewClientCreated = useCallback(
-    (client: ClientSummary) => {
-      setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
-      setClientId(client.id);
-      setIsNewClientModalOpen(false);
-    },
-    [setClients],
-  );
-
+     (client: ClientSummary) => {
+       setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
+       setClientId(client.id);
+       setIsNewClientModalOpen(false);
+     },
+     // eslint-disable-next-line react-hooks/exhaustive-deps
+     [],
+   );
+  
+  const handleOpenNewClientModal = useCallback(() => {
+    setIsNewClientModalOpen(true);
+  }, []);
+  
+  const handleCloseNewClientModal = useCallback(() => {
+    setIsNewClientModalOpen(false);
+  }, []);
+  
   const validateForm = useCallback(() => {
     console.log('validateForm - clientId:', clientId, 'type:', typeof clientId);
     if (!clientId) {
@@ -643,12 +630,9 @@ export const OperationWizardStep1Page: React.FC = () => {
             <div>
               <ClientSelection
                 value={clientId}
-                onChange={(newClientId) => {
-                  console.log('OperationWizardStep1Page - setClientId called with:', newClientId, 'current clientId:', clientId);
-                  setClientId(newClientId);
-                }}
+                onChange={handleClientChange}
                 clients={clients}
-                onNewClient={() => setIsNewClientModalOpen(true)}
+                onNewClient={handleOpenNewClientModal}
                 marginInfo={marginInfo}
                 loading={clientsLoading}
                 error={clientsError?.message || null}
@@ -720,7 +704,7 @@ export const OperationWizardStep1Page: React.FC = () => {
 
       <NewClientModal
         open={isNewClientModalOpen}
-        onClose={() => setIsNewClientModalOpen(false)}
+        onClose={handleCloseNewClientModal}
         onCreated={handleNewClientCreated}
         defaultType="client"
         ownerOptions={OWNER_OPTIONS}

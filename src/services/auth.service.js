@@ -64,12 +64,24 @@ Este enlace caduca en 24 horas.`;
 <p><a href="${verificationUrl}">${verificationUrl}</a></p>
 <p>Este enlace caduca en 24 horas.</p>`;
 
-  await sendEmail({
-    to: user.email,
-    subject,
-    text,
-    html,
-  });
+  try {
+    await sendEmail({
+      to: user.email,
+      subject,
+      text,
+      html,
+    });
+  } catch (err) {
+    // Annotate with a recognizable code so the controller/client can respond accordingly
+    throw new AppError(
+      'No pudimos enviar el correo de verificación. Intentá nuevamente más tarde.',
+      502,
+      {
+        code: 'VERIFICATION_EMAIL_FAILED',
+        originalError: err?.message,
+      },
+    );
+  }
 };
 
 const sendTwoFactorCodeEmail = async (user, code) => {

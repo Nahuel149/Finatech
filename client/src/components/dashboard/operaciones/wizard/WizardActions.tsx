@@ -9,6 +9,7 @@ interface Props {
   disableSave?: boolean;
   onBack?: () => void;
   backLabel?: string;
+  continueLabel?: string;
 }
 
 export const WizardActions: React.FC<Props> = ({
@@ -20,6 +21,7 @@ export const WizardActions: React.FC<Props> = ({
   disableSave = false,
   onBack,
   backLabel = 'Atrás',
+  continueLabel = 'Continuar',
 }) => (
   <div
     id="step-1-actions"
@@ -71,7 +73,7 @@ export const WizardActions: React.FC<Props> = ({
         </>
       ) : (
         <>
-          Continuar
+          {continueLabel}
           <i className="fa-solid fa-arrow-right ml-2" />
         </>
       )}
