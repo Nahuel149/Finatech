@@ -109,6 +109,7 @@ const googleAuth = async (req, res, next) => {
     }
 
     res.json({
+      success: true,
       ...rest,
       profile: buildProfile(user),
     });
