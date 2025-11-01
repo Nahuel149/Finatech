@@ -190,8 +190,9 @@ export const Register: React.FC = () => {
         });
 
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isDismissedMoment() || notification.isSkippedMoment()) {
-            setFormErrors({ general: 'Se canceló el diálogo de Google. Intentá de nuevo.' });
+          // Ignore user dismiss/skip to prevent brief cancellation warning when sign-in succeeds.
+          if (typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
+            setFormErrors({ general: 'Google Sign-In no pudo mostrarse. Intentá de nuevo.' });
           }
           setIsGoogleLoading(false);
         });

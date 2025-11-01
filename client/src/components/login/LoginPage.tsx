@@ -186,8 +186,11 @@ export const LoginPage: React.FC = () => {
 
         // Try to show the prompt first
         window.google.accounts.id.prompt((notification) => {
-          if (notification.isDismissedMoment() || notification.isSkippedMoment()) {
-            setLoginError('Se canceló el diálogo de Google. Intentá de nuevo.');
+          // Only show an error if the prompt could not be displayed at all. We silently
+          // ignore user-initiated dismiss/skip moments to avoid flashing a cancellation
+          // message when the sign-in actually succeeds shortly afterwards.
+          if (typeof notification.isNotDisplayed === 'function' && notification.isNotDisplayed()) {
+            setLoginError('Google Sign-In no pudo mostrarse. Intentá de nuevo.');
           }
           setIsGoogleLoading(false);
         });
