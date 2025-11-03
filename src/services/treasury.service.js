@@ -1224,6 +1224,26 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
         $group: {
           _id: '$currency',
           total: { $sum: '$amount' },
+          incoming: {
+            $sum: {
+              $cond: [{ $gt: ['$amount', 0] }, '$amount', 0],
+            },
+          },
+          incomingCount: {
+            $sum: {
+              $cond: [{ $gt: ['$amount', 0] }, 1, 0],
+            },
+          },
+          outgoing: {
+            $sum: {
+              $cond: [{ $lt: ['$amount', 0] }, '$amount', 0],
+            },
+          },
+          outgoingCount: {
+            $sum: {
+              $cond: [{ $lt: ['$amount', 0] }, 1, 0],
+            },
+          },
         },
       },
       { $sort: { _id: 1 } },
@@ -1255,7 +1275,7 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
     lastMovementAt: null,
   };
 
-  const totals = {
+  const overallTotals = {
     balance: roundAmount(totalsEntry.balance || 0),
     incoming: {
       amount: roundAmount(Math.abs(totalsEntry.incoming || 0)),
@@ -1271,10 +1291,25 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
       : null,
   };
 
-  const totalsByCurrencyList = totalsByCurrency.map((entry) => ({
-    currency: entry._id,
-    total: roundAmount(entry.total || 0),
-  }));
+  const currencyTotals = totalsByCurrency.map((entry) => {
+    const incomingRaw = entry.incoming || 0;
+    const outgoingRaw = entry.outgoing || 0;
+    return {
+      currency: entry._id,
+      balance: roundAmount(entry.total || 0),
+      totals: {
+        incoming: {
+          amount: roundAmount(Math.abs(incomingRaw)),
+          count: entry.incomingCount || 0,
+        },
+        outgoing: {
+          amount: roundAmount(Math.abs(outgoingRaw)),
+          count: entry.outgoingCount || 0,
+        },
+        net: roundAmount(incomingRaw + outgoingRaw),
+      },
+    };
+  });
 
   const optionsDoc = filterSource[0] || {
     operationTypes: [],
@@ -1372,6 +1407,50 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
     };
   }
 
+  const normalizedCurrencyTotals = currencyTotals.length
+    ? currencyTotals
+    : [
+        {
+          currency: currency ? String(currency).toUpperCase() : 'ARS',
+          balance: overallTotals.balance,
+          totals: {
+            incoming: {
+              amount: overallTotals.incoming.amount,
+              count: overallTotals.incoming.count,
+            },
+            outgoing: {
+              amount: overallTotals.outgoing.amount,
+              count: overallTotals.outgoing.count,
+            },
+            net: overallTotals.net,
+          },
+        },
+      ];
+
+  const primaryCurrency = currency
+    ? String(currency).toUpperCase()
+    : normalizedCurrencyTotals[0]?.currency || 'ARS';
+
+  const primaryTotalsEntry = normalizedCurrencyTotals.find(
+    (entry) => entry.currency === primaryCurrency
+  ) || normalizedCurrencyTotals[0] || {
+    currency: primaryCurrency,
+    balance: 0,
+    totals: {
+      incoming: { amount: 0, count: 0 },
+      outgoing: { amount: 0, count: 0 },
+      net: 0,
+    },
+  };
+
+  const summaryTotals = {
+    balance: primaryTotalsEntry.balance,
+    incoming: primaryTotalsEntry.totals.incoming,
+    outgoing: primaryTotalsEntry.totals.outgoing,
+    net: primaryTotalsEntry.totals.net,
+    lastMovementAt: overallTotals.lastMovementAt,
+  };
+
   return {
     contact: {
       id: contact._id ? contact._id.toString() : contactIdInput,
@@ -1380,15 +1459,16 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
       contactType: contact.contactType || 'client',
       status: contact.status || 'active',
       cuit: contact.cuit || null,
-      updatedAt: totals.lastMovementAt,
+      updatedAt: overallTotals.lastMovementAt,
     },
     summary: {
       balance: {
-        amount: totals.balance,
-        currency: currency ? String(currency).toUpperCase() : totalsByCurrencyList[0]?.currency || 'ARS',
+        amount: summaryTotals.balance,
+        currency: primaryCurrency,
       },
       variation,
-      totals,
+      totals: summaryTotals,
+      totalsByCurrency: normalizedCurrencyTotals,
     },
     filters: {
       options: filterOptions,
@@ -1415,7 +1495,7 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
       },
     },
     stats: {
-      totalsByCurrency: totalsByCurrencyList,
+      totalsByCurrency: normalizedCurrencyTotals,
       totalOperations: totalItems,
     },
   };

@@ -1,5 +1,8 @@
 import React from 'react';
-import { TreasuryContactBalanceSummary } from '../../../../types';
+import {
+  TreasuryContactBalanceSummary,
+  TreasuryContactCurrencyTotals,
+} from '../../../../types';
 
 interface Props {
   contact: {
@@ -10,7 +13,7 @@ interface Props {
     updatedAt: string | null;
   };
   summary: TreasuryContactBalanceSummary;
-  totalsByCurrency: Array<{ currency: string; total: number }>;
+  totalsByCurrency: TreasuryContactCurrencyTotals[];
   onViewInAccounts: () => void;
 }
 
@@ -19,12 +22,20 @@ const CONTACT_TYPE_LABEL: Record<string, string> = {
   provider: 'Proveedor',
 };
 
-const formatAmount = (amount: number, currency: string) =>
-  new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'es-AR', {
+const formatAmount = (amount: number, currency: string) => {
+  const normalized = String(currency || 'ARS').toUpperCase();
+  const isUsd = normalized === 'USD';
+  const formatter = new Intl.NumberFormat(isUsd ? 'en-US' : 'es-AR', {
     style: 'currency',
-    currency,
+    currency: isUsd ? 'USD' : 'ARS',
     minimumFractionDigits: 2,
-  }).format(amount);
+  });
+  const formatted = formatter.format(amount);
+  if (isUsd) {
+    return formatted.replace('US$', 'USD').trim();
+  }
+  return formatted.replace('AR$', '$').replace('ARS', '$').trim();
+};
 
 const amountToneClass = (amount: number) => {
   if (amount > 0) return 'positive-amount';
@@ -87,6 +98,31 @@ export const ContactSummaryCard: React.FC<Props> = ({
   const contactLabel = CONTACT_TYPE_LABEL[contact.contactType] || contact.contactType;
   const variationMeta = variationText(summary.variation, summary.balance.currency);
 
+  const currencyTotals: TreasuryContactCurrencyTotals[] = (() => {
+    if (totalsByCurrency && totalsByCurrency.length) {
+      return totalsByCurrency;
+    }
+    if (summary.totalsByCurrency && summary.totalsByCurrency.length) {
+      return summary.totalsByCurrency;
+    }
+    return [
+      {
+        currency: summary.balance.currency,
+        balance: summary.balance.amount,
+        totals: {
+          incoming: summary.totals.incoming,
+          outgoing: summary.totals.outgoing,
+          net: summary.totals.net,
+        },
+      },
+    ];
+  })();
+
+  const primaryEntry =
+    currencyTotals.find((entry) => entry.currency === summary.balance.currency) ||
+    currencyTotals[0];
+  const otherEntries = currencyTotals.filter((entry) => entry !== primaryEntry);
+
   return (
     <section
       id="contact-summary"
@@ -115,9 +151,18 @@ export const ContactSummaryCard: React.FC<Props> = ({
 
         <div id="current-balance" className="text-center">
           <div className="text-sm text-gray-600 mb-1">Saldo total actual</div>
-          <div className={`text-4xl font-bold ${amountToneClass(summary.balance.amount)} mb-2`}>
-            {formatAmount(summary.balance.amount, summary.balance.currency)}
+          <div className={`text-4xl font-bold ${amountToneClass(primaryEntry.balance)} mb-2`}>
+            {formatAmount(primaryEntry.balance, primaryEntry.currency)}
           </div>
+          {otherEntries.length > 0 && (
+            <div className="space-y-1 text-sm text-gray-600">
+              {otherEntries.map((entry) => (
+                <div key={entry.currency}>
+                  {formatAmount(entry.balance, entry.currency)}
+                </div>
+              ))}
+            </div>
+          )}
           <div className={`flex items-center justify-center space-x-2 ${variationMeta.className}`}>
             <i className={`fa-solid ${variationMeta.icon}`} />
             <span className="font-medium">{variationMeta.text}</span>
@@ -125,47 +170,60 @@ export const ContactSummaryCard: React.FC<Props> = ({
         </div>
 
         <div id="operation-totals" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Operaciones entrantes</span>
-            <div className="text-right">
-              <div className="font-semibold incoming">
-                {formatAmount(summary.totals.incoming.amount, summary.balance.currency)}
+          {currencyTotals.map((entry) => (
+            <div
+              key={entry.currency}
+              className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-gray-600">
+                  Operaciones en {entry.currency}
+                </span>
+                <span className={`text-sm font-semibold ${amountToneClass(entry.balance)}`}>
+                  {formatAmount(entry.balance, entry.currency)}
+                </span>
               </div>
-              <div className="text-xs text-gray-500">
-                {summary.totals.incoming.count} operaciones
+              <div className="flex justify-between items-start text-sm mb-2">
+                <div>
+                  <div className="text-gray-600">Entrantes</div>
+                  <div className="font-semibold incoming">
+                    {formatAmount(entry.totals.incoming.amount, entry.currency)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {entry.totals.incoming.count} operaciones
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-gray-600">Salientes</div>
+                  <div className="font-semibold outgoing">
+                    {formatAmount(entry.totals.outgoing.amount, entry.currency)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {entry.totals.outgoing.count} operaciones
+                  </div>
+                </div>
+              </div>
+              <div className="border-t pt-2 flex justify-between items-center">
+                <span className="text-sm font-medium text-gray-700">Saldo neto</span>
+                <span className={`font-bold ${amountToneClass(entry.totals.net)}`}>
+                  {formatAmount(entry.totals.net, entry.currency)}
+                </span>
               </div>
             </div>
-          </div>
-          <div className="flex justify-between items-center">
-            <span className="text-sm text-gray-600">Operaciones salientes</span>
-            <div className="text-right">
-              <div className="font-semibold outgoing">
-                {formatAmount(summary.totals.outgoing.amount, summary.balance.currency)}
-              </div>
-              <div className="text-xs text-gray-500">
-                {summary.totals.outgoing.count} operaciones
-              </div>
-            </div>
-          </div>
-          <div className="border-t pt-2 flex justify-between items-center">
-            <span className="text-sm font-medium text-gray-700">Saldo neto</span>
-            <div className={`font-bold ${amountToneClass(summary.totals.net)}`}>
-              {formatAmount(summary.totals.net, summary.balance.currency)}
-            </div>
-          </div>
+          ))}
         </div>
       </div>
 
-      {totalsByCurrency.length > 1 && (
+      {currencyTotals.length > 1 && (
         <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-          {totalsByCurrency.map((entry) => (
+          {currencyTotals.map((entry) => (
             <div
               key={entry.currency}
               className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-2"
             >
               <span>{`Saldo en ${entry.currency}`}</span>
               <span className="font-medium text-text-primary">
-                {formatAmount(entry.total, entry.currency)}
+                {formatAmount(entry.balance, entry.currency)}
               </span>
             </div>
           ))}

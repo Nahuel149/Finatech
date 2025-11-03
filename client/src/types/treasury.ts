@@ -296,6 +296,16 @@ export interface TreasuryContactBalanceSummaryTotals {
   count: number;
 }
 
+export interface TreasuryContactCurrencyTotals {
+  currency: string;
+  balance: number;
+  totals: {
+    incoming: TreasuryContactBalanceSummaryTotals;
+    outgoing: TreasuryContactBalanceSummaryTotals;
+    net: number;
+  };
+}
+
 export interface TreasuryContactBalanceSummary {
   balance: {
     amount: number;
@@ -315,6 +325,7 @@ export interface TreasuryContactBalanceSummary {
     net: number;
     lastMovementAt: string | null;
   };
+  totalsByCurrency: TreasuryContactCurrencyTotals[];
 }
 
 export interface TreasuryContactBalanceOperation {
@@ -378,7 +389,7 @@ export interface TreasuryContactBalanceDetailResponse {
     };
   };
   stats: {
-    totalsByCurrency: Array<{ currency: string; total: number }>;
+    totalsByCurrency: TreasuryContactCurrencyTotals[];
     totalOperations: number;
   };
 }

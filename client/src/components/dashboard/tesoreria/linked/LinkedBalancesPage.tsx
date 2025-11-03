@@ -251,7 +251,7 @@ export const LinkedBalancesPage: React.FC = () => {
   const lastSyncTime = formatTime(generatedAt);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-sm lg:text-base">
       <TreasuryNavbar search={globalSearch} onSearchChange={setGlobalSearch} />
       <TreasuryBalanceStripe onSelectBalance={handleOpenDetail} />
 

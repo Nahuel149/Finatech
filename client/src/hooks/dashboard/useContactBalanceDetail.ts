@@ -43,6 +43,7 @@ const DEFAULT_RESPONSE: TreasuryContactBalanceDetailResponse = {
       net: 0,
       lastMovementAt: null,
     },
+    totalsByCurrency: [],
   },
   filters: {
     options: {

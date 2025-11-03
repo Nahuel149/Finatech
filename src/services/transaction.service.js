@@ -6,6 +6,7 @@ const {
   roundAmount,
   reverseTransactionRegistration,
 } = require('./currentAccount.service');
+const { registerTreasuryMovement } = require('./treasury.service');
 const { emitBalanceUpdated } = require('../utils/eventBus');
 
 const calculateMarginPercentage = ({ type, incomingAmount, outgoingAmount, marketRate }) => {
@@ -70,6 +71,119 @@ const mapSettlementMethodToMovementType = (method) => {
     return 'transfer';
   }
   return 'transfer';
+};
+
+const classifyLiquidationMethod = (method, defaultCurrency = 'ARS') => {
+  const normalized = stripDiacritics(method || '').toLowerCase();
+  let currency = String(defaultCurrency || 'ARS').toUpperCase();
+
+  if (normalized.includes('usd') || normalized.includes('dolar') || normalized.includes('dólar')) {
+    currency = 'USD';
+  } else if (normalized.includes('ars') || normalized.includes('peso')) {
+    currency = 'ARS';
+  }
+
+  let medium = 'transfer';
+  if (normalized.includes('efectivo') || normalized.includes('cash')) {
+    medium = 'cash';
+  } else if (normalized.includes('deposito') || normalized.includes('depósito')) {
+    medium = 'deposit';
+  }
+
+  if (currency === 'USD' && medium === 'deposit') {
+    medium = 'transfer';
+  }
+
+  return { currency, medium };
+};
+
+const buildPlannedTreasuryMovements = (transaction) => {
+  if (!transaction || !transaction.settlement || !transaction.settlement.isComplete) {
+    return [];
+  }
+
+  const baseAmount = transaction.type === 'buy'
+    ? Number(transaction.outgoingAmount)
+    : Number(transaction.incomingAmount);
+
+  const defaultCurrency = transaction.type === 'buy'
+    ? transaction.outgoingAsset?.code || transaction.outgoingAsset?.label || 'ARS'
+    : transaction.incomingAsset?.code || transaction.incomingAsset?.label || 'ARS';
+
+  if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
+    return [];
+  }
+
+  const direction = transaction.type === 'sell' ? 'incoming' : 'outgoing';
+
+  const lines = transaction.settlement.mode === 'simple'
+    ? [
+        {
+          method: transaction.settlement.simpleMethod || 'Sin especificar',
+          computedPercentage: 100,
+          computedAmount: baseAmount,
+          allocationType: 'percentage',
+        },
+      ]
+    : (transaction.settlement.lines || []).map((line) => {
+        const percentage = Number.isFinite(Number(line.computedPercentage))
+          ? Number(line.computedPercentage)
+          : line.allocationType === 'percentage'
+          ? Number(line.value)
+          : (Number(line.value) / baseAmount) * 100;
+
+        const amount = line.allocationType === 'amount'
+          ? Number(line.value)
+          : (percentage / 100) * baseAmount;
+
+        return {
+          method: line.method,
+          computedPercentage: Number.isFinite(percentage) ? percentage : 0,
+          computedAmount: Number.isFinite(amount) ? amount : 0,
+          allocationType: line.allocationType,
+        };
+      });
+
+  return lines
+    .map((line) => {
+      const normalizedAmount = roundAmount(Math.abs(Number(line.computedAmount) || 0));
+      if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
+        return null;
+      }
+
+      const { currency, medium } = classifyLiquidationMethod(line.method, defaultCurrency);
+
+      const metadata = {
+        source: 'transaction_settlement',
+        transactionId: transaction._id,
+        settlementMethod: line.method,
+        computedPercentage: Number(line.computedPercentage || 0),
+        allocationType: line.allocationType,
+      };
+
+      const movementAt = transaction.completedAt || transaction.updatedAt || transaction.createdAt || new Date();
+
+      const contactId = transaction.client && mongoose.Types.ObjectId.isValid(transaction.client)
+        ? transaction.client.toString()
+        : null;
+
+      return {
+        type: direction,
+        medium,
+        currency,
+        amount: normalizedAmount,
+        movementAt,
+        contactId,
+        reference: transaction.operationCode || null,
+        description: `Liquidación ${transaction.operationCode || transaction._id.toString()}`,
+        metadata,
+        operation: {
+          id: transaction._id,
+          model: 'Transaction',
+        },
+      };
+    })
+    .filter(Boolean);
 };
 
 const resolveSettlementSlices = (transaction, totalAmount) => {
@@ -611,6 +725,7 @@ const finalizeTransaction = async (id, context = {}) => {
   const session = await mongoose.startSession();
   let formatted;
   let registrationResult = null;
+  let plannedTreasuryMovements = [];
 
   try {
     await session.withTransaction(async () => {
@@ -639,10 +754,34 @@ const finalizeTransaction = async (id, context = {}) => {
 
       await transaction.save({ session });
 
+      plannedTreasuryMovements = buildPlannedTreasuryMovements(transaction);
+
       formatted = formatTransaction(transaction);
     });
   } finally {
     session.endSession();
+  }
+
+  if (plannedTreasuryMovements.length) {
+    await Promise.all(
+      plannedTreasuryMovements.map(async (payload) => {
+        try {
+          if (!payload.contactId) {
+            payload.contactId = formatted?.clientId || null;
+          }
+
+          await registerTreasuryMovement(payload, {
+            userId,
+            skipBalanceAdjustments: true,
+            skipSettlement: true,
+            skipBalanceEvent: false,
+          });
+        } catch (error) {
+          // eslint-disable-next-line no-console
+          console.error('No pudimos registrar el movimiento de tesorería planificado', error);
+        }
+      })
+    );
   }
 
   if (registrationResult) {

@@ -467,6 +467,10 @@ export const OperationWizardStep3Page: React.FC = () => {
 
   const summarySettlementMode = draft?.settlement?.mode ?? 'simple';
   const summarySimpleMethod = draft?.settlement?.simpleMethod ?? null;
+  const settlementBaseCurrency =
+    draft?.type === 'buy'
+      ? draft?.outgoingAsset?.code || outgoingCurrency
+      : draft?.incomingAsset?.code || incomingCurrency;
 
   const summarySettlementLines =
     (draft?.settlement?.lines ?? []).map((line) => {
@@ -483,11 +487,17 @@ export const OperationWizardStep3Page: React.FC = () => {
       const computedPercentage = Number.isFinite(line.computedPercentage)
         ? line.computedPercentage
         : fallbackPercentage;
+      const computedAmount =
+        line.allocationType === 'percentage'
+          ? (computedPercentage / 100) * baseAmount
+          : line.value;
       return {
         method: line.method,
         allocationType: line.allocationType,
         value: line.value,
         computedPercentage,
+        computedAmount,
+        currency: (settlementBaseCurrency || incomingCurrency || outgoingCurrency || 'ARS').toUpperCase(),
       };
     }) ?? [];
 

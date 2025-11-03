@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useContactBalanceDetail,
@@ -209,9 +209,9 @@ export const ContactBalanceDetailPage: React.FC = () => {
     handleFiltersChange({ search: value });
   };
 
-  const handleViewInAccounts = () => {
-    setToast({ type: 'info', message: 'La navegación a Cuentas Corrientes estará disponible pronto.' });
-  };
+  const handleViewInAccounts = useCallback(() => {
+    navigate('/dashboard/tesoreria/saldos');
+  }, [navigate]);
 
   const handleViewOperation = (operation: TreasuryContactBalanceOperation) => {
     const identifier = operation.operation.code ? `#${operation.operation.code}` : 'esta operación';
@@ -226,7 +226,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
 
   if (!contactId) {
     return (
-      <div className="bg-gray-50 min-h-screen">
+      <div className="bg-gray-50 min-h-screen text-sm lg:text-base">
         <TreasuryNavbar search="" onSearchChange={() => {}} />
         <main className="pt-24 px-6 pb-24">
           <Alert type="warning" title="Contacto no especificado" message="Seleccioná un contacto desde la vista de saldos para ver el detalle correspondiente." />
@@ -236,7 +236,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen text-sm lg:text-base">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleGlobalSearchChange} />
       <TreasuryBalanceStripe onSelectBalance={handleSelectBalanceStripe} />
 

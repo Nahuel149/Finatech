@@ -63,6 +63,8 @@ interface OperationSummaryProps {
     allocationType: 'percentage' | 'amount';
     value: number;
     computedPercentage: number;
+    computedAmount: number;
+    currency: string;
   }>;
   lastUpdated?: string;
   onEditStep1?: () => void;
@@ -154,22 +156,21 @@ const SettlementCompound: React.FC<{
         </div>
       </div>
       <div className="divide-y divide-gray-200">
-        {lines.map((line) => (
-          <div key={`${line.method}-${line.value}-${line.computedPercentage}`} className="px-4 py-3">
+        {lines.map((line, index) => (
+          <div
+            key={`${line.method || 'line'}-${index}`}
+            className="px-4 py-3"
+          >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-sm text-gray-700">
               <div className="md:col-span-4 font-medium text-text-primary">{line.method}</div>
               <div className="md:col-span-3">
                 {line.allocationType === 'percentage'
                   ? `${line.value.toFixed(1)}%`
-                  : `Monto fijo (${line.value.toLocaleString('es-AR', {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })})`}
+                  : `${formatCurrency(line.value, line.currency)}`}
               </div>
-              <div className="md:col-span-3">{line.value.toLocaleString('es-AR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}</div>
+              <div className="md:col-span-3 font-semibold text-text-primary">
+                {formatCurrency(line.computedAmount, line.currency)}
+              </div>
               <div className="md:col-span-2 font-semibold text-text-primary">
                 {line.computedPercentage.toFixed(1)}%
               </div>

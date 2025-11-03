@@ -231,7 +231,7 @@ export const TreasuryMovementsPage: React.FC = () => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen flex flex-col">
+    <div className="bg-gray-50 min-h-screen flex flex-col text-sm lg:text-base">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleGlobalSearchChange} />
       <TreasuryBalanceStripe onSelectBalance={handleSelectBalanceStripe} />
 

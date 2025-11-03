@@ -341,7 +341,7 @@ export const GlobalBalancesPage: React.FC = () => {
   const sortValue = sortValueFromState(filters.sortBy, filters.sortDirection);
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div className="bg-gray-50 min-h-screen text-sm lg:text-base">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleSearchChange} />
       <TreasuryBalanceStripe
         onSelectBalance={(accountKeyValue: string) => {
