@@ -158,9 +158,14 @@ const formatTransaction = (transaction) => {
     transaction.client && typeof transaction.client === 'object' && transaction.client._id
       ? transaction.client._id
       : transaction.client;
+  const userId =
+    transaction.user && typeof transaction.user === 'object' && transaction.user._id
+      ? transaction.user._id
+      : transaction.user;
 
   return {
     id: transaction._id.toString(),
+    userId: userId ? userId.toString() : null,
     clientId: clientId ? clientId.toString() : null,
     type: transaction.type,
     incomingAsset: transaction.incomingAsset,
@@ -225,6 +230,11 @@ const createTransactionDraft = async (payload, context = {}) => {
     notes,
   } = payload;
 
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required in context to create a draft');
+  }
+
   if (!mongoose.Types.ObjectId.isValid(clientId)) {
     throw new Error('Invalid client identifier');
   }
@@ -258,6 +268,7 @@ const createTransactionDraft = async (payload, context = {}) => {
 
 
   const transaction = await Transaction.create({
+    user: userId,
     client: clientId,
     type: normalizedType,
     incomingAsset: incoming,
@@ -277,19 +288,23 @@ const createTransactionDraft = async (payload, context = {}) => {
       totalPercentage: 0,
       isComplete: false,
     },
-    createdBy: context.userId || null,
-    lastUpdatedBy: context.userId || null,
+    createdBy: userId,
+    lastUpdatedBy: userId,
   });
 
   return formatTransaction(transaction);
 };
 
-const getTransactionDraft = async (id) => {
+const getTransactionDraft = async (id, userId) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return null;
   }
 
-  const transaction = await Transaction.findById(id).lean();
+  if (!userId) {
+    throw new Error('User ID is required to fetch a draft');
+  }
+
+  const transaction = await Transaction.findOne({ _id: id, user: userId }).lean();
   return formatTransaction(transaction);
 };
 
@@ -310,7 +325,12 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
     throw new Error('Invalid transaction identifier');
   }
 
-  const transaction = await Transaction.findById(id);
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required to update a draft');
+  }
+
+  const transaction = await Transaction.findOne({ _id: id, user: userId });
   if (!transaction) {
     throw new Error('Transaction not found');
   }
@@ -376,7 +396,7 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
     totalPercentage: 0,
     isComplete: false,
   };
-  transaction.lastUpdatedBy = context.userId || transaction.lastUpdatedBy || null;
+  transaction.lastUpdatedBy = userId;
 
   await transaction.save();
 
@@ -388,7 +408,12 @@ const updateTransactionSettlement = async (id, payload = {}, context = {}) => {
     throw new Error('Invalid transaction identifier');
   }
 
-  const transaction = await Transaction.findById(id);
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required to update settlement');
+  }
+
+  const transaction = await Transaction.findOne({ _id: id, user: userId });
   if (!transaction) {
     throw new Error('Transaction not found');
   }
@@ -485,7 +510,7 @@ const updateTransactionSettlement = async (id, payload = {}, context = {}) => {
   }
 
   transaction.currentStep = Math.max(Number(transaction.currentStep) || 1, 2);
-  transaction.lastUpdatedBy = context.userId || transaction.lastUpdatedBy || null;
+  transaction.lastUpdatedBy = userId;
   await transaction.save();
 
   return formatTransaction(transaction);
@@ -500,13 +525,18 @@ const advanceTransactionStep = async (id, step = 1, context = {}) => {
     throw new Error('Paso inválido.');
   }
 
-  const transaction = await Transaction.findById(id);
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required to advance step');
+  }
+
+  const transaction = await Transaction.findOne({ _id: id, user: userId });
   if (!transaction) {
     throw new Error('Transaction not found');
   }
 
   transaction.currentStep = Math.max(Number(transaction.currentStep) || 1, numericStep);
-  transaction.lastUpdatedBy = context.userId || transaction.lastUpdatedBy || null;
+  transaction.lastUpdatedBy = userId;
   await transaction.save();
   return formatTransaction(transaction);
 };
@@ -566,13 +596,18 @@ const finalizeTransaction = async (id, context = {}) => {
     throw new Error('Invalid transaction identifier');
   }
 
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required to finalize');
+  }
+
   const session = await mongoose.startSession();
   let formatted;
   let registrationResult = null;
 
   try {
     await session.withTransaction(async () => {
-      const transaction = await Transaction.findById(id).session(session);
+      const transaction = await Transaction.findOne({ _id: id, user: userId }).session(session);
       if (!transaction) {
         throw new Error('Transaction not found');
       }
@@ -588,11 +623,11 @@ const finalizeTransaction = async (id, context = {}) => {
       transaction.currentStep = 3;
       transaction.operationCode = transaction.operationCode || (await generateOperationCode());
       transaction.completedAt = new Date();
-      transaction.lastUpdatedBy = context.userId || transaction.lastUpdatedBy || null;
+      transaction.lastUpdatedBy = userId;
 
       registrationResult = await applyTransactionRegistration(transaction, {
         session,
-        userId: context.userId,
+        userId,
       });
 
       await transaction.save({ session });
@@ -621,13 +656,18 @@ const voidTransaction = async (id, reason = '', context = {}) => {
     throw new Error('Invalid transaction identifier');
   }
 
+  const userId = context.userId;
+  if (!userId) {
+    throw new Error('User ID is required to void');
+  }
+
   const session = await mongoose.startSession();
   let formatted;
   let reversalResult = null;
 
   try {
     await session.withTransaction(async () => {
-      const transaction = await Transaction.findById(id).session(session);
+      const transaction = await Transaction.findOne({ _id: id, user: userId }).session(session);
       if (!transaction) {
         throw new Error('Transaction not found');
       }
@@ -648,13 +688,13 @@ const voidTransaction = async (id, reason = '', context = {}) => {
       if (transaction.status === 'registered') {
         reversalResult = await reverseTransactionRegistration(transaction, {
           session,
-          userId: context.userId,
+          userId,
         });
       }
 
       transaction.status = 'voided';
       transaction.voidedAt = new Date();
-      transaction.voidedBy = context.userId || null;
+      transaction.voidedBy = userId;
       transaction.voidReason = reason ? String(reason).trim() || null : null;
 
       if (!Array.isArray(transaction.accountingAudit)) {
@@ -662,7 +702,7 @@ const voidTransaction = async (id, reason = '', context = {}) => {
       }
       transaction.accountingAudit.push({
         action: 'transaction_voided',
-        performedBy: context.userId || null,
+        performedBy: userId,
         performedAt: new Date(),
         metadata: {
           reason: transaction.voidReason,

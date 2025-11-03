@@ -204,13 +204,13 @@ interface LogisticsBalanceStripeProps {
   mapBalanceToCardData: (balance: TreasuryBalance) => BalanceCardData;
 }
 
-const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({ 
-  onBalanceClick, 
-  balances, 
-  loading, 
-  error, 
-  refresh, 
-  mapBalanceToCardData 
+const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
+  onBalanceClick,
+  balances,
+  loading,
+  error,
+  refresh,
+  mapBalanceToCardData,
 }) => {
   // Subscribe to balance refresh events
   useEffect(() => {
@@ -221,8 +221,11 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
   }, [refresh]);
 
   return (
-    <div id="logistics-balance-stripe" className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40">
-      <div className="px-6 py-4">
+    <div
+      id="logistics-balance-stripe"
+      className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
+    >
+      <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8">
         {/* Desktop Layout */}
         <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
           {loading && (
@@ -256,6 +259,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
                     status: 'error',
                     updatedAt: new Date().toISOString(),
                   }}
+                  error
                   onClick={onBalanceClick}
                   onRetry={refresh}
                 />
@@ -288,19 +292,20 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
             {!loading && error && (
               <>
                 {[0, 1, 2].map((i) => (
-                  <BalanceCard
-                    key={i}
-                    data={{
-                      id: `error-${i}`,
-                      label: 'Balance',
-                      amount: 0,
-                      currency: 'ARS',
-                      status: 'error',
-                      updatedAt: new Date().toISOString(),
-                    }}
-                    onClick={onBalanceClick}
-                    onRetry={refresh}
-                  />
+                <BalanceCard
+                  key={i}
+                  data={{
+                    id: `error-${i}`,
+                    label: 'Balance',
+                    amount: 0,
+                    currency: 'ARS',
+                    status: 'error',
+                    updatedAt: new Date().toISOString(),
+                  }}
+                  error
+                  onClick={onBalanceClick}
+                  onRetry={refresh}
+                />
                 ))}
               </>
             )}
@@ -425,7 +430,7 @@ export const LogisticaPanel: React.FC = () => {
   const totalOperations = useMemo(() => filteredOperations.length, [filteredOperations]);
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex flex-col">
       <DashboardNavbar search={searchTerm} onSearchChange={handleSearchChange} />
       <LogisticsBalanceStripe 
         onBalanceClick={handleBalanceClick}
@@ -436,45 +441,52 @@ export const LogisticaPanel: React.FC = () => {
         mapBalanceToCardData={mapBalanceToCardData}
       />
 
-      <main className="pt-[220px] pb-8 max-w-7xl mx-auto px-4 sm:px-6">
-        <header className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Logística</h1>
-            <p className="text-sm sm:text-base text-gray-600 mt-1">
-              Gestión integral de operaciones logísticas y movimientos de efectivo
-            </p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <button
-              type="button"
-              onClick={handleRegisterNewMovement}
-              className="inline-flex items-center px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <PlusIcon className="h-5 w-5 mr-2" />
-              Registrar nuevo movimiento logístico
-            </button>
-          </div>
-        </header>
+      <main
+        id="logistics-main"
+        className="flex-grow pt-[420px] lg:pt-[250px] pb-8 px-4 lg:px-6"
+      >
+        <div className="max-w-7xl mx-auto w-full">
+          <section
+            id="logistics-header"
+            className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8"
+          >
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Logística</h1>
+              <p className="text-sm sm:text-base text-gray-600 mt-1">
+                Gestión integral de operaciones logísticas y movimientos de efectivo
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <button
+                type="button"
+                onClick={handleRegisterNewMovement}
+                className="inline-flex items-center justify-center px-4 py-3 sm:px-5 sm:py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium"
+              >
+                <PlusIcon className="h-5 w-5 mr-2" />
+                Registrar nuevo movimiento logístico
+              </button>
+            </div>
+          </section>
 
-        <GeneralSummarySection 
-            metrics={null}
+          <GeneralSummarySection metrics={null} loading={false} />
+
+          <LogisticsOperationsSection
+            operations={filteredOperations}
+            selectedOperations={selectedOperations}
+            onSelectionChange={handleSelectionChange}
+            onFilterClick={handleFilterToggle}
+            onBulkAction={handleBulkAction}
+            onViewOperation={handleViewOperation}
+            totalOperations={totalOperations}
             loading={false}
+            error={null}
           />
 
-        <LogisticsOperationsSection
-          operations={filteredOperations}
-          selectedOperations={selectedOperations}
-          onSelectionChange={handleSelectionChange}
-          onFilterClick={handleFilterToggle}
-          onBulkAction={handleBulkAction}
-          onViewOperation={handleViewOperation}
-          totalOperations={totalOperations}
-          loading={false}
-          error={null}
-        />
-
-        <TreasuryIntegrationSection />
+          <TreasuryIntegrationSection />
+        </div>
       </main>
+
+      <Footer />
 
       <FilterPanel
         isOpen={filterOpen}
@@ -491,8 +503,6 @@ export const LogisticaPanel: React.FC = () => {
       />
 
       <NewMovementModal isOpen={isNewMovementModalOpen} onClose={handleCloseNewMovementModal} />
-
-      <Footer />
 
       {toast && (
         <div className="fixed top-4 right-4 z-50 max-w-sm w-full">

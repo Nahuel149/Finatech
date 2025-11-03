@@ -34,7 +34,12 @@ const createDraft = async (req, res, next) => {
 const getDraft = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const transaction = await getTransactionDraft(id);
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      throw new AppError('Autenticación requerida', 401);
+    }
+
+    const transaction = await getTransactionDraft(id, userId);
     if (!transaction) {
       throw new AppError('Transacción no encontrada', 404);
     }

@@ -258,6 +258,10 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
       providers: [{ provider: 'local' }],
       isVerified: false,
       verification: verificationPayload,
+      audit: {
+        createdByIp: requestMetadata.ipAddress || null,
+        createdByAgent: requestMetadata.userAgent || null,
+      },
     });
 
     try {
@@ -314,6 +318,12 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
     user.lockUntil = undefined;
     user.lastFailedLoginAt = undefined;
     user.lastLoginAt = new Date();
+    if (!user.audit || (!user.audit.createdByIp && !user.audit.createdByAgent)) {
+      user.audit = {
+        createdByIp: requestMetadata.ipAddress || null,
+        createdByAgent: requestMetadata.userAgent || null,
+      };
+    }
     await user.save();
     const session = await issueSession({ user, context, rememberMe: false });
 
@@ -450,6 +460,10 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
       providers: [{ provider: 'google', providerId: sub }],
       isVerified: true,
       lastLoginAt: new Date(),
+      audit: {
+        createdByIp: requestMetadata.ipAddress || null,
+        createdByAgent: requestMetadata.userAgent || null,
+      },
     });
     const session = await issueSession({ user, context, rememberMe: false });
     await logSecurityEvent({
@@ -485,6 +499,12 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
   user.lockUntil = undefined;
   user.lastFailedLoginAt = undefined;
   user.lastLoginAt = new Date();
+  if (!user.audit || (!user.audit.createdByIp && !user.audit.createdByAgent)) {
+    user.audit = {
+      createdByIp: requestMetadata.ipAddress || null,
+      createdByAgent: requestMetadata.userAgent || null,
+    };
+  }
   await user.save();
   const session = await issueSession({ user, context, rememberMe: false });
   await logSecurityEvent({

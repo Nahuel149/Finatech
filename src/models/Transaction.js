@@ -18,6 +18,12 @@ const assetSchema = new mongoose.Schema(
 
 const transactionSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      index: true,
+    },
     client: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Client',
@@ -175,6 +181,7 @@ const transactionSchema = new mongoose.Schema(
   }
 );
 
+transactionSchema.index({ user: 1, createdAt: -1 });
 transactionSchema.index({ client: 1, createdAt: -1 });
 transactionSchema.index({ status: 1, currentStep: 1 });
 

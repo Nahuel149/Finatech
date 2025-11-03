@@ -26,6 +26,7 @@ export const DashboardBalanceWidget: React.FC<Props> = ({ canView }) => {
       onClick={handleClick}
       loading={loading}
       icon={loading ? "fa-solid fa-spinner fa-spin" : "fa-solid fa-eye"}
+      className="text-text-primary hover:text-primary hover:bg-transparent focus:ring-primary"
       aria-label="Ver saldos"
     />
   );

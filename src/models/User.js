@@ -80,6 +80,16 @@ const userSchema = new mongoose.Schema(
         'manage-market-rates'
       ],
     },
+    audit: {
+      createdByIp: {
+        type: String,
+        default: null,
+      },
+      createdByAgent: {
+        type: String,
+        default: null,
+      },
+    },
   },
   {
     timestamps: true,

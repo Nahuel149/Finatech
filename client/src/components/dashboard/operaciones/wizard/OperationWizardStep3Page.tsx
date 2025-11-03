@@ -288,7 +288,7 @@ export const OperationWizardStep3Page: React.FC = () => {
       const apiError = error as ApiError;
       setFormError(apiError.message || 'No pudimos confirmar la operación.');
     }
-  }, [canConfirm, draft?.id, fetchDraft, finalize]);
+  }, [canConfirm, draft?.id, fetchDraft, finalize, navigate]);
 
   // --- Handlers para la pantalla de ÉXITO (sin cambios) ---
   const handleViewDetails = useCallback(() => {

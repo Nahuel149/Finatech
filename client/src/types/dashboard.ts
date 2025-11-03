@@ -20,6 +20,7 @@ export interface DashboardNotification {
   createdAt: string;
   severity?: 'info' | 'warning' | 'error' | 'success';
   actionLabel?: string;
+  actionUrl?: string;
   read?: boolean;
   message?: string;
 }

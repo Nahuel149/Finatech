@@ -130,6 +130,23 @@ router.get('/verify-email', verifyEmail);
 
 router.post('/google', authLimiter, ...googleValidators, validateRequest, googleAuth);
 
+// Legacy compatibility routes for Google OAuth flows used by older clients.
+// They simply redirect to the client login page so the new Google Identity flow can continue.
+router.get('/google', (req, res) => {
+  const clientBase = process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:4000';
+  const redirectUrl = new URL('/login', clientBase);
+  redirectUrl.searchParams.set('provider', 'google');
+  res.redirect(302, redirectUrl.toString());
+});
+
+router.get('/google/callback', (req, res) => {
+  const clientBase = process.env.CLIENT_URL || process.env.APP_URL || 'http://localhost:4000';
+  const redirectUrl = new URL('/login', clientBase);
+  redirectUrl.searchParams.set('provider', 'google');
+  redirectUrl.searchParams.set('oauth', 'completed');
+  res.redirect(302, redirectUrl.toString());
+});
+
 router.post('/login', authLimiter, ...loginValidators, validateRequest, login);
 
 router.post('/login/2fa', authLimiter, ...twoFactorValidators, validateRequest, verifyTwoFactor);

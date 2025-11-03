@@ -100,6 +100,19 @@ const findAssetLabel = (code: string) =>
 const sanitizeNumber = (value: number) =>
   Number.isFinite(value) ? Number(value) : 0;
 
+const RATES_EPSILON = 1e-6;
+const ratesAreEqual = (first?: number | null, second?: number | null) => {
+  if (first === null || first === undefined) {
+    return second === null || second === undefined;
+  }
+
+  if (second === null || second === undefined) {
+    return false;
+  }
+
+  return Math.abs(first - second) < RATES_EPSILON;
+};
+
 // Genera labels contextuales según las reglas de negocio
 const getAmountLabels = (operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => {
   if (operationType === 'buy') {
@@ -128,11 +141,6 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [clientId, setClientId] = useState<string>('');
-  
-  // Debug: Track all clientId changes
-  useEffect(() => {
-    console.log('clientId state changed to:', clientId, 'type:', typeof clientId);
-  }, [clientId]);
   const [operationType, setOperationType] =
     useState<TransactionType>(initialOperationType);
   const [incomingAssetCode, setIncomingAssetCode] = useState<string>(
@@ -196,15 +204,31 @@ export const OperationWizardStep1Page: React.FC = () => {
   useEffect(() => {
     if (!canEditMarketRate && useCustomMarketRate) {
       setUseCustomMarketRate(false);
-      setMarketApr(autoMarketRate);
+
+      if (Number.isFinite(autoMarketRate) && !ratesAreEqual(marketApr, autoMarketRate)) {
+        setMarketApr(autoMarketRate);
+      }
     }
-  }, [autoMarketRate, canEditMarketRate, useCustomMarketRate]);
+  }, [autoMarketRate, canEditMarketRate, marketApr, useCustomMarketRate]);
 
   useEffect(() => {
-    if (!useCustomMarketRate && latestMarketRate?.rate) {
-      setMarketApr(latestMarketRate.rate);
+    if (!latestMarketRate) {
+      return;
     }
-  }, [latestMarketRate, useCustomMarketRate]);
+
+    const normalizedRate = Number(latestMarketRate.rate);
+    if (!Number.isFinite(normalizedRate)) {
+      return;
+    }
+
+    if (!ratesAreEqual(autoMarketRate, normalizedRate)) {
+      setAutoMarketRate(normalizedRate);
+    }
+
+    if (!useCustomMarketRate && !ratesAreEqual(marketApr, normalizedRate)) {
+      setMarketApr(normalizedRate);
+    }
+  }, [autoMarketRate, latestMarketRate, marketApr, useCustomMarketRate]);
 
   // Hydrate form with draft data when available
   useEffect(() => {
@@ -242,8 +266,10 @@ export const OperationWizardStep1Page: React.FC = () => {
     if (draftApr !== apr) {
       setApr(draftApr);
     }
-    if (draftMarketApr !== marketApr) {
+    if (!ratesAreEqual(draftMarketApr, marketApr)) {
       setMarketApr(draftMarketApr);
+    }
+    if (!ratesAreEqual(draftMarketApr, autoMarketRate)) {
       setAutoMarketRate(draftMarketApr);
     }
     if (draftIncomingAmount !== incomingAmount) {
@@ -292,13 +318,6 @@ export const OperationWizardStep1Page: React.FC = () => {
 
     setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
   }, [incomingAmount, apr, operationType]);
-
-  useEffect(() => {
-    if (!useCustomMarketRate) {
-      setAutoMarketRate(marketApr);
-    }
-  }, [marketApr, useCustomMarketRate]);
-
   // When the preset type changes via query params (e.g. shortcuts)
   useEffect(() => {
     if (presetType === 'venta') {
@@ -442,11 +461,17 @@ export const OperationWizardStep1Page: React.FC = () => {
     (enabled: boolean) => {
       setUseCustomMarketRate(enabled);
       if (!enabled) {
-        setMarketApr(autoMarketRate);
+        const fallbackRate = Number.isFinite(autoMarketRate)
+          ? autoMarketRate
+          : marketApr;
+
+        if (!ratesAreEqual(marketApr, fallbackRate)) {
+          setMarketApr(fallbackRate);
+        }
         refreshMarketRate().catch(() => {});
       }
     },
-    [autoMarketRate, refreshMarketRate],
+    [autoMarketRate, marketApr, refreshMarketRate],
   );
 
   const handleNewClientCreated = useCallback(

@@ -68,7 +68,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   defaultType = 'client',
   ownerOptions = DEFAULT_OWNER_OPTIONS,
   defaultOwner,
-  addressSuggestions = [],
+  addressSuggestions,
   onSearchAddress,
   onSelectAddress,
 }) => {
@@ -79,6 +79,11 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     return DEFAULT_OWNER_OPTIONS;
   }, [ownerOptions]);
   
+  const normalizedAddressSuggestions = useMemo(
+    () => addressSuggestions ?? [],
+    [addressSuggestions]
+  );
+
   const defaultOwnerValue = useMemo(() => {
     if (defaultOwner && normalizedOwnerOptions.includes(defaultOwner)) {
       return defaultOwner;
@@ -96,12 +101,14 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>(addressSuggestions);
+  const [suggestions, setSuggestions] = useState<AddressSuggestion[]>(normalizedAddressSuggestions);
   const [addressLoading, setAddressLoading] = useState(false);
 
   useEffect(() => {
-    setSuggestions(addressSuggestions);
-  }, [addressSuggestions]);
+    setSuggestions((prev) =>
+      prev === normalizedAddressSuggestions ? prev : normalizedAddressSuggestions
+    );
+  }, [normalizedAddressSuggestions]);
 
   // Reset form when modal closes
   useEffect(() => {
@@ -126,7 +133,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       setError(null);
       setFieldErrors({});
       setLoading(false);
-      setSuggestions([]);
+      setSuggestions((prev) => (prev.length > 0 ? [] : prev));
     }
   }, [open, defaultType, normalizedOwnerOptions]);
 

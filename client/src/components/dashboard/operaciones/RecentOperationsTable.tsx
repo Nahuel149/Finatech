@@ -23,6 +23,7 @@ interface TableRow {
   marginClassName: string;
   statusLabel: string;
   statusClassName: string;
+  isEditable: boolean;
 }
 
 const TYPE_BADGE_CLASS: Record<'Compra' | 'Venta' | 'Liquidación', string> = {
@@ -36,6 +37,10 @@ const TYPE_BADGE_CLASS: Record<'Compra' | 'Venta' | 'Liquidación', string> = {
 
 const STATUS_MAP: Record<string, { label: string; className: string }> = {
   confirmed: {
+    label: 'Completada',
+    className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800',
+  },
+  completed: {
     label: 'Completada',
     className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800',
   },
@@ -265,10 +270,13 @@ const formatTableRows = (
       marketRate
     );
     const { marginLabel, marginClassName } = calculateMargin(effectiveRate, marketRate, typeLabel);
+    const statusNormalized = (operation.status || '').toLowerCase();
     const statusInfo =
-      STATUS_MAP[(operation.status || '').toLowerCase()] ?? {
+      STATUS_MAP[statusNormalized] ?? {
         ...DEFAULT_STATUS,
       };
+
+    const isEditable = !['confirmed', 'completed', 'voided', 'cancelled'].includes(statusNormalized);
 
     const clientName = getClientName(operation);
 
@@ -287,6 +295,7 @@ const formatTableRows = (
       marginClassName,
       statusLabel: statusInfo.label,
       statusClassName: statusInfo.className,
+      isEditable,
     };
   });
 
@@ -303,6 +312,16 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
   const handleViewDetail = (operationId: string) => {
     // Navigate to the transfer details page
     navigate(`/dashboard/operaciones/transfer-pesos/detalle/${operationId}`);
+  };
+
+  const handleEditOperation = (row: TableRow) => {
+    if (!row.isEditable) {
+      return;
+    }
+
+    const tipoParam = row.typeLabel === 'Venta' ? 'venta' : row.typeLabel === 'Compra' ? 'compra' : '';
+    const searchSuffix = tipoParam ? `&tipo=${tipoParam}` : '';
+    navigate(`/dashboard/operaciones/nueva?draftId=${row.id}${searchSuffix}`);
   };
 
   const rows = useMemo(() => formatTableRows(items, latestRate), [items, latestRate]);
@@ -397,7 +416,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                   Tipo
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Cliente recibe/paga
+                  Bien entra/sale
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   TC Efectivo
@@ -506,8 +525,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                       <span className={row.typeClassName}>{row.typeLabel}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      <div>{row.receivesText}</div>
-                      <div>{row.paysText}</div>
+                      <div><span className="text-gray-500 mr-1">Entra:</span>{row.receivesText}</div>
+                      <div><span className="text-gray-500 mr-1">Sale:</span>{row.paysText}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-text-primary">
                       {row.rateLabel}
@@ -531,6 +550,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                           variant="ghost"
                           size="sm"
                           className="text-gray-600 hover:text-gray-900"
+                          disabled={!row.isEditable}
+                          onClick={() => handleEditOperation(row)}
                         >
                           Editar
                         </Button>
@@ -627,10 +648,10 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                     <span className={row.marginClassName}>{row.marginLabel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Recibe/Paga:</span>
+                    <span className="text-gray-500">Bien entra/sale:</span>
                     <div className="text-right">
-                      <div className="text-xs">{row.receivesText}</div>
-                      <div className="text-xs">{row.paysText}</div>
+                      <div className="text-xs"><span className="text-gray-500 mr-1">Entra:</span>{row.receivesText}</div>
+                      <div className="text-xs"><span className="text-gray-500 mr-1">Sale:</span>{row.paysText}</div>
                     </div>
                   </div>
                 </div>
@@ -650,6 +671,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                       variant="ghost"
                       size="sm"
                       className="text-gray-600 hover:text-gray-900 text-xs"
+                      disabled={!row.isEditable}
+                      onClick={() => handleEditOperation(row)}
                     >
                       Editar
                     </Button>

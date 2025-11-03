@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardNotifications } from '../../../hooks';
 import { DashboardNotification } from '../../../types';
 
@@ -29,6 +30,28 @@ const severityStyles = (severity?: string) => {
 
 export const RecentValidations: React.FC = () => {
   const { notifications, loading, error, refresh } = useDashboardNotifications();
+  const navigate = useNavigate();
+
+  const handleViewAll = useCallback(() => {
+    navigate('/dashboard/notificaciones');
+  }, [navigate]);
+
+  const handleNotificationAction = useCallback(
+    (notification: DashboardNotification) => {
+      if (!notification.actionLabel) {
+        navigate('/dashboard/notificaciones');
+        return;
+      }
+
+      if (notification.actionUrl) {
+        navigate(notification.actionUrl);
+        return;
+      }
+
+      navigate('/dashboard/notificaciones');
+    },
+    [navigate]
+  );
 
   return (
     <section id="recent-validations" className="mb-6 lg:mb-8">
@@ -41,7 +64,11 @@ export const RecentValidations: React.FC = () => {
               </h2>
               <p className="text-gray-600 text-sm lg:text-base">Alertas y notificaciones importantes</p>
             </div>
-            <button className="text-primary hover:underline font-medium text-sm lg:text-base">
+            <button
+              type="button"
+              onClick={handleViewAll}
+              className="text-primary hover:underline font-medium text-sm lg:text-base"
+            >
               Ver todas
             </button>
           </div>
@@ -64,6 +91,8 @@ export const RecentValidations: React.FC = () => {
           {!loading && !error &&
             notifications.map((n: DashboardNotification) => {
               const s = severityStyles(n.severity);
+              const actionLabel = n.actionLabel || 'Ver detalle';
+              const actionUrl = n.actionUrl || '/dashboard/notificaciones';
               return (
                 <div key={n.id} className="p-4 lg:p-6 flex items-start">
                   <div
@@ -75,13 +104,21 @@ export const RecentValidations: React.FC = () => {
                     <div className="flex items-center justify-between">
                       <div>
                         <h3 className="font-medium text-text-primary text-sm lg:text-base">{n.title}</h3>
-                        {n.description && <p className="text-gray-600 text-sm mt-1 lg:mt-0">{n.description}</p>}
+                        {(n.description || n.message) && (
+                          <p className="text-gray-600 text-sm mt-1 lg:mt-0">
+                            {n.description || n.message}
+                          </p>
+                        )}
                       </div>
                       <div className="text-right">
                         <div className="text-xs text-gray-500 lg:text-sm">{timeAgo(n.createdAt)}</div>
-                        {n.actionLabel && (
-                          <button className="text-primary text-sm hover:underline">{n.actionLabel}</button>
-                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleNotificationAction({ ...n, actionUrl, actionLabel })}
+                          className="text-primary text-sm hover:underline"
+                        >
+                          {actionLabel}
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -101,7 +138,7 @@ export const RecentValidations: React.FC = () => {
                   </h3>
                   <p className="text-gray-600 text-sm">Verifica la conexión y vuelve a intentar</p>
                 </div>
-                <button onClick={() => refresh()} className="text-primary text-sm hover:underline">
+                <button type="button" onClick={() => refresh()} className="text-primary text-sm hover:underline">
                   Reintentar
                 </button>
               </div>
