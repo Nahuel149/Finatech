@@ -10,6 +10,7 @@ import {
   useClientSearch,
   useCreateTreasuryMovement,
   useOperationSearch,
+  useUserPermissions,
 } from '../../../../hooks';
 import { Alert } from '../../../ui';
 import { MovementTypeSelector } from './MovementTypeSelector';
@@ -26,15 +27,12 @@ interface RegisterMovementModalProps {
 
 type MovementTypeValue = 'incoming' | 'outgoing' | '';
 type MovementMediumValue = 'cash' | 'transfer' | 'deposit' | '';
-type MovementStatusValue = 'registrado' | 'compensado' | 'anulado';
-
 interface FormValues {
   type: MovementTypeValue;
   medium: MovementMediumValue;
   currency: 'ARS' | 'USD' | '';
   amount: string;
   movementAt: string;
-  status: MovementStatusValue;
   reference: string;
 }
 
@@ -44,12 +42,6 @@ const MEDIUM_OPTIONS: Array<{ value: MovementMediumValue; label: string }> = [
   { value: 'deposit', label: 'Depósito' },
 ];
 
-const STATUS_LABELS: Record<MovementStatusValue, string> = {
-  registrado: 'Registrado',
-  compensado: 'Compensado',
-  anulado: 'Anulado',
-};
-
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 
@@ -57,19 +49,6 @@ const formatDateTimeLocal = (date: Date) => {
   const offset = date.getTimezoneOffset();
   const local = new Date(date.getTime() - offset * 60 * 1000);
   return local.toISOString().slice(0, 16);
-};
-
-const mapStatusToMetadata = (status: MovementStatusValue) => {
-  switch (status) {
-    case 'registrado':
-      return 'registered';
-    case 'compensado':
-      return 'compensated';
-    case 'anulado':
-      return 'cancelled';
-    default:
-      return 'registered';
-  }
 };
 
 const sanitizeAmountInput = (value: string) => {
@@ -97,7 +76,6 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     currency: '',
     amount: '',
     movementAt: formatDateTimeLocal(new Date()),
-    status: 'registrado',
     reference: '',
   });
   const [errors, setErrors] = useState<Partial<Record<keyof FormValues, string>>>({});
@@ -118,6 +96,8 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const operationSearch = useOperationSearch();
   const { createMovement, loading: submitting, error: createError, reset: resetCreateError } =
     useCreateTreasuryMovement();
+  const { permissions, loading: permissionsLoading } = useUserPermissions();
+  const canManageTreasury = permissions.includes('manage-treasury');
 
   const currencySymbol = form.currency === 'USD' ? 'USD' : '$';
 
@@ -174,7 +154,6 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       currency: '',
       amount: '',
       movementAt: formatDateTimeLocal(new Date()),
-      status: 'registrado',
       reference: '',
     });
     setErrors({});
@@ -233,10 +212,6 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const handleMovementAtChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, movementAt: event.target.value }));
     setErrors((prev) => ({ ...prev, movementAt: undefined }));
-  };
-
-  const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setForm((prev) => ({ ...prev, status: event.target.value as MovementStatusValue }));
   };
 
   const handleContactInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -353,9 +328,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
 
   const buildPayload = (values: FormValues): CreateTreasuryMovementPayload => {
     const amountNumber = Number(values.amount.replace(',', '.'));
-    const metadata: Record<string, unknown> = {
-      initialStatus: mapStatusToMetadata(values.status),
-    };
+    const metadata: Record<string, unknown> = {};
 
     if (attachments.length) {
       metadata.attachments = attachments.map(({ file }) => ({
@@ -388,6 +361,11 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const handleSubmit = async () => {
+    if (!canManageTreasury) {
+      onShowToast({ type: 'warning', message: 'No tenés permiso para registrar movimientos de tesorería.' });
+      return;
+    }
+
     const validationErrors = validateForm(form);
     if (hasValidationErrors(validationErrors)) {
       setErrors(validationErrors);
@@ -647,25 +625,6 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                   )}
                 </div>
 
-                <div className="mb-6">
-                  <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-                    Estado inicial
-                  </label>
-                  <select
-                    id="status"
-                    name="status"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                    value={form.status}
-                    onChange={handleStatusChange}
-                  >
-                    {(Object.keys(STATUS_LABELS) as MovementStatusValue[]).map((status) => (
-                      <option key={status} value={status}>
-                        {STATUS_LABELS[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
                 <div className="mb-0">
                   <label htmlFor="reference" className="block text-sm font-medium text-gray-700 mb-2">
                     Referencia o descripción
@@ -820,7 +779,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                 type="button"
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || permissionsLoading || !canManageTreasury}
+                title={
+                  !canManageTreasury
+                    ? 'Necesitás permiso de Tesorería para registrar movimientos.'
+                    : undefined
+                }
               >
                 <span>Registrar movimiento</span>
                 {submitting && <i className="fa-solid fa-spinner fa-spin ml-2" />}

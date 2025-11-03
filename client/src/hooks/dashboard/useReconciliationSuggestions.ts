@@ -2,28 +2,33 @@ import { useCallback, useEffect, useState } from 'react';
 import { apiRequest, handleApiError } from '../../utils';
 import { ApiError, TreasuryMovement, OperationSuggestion } from '../../types';
 
-interface ReconciliationResponse {
-  movement: TreasuryMovement;
-  suggestions: Array<{
-    operationId: string;
-    score: number;
-    currency: string;
-    amount: number;
-    contactName: string | null;
-    operationCode: string | null;
-    movementType: string | null;
-    status: string | null;
-  }>;
+interface ReconciliationSuggestionDTO {
+  suggestionId: string;
+  operationId: string | null;
+  model: string | null;
+  code: string | null;
+  amount: number;
+  currency: string;
+  contactName: string | null;
+  movementType: string | null;
+  status: string | null;
+  confirmedAt: string | null;
 }
 
-const normalizeSuggestion = (item: ReconciliationResponse['suggestions'][number]): OperationSuggestion => ({
-  id: item.operationId,
-  code: item.operationCode,
-  model: 'Transaction',
+interface ReconciliationResponse {
+  movement: TreasuryMovement;
+  suggestions: ReconciliationSuggestionDTO[];
+}
+
+const normalizeSuggestion = (item: ReconciliationSuggestionDTO): OperationSuggestion => ({
+  id: item.operationId || item.suggestionId,
+  code: item.code,
+  model: item.model || 'CurrentAccountMovement',
   amount: item.amount,
   currency: item.currency,
   movementType: item.movementType,
   status: item.status,
+  confirmedAt: item.confirmedAt || null,
   description: item.contactName,
 });
 
@@ -53,7 +58,11 @@ export const useReconciliationSuggestions = (movementId: string | null) => {
       );
 
       setMovement(response.movement);
-      setSuggestions((response.suggestions || []).map(normalizeSuggestion));
+      setSuggestions(
+        (response.suggestions || [])
+          .filter((item) => Boolean(item.operationId))
+          .map(normalizeSuggestion)
+      );
     } catch (err) {
       const apiErr = handleApiError(err);
       setError(apiErr);

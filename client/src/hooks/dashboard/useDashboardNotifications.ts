@@ -1,5 +1,5 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { apiRequest, handleApiError } from '../../utils';
+import { api, apiRequest, handleApiError } from '../../utils';
 import { ApiError, DashboardNotification, DashboardNotificationsResponse } from '../../types';
 
 interface NotificationsState {
@@ -113,6 +113,40 @@ const getDisabledSnapshot = (): NotificationsState => ({
   error: null,
 });
 
+const markNotificationAsRead = async (notificationId: string) => {
+  if (!notificationId) {
+    return;
+  }
+
+  const previous = state.notifications;
+  const updated = previous.map((notification) =>
+    notification.id === notificationId ? { ...notification, read: true } : notification
+  );
+  setState({ notifications: updated });
+
+  try {
+    await api.markNotificationRead(notificationId);
+  } catch (error) {
+    const apiError = handleApiError(error);
+    setState({ notifications: previous });
+    throw apiError;
+  }
+};
+
+const markAllNotificationsAsRead = async () => {
+  const previous = state.notifications;
+  const updated = previous.map((notification) => ({ ...notification, read: true }));
+  setState({ notifications: updated });
+
+  try {
+    await api.markAllNotificationsRead();
+  } catch (error) {
+    const apiError = handleApiError(error);
+    setState({ notifications: previous });
+    throw apiError;
+  }
+};
+
 export const useDashboardNotifications = (enabled: boolean = true) => {
   const subscribeFn = useCallback((listener: () => void) => subscribe(listener), []);
 
@@ -127,23 +161,7 @@ export const useDashboardNotifications = (enabled: boolean = true) => {
     loading: enabled ? snapshot.loading : false,
     error: enabled ? snapshot.error : null,
     refresh: (options?: { force?: boolean }) => fetchNotifications(options),
-    markRead: (id: string) => {
-      setState({
-        notifications: state.notifications.map((notification) =>
-          notification.id === id ? { ...notification, read: true } : notification
-        ),
-      });
-    },
-    markAllRead: () => {
-      if (state.notifications.every((notification) => notification.read)) {
-        return;
-      }
-      setState({
-        notifications: state.notifications.map((notification) => ({
-          ...notification,
-          read: true,
-        })),
-      });
-    },
+    markRead: markNotificationAsRead,
+    markAllRead: markAllNotificationsAsRead,
   };
 };

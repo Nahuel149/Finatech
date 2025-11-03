@@ -17,6 +17,7 @@ export interface TransferDistributionLine {
   contactType: string | null;
   method: MovementMethod;
   amount: number;
+  amountArs?: number;
 }
 
 export interface TransferOperation {
@@ -27,8 +28,13 @@ export interface TransferOperation {
   currency: 'ARS' | 'USD' | string;
   totalAmount: number;
   distributionLines: TransferDistributionLine[];
-  status: string;
+  status: 'pending' | 'registered' | 'completed' | 'cancelled';
   confirmedAt: string | null;
+  completedAt: string | null;
+  completedBy?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -38,6 +44,9 @@ export interface CreateTransferPayload {
   direction: MovementDirection;
   totalAmount: number;
   distributionLines: TransferDistributionLineInput[];
+  exchangeRates?: {
+    usdArs?: number;
+  };
 }
 
 export interface CreateTransferResponse {
@@ -54,6 +63,9 @@ export interface CreateTransferResponse {
     status: string;
     createdAt: string | null;
   }>;
+  exchangeRates?: {
+    usdArs?: number;
+  } | null;
 }
 
 export interface ListTransfersResponse {

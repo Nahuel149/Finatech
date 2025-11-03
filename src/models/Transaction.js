@@ -141,7 +141,7 @@ const transactionSchema = new mongoose.Schema(
         {
           action: {
             type: String,
-            enum: ['settlement_completed', 'transaction_voided'],
+            enum: ['settlement_completed', 'settlement_reverted', 'transaction_voided'],
             required: true,
           },
           performedBy: {

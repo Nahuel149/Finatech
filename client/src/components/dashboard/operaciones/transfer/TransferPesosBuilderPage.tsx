@@ -13,6 +13,7 @@ import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
 import { NewClientModal } from '../../../clients/NewClientModal';
+import { useLatestMarketRate } from '../../../../hooks/dashboard/useLatestMarketRate';
 
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -299,6 +300,13 @@ export const TransferPesosBuilderPage: React.FC = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [clientModalLineId, setClientModalLineId] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
+  const {
+    data: usdMarketRate,
+    loading: rateLoading,
+    error: rateError,
+    refresh: refreshRate,
+  } = useLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+  const usdToArsRate = usdMarketRate?.rate && usdMarketRate.rate > 0 ? usdMarketRate.rate : null;
 
   const goToStep = useCallback(
     (nextStep: BuilderStep) => {
@@ -370,32 +378,51 @@ export const TransferPesosBuilderPage: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  const totalARS = useMemo(
-    () => draft.distributionLines
-      .filter(line => line.method === 'ARS')
-      .reduce((sum, line) => sum + (line.amount || 0), 0),
-    [draft.distributionLines]
-  );
-  
-  const totalUSD = useMemo(
-    () => draft.distributionLines
-      .filter(line => line.method === 'USD')
-      .reduce((sum, line) => sum + (line.amount || 0), 0),
+  const hasUsdLines = useMemo(
+    () => draft.distributionLines.some((line) => line.method === 'USD'),
     [draft.distributionLines]
   );
 
-  const totalAssigned = useMemo(
-    () => draft.distributionLines.reduce((sum, line) => sum + (line.amount || 0), 0),
+  const totalARS = useMemo(
+    () =>
+      draft.distributionLines
+        .filter((line) => line.method === 'ARS')
+        .reduce((sum, line) => sum + (line.amount || 0), 0),
     [draft.distributionLines]
   );
-  
+
+  const totalUSD = useMemo(
+    () =>
+      draft.distributionLines
+        .filter((line) => line.method === 'USD')
+        .reduce((sum, line) => sum + (line.amount || 0), 0),
+    [draft.distributionLines]
+  );
+
+  const totalAssignedArs = useMemo(() => {
+    return draft.distributionLines.reduce((sum, line) => {
+      if (line.method === 'USD') {
+        if (!usdToArsRate) {
+          return sum;
+        }
+        return sum + (line.amount || 0) * usdToArsRate;
+      }
+      return sum + (line.amount || 0);
+    }, 0);
+  }, [draft.distributionLines, usdToArsRate]);
+
   const progressDifference = useMemo(
-    () => totalAssigned - (draft.totalAmount || 0),
-    [draft.totalAmount, totalAssigned]
+    () => totalAssignedArs - (draft.totalAmount || 0),
+    [draft.totalAmount, totalAssignedArs]
   );
 
   const progressStatus = useMemo(() => {
-    if (!draft.totalAmount || draft.totalAmount <= 0 || !draft.distributionLines.length) {
+    if (
+      !draft.totalAmount ||
+      draft.totalAmount <= 0 ||
+      !draft.distributionLines.length ||
+      (hasUsdLines && !usdToArsRate)
+    ) {
       return 'idle';
     }
     if (Math.abs(progressDifference) < 0.01) {
@@ -405,7 +432,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
       return 'exceeded';
     }
     return 'pending';
-  }, [draft.distributionLines.length, draft.totalAmount, progressDifference]);
+  }, [draft.distributionLines.length, draft.totalAmount, progressDifference, hasUsdLines, usdToArsRate]);
 
   const canConfirmDistribution =
     !!draft.movementType &&
@@ -569,6 +596,14 @@ export const TransferPesosBuilderPage: React.FC = () => {
       });
       return;
     }
+    if (hasUsdLines && !usdToArsRate) {
+      setToast({
+        type: 'error',
+        message: 'Necesitamos un tipo de cambio USD/ARS válido para continuar.',
+      });
+      refreshRate().catch(() => {});
+      return;
+    }
     const invalidLine = draft.distributionLines.find(
       (line) => !line.contactId || !line.amount || line.amount <= 0
     );
@@ -582,7 +617,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
     if (Math.abs(progressDifference) >= 0.01) {
       setToast({
         type: 'warning',
-        message: 'La suma de asignaciones debe coincidir con el monto total.',
+        message: 'La suma de asignaciones debe coincidir con el monto total en ARS.',
       });
       return;
     }
@@ -833,13 +868,23 @@ export const TransferPesosBuilderPage: React.FC = () => {
           </div>
 
           <div className="mb-6">
-            <div className="flex items-center justify-between mb-2">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-2 gap-2">
               <span className="text-sm font-medium text-gray-700">Progreso de asignación</span>
               <div className="text-sm text-gray-600">
                 <div>Total: {formatCurrency(draft.totalAmount)}</div>
                 <div className="text-xs mt-1">
-                  Distribuido: {formatCurrency(totalARS)}
-                  {totalUSD > 0 && <span> + {formatCurrency(totalUSD, 'USD')}</span>}
+                  Distribuido (ARS):
+                  {hasUsdLines && !usdToArsRate
+                    ? ' —'
+                    : ` ${formatCurrency(totalAssignedArs)}`}
+                  {(totalARS > 0 || totalUSD > 0) && (
+                    <span className="block">
+                      Detalle: {formatCurrency(totalARS)} ARS
+                      {totalUSD > 0 && (
+                        <> · {formatCurrency(totalUSD, 'USD')} USD</>
+                      )}
+                    </span>
+                  )}
                 </div>
               </div>
             </div>
@@ -856,7 +901,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
                 }`}
                 style={{
                   width: draft.totalAmount
-                    ? `${Math.min(100, (totalAssigned / draft.totalAmount) * 100)}%`
+                    ? `${Math.min(100, (totalAssignedArs / draft.totalAmount) * 100)}%`
                     : '0%',
                 }}
               />
@@ -864,7 +909,9 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <div className="text-sm mt-2">
               {progressStatus === 'idle' && (
                 <span className="text-gray-600">
-                  Agregá contactos para comenzar la distribución.
+                  {hasUsdLines && !usdToArsRate
+                    ? 'Esperando la tasa USD/ARS para calcular la distribución.'
+                    : 'Agregá contactos para comenzar la distribución.'}
                 </span>
               )}
               {progressStatus === 'pending' && (
@@ -887,6 +934,22 @@ export const TransferPesosBuilderPage: React.FC = () => {
               )}
             </div>
           </div>
+
+          {hasUsdLines && !usdToArsRate && !rateLoading && !rateError && (
+            <div className="mb-4">
+              <Alert
+                type="warning"
+                message="Necesitamos un tipo de cambio USD/ARS válido para calcular la distribución. Actualizá el valor para continuar."
+              />
+            </div>
+          )}
+          {hasUsdLines && rateError && (
+            <div className="mb-4">
+              <Alert
+                type="error"
+                message="No pudimos obtener la tasa USD/ARS. Reintentá o cargá una tasa manual." />
+            </div>
+          )}
 
           <div className="overflow-x-auto mb-4 border border-gray-200 rounded-lg">
             <table className="w-full">
@@ -952,21 +1015,41 @@ export const TransferPesosBuilderPage: React.FC = () => {
             </table>
           </div>
 
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={handleAddLine}
-              className="text-primary hover:text-blue-700 text-sm font-medium"
-            >
-              <i className="fa-solid fa-user-plus mr-2" />
-              Agregar contacto
-            </button>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={handleAddLine}
+                className="text-primary hover:text-blue-700 text-sm font-medium inline-flex items-center"
+              >
+                <i className="fa-solid fa-user-plus mr-2" />
+                Agregar contacto
+              </button>
+              {hasUsdLines && (
+                <span className="text-xs text-gray-500">
+                  USD→ARS:{' '}
+                  {usdToArsRate
+                    ? usdToArsRate.toLocaleString('es-AR', {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 4,
+                      })
+                    : rateLoading
+                    ? 'Obteniendo…'
+                    : 'Sin datos'}
+                </span>
+              )}
+            </div>
             <div className="text-sm text-gray-600">
-              Total distribuido{' '}
+              Total distribuido (ARS){' '}
               <span className="font-semibold text-text-primary">
-                {formatCurrency(totalARS)}
-                {totalUSD > 0 && <span> + {formatCurrency(totalUSD, 'USD')}</span>}
+                {hasUsdLines && !usdToArsRate ? '—' : formatCurrency(totalAssignedArs)}
               </span>
+              {(totalARS > 0 || totalUSD > 0) && (
+                <span className="block text-xs text-gray-500">
+                  Detalle: {formatCurrency(totalARS)} ARS
+                  {totalUSD > 0 && <> · {formatCurrency(totalUSD, 'USD')} USD</>}
+                </span>
+              )}
             </div>
           </div>
         </section>
@@ -983,7 +1066,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
                 className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <i className="fa-solid fa-arrow-left" />
-                Atrás
+                Cancelar
               </button>
               <button
                 type="button"

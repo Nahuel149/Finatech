@@ -1,12 +1,75 @@
+const mongoose = require('mongoose');
 const { Router } = require('express');
+const { body, param } = require('express-validator');
 const { getTreasuryBalances } = require('../services/treasury.service');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
+const { validateRequest } = require('../middleware/validateRequest');
 const { subscribeBalanceUpdated } = require('../utils/eventBus');
-const { sendCached, buildUserAwareKey } = require('../utils/responseCache');
+const Notification = require('../models/Notification');
+const NotificationState = require('../models/NotificationState');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const router = Router();
+
+const formatNotification = (notification, readSet = new Set()) => {
+  const id = notification._id.toString();
+  return {
+    id,
+    title: notification.title,
+    message: notification.message,
+    description: notification.message,
+    severity: notification.severity,
+    actionLabel: notification.actionLabel,
+    actionUrl: notification.actionUrl,
+    metadata: notification.metadata,
+    createdAt: notification.createdAt,
+    read: readSet.has(id),
+  };
+};
+
+const seedDefaultNotificationsIfEmpty = async () => {
+  const count = await Notification.estimatedDocumentCount();
+  if (count > 0) {
+    return;
+  }
+
+  const now = new Date();
+  const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000);
+
+  const defaults = [
+    {
+      title: 'Operación completada',
+      message: 'La operación #OP-2041 se registró exitosamente.',
+      severity: 'success',
+      createdAt: minutesAgo(5),
+      updatedAt: minutesAgo(5),
+    },
+    {
+      title: 'Liquidación pendiente',
+      message: 'Liquidación LQ-9033 requiere tu revisión.',
+      severity: 'warning',
+      createdAt: minutesAgo(18),
+      updatedAt: minutesAgo(18),
+    },
+    {
+      title: 'Alerta de liquidez',
+      message: 'La cuenta USD Nación se acerca al mínimo operativo.',
+      severity: 'warning',
+      createdAt: minutesAgo(42),
+      updatedAt: minutesAgo(42),
+    },
+    {
+      title: 'Nueva documentación',
+      message: 'Cliente Gamma adjuntó documentación para validación.',
+      severity: 'info',
+      createdAt: minutesAgo(120),
+      updatedAt: minutesAgo(120),
+    },
+  ];
+
+  await Notification.insertMany(defaults);
+};
 
 router.get(
   '/balances',
@@ -99,53 +162,258 @@ const notificationsLimiter = rateLimit({
   },
 });
 
+const notificationBaseValidators = [
+  body('title').isString().trim().notEmpty().withMessage('El título es obligatorio.'),
+  body('message').isString().trim().notEmpty().withMessage('La descripción es obligatoria.'),
+  body('severity')
+    .optional()
+    .isIn(['info', 'success', 'warning', 'error'])
+    .withMessage('La severidad es inválida.'),
+  body('actionLabel')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('La etiqueta de acción es demasiado larga.'),
+  body('actionUrl')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 1024 })
+    .withMessage('La URL de acción es demasiado larga.'),
+  body('metadata')
+    .optional()
+    .custom((value, { req }) => {
+      if (typeof value === 'string') {
+        try {
+          req.body.metadata = JSON.parse(value);
+          return true;
+        } catch (error) {
+          throw new Error('El metadata debe ser un objeto JSON válido.');
+        }
+      }
+      if (typeof value === 'object' && value !== null) {
+        return true;
+      }
+      throw new Error('El metadata debe ser un objeto.');
+    }),
+];
+
 router.get('/notifications', requireAuth, notificationsLimiter, async (req, res, next) => {
   try {
-    const now = new Date();
-    const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
+    await seedDefaultNotificationsIfEmpty();
 
-    const key = buildUserAwareKey(req, 'dashboard:notifications');
-    await sendCached({
-      req,
-      res,
-      key,
-      ttlMs: 10 * 1000, // cache for 10s to avoid hammering the route
-      compute: async () => ({
-        notifications: [
-          {
-            id: 'notif-001',
-            title: 'Operación completada',
-            message: 'La operación #OP-2041 se registró exitosamente.',
-            createdAt: minutesAgo(5),
-            read: false,
-          },
-          {
-            id: 'notif-002',
-            title: 'Liquidación pendiente',
-            message: 'Liquidación LQ-9033 requiere tu revisión.',
-            createdAt: minutesAgo(18),
-            read: false,
-          },
-          {
-            id: 'notif-003',
-            title: 'Alerta de liquidez',
-            message: 'La cuenta USD Nación se acerca al mínimo operativo.',
-            createdAt: minutesAgo(42),
-            read: false,
-          },
-          {
-            id: 'notif-004',
-            title: 'Nueva documentación',
-            message: 'Cliente Gamma adjuntó documentación para validación.',
-            createdAt: minutesAgo(120),
-            read: true,
-          },
-        ],
-      }),
-    });
+    const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 100);
+    const includeRead = req.query.includeRead !== 'false';
+    const since = req.query.since ? new Date(req.query.since) : null;
+
+    const match = {};
+    if (since && !Number.isNaN(since.getTime())) {
+      match.createdAt = { $gt: since };
+    }
+
+    const notifications = await Notification.find(match)
+      .sort({ createdAt: -1 })
+      .limit(limit)
+      .lean()
+      .exec();
+
+    const ids = notifications.map((notification) => notification._id.toString());
+    let readSet = new Set();
+    if (ids.length > 0) {
+      const readStates = await NotificationState.find({
+        user: req.user._id,
+        notificationId: { $in: ids },
+      })
+        .lean()
+        .exec();
+      readSet = new Set(readStates.map((state) => state.notificationId));
+    }
+
+    let payload = notifications.map((notification) => formatNotification(notification, readSet));
+    if (!includeRead) {
+      payload = payload.filter((notification) => !notification.read);
+    }
+
+    res.json({ notifications: payload });
   } catch (error) {
     next(error);
   }
 });
+
+router.post('/notifications/:id/read', requireAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    if (!id) {
+      return res.status(400).json({ message: 'El identificador de la notificación es obligatorio.' });
+    }
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Identificador inválido.' });
+    }
+
+    const exists = await Notification.exists({ _id: id });
+    if (!exists) {
+      return res.status(404).json({ message: 'Notificación no encontrada.' });
+    }
+
+    await NotificationState.findOneAndUpdate(
+      { user: req.user._id, notificationId: id },
+      { $set: { readAt: new Date() } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    ).exec();
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post('/notifications/read-all', requireAuth, async (req, res, next) => {
+  try {
+    const notifications = await Notification.find({}, { _id: 1 }).lean().exec();
+    if (!notifications.length) {
+      return res.json({ success: true });
+    }
+
+    const bulkOperations = notifications.map((notification) => ({
+      updateOne: {
+        filter: {
+          user: req.user._id,
+          notificationId: notification._id.toString(),
+        },
+        update: {
+          $set: {
+            readAt: new Date(),
+          },
+        },
+        upsert: true,
+      },
+    }));
+
+    await NotificationState.bulkWrite(bulkOperations, { ordered: false });
+
+    res.json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post(
+  '/notifications',
+  requireAuth,
+  requirePermission('manage-notifications'),
+  notificationBaseValidators,
+  validateRequest,
+  async (req, res, next) => {
+    try {
+      const { title, message, severity = 'info', actionLabel = null, actionUrl = null, metadata = null } = req.body;
+
+      const notification = await Notification.create({
+        title,
+        message,
+        severity,
+        actionLabel,
+        actionUrl,
+        metadata,
+        createdBy: req.user._id,
+      });
+
+      res.status(201).json({ notification: formatNotification(notification) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.patch(
+  '/notifications/:id',
+  requireAuth,
+  requirePermission('manage-notifications'),
+  param('id').isMongoId().withMessage('Identificador inválido.'),
+  body('title').optional().isString().trim().notEmpty().withMessage('El título no puede estar vacío.'),
+  body('message').optional().isString().trim().notEmpty().withMessage('La descripción no puede estar vacía.'),
+  body('severity')
+    .optional()
+    .isIn(['info', 'success', 'warning', 'error'])
+    .withMessage('La severidad es inválida.'),
+  body('actionLabel')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 120 })
+    .withMessage('La etiqueta de acción es demasiado larga.'),
+  body('actionUrl')
+    .optional()
+    .isString()
+    .trim()
+    .isLength({ max: 1024 })
+    .withMessage('La URL de acción es demasiado larga.'),
+  body('metadata')
+    .optional()
+    .custom((value, { req }) => {
+      if (typeof value === 'string') {
+        try {
+          req.body.metadata = JSON.parse(value);
+          return true;
+        } catch (error) {
+          throw new Error('El metadata debe ser un objeto JSON válido.');
+        }
+      }
+      if (typeof value === 'object' && value !== null) {
+        return true;
+      }
+      throw new Error('El metadata debe ser un objeto.');
+    }),
+  validateRequest,
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const update = {};
+      const allowedFields = ['title', 'message', 'severity', 'actionLabel', 'actionUrl', 'metadata'];
+      allowedFields.forEach((field) => {
+        if (field in req.body) {
+          update[field] = req.body[field];
+        }
+      });
+
+      const notification = await Notification.findByIdAndUpdate(id, update, {
+        new: true,
+        runValidators: true,
+      });
+
+      if (!notification) {
+        return res.status(404).json({ message: 'Notificación no encontrada.' });
+      }
+
+      res.json({ notification: formatNotification(notification) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete(
+  '/notifications/:id',
+  requireAuth,
+  requirePermission('manage-notifications'),
+  param('id').isMongoId().withMessage('Identificador inválido.'),
+  validateRequest,
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const notification = await Notification.findByIdAndDelete(id);
+
+      if (!notification) {
+        return res.status(404).json({ message: 'Notificación no encontrada.' });
+      }
+
+      await NotificationState.deleteMany({ notificationId: id });
+
+      res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 module.exports = router;

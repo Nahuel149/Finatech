@@ -23,7 +23,7 @@ export interface TransactionSettlement {
 }
 
 export interface TransactionAccountingEntry {
-  action: 'settlement_completed';
+  action: 'settlement_completed' | 'settlement_reverted';
   performedAt: string | null;
   performedBy: string | null;
   metadata: {

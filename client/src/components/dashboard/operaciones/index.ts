@@ -7,3 +7,4 @@ export { RecentValidations } from './RecentValidations';
 export { RecentOperationsTable } from './RecentOperationsTable';
 export { DashboardFooter } from './Footer';
 export { OperationWizardStep1Page, OperationWizardStep2Page, OperationWizardStep3Page } from './wizard';
+export { OperationDetailPage } from './OperationDetailPage';

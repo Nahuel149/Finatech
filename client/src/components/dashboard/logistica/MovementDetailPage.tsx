@@ -28,76 +28,92 @@ export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movement
       setIsLoading(true);
       setTimeout(() => {
         setMovement({
-          id: movementId,
-          type: 'Entrega de efectivo',
-          date: '2024-01-15T14:30:00Z',
-          responsible: 'Carlos Ruiz',
-          contact: 'María González',
-          reference: 'REF-2024-001',
-          status: 'en-progreso',
-          origin: 'Sucursal Central',
+          id: `#${movementId}`.toUpperCase(),
+          type: 'Transferencia',
+          date: '2024-01-15T10:30:00Z',
+          responsible: 'Juan Pérez - Operador Senior',
+          contact: 'Empresa ABC S.A.',
+          reference: 'Entrega de documentación para operación #FT-000456',
+          status: 'en-curso',
+          origin: 'Sede Central',
           destination: 'Sucursal Norte',
-          medium: 'Vehículo propio',
-          currency: 'ARS',
+          medium: 'Transporte interno',
+          currency: 'USD',
           totalAmount: 125000,
-          linkedOperation: 'OP-2024-001',
+          linkedOperation: '#FT-000456',
           timeline: [
             {
-              id: '1',
-              title: 'Movimiento registrado',
-              description: 'El movimiento fue registrado en el sistema por Ana López',
-              date: '2024-01-15T14:30:00Z',
-              user: 'Ana López',
-              type: 'created'
+              id: 'created',
+              title: 'Creado',
+              description: null,
+              date: '2024-01-15T10:30:00Z',
+              user: 'Juan Pérez',
+              type: 'created',
             },
             {
-              id: '2',
-              title: 'En progreso',
-              description: 'Carlos Ruiz inició el proceso de entrega',
-              date: '2024-01-15T15:00:00Z',
-              user: 'Carlos Ruiz',
-              type: 'updated'
-            }
+              id: 'in-progress',
+              title: 'En curso',
+              description: 'Movimiento iniciado hacia destino',
+              date: '2024-01-15T11:15:00Z',
+              user: 'Juan Pérez',
+              type: 'updated',
+            },
+            {
+              id: 'received',
+              title: 'Recibido',
+              description: null,
+              date: null,
+              user: null,
+              type: 'received',
+            },
+            {
+              id: 'completed',
+              title: 'Completado',
+              description: null,
+              date: null,
+              user: null,
+              type: 'completed',
+            },
           ],
           associatedItems: [
             {
-              id: '1',
-              description: 'Efectivo en billetes de $1000',
-              identifier: 'EF-001',
-              quantity: 125,
-              unit: 'billetes'
+              id: 'DOC-001-2024',
+              description: 'Documentación contractual',
+              identifier: 'DOC-001-2024',
+              quantity: 1,
+              unit: 'paquete',
             },
             {
-              id: '2',
-              description: 'Documentos de respaldo',
-              identifier: 'DOC-001',
+              id: 'CHQ-ABC-001',
+              description: 'Cheques en custodia',
+              identifier: 'CHQ-ABC-001',
               quantity: 3,
-              unit: 'documentos'
-            }
+              unit: 'sobre',
+            },
           ],
           attachments: [
             {
-              id: '1',
-              name: 'comprobante-entrega.pdf',
+              id: 'contrato_abc_2024.pdf',
+              name: 'contrato_abc_2024.pdf',
               type: 'PDF',
-              size: '2.3 MB',
-              url: '#'
+              size: '2.4 MB',
+              url: '#',
             },
             {
-              id: '2',
-              name: 'foto-efectivo.jpg',
+              id: 'foto_cheques.jpg',
+              name: 'foto_cheques.jpg',
               type: 'JPG',
               size: '1.8 MB',
-              url: '#'
-            }
+              url: '#',
+            },
           ],
           audit: {
-            createdBy: 'Ana López',
-            createdAt: '2024-01-15T14:30:00Z',
-            lastModifiedBy: 'Carlos Ruiz',
-            lastModifiedAt: '2024-01-15T15:00:00Z',
-            ipAddress: '192.168.1.45'
-          }
+            createdBy: 'Juan Pérez',
+            createdAt: '2024-01-15T10:30:00Z',
+            lastModifiedBy: 'Juan Pérez',
+            lastModifiedAt: '2024-01-15T14:25:00Z',
+            ipAddress: '192.168.1.45',
+          },
         });
         setIsLoading(false);
       }, 1000);
@@ -112,7 +128,7 @@ export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movement
     // Simulate API call to mark as completed
     setMovement((prev: any) => ({
       ...prev,
-      status: 'completado'
+      status: 'completado',
     }));
     setIsCompletionModalOpen(false);
   };

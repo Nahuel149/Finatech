@@ -7,17 +7,22 @@ import {
 } from '../../types';
 import { apiRequest, handleApiError } from '../../utils/api';
 
-const normalizeOperationToSuggestion = (operation: TransferOperation): OperationSuggestion => ({
-  id: operation.id,
-  code: operation.operationCode || operation.id,
-  model: 'TransferOperation',
-  amount: operation.totalAmount,
-  currency: operation.currency,
-  movementType: operation.movementType,
-  status: operation.status,
-  confirmedAt: operation.confirmedAt,
-  description: operation.distributionLines?.[0]?.contactName ?? null, // Use null as default instead of redundant null/undefined
-});
+const normalizeOperationToSuggestion = (operation: TransferOperation): OperationSuggestion => {
+  const baseCode = operation.operationCode || operation.id;
+  const displayCode = baseCode ? `#${baseCode}` : null;
+
+  return {
+    id: operation.id,
+    code: displayCode,
+    model: 'TransferOperation',
+    amount: operation.totalAmount,
+    currency: operation.currency,
+    movementType: operation.movementType,
+    status: operation.status,
+    confirmedAt: operation.confirmedAt,
+    description: operation.distributionLines?.[0]?.contactName ?? null, // Use null as default instead of redundant null/undefined
+  };
+};
 
 interface UseOperationSearchOptions {
   minimumQueryLength?: number;
@@ -33,7 +38,9 @@ export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
 
   useEffect(() => {
     const trimmed = query.trim();
-    if (trimmed.length < minimumQueryLength) {
+    const sanitized = trimmed.replace(/#/g, '').trim();
+
+    if (sanitized.length < minimumQueryLength) {
       setItems([]);
       setLoading(false);
       setError(null);
@@ -47,7 +54,7 @@ export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
       try {
         const response = await apiRequest<ListTransfersResponse>(
           `/api/transfers/pesos?limit=${encodeURIComponent(limit)}&skip=0&search=${encodeURIComponent(
-            trimmed
+            sanitized
           )}`,
           {
             method: 'GET',

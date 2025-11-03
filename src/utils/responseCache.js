@@ -23,6 +23,10 @@ function setEntry(key, payload, ttlMs) {
   return value;
 }
 
+function invalidateEntry(key) {
+  cache.delete(key);
+}
+
 async function sendCached({ req, res, compute, key, ttlMs }) {
   let entry = getEntry(key);
   if (!entry) {
@@ -51,4 +55,5 @@ module.exports = {
   buildUserAwareKey,
   getEntry,
   setEntry,
+  invalidateEntry,
 };

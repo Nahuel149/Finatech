@@ -25,6 +25,32 @@ const DIRECTION_TEXT: Record<string, string> = {
   outgoing: 'Saliente',
 };
 
+const STATUS_BADGE: Record<
+  'pending' | 'registered' | 'completed' | 'cancelled',
+  { label: string; className: string }
+> = {
+  pending: {
+    label: 'Pendiente',
+    className:
+      'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-700',
+  },
+  registered: {
+    label: 'En proceso',
+    className:
+      'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800',
+  },
+  completed: {
+    label: 'Completada',
+    className:
+      'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800',
+  },
+  cancelled: {
+    label: 'Cancelada',
+    className:
+      'inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700',
+  },
+};
+
 export const TransferPesosDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { operationId } = useParams<{ operationId: string }>();
@@ -130,6 +156,8 @@ export const TransferPesosDetailPage: React.FC = () => {
     .filter((line) => line.method === 'USD')
     .reduce((sum, line) => sum + line.amount, 0);
 
+  const statusBadge = STATUS_BADGE[operation.status] ?? STATUS_BADGE.registered;
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNavbar search="" onSearchChange={() => {}} />
@@ -149,7 +177,7 @@ export const TransferPesosDetailPage: React.FC = () => {
                 Registrada el {formatDateTime(operation.confirmedAt || operation.createdAt)}
               </p>
             </div>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-16 md:mt-0">
               <button
                 type="button"
                 onClick={() => setPanelOpen(true)}
@@ -189,9 +217,7 @@ export const TransferPesosDetailPage: React.FC = () => {
             </div>
             <div className="space-y-2">
               <span className="text-gray-600 block mb-2">Estado</span>
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                {operation.status === 'registered' ? 'Registrada' : operation.status}
-              </span>
+              <span className={statusBadge.className}>{statusBadge.label}</span>
             </div>
             <div className="space-y-2">
               <span className="text-gray-600 block mb-2">Moneda</span>

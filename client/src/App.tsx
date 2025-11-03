@@ -9,6 +9,7 @@ import { NotificationsPage } from './components/dashboard/operaciones/Notificati
 import { OperationWizardStep1Page } from './components/dashboard/operaciones/wizard/OperationWizardStep1Page';
 import { OperationWizardStep2Page } from './components/dashboard/operaciones/wizard/OperationWizardStep2Page';
 import { OperationWizardStep3Page } from './components/dashboard/operaciones/wizard/OperationWizardStep3Page';
+import { OperationDetailPage } from './components/dashboard/operaciones/OperationDetailPage';
 import {
   TreasuryMovementsPage,
   LinkedBalancesPage,
@@ -89,6 +90,10 @@ const App: React.FC = () => {
               <Route path="completada" element={<ErrorBoundary><TransferPesosSuccessPage /></ErrorBoundary>} />
               <Route path="detalle/:operationId" element={<ErrorBoundary><TransferPesosDetailPage /></ErrorBoundary>} />
             </Route>
+            <Route
+              path="/dashboard/operaciones/detalle/:operationId"
+              element={<ErrorBoundary><OperationDetailPage /></ErrorBoundary>}
+            />
             <Route path="/dashboard/operaciones/nueva" element={<ErrorBoundary><OperationWizardStep1Page /></ErrorBoundary>} />
             <Route path="/dashboard/operaciones/nueva/liquidacion" element={<ErrorBoundary><OperationWizardStep2Page /></ErrorBoundary>} />
             <Route path="/dashboard/operaciones/nueva/resumen" element={<ErrorBoundary><OperationWizardStep3Page /></ErrorBoundary>} />

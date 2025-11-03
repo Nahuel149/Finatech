@@ -97,9 +97,54 @@ export const TransferAccountingPanel: React.FC<Props> = ({
             {/* Movements Table */}
             <div className="mb-6">
               <h3 className="text-lg font-semibold text-text-primary mb-4">Movimientos generados</h3>
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+              <div className="space-y-3 sm:hidden">
+                {summary.entries.map((entry, index) => {
+                  const signedAmount = entry.amount === 0 ? 0 : entry.amount * entry.sign;
+                  const amountClass = entry.sign === 1 ? 'text-success' : 'text-danger';
+                  return (
+                    <div
+                      key={`${entry.label}-card-${index}`}
+                      className="bg-white border border-gray-200 rounded-lg p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                          <i className="fa-solid fa-money-bill-transfer text-primary mr-2" />
+                          <span className="text-sm font-medium text-text-primary break-words">
+                            {entry.label}
+                          </span>
+                        </div>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {entry.currency}
+                        </span>
+                      </div>
+                      <div>
+                        <span className={`text-sm font-semibold ${amountClass}`}>
+                          {formatCurrency(signedAmount, entry.currency)}
+                        </span>
+                        {entry.originalCurrency && entry.originalAmount ? (
+                          <div className="text-xs text-gray-500">
+                            {formatCurrency(entry.originalAmount, entry.originalCurrency)}{' '}
+                            {entry.originalCurrency}
+                          </div>
+                        ) : null}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium text-text-primary">Contraparte:</span>{' '}
+                        {entry.contact || 'Múltiples clientes'}
+                      </div>
+                      <div>
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success text-white">
+                          <i className="fa-solid fa-check mr-1" />
+                          Registrado
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="hidden sm:block bg-white border border-gray-200 rounded-lg overflow-hidden">
                 <div className="overflow-x-auto">
-                  <table className="w-full">
+                  <table className="min-w-[720px] w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -140,6 +185,12 @@ export const TransferAccountingPanel: React.FC<Props> = ({
                               <span className={`text-sm font-bold ${amountClass}`}>
                                 {formatCurrency(signedAmount, entry.currency)}
                               </span>
+                              {entry.originalCurrency && entry.originalAmount ? (
+                                <div className="text-xs text-gray-500">
+                                  {formatCurrency(entry.originalAmount, entry.originalCurrency)}{' '}
+                                  {entry.originalCurrency}
+                                </div>
+                              ) : null}
                             </td>
                             <td className="px-4 py-4">
                               <span className="text-sm text-gray-600">

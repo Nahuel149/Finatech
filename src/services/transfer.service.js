@@ -5,9 +5,15 @@ const AppError = require('../utils/AppError');
 const {
   adjustTreasuryBalanceForMovement,
   normalizeBalanceKey,
+  registerTreasuryMovement,
 } = require('./treasury.service');
 const { createTransferOperationEvents } = require('./treasuryEvent.service');
-const { applyTreasurySettlement } = require('./currentAccount.service');
+const {
+  applyTreasurySettlement,
+  registerTransferRegistration,
+} = require('./currentAccount.service');
+const { getLatestMarketRate } = require('./marketRate.service');
+const { emitBalanceUpdated } = require('../utils/eventBus');
 
 const escapeRegex = (value = '') => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -68,6 +74,7 @@ const formatTransferOperation = (operation, contacts = []) => {
           contactType: contact?.contactType || null,
           method: line.method,
           amount: roundAmount(line.amount),
+          amountArs: roundAmount(line.amountArs == null ? line.amount : line.amountArs),
         };
       })
     : [];
@@ -84,6 +91,11 @@ const formatTransferOperation = (operation, contacts = []) => {
     confirmedAt: operation.confirmedAt
       ? new Date(operation.confirmedAt).toISOString()
       : null,
+    completedAt: operation.completedAt ? new Date(operation.completedAt).toISOString() : null,
+    completedBy: operation.completedBy ? operation.completedBy.toString() : null,
+    cancelledAt: operation.cancelledAt ? new Date(operation.cancelledAt).toISOString() : null,
+    cancelledBy: operation.cancelledBy ? operation.cancelledBy.toString() : null,
+    cancellationReason: operation.cancellationReason || null,
     createdAt: operation.createdAt ? new Date(operation.createdAt).toISOString() : null,
     updatedAt: operation.updatedAt ? new Date(operation.updatedAt).toISOString() : null,
   };
@@ -118,25 +130,47 @@ const validateAndNormalizePayload = async (payload = {}) => {
     throw new AppError('Agregá al menos un contacto a la distribución.', 400);
   }
 
+  const needsUsdRate = lines.some(
+    (line) => String(line.method || line.currency || '').toUpperCase() === 'USD'
+  );
+  let usdArsRate = null;
+  if (needsUsdRate) {
+    const rateFromPayload = Number(payload?.exchangeRates?.usdArs);
+    if (Number.isFinite(rateFromPayload) && rateFromPayload > 0) {
+      usdArsRate = rateFromPayload;
+    }
+    if (!usdArsRate) {
+      const marketRate = await getLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+      if (marketRate?.rate && Number.isFinite(marketRate.rate) && marketRate.rate > 0) {
+        usdArsRate = marketRate.rate;
+      }
+    }
+    if (!usdArsRate) {
+      throw new AppError('No hay una tasa USD/ARS disponible. Intentá nuevamente.', 400);
+    }
+  }
+
   const normalizedLines = lines.map((line, index) => {
     const contactId = line.contactId || line.contact || null;
     if (!contactId || !mongoose.Types.ObjectId.isValid(contactId)) {
       throw new AppError(`La línea ${index + 1} no tiene un contacto válido.`, 400);
     }
-    const method = line.method === 'USD' ? 'USD' : 'ARS';
+    const method = String(line.method || '').toUpperCase() === 'USD' ? 'USD' : 'ARS';
     const amount = roundAmount(line.amount);
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new AppError(`Ingresá un monto válido en la línea ${index + 1}.`, 400);
     }
+    const amountArs = method === 'USD' ? roundAmount(amount * usdArsRate) : amount;
 
     return {
       contact: new mongoose.Types.ObjectId(contactId),
       method,
       amount,
+      amountArs,
     };
   });
 
-  const assignedTotal = normalizedLines.reduce((sum, line) => sum + line.amount, 0);
+  const assignedTotal = normalizedLines.reduce((sum, line) => sum + line.amountArs, 0);
   const difference = Math.abs(assignedTotal - totalAmount);
 
   if (difference >= 0.01) {
@@ -163,17 +197,19 @@ const validateAndNormalizePayload = async (payload = {}) => {
     normalizedLines,
     contacts,
     contactsMap,
+    usdArsRate,
   };
 };
 
 const registerTransferOperation = async (payload, context = {}) => {
-  const { movementType, direction, totalAmount, normalizedLines, contacts } =
+  const { movementType, direction, totalAmount, normalizedLines, contacts, usdArsRate } =
     await validateAndNormalizePayload(payload);
 
   const session = await mongoose.startSession();
   let operationDocument;
   let balance;
   let eventDocuments = [];
+  let treasuryMovementResult = null;
 
   try {
     await session.withTransaction(async () => {
@@ -182,24 +218,30 @@ const registerTransferOperation = async (payload, context = {}) => {
         movementType,
         direction,
         currency: 'ARS',
-      totalAmount,
-      distributionLines: normalizedLines,
-      status: 'registered',
-      confirmedAt: new Date(),
-      createdBy: context.userId || null,
-      updatedBy: context.userId || null,
-    });
+        totalAmount,
+        distributionLines: normalizedLines,
+        status: 'registered',
+        confirmedAt: new Date(),
+        createdBy: context.userId || null,
+        updatedBy: context.userId || null,
+      });
 
-    await operation.save({ session });
-    operationDocument = operation;
+      await operation.save({ session });
+      const operationPayload = operation.toObject();
+      operationDocument = operationPayload;
 
-    const delta = direction === 'incoming' ? totalAmount : -totalAmount;
-    balance = await adjustTreasuryBalanceForMovement(movementType, 'ARS', delta, {
-      userId: context.userId,
-      session,
-    });
+      await registerTransferRegistration(operationPayload, {
+        session,
+        userId: context.userId,
+      });
 
-      await applyTreasurySettlement(operationDocument.toObject(), {
+      const delta = direction === 'incoming' ? totalAmount : -totalAmount;
+      balance = await adjustTreasuryBalanceForMovement(movementType, 'ARS', delta, {
+        userId: context.userId,
+        session,
+      });
+
+      await applyTreasurySettlement(operationPayload, {
         session,
         userId: context.userId,
       });
@@ -210,7 +252,51 @@ const registerTransferOperation = async (payload, context = {}) => {
     session.endSession();
   }
 
-  const formattedOperation = formatTransferOperation(operationDocument.toObject(), contacts);
+  const formattedOperation = formatTransferOperation(operationDocument, contacts);
+
+  const treasuryPayload = {
+    type: direction === 'incoming' ? 'incoming' : 'outgoing',
+    medium: movementType === 'cash' ? 'cash' : 'transfer',
+    currency: 'ARS',
+    amount: totalAmount,
+    movementAt:
+      operationDocument?.confirmedAt ||
+      operationDocument?.createdAt ||
+      new Date().toISOString(),
+    operation: {
+      id: operationDocument?._id,
+      model: 'TransferOperation',
+    },
+    metadata: {
+      ...(payload?.metadata || {}),
+      source: 'transfer_operation',
+      distributionLines: normalizedLines.map((line) => ({
+        contact: line.contact.toString(),
+        method: line.method,
+        amount: roundAmount(line.amount),
+        amountArs: roundAmount(line.amountArs),
+      })),
+    },
+  };
+
+  const treasuryContext = {
+    userId: context.userId,
+    skipBalanceAdjustments: true,
+    skipSettlement: true,
+    skipBalanceEvent: true,
+  };
+
+  treasuryMovementResult = await registerTreasuryMovement(treasuryPayload, treasuryContext);
+
+  emitBalanceUpdated({
+    source: 'transfer_operation',
+    operationId: formattedOperation?.id || null,
+    movementType,
+    direction,
+    currency: 'ARS',
+    delta: direction === 'incoming' ? totalAmount : -totalAmount,
+    emittedBy: context.userId || null,
+  });
 
   return {
     operation: formattedOperation,
@@ -228,6 +314,12 @@ const registerTransferOperation = async (payload, context = {}) => {
       status: event.status,
       createdAt: event.createdAt ? new Date(event.createdAt).toISOString() : null,
     })),
+    exchangeRates: usdArsRate
+      ? {
+          usdArs: usdArsRate,
+        }
+      : null,
+    treasuryMovement: treasuryMovementResult?.movement || null,
   };
 };
 

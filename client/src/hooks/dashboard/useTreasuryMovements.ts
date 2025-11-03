@@ -117,12 +117,15 @@ export const useTreasuryMovements = (options: UseTreasuryMovementsOptions = {}) 
   );
 
   const { data, loading, error, execute } = useApi<TreasuryMovementsResponse>(endpoint);
-  const [items, setItems] = useState<TreasuryMovement[]>([]);
-
+  // Trigger API call whenever the endpoint (filters, pagination, sort) changes
   useEffect(() => {
     execute().catch(() => {});
-  }, [execute]);
+  }, [endpoint, execute]);
+  const [items, setItems] = useState<TreasuryMovement[]>([]);
 
+  // The previous effect that depended only on `execute` is no longer necessary and
+  // has been merged into the effect above to ensure fresh data is fetched when
+  // any parameter affecting the `endpoint` changes.
   useEffect(() => {
     if (!data) return;
     const itemsWithSort = sortItemsLocally(data.items ?? [], sort);

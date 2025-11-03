@@ -3,9 +3,19 @@ const AppError = require('../utils/AppError');
 const normalizePermission = (permission) =>
   (typeof permission === 'string' ? permission.trim() : '').toLowerCase();
 
-const requirePermission = (permission) => {
+const toPermissionList = (permission) => {
+  if (Array.isArray(permission)) {
+    return permission
+      .map(normalizePermission)
+      .filter(Boolean);
+  }
   const normalized = normalizePermission(permission);
-  if (!normalized) {
+  return normalized ? [normalized] : [];
+};
+
+const requirePermission = (permission) => {
+  const required = toPermissionList(permission);
+  if (required.length === 0) {
     throw new Error('Permission name is required');
   }
 
@@ -15,7 +25,9 @@ const requirePermission = (permission) => {
         ? req.user.permissions.map(normalizePermission)
         : [];
 
-      if (!permissions.includes(normalized)) {
+      const hasPermission = required.some((perm) => permissions.includes(perm));
+
+      if (!hasPermission) {
         throw new AppError('No tenés permisos suficientes para realizar esta acción.', 403);
       }
 

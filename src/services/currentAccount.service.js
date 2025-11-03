@@ -120,38 +120,49 @@ const extractCurrencyAndAmountFromTransaction = (transaction) => {
     return null;
   }
 
-  const candidates = [
-    {
-      currency: transaction.incomingAsset?.code,
-      amount: Number(transaction.incomingAmount),
-    },
-    {
-      currency: transaction.outgoingAsset?.code,
-      amount: Number(transaction.outgoingAmount),
-    },
-  ];
+  const normalizeCandidate = (asset, amount) => {
+    if (!asset || !asset.code) {
+      return null;
+    }
+    const numericAmount = Number(amount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      return null;
+    }
+    return {
+      currency: String(asset.code).trim().toUpperCase(),
+      amount: Math.abs(numericAmount),
+    };
+  };
 
-  const pick = (code) =>
-    candidates.find(
-      (candidate) =>
-        candidate &&
-        candidate.currency &&
-        candidate.currency.toUpperCase() === code &&
-        Number.isFinite(candidate.amount) &&
-        candidate.amount > 0
-    );
+  const incoming = normalizeCandidate(transaction.incomingAsset, transaction.incomingAmount);
+  const outgoing = normalizeCandidate(transaction.outgoingAsset, transaction.outgoingAmount);
+  const type = String(transaction.type || '').toLowerCase();
 
-  const ars = pick('ARS');
-  if (ars) {
-    return { currency: 'ARS', amount: ars.amount };
+  const preferNonArs = (candidate) =>
+    candidate && candidate.currency !== 'ARS' ? candidate : null;
+
+  if (type === 'buy') {
+    return preferNonArs(incoming) || preferNonArs(outgoing) || incoming || outgoing || null;
   }
 
-  const usd = pick('USD');
-  if (usd) {
-    return { currency: 'USD', amount: usd.amount };
+  if (type === 'sell') {
+    return preferNonArs(outgoing) || preferNonArs(incoming) || outgoing || incoming || null;
   }
 
-  return null;
+  const firstNonArs = preferNonArs(incoming) || preferNonArs(outgoing);
+  if (firstNonArs) {
+    return firstNonArs;
+  }
+
+  if (incoming && incoming.currency === 'ARS') {
+    return incoming;
+  }
+
+  if (outgoing && outgoing.currency === 'ARS') {
+    return outgoing;
+  }
+
+  return incoming || outgoing || null;
 };
 
 const applyTransactionRegistration = async (transaction, { session, userId } = {}) => {
@@ -162,7 +173,8 @@ const applyTransactionRegistration = async (transaction, { session, userId } = {
 
   const currency = info.currency;
   const amount = roundAmount(info.amount);
-  // Buy: client pays ARS (positive delta), Sell: client receives ARS (negative delta)
+  // Buy: el cliente entrega el activo duro (usualmente USD) a FinaTech, generando cuenta por cobrar positiva.
+  // Sell: FinaTech entrega el activo duro, generando cuenta por cobrar negativa.
   const delta = transaction.type === 'buy' ? amount : -amount;
 
   const operationRef = {
@@ -234,7 +246,7 @@ const reverseTransactionRegistration = async (transaction, { session, userId } =
 
   const currency = info.currency;
   const amount = roundAmount(info.amount);
-  const delta = transaction.type === 'buy' ? amount : -amount;
+  const delta = transaction.type === 'buy' ? -amount : amount;
 
   const operationRef = {
     id: transaction._id,
@@ -257,7 +269,7 @@ const reverseTransactionRegistration = async (transaction, { session, userId } =
       accountKey: ACCOUNT_KEY,
       currency,
       amount: delta,
-      stage: 'reversal',
+      stage: 'registration',
       operation: operationRef,
       counterpart: {
         type: 'contact',
@@ -283,7 +295,7 @@ const reverseTransactionRegistration = async (transaction, { session, userId } =
       contact: contactId,
       currency,
       amount: delta,
-      stage: 'reversal',
+      stage: 'registration',
       operation: operationRef,
       counterpart: {
         type: 'account',
@@ -293,6 +305,104 @@ const reverseTransactionRegistration = async (transaction, { session, userId } =
       performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
     });
   }
+
+  await registerMovements(movements, { session });
+  return { currency, delta };
+};
+
+const registerTransferRegistration = async (operationDoc, { session, userId } = {}) => {
+  if (!operationDoc) {
+    return null;
+  }
+
+  const currency = String(operationDoc.currency || 'ARS').toUpperCase();
+  const totalAmount = roundAmount(operationDoc.totalAmount || operationDoc.amount || 0);
+  if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
+    return null;
+  }
+
+  const direction = operationDoc.direction === 'outgoing' ? 'outgoing' : 'incoming';
+  const delta = direction === 'incoming' ? totalAmount : -totalAmount;
+
+  const operationRef = {
+    id: operationDoc._id || operationDoc.id || null,
+    code: operationDoc.operationCode || operationDoc.code || null,
+    type: operationDoc.movementType || null,
+    source: 'transfer_operation',
+  };
+
+  const baseMetadata = {
+    direction,
+    movementType: operationDoc.movementType || null,
+    stage: 'registration',
+  };
+
+  await adjustAccountBalance(ACCOUNT_KEY, currency, delta, { session, userId });
+
+  const movements = [
+    {
+      ledger: 'general',
+      accountKey: ACCOUNT_KEY,
+      currency,
+      amount: delta,
+      stage: 'registration',
+      operation: operationRef,
+      counterpart: {
+        type: 'transfer_distribution',
+        key: operationDoc.movementType || null,
+      },
+      metadata: baseMetadata,
+      performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+    },
+  ];
+
+  const lines = Array.isArray(operationDoc.distributionLines)
+    ? operationDoc.distributionLines
+    : [];
+
+  await Promise.all(
+    lines.map(async (line) => {
+      const contactId =
+        line.contact && typeof line.contact === 'object' && line.contact._id
+          ? line.contact._id
+          : line.contact || line.contactId;
+
+      if (!mongoose.Types.ObjectId.isValid(contactId)) {
+        return;
+      }
+
+      const amountOriginal = Number(line.amount);
+      const amountArs = Number(line.amountArs ?? amountOriginal);
+      if (!Number.isFinite(amountArs) || amountArs <= 0) {
+        return;
+      }
+
+      const contactDelta =
+        direction === 'incoming' ? roundAmount(amountArs) : -roundAmount(amountArs);
+
+      await adjustContactBalance(contactId, currency, contactDelta, { session, userId });
+
+      movements.push({
+        ledger: 'contact',
+        accountKey: ACCOUNT_KEY,
+        contact: contactId,
+        currency,
+        amount: contactDelta,
+        stage: 'registration',
+        operation: operationRef,
+        counterpart: {
+          type: 'transfer_distribution',
+          key: operationDoc.movementType || null,
+        },
+        metadata: {
+          ...baseMetadata,
+          originalAmount: amountOriginal,
+          originalCurrency: line.method || currency,
+        },
+        performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
+      });
+    })
+  );
 
   await registerMovements(movements, { session });
   return { currency, delta };
@@ -360,12 +470,14 @@ const applyTreasurySettlement = async (operationDoc, { session, userId } = {}) =
         return;
       }
 
-      const amount = Number(line.amount);
-      if (!Number.isFinite(amount) || amount <= 0) {
+      const amountOriginal = Number(line.amount);
+      const amountArs = Number(line.amountArs ?? amountOriginal);
+      if (!Number.isFinite(amountArs) || amountArs <= 0) {
         return;
       }
 
-      const contactDelta = direction === 'incoming' ? -roundAmount(amount) : roundAmount(amount);
+      const contactDelta =
+        direction === 'incoming' ? -roundAmount(amountArs) : roundAmount(amountArs);
 
       await adjustContactBalance(contactId, currency, contactDelta, { session, userId });
 
@@ -384,6 +496,8 @@ const applyTreasurySettlement = async (operationDoc, { session, userId } = {}) =
         metadata: {
           direction,
           movementType: operationDoc.movementType,
+          originalAmount: amountOriginal,
+          originalCurrency: line.method || currency,
         },
         performedBy: userId && mongoose.Types.ObjectId.isValid(userId) ? userId : null,
       });
@@ -1007,8 +1121,10 @@ module.exports = {
   applyTransactionRegistration,
   reverseTransactionRegistration,
   applyTreasurySettlement,
+  registerTransferRegistration,
   adjustAccountBalance,
   adjustContactBalance,
+  ensureContactBalance,
   getCurrentAccountSummary,
   listCurrentAccountMovements,
   listContactBalancesDetailed,

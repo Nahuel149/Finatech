@@ -291,6 +291,7 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
 
                   <div className="text-sm text-text-primary mb-2">
                     <div className="font-medium">{movement.contact?.fullName || movement.contact?.shortName || '—'}</div>
+                    <div className="text-xs text-gray-500 capitalize">Origen: {movement.source || '—'}</div>
                     <div className="text-xs text-primary">{linkedOperationCode(movement)}</div>
                   </div>
 
@@ -361,6 +362,9 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
               <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Contacto
               </th>
+              <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Origen
+              </th>
               <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Operación
               </th>
@@ -418,6 +422,11 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-text-primary">
                         {movement.contact?.fullName || movement.contact?.shortName || '—'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 capitalize">
+                        {movement.source || '—'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-center">

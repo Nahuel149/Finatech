@@ -56,82 +56,82 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
 
   return (
     <>
-      {/* No renderizar contenido cuando el modal está cerrado */}
-      {!isOpen ? null : (
-      <div
-        className={`fixed inset-0 flex items-center justify-center p-5 bg-black/40 backdrop-blur-sm z-[100] transition-opacity duration-200 ease-out ${mounted ? 'opacity-100' : 'opacity-0'}`}
-        onClick={handleClose}
-      >
+      {isOpen && (
         <div
-          className={`bg-white rounded-lg shadow-2xl border border-gray-200/60 max-w-4xl w-full max-h-[calc(100vh-40px)] flex flex-col transform transition-all duration-200 ease-out ${mounted ? 'scale-100 translate-y-0' : 'scale-95 translate-y-1'}`}
-          onClick={(e) => e.stopPropagation()}
+          className={`fixed inset-0 flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm z-[100] transition-opacity duration-200 ease-out ${
+            mounted ? 'opacity-100' : 'opacity-0'
+          }`}
+          onClick={handleClose}
+          role="presentation"
         >
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 sm:p-6 border-b border-gray-200 gap-4">
-            <div className="flex-1">
-              {/* Breadcrumb */}
-              <nav className="text-sm text-gray-500 mb-2 overflow-x-auto">
-                <div className="flex items-center space-x-2 whitespace-nowrap">
-                  <span>Logística</span>
-                  <span>/</span>
-                  <span>Panel principal</span>
-                  <span>/</span>
-                  <span className="text-gray-900">Registrar nuevo movimiento</span>
-                </div>
+          <div
+            role="dialog"
+            aria-modal="true"
+            className={`bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[90vh] overflow-hidden border border-gray-200/60 flex flex-col transform transition-all duration-200 ease-out ${
+              mounted ? 'scale-100 translate-y-0' : 'scale-95 translate-y-1'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <header className="px-6 sm:px-8 py-5 sm:py-6 border-b border-gray-200">
+              <nav className="flex items-center space-x-2 text-sm text-gray-500 mb-4" aria-label="Breadcrumb">
+                <span className="text-primary font-medium">Logística</span>
+                <i className="fa-solid fa-chevron-right text-xs" />
+                <span>Nuevo movimiento</span>
               </nav>
-              <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
-                Registrar nuevo movimiento logístico
-              </h2>
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-semibold text-text-primary">Registrar nuevo movimiento</h2>
+                  <p className="text-sm text-gray-600 mt-1">
+                    Cargá los datos operativos para la trazabilidad logística
+                  </p>
+                </div>
+                <button
+                  onClick={handleClose}
+                  className="text-gray-400 hover:text-gray-600 transition-colors p-2"
+                  aria-label="Cerrar modal"
+                >
+                  <XMarkIcon className="w-6 h-6" />
+                </button>
+              </div>
+            </header>
+
+            <div className="flex-1 overflow-y-auto">
+              <div className="px-6 sm:px-8 py-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <MovementDataForm />
+                  <div className="space-y-8">
+                    <AssociationsDocumentsForm />
+                    <ItemsBulkForm />
+                    <AttachmentsForm />
+                  </div>
+                </div>
+              </div>
             </div>
-            <button
-              onClick={handleClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors self-end sm:self-auto p-2"
-              aria-label="Cerrar modal"
-            >
-              <XMarkIcon className="w-6 h-6" />
-            </button>
-          </div>
 
-          {/* Content */}
-          <div className="p-4 sm:p-6 overflow-y-auto flex-1">
-            <div className="space-y-6 sm:space-y-8">
-              {/* Movement Data Form */}
-              <MovementDataForm />
-
-              {/* Associations and Documents Form */}
-              <AssociationsDocumentsForm />
-
-              {/* Items or Bulk Form */}
-              <ItemsBulkForm />
-
-              {/* Attachments Form */}
-              <AttachmentsForm />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 p-4 sm:p-6 border-t border-gray-200 bg-gray-50">
-            <button
-              onClick={handleClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Cancelar
-            </button>
-            <button
-              onClick={handleSaveDraft}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              Guardar borrador
-            </button>
-            <button
-              onClick={handleRegisterMovement}
-              className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Registrar movimiento
-            </button>
+            <footer className="px-6 sm:px-8 py-5 sm:py-6 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row justify-end gap-3">
+                <button
+                  onClick={handleClose}
+                  className="px-5 py-2 text-sm font-medium text-text-primary border border-gray-300 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={handleSaveDraft}
+                  className="px-5 py-2 text-sm font-medium text-white bg-gray-500 rounded-lg hover:bg-gray-600 transition-colors"
+                >
+                  Guardar borrador
+                </button>
+                <button
+                  onClick={handleRegisterMovement}
+                  className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Registrar movimiento
+                </button>
+              </div>
+            </footer>
           </div>
         </div>
-      </div>
       )}
 
       {/* Completion Confirmation Modal */}

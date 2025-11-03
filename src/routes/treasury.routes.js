@@ -16,20 +16,21 @@ const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 
 const router = Router();
+const VIEW_BALANCES_PERMISSIONS = ['view-balances', 'access-treasury'];
 
 router.use(requireAuth);
 
-router.get('/balances', requirePermission('access-treasury'), balances);
-router.get('/balances/overview', requirePermission('access-treasury'), globalOverview);
+router.get('/balances', requirePermission(VIEW_BALANCES_PERMISSIONS), balances);
+router.get('/balances/overview', requirePermission(VIEW_BALANCES_PERMISSIONS), globalOverview);
 router.get(
   '/balances/contacts/:contactId',
-  requirePermission('access-treasury'),
+  requirePermission(VIEW_BALANCES_PERMISSIONS),
   contactBalanceDetail
 );
-router.get('/linked-balances', requirePermission('access-treasury'), linkedBalancesSummary);
+router.get('/linked-balances', requirePermission(VIEW_BALANCES_PERMISSIONS), linkedBalancesSummary);
 router.get(
   '/linked-balances/:balanceKey',
-  requirePermission('access-treasury'),
+  requirePermission(VIEW_BALANCES_PERMISSIONS),
   linkedBalanceDetail
 );
 

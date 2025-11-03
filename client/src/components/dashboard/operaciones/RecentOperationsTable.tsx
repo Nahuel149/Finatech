@@ -44,6 +44,14 @@ const STATUS_MAP: Record<string, { label: string; className: string }> = {
     label: 'Completada',
     className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800',
   },
+  cancelled: {
+    label: 'Cancelada',
+    className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700',
+  },
+  voided: {
+    label: 'Cancelada',
+    className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-red-100 text-red-700',
+  },
   registered: {
     label: 'En proceso',
     className: 'inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800',
@@ -567,8 +575,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
         <div className="lg:hidden">
           {loading &&
             Array.from({ length: 3 }).map((_, index) => (
-              <div key={`mobile-skeleton-${index}`} className="p-4 border-b border-gray-200 animate-pulse">
-                <div className="flex items-center justify-between mb-3">
+              <div key={`mobile-skeleton-${index}`} className="px-4 py-5 border-b border-gray-200 animate-pulse">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <div className="w-8 h-8 rounded-full bg-gray-200 mr-3" />
                     <div>
@@ -578,12 +586,12 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                   </div>
                   <div className="h-5 w-16 rounded bg-gray-200" />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <div className="h-3 w-32 rounded bg-gray-200" />
                   <div className="h-3 w-28 rounded bg-gray-200" />
                   <div className="h-3 w-24 rounded bg-gray-200" />
                 </div>
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex justify-between items-center mt-4">
                   <div className="h-5 w-20 rounded bg-gray-200" />
                   <div className="flex space-x-2">
                     <div className="h-6 w-12 rounded bg-gray-200" />
@@ -618,8 +626,8 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
           {!loading &&
             !error &&
             filteredRows.map((row) => (
-              <div key={`mobile-${row.id}`} className="p-4 border-b border-gray-200 hover:bg-gray-50">
-                <div className="flex items-center justify-between mb-3">
+              <div key={`mobile-${row.id}`} className="px-4 py-5 border-b border-gray-200 hover:bg-gray-50">
+                <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center">
                     <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
                       <span className="text-blue-600 text-sm font-medium">
@@ -634,7 +642,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                   <span className={row.typeClassName}>{row.typeLabel}</span>
                 </div>
                 
-                <div className="space-y-2 text-sm">
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
                     <span className="text-gray-500">Fecha:</span>
                     <span className="text-text-primary">{row.dateLabel}</span>
@@ -656,7 +664,7 @@ export const RecentOperationsTable: React.FC<Props> = ({ search = '' }) => {
                   </div>
                 </div>
                 
-                <div className="flex justify-between items-center mt-3">
+                <div className="flex justify-between items-center mt-4">
                   <span className={row.statusClassName}>{row.statusLabel}</span>
                   <div className="flex space-x-2">
                     <Button

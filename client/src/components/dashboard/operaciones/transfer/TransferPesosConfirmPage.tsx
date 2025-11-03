@@ -6,6 +6,7 @@ import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
+import { useLatestMarketRate } from '../../../../hooks/dashboard/useLatestMarketRate';
 
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -38,24 +39,48 @@ export const TransferPesosConfirmPage: React.FC = () => {
   const { execute, loading, error } = useCreateTransfer();
 
   const [toast, setToast] = useState<ToastState | null>(null);
+  const {
+    data: usdMarketRate,
+    loading: rateLoading,
+    error: rateError,
+    refresh: refreshRate,
+  } = useLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+  const usdToArsRate = usdMarketRate?.rate && usdMarketRate.rate > 0 ? usdMarketRate.rate : null;
 
   const payload = useMemo(() => toPayload(), [toPayload]);
+  const baseValid = Boolean(
+    draft.movementType &&
+      draft.direction &&
+      draft.totalAmount > 0 &&
+      draft.distributionLines.length > 0 &&
+      payload
+  );
+  const hasUsdLines = useMemo(
+    () => draft.distributionLines.some((line) => line.method === 'USD'),
+    [draft.distributionLines]
+  );
+  const totalAssignedArs = useMemo(() => {
+    return draft.distributionLines.reduce((sum, line) => {
+      if (line.method === 'USD') {
+        if (!usdToArsRate) {
+          return sum;
+        }
+        return sum + line.amount * usdToArsRate;
+      }
+      return sum + line.amount;
+    }, 0);
+  }, [draft.distributionLines, usdToArsRate]);
 
   const readyForSubmit =
-    draft.movementType &&
-    draft.direction &&
-    draft.totalAmount > 0 &&
-    draft.distributionLines.length > 0 &&
-    payload &&
-    Math.abs(
-      draft.distributionLines.reduce((sum, line) => sum + line.amount, 0) - draft.totalAmount
-    ) < 0.01;
+    baseValid &&
+    (!hasUsdLines || !!usdToArsRate) &&
+    Math.abs(totalAssignedArs - draft.totalAmount) < 0.01;
 
   useEffect(() => {
-    if (!readyForSubmit) {
+    if (!baseValid) {
       navigate('/dashboard/operaciones/transfer-pesos', { replace: true });
     }
-  }, [navigate, readyForSubmit]);
+  }, [baseValid, navigate]);
 
   useEffect(() => {
     if (!toast) return;
@@ -63,17 +88,31 @@ export const TransferPesosConfirmPage: React.FC = () => {
     return () => window.clearTimeout(timer);
   }, [toast]);
 
-  if (!readyForSubmit) {
+  const totalARS = useMemo(
+    () =>
+      draft.distributionLines
+        .filter((line) => line.method === 'ARS')
+        .reduce((sum, line) => sum + line.amount, 0),
+    [draft.distributionLines]
+  );
+
+  const totalUSD = useMemo(
+    () =>
+      draft.distributionLines
+        .filter((line) => line.method === 'USD')
+        .reduce((sum, line) => sum + line.amount, 0),
+    [draft.distributionLines]
+  );
+
+  const submitDisabledReason = !readyForSubmit
+    ? hasUsdLines && !usdToArsRate
+      ? 'Esperando tasa USD/ARS'
+      : 'Revisá la distribución'
+    : null;
+
+  if (!baseValid) {
     return null;
   }
-
-  const totalARS = draft.distributionLines
-    .filter((line) => line.method === 'ARS')
-    .reduce((sum, line) => sum + line.amount, 0);
-
-  const totalUSD = draft.distributionLines
-    .filter((line) => line.method === 'USD')
-    .reduce((sum, line) => sum + line.amount, 0);
 
   const handleBack = () => {
     navigate('/dashboard/operaciones/transfer-pesos?step=distribution');
@@ -104,6 +143,7 @@ export const TransferPesosConfirmPage: React.FC = () => {
         direction: draft.direction,
         totalAmount: draft.totalAmount,
         distributionLines: payload,
+        exchangeRates: usdToArsRate ? { usdArs: usdToArsRate } : undefined,
       });
       setLastOperation(response.operation);
       navigate('/dashboard/operaciones/transfer-pesos/completada', { replace: true });
@@ -159,6 +199,27 @@ export const TransferPesosConfirmPage: React.FC = () => {
         {error && (
           <div className="mb-6">
             <Alert type="error" message={error.message || 'No pudimos registrar la transferencia.'} />
+          </div>
+        )}
+        {hasUsdLines && rateLoading && (
+          <div className="mb-6">
+            <Alert type="info" message="Obteniendo tasa USD/ARS…" />
+          </div>
+        )}
+        {rateError && hasUsdLines && !usdToArsRate && (
+          <div className="mb-6">
+            <Alert
+              type="error"
+              message="No pudimos obtener la tasa USD/ARS. Intentá nuevamente antes de confirmar."
+            />
+          </div>
+        )}
+        {hasUsdLines && !usdToArsRate && !rateLoading && !rateError && (
+          <div className="mb-6">
+            <Alert
+              type="warning"
+              message="Necesitamos un tipo de cambio USD/ARS válido para confirmar la operación."
+            />
           </div>
         )}
 
@@ -275,6 +336,11 @@ export const TransferPesosConfirmPage: React.FC = () => {
                         : formatCurrency(line.amount)}
                     </div>
                     <div className="text-sm text-gray-600">{line.method}</div>
+                    {line.method === 'USD' && usdToArsRate && (
+                      <div className="text-xs text-gray-500">
+                        ≈ {formatCurrency(line.amount * usdToArsRate)} ARS
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -282,24 +348,45 @@ export const TransferPesosConfirmPage: React.FC = () => {
 
             <div className="mt-6 pt-6 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               <div className="flex items-center justify-between md:justify-start md:space-x-2">
-                <span className="text-gray-600">Total distribuido ARS:</span>
+                <span className="text-gray-600">Equivalente en ARS:</span>
+                <span className="font-semibold text-text-primary">
+                  {hasUsdLines && !usdToArsRate
+                    ? '—'
+                    : formatCurrency(totalAssignedArs)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between md:justify-start md:space-x-2">
+                <span className="text-gray-600">Detalle ARS:</span>
                 <span className="font-semibold text-text-primary">
                   {formatCurrency(totalARS)}
                 </span>
               </div>
               <div className="flex items-center justify-between md:justify-start md:space-x-2">
-                <span className="text-gray-600">Total distribuido USD:</span>
+                <span className="text-gray-600">Detalle USD:</span>
                 <span className="font-semibold text-text-primary">
                   {formatCurrency(totalUSD, 'USD')}
                 </span>
               </div>
               <div className="flex items-center justify-between md:justify-start md:space-x-2">
-                <span className="text-gray-600">Total general:</span>
+                <span className="text-gray-600">Total operación:</span>
                 <span className="font-semibold text-text-primary">
                   {formatCurrency(draft.totalAmount)}
                 </span>
               </div>
             </div>
+            {hasUsdLines && (
+              <div className="mt-4 text-xs text-gray-500">
+                Tasa USD→ARS utilizada:{' '}
+                {usdToArsRate
+                  ? usdToArsRate.toLocaleString('es-AR', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 4,
+                    })
+                  : rateLoading
+                  ? 'Obteniendo…'
+                  : 'No disponible'}
+              </div>
+            )}
           </div>
         </section>
       </main>
@@ -317,7 +404,7 @@ export const TransferPesosConfirmPage: React.FC = () => {
               <span>Atrás</span>
             </button>
             
-            <div className="flex space-x-4">
+            <div className="flex space-x-4 items-center">
               <button
                 onClick={handleSaveDraft}
                 disabled={loading}
@@ -326,14 +413,30 @@ export const TransferPesosConfirmPage: React.FC = () => {
                 <i className="fa-solid fa-save text-sm" />
                 <span>{loading ? 'Guardando...' : 'Guardar borrador'}</span>
               </button>
-              
+              {hasUsdLines && !usdToArsRate && (
+                <button
+                  type="button"
+                  onClick={() => refreshRate().catch(() => {})}
+                  className="flex items-center space-x-2 px-4 py-3 border border-yellow-400 text-yellow-700 rounded-lg hover:bg-yellow-50 transition-colors"
+                  disabled={rateLoading || loading}
+                >
+                  <i className="fa-solid fa-sync" />
+                  <span>{rateLoading ? 'Actualizando…' : 'Actualizar tasa'}</span>
+                </button>
+              )}
               <button
                 onClick={handleConfirm}
-                disabled={loading}
+                disabled={loading || !readyForSubmit}
                 className="flex items-center space-x-2 px-8 py-3 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50 font-medium shadow-sm"
               >
                 <i className="fa-solid fa-check text-sm" />
-                <span>{loading ? 'Confirmando...' : 'Confirmar operación'}</span>
+                <span>
+                  {loading
+                    ? 'Confirmando...'
+                    : submitDisabledReason
+                    ? submitDisabledReason
+                    : 'Confirmar operación'}
+                </span>
               </button>
             </div>
           </div>

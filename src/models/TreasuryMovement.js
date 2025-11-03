@@ -187,6 +187,13 @@ treasuryMovementSchema.index({ status: 1, movementAt: -1 });
 treasuryMovementSchema.index({ currency: 1, movementAt: -1 });
 treasuryMovementSchema.index({ medium: 1, movementAt: -1 });
 treasuryMovementSchema.index({ contact: 1, movementAt: -1 });
+// Added compound index to optimize common filtering combinations (currency, type, movementAt)
+treasuryMovementSchema.index({ currency: 1, type: 1, movementAt: -1 });
+// Added text index for efficient searching across multiple text fields
+treasuryMovementSchema.index(
+  { movementCode: 'text', reference: 'text', description: 'text', 'linkedOperations.code': 'text' },
+  { name: 'MovementTextIndex' }
+);
 
 treasuryMovementSchema.pre('validate', function assignBalanceKey(next) {
   if (!this.balanceKey) {

@@ -19,6 +19,8 @@ interface Props {
   onNewOperation: () => void;
   onExportPDF: () => void;
   onDuplicate: () => void;
+  onVoid?: () => void;
+  canVoid?: boolean;
 
   // Datos para el resumen breve
   clientName: string;
@@ -28,6 +30,7 @@ interface Props {
   incomingAmountLabel: string; // Ej: "USD 1.250,00"
   incomingAssetLabel: string; // Ej: "(Billete)"
   outgoingAmountLabel: string; // Ej: "ARS $125.000,00"
+  outgoingAssetLabel: string;
   operationRate: number;
 }
 
@@ -38,6 +41,8 @@ export const CompletionSuccessState: React.FC<Props> = ({
   onNewOperation,
   onExportPDF,
   onDuplicate,
+  onVoid,
+  canVoid = true,
   clientName,
   clientDocument,
   operationType,
@@ -45,8 +50,17 @@ export const CompletionSuccessState: React.FC<Props> = ({
   incomingAmountLabel,
   incomingAssetLabel,
   outgoingAmountLabel,
+  outgoingAssetLabel,
   operationRate,
-}) => (
+}) => {
+  const clientReceives = operationType === 'buy'
+    ? { amount: incomingAmountLabel, asset: incomingAssetLabel }
+    : { amount: outgoingAmountLabel, asset: outgoingAssetLabel };
+  const clientPays = operationType === 'buy'
+    ? { amount: outgoingAmountLabel, asset: outgoingAssetLabel }
+    : { amount: incomingAmountLabel, asset: incomingAssetLabel };
+
+  return (
   <section
     id="success-card"
     className="bg-white rounded-lg border border-gray-200 shadow-lg"
@@ -119,20 +133,20 @@ export const CompletionSuccessState: React.FC<Props> = ({
                 {settlementMode === 'compound' ? 'Compuesta' : 'Simple'}
               </span>
             </div>
-          </SummaryItem>
+         </SummaryItem>
         </div>
 
         <div className="space-y-4">
-          <SummaryItem label={operationType === 'buy' ? 'Bien que entra' : 'Bien que sale'}>
+          <SummaryItem label="Cliente recibe">
             <div className="text-text-primary font-medium">
-              {incomingAmountLabel}
+              {clientReceives.amount}
             </div>
-            <div className="text-sm text-gray-500">({incomingAssetLabel})</div>
+            <div className="text-sm text-gray-500">({clientReceives.asset})</div>
           </SummaryItem>
 
-          <SummaryItem label={operationType === 'buy' ? 'Bien que sale' : 'Bien que entra'}>
+          <SummaryItem label="Cliente paga">
             <div className="text-text-primary font-medium">
-              {outgoingAmountLabel}
+              {clientPays.amount}
             </div>
             {operationRate !== undefined && operationRate !== null ? (
               <div className="text-sm text-gray-500">
@@ -178,13 +192,23 @@ export const CompletionSuccessState: React.FC<Props> = ({
 
     {/* 4. Secondary Actions */}
     <div id="secondary-actions" className="px-8 py-4 border-t border-gray-200">
-      <div className="flex items-center justify-center space-x-6">
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:space-x-6">
+        {onVoid && (
+          <button
+            onClick={onVoid}
+            className="flex items-center px-4 py-2 text-danger hover:text-red-700 transition-colors"
+            disabled={!canVoid}
+          >
+            <i className="fa-solid fa-ban mr-2" />
+            Anular operación
+          </button>
+        )}
         <button
           onClick={onExportPDF}
           className="flex items-center px-4 py-2 text-gray-600 hover:text-text-primary transition-colors"
         >
           <i className="fa-solid fa-file-pdf mr-2" />
-          Exportar a PDF
+          Exportar resumen (PDF)
         </button>
         <button
           onClick={onDuplicate}
@@ -197,3 +221,4 @@ export const CompletionSuccessState: React.FC<Props> = ({
     </div>
   </section>
 );
+};

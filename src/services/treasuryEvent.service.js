@@ -5,6 +5,7 @@ const buildDistributionSummary = (lines = []) =>
     contact: line.contact,
     method: line.method,
     amount: line.amount,
+    amountArs: line.amountArs == null ? line.amount : line.amountArs,
   }));
 
 const createTransferOperationEvents = async (operationDocument, { session } = {}) => {
@@ -31,6 +32,7 @@ const createTransferOperationEvents = async (operationDocument, { session } = {}
           contact: summary.contact,
           method: summary.method,
           amount: summary.amount,
+          amountArs: summary.amountArs,
         })),
       },
     },

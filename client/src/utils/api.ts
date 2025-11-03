@@ -175,6 +175,50 @@ export const api = {
       method: 'POST',
       body: { email },
     }),
+
+  markNotificationRead: (notificationId: string) =>
+    apiRequest(`/api/dashboard/notifications/${encodeURIComponent(notificationId)}/read`, {
+      method: 'POST',
+    }),
+
+  markAllNotificationsRead: () =>
+    apiRequest('/api/dashboard/notifications/read-all', {
+      method: 'POST',
+    }),
+
+  createNotification: (payload: {
+    title: string;
+    message: string;
+    severity?: 'info' | 'success' | 'warning' | 'error';
+    actionLabel?: string;
+    actionUrl?: string;
+    metadata?: Record<string, unknown> | null;
+  }) =>
+    apiRequest('/api/dashboard/notifications', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  updateNotification: (
+    id: string,
+    payload: Partial<{
+      title: string;
+      message: string;
+      severity: 'info' | 'success' | 'warning' | 'error';
+      actionLabel?: string;
+      actionUrl?: string;
+      metadata?: Record<string, unknown> | null;
+    }>
+  ) =>
+    apiRequest(`/api/dashboard/notifications/${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  deleteNotification: (id: string) =>
+    apiRequest(`/api/dashboard/notifications/${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+    }),
     
   logout: () =>
     apiRequest('/api/auth/logout', {

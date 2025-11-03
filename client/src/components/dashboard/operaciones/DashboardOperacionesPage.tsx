@@ -31,7 +31,9 @@ export const DashboardOperacionesPage: React.FC = () => {
         <RecentValidations />
 
         {/* Recent operations table */}
-        <RecentOperationsTable search={search} />
+        <div className="mt-8">
+          <RecentOperationsTable search={search} />
+        </div>
 
         {/* Placeholder sections to keep 1:1 structure */}
         <section id="system-status" className="mb-8" />

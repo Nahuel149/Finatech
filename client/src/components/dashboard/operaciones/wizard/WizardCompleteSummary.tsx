@@ -218,6 +218,10 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
     typeof clientLastMargin === 'number' && Number.isFinite(clientLastMargin)
       ? formatPercentage(clientLastMargin)
       : '—';
+  const clientReceivesAmount = outgoingLabel;
+  const clientReceivesAsset = outgoingAssetLabel;
+  const clientPaysAmount = incomingLabel;
+  const clientPaysAsset = incomingAssetLabel;
 
   return (
     <div id="summary-cards" className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
@@ -233,12 +237,12 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
           <InlineItem label="Tipo" value={summaryTypeLabel} />
           <InlineItem label="Último margen (cliente)" value={lastMarginLabel} />
           <InlineItem
-            label={type === 'buy' ? 'Entra' : 'Sale'}
-            value={`${incomingLabel} (${incomingAssetLabel})`}
+            label="Cliente recibe"
+            value={`${clientReceivesAmount} (${clientReceivesAsset})`}
           />
           <InlineItem
-            label={type === 'buy' ? 'Sale' : 'Entra'}
-            value={`${outgoingLabel} (${outgoingAssetLabel})`}
+            label="Cliente paga"
+            value={`${clientPaysAmount} (${clientPaysAsset})`}
           />
           <InlineItem
             label="TC Operación / Mercado"
@@ -261,9 +265,9 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
         onEdit={onEditStep2}
       >
         {settlementMode === 'simple' ? (
-          <SettlementSimple method={settlementSimpleMethod} amountLabel={incomingLabel} />
+          <SettlementSimple method={settlementSimpleMethod} amountLabel={clientPaysAmount} />
         ) : (
-          <SettlementCompound lines={settlementLines} amountLabel={incomingLabel} />
+          <SettlementCompound lines={settlementLines} amountLabel={clientPaysAmount} />
         )}
       </SummaryCard>
 
@@ -275,18 +279,18 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center text-gray-500 text-xs uppercase tracking-wide mb-2">
               <i className="fa-solid fa-arrow-down mr-2" />
-              Entra
+              Cliente paga
             </div>
-            <div className="text-lg font-semibold text-text-primary">{incomingLabel}</div>
-            <div className="text-xs text-gray-500">{incomingAssetLabel}</div>
+            <div className="text-lg font-semibold text-text-primary">{clientPaysAmount}</div>
+            <div className="text-xs text-gray-500">{clientPaysAsset}</div>
           </div>
           <div className="bg-gray-50 rounded-lg p-4">
             <div className="flex items-center text-gray-500 text-xs uppercase tracking-wide mb-2">
               <i className="fa-solid fa-arrow-up mr-2" />
-              Sale
+              Cliente recibe
             </div>
-            <div className="text-lg font-semibold text-text-primary">{outgoingLabel}</div>
-            <div className="text-xs text-gray-500">{outgoingAssetLabel}</div>
+            <div className="text-lg font-semibold text-text-primary">{clientReceivesAmount}</div>
+            <div className="text-xs text-gray-500">{clientReceivesAsset}</div>
           </div>
         </div>
         <div className="mt-4 text-xs text-gray-500">

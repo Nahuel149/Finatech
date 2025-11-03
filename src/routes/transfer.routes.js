@@ -36,6 +36,10 @@ router.post(
   body('distributionLines.*.amount')
     .isFloat({ gt: 0 })
     .withMessage('Los montos asignados deben ser mayores a 0.'),
+  body('exchangeRates.usdArs')
+    .optional()
+    .isFloat({ gt: 0 })
+    .withMessage('La tasa USD/ARS debe ser mayor a 0.'),
   validateRequest,
   createTransferOperation
 );

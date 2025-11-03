@@ -77,7 +77,8 @@ const userSchema = new mongoose.Schema(
         'access-treasury', 
         'access-transfers',
         'manage-treasury',
-        'manage-market-rates'
+        'manage-market-rates',
+        'manage-notifications'
       ],
     },
     audit: {

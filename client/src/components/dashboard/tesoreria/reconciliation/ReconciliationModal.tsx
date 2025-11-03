@@ -4,6 +4,7 @@ import {
   useTreasuryMovements,
   useReconciliationSuggestions,
   useCompensateTreasuryMovement,
+  useUserPermissions,
 } from '../../../../hooks';
 import { ApiError, TreasuryMovement, OperationSuggestion } from '../../../../types';
 import { ReconciliationFilters, ReconciliationFiltersState } from './ReconciliationFilters';
@@ -64,6 +65,8 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
     loading: compensating,
     reset: resetCompensate,
   } = useCompensateTreasuryMovement();
+  const { permissions, loading: permissionsLoading } = useUserPermissions();
+  const canManageTreasury = permissions.includes('manage-treasury');
 
   useEffect(() => {
     if (open && pendingMovements.length && !selectedMovement) {
@@ -80,6 +83,12 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
       resetCompensate();
     }
   }, [open, resetSuggestions, resetCompensate]);
+
+  useEffect(() => {
+    if (!canManageTreasury) {
+      setSelectedOperationIds([]);
+    }
+  }, [canManageTreasury]);
 
   const activeMovement = suggestionMovement || selectedMovement;
 
@@ -123,6 +132,11 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
     ? formatCurrency(difference, activeMovement.currency || 'ARS')
     : '$0,00';
   const isBalanced = Math.abs(difference) < 0.01 && !!selectedOperationIds.length;
+  const summaryWarning = !canManageTreasury
+    ? 'No tenés permiso para compensar movimientos.'
+    : Math.abs(difference) > 0.01
+    ? 'Los montos no coinciden exactamente, revisá antes de confirmar.'
+    : null;
 
   const handleSelectMovement = (movement: TreasuryMovement) => {
     setSelectedMovement(movement);
@@ -130,6 +144,9 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
   };
 
   const handleToggleOperation = (operationId: string) => {
+    if (!canManageTreasury) {
+      return;
+    }
     setSelectedOperationIds((prev) =>
       prev.includes(operationId)
         ? prev.filter((id) => id !== operationId)
@@ -138,6 +155,11 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
   };
 
   const handleConfirm = async () => {
+    if (!canManageTreasury) {
+      onShowToast({ type: 'warning', message: 'No tenés permiso para compensar movimientos.' });
+      return;
+    }
+
     if (!selectedMovement || !selectedOperationIds.length) {
       return;
     }
@@ -248,7 +270,7 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
               <ReconciliationOperationsTable
                 operations={filteredOperations}
                 selectedIds={selectedOperationIds}
-                onToggle={handleToggleOperation}
+                onToggle={canManageTreasury ? handleToggleOperation : () => {}}
                 loading={suggestionsLoading}
                 error={suggestionsError ? suggestionsError.message : null}
               />
@@ -271,8 +293,8 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
           movementTotalLabel={formattedMovementTotal}
           differenceLabel={formattedDifference}
           isBalanced={isBalanced}
-          warning={Math.abs(difference) > 0.01 ? 'Los montos no coinciden exactamente, revisá antes de confirmar.' : null}
-          disableConfirm={!isBalanced || compensating}
+          warning={summaryWarning}
+          disableConfirm={!canManageTreasury || !isBalanced || compensating || permissionsLoading}
           confirming={compensating}
           onCancel={onClose}
           onSaveDraft={handleSaveDraft}

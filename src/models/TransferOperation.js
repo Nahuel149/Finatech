@@ -18,6 +18,14 @@ const distributionLineSchema = new mongoose.Schema(
       required: true,
       min: 0.01,
     },
+    amountArs: {
+      type: Number,
+      required: true,
+      min: 0.01,
+      default() {
+        return Number(this.amount || 0);
+      },
+    },
   },
   { _id: false }
 );
@@ -55,7 +63,10 @@ const transferOperationSchema = new mongoose.Schema(
           if (!Array.isArray(lines) || lines.length === 0) {
             return false;
           }
-          const sum = lines.reduce((acc, line) => acc + Number(line.amount || 0), 0);
+          const sum = lines.reduce(
+            (acc, line) => acc + Number(line.amountArs != null ? line.amountArs : line.amount || 0),
+            0
+          );
           const total = Number(this.totalAmount || 0);
           return Math.abs(sum - total) < 0.01;
         },
@@ -64,11 +75,34 @@ const transferOperationSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['registered'],
+      enum: ['pending', 'registered', 'completed', 'cancelled'],
       default: 'registered',
     },
     confirmedAt: {
       type: Date,
+      default: null,
+    },
+    completedAt: {
+      type: Date,
+      default: null,
+    },
+    completedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    cancellationReason: {
+      type: String,
+      trim: true,
       default: null,
     },
     createdBy: {

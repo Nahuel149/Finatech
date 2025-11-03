@@ -54,9 +54,9 @@ export const RecentValidations: React.FC = () => {
   );
 
   return (
-    <section id="recent-validations" className="mb-6 lg:mb-8">
+    <section id="recent-validations" className="mb-8 lg:mb-10">
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="p-4 lg:p-6 border-b border-gray-200">
+        <div className="px-4 py-5 lg:p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg lg:text-xl font-semibold text-text-primary mb-1">
@@ -77,7 +77,7 @@ export const RecentValidations: React.FC = () => {
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
-                <div key={i} className="p-4 lg:p-6 flex items-center">
+                <div key={i} className="px-4 py-5 lg:p-6 flex items-center">
                   <div className="w-8 h-8 lg:w-10 lg:h-10 rounded-lg mr-3 lg:mr-4 bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse" />
                   <div className="flex-1">
                     <div className="h-4 w-48 rounded bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 animate-pulse mb-2" />
@@ -94,7 +94,7 @@ export const RecentValidations: React.FC = () => {
               const actionLabel = n.actionLabel || 'Ver detalle';
               const actionUrl = n.actionUrl || '/dashboard/notificaciones';
               return (
-                <div key={n.id} className="p-4 lg:p-6 flex items-start">
+                <div key={n.id} className="px-4 py-5 lg:p-6 flex items-start">
                   <div
                     className={`w-8 h-8 lg:w-10 lg:h-10 ${s.box} rounded-lg flex items-center justify-center mr-3 lg:mr-4 mt-1`}
                   >
@@ -103,9 +103,9 @@ export const RecentValidations: React.FC = () => {
                   <div className="flex-1">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h3 className="font-medium text-text-primary text-sm lg:text-base">{n.title}</h3>
+                        <h3 className="font-medium text-text-primary text-sm lg:text-base mb-1">{n.title}</h3>
                         {(n.description || n.message) && (
-                          <p className="text-gray-600 text-sm mt-1 lg:mt-0">
+                          <p className="text-gray-600 text-sm">
                             {n.description || n.message}
                           </p>
                         )}
@@ -127,7 +127,7 @@ export const RecentValidations: React.FC = () => {
             })}
 
           {!loading && error && (
-            <div className="p-4 lg:p-6 flex items-center">
+            <div className="px-4 py-5 lg:p-6 flex items-center">
               <div className="w-8 h-8 lg:w-10 lg:h-10 bg-red-100 rounded-lg flex items-center justify-center mr-3 lg:mr-4">
                 <i className="fa-solid fa-times-circle text-danger text-sm lg:text-base"></i>
               </div>

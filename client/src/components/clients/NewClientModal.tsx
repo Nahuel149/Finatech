@@ -39,11 +39,10 @@ export interface NewClientModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
-  cuit?: string;
-  email?: string;
-  phone?: string;
   address?: string;
+  secondaryAddress?: string;
   internalOwner?: string;
+  contactType?: string;
 }
 
 const INTERNAL_OWNER_FALLBACK = 'Operaciones';
@@ -52,12 +51,9 @@ const DEFAULT_OWNER_OPTIONS = ['Operaciones', 'Tesorería', 'Comercial', 'Backof
 const initialFormState = {
   firstName: '',
   lastName: '',
-  businessName: '',
-  cuit: '',
-  email: '',
-  phone: '',
   contactType: 'client' as ClientType,
   addressSearch: '',
+  secondaryAddressSearch: '',
   internalOwner: INTERNAL_OWNER_FALLBACK,
 };
 
@@ -97,12 +93,14 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     internalOwner: defaultOwnerValue,
   }));
   const [addressDetails, setAddressDetails] = useState<AddressDetails | null>(null);
+  const [secondaryAddressDetails, setSecondaryAddressDetails] = useState<AddressDetails | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [suggestions, setSuggestions] = useState<AddressSuggestion[]>(normalizedAddressSuggestions);
   const [addressLoading, setAddressLoading] = useState(false);
+  const [activeAddressField, setActiveAddressField] = useState<'primary' | 'secondary'>('primary');
 
   useEffect(() => {
     setSuggestions((prev) =>
@@ -130,10 +128,13 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
         return newForm;
       });
       setAddressDetails(null);
+      setSecondaryAddressDetails(null);
       setError(null);
       setFieldErrors({});
       setLoading(false);
       setSuggestions((prev) => (prev.length > 0 ? [] : prev));
+      setShowSuggestions(false);
+      setActiveAddressField('primary');
     }
   }, [open, defaultType, normalizedOwnerOptions]);
 
@@ -157,7 +158,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
 
   const canSubmit = useMemo(() => {
     if (!form.firstName.trim() || !form.lastName.trim()) return false;
-    if (form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return false;
+    if (!form.contactType.trim()) return false;
     if (!form.internalOwner.trim()) return false;
     return true;
   }, [form]);
@@ -206,28 +207,48 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       const value = event.target.value;
       setForm((prev) => ({ ...prev, [field]: value }));
       setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
-      if (field === 'addressSearch') {
+      if (field === 'addressSearch' || field === 'secondaryAddressSearch') {
+        if (field === 'addressSearch') {
+          setAddressDetails(null);
+        } else {
+          setSecondaryAddressDetails(null);
+        }
+        setActiveAddressField(field === 'addressSearch' ? 'primary' : 'secondary');
         setShowSuggestions(true);
         fetchSuggestions(value);
       }
     };
 
-  const handleSelectAddress = async (suggestion: AddressSuggestion) => {
-    setForm((prev) => ({ ...prev, addressSearch: suggestion.description }));
+  const handleSelectAddress = async (suggestion: AddressSuggestion, target?: 'primary' | 'secondary') => {
+    const destination = target ?? activeAddressField;
+    if (destination === 'secondary') {
+      setForm((prev) => ({ ...prev, secondaryAddressSearch: suggestion.description }));
+    } else {
+      setForm((prev) => ({ ...prev, addressSearch: suggestion.description }));
+    }
     setShowSuggestions(false);
     if (!onSelectAddress) {
-      setAddressDetails({
+      const detailPayload: AddressDetails = {
         formatted: suggestion.description,
         description: suggestion.description,
         placeId: suggestion.placeId,
-      });
+      };
+      if (destination === 'secondary') {
+        setSecondaryAddressDetails(detailPayload);
+      } else {
+        setAddressDetails(detailPayload);
+      }
       setSuggestions([]);
       return;
     }
     try {
       setLoading(true);
       const details = await onSelectAddress(suggestion);
-      setAddressDetails(details);
+      if (destination === 'secondary') {
+        setSecondaryAddressDetails(details);
+      } else {
+        setAddressDetails(details);
+      }
     } catch (err) {
       const apiError = handleApiError(err);
       setError(apiError.message || 'No pudimos obtener la dirección seleccionada.');
@@ -250,6 +271,20 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
     if (!canSubmit) {
+      const nextFieldErrors: FieldErrors = {};
+      if (!form.firstName.trim()) {
+        nextFieldErrors.firstName = 'Ingresá el nombre.';
+      }
+      if (!form.lastName.trim()) {
+        nextFieldErrors.lastName = 'Ingresá el apellido.';
+      }
+      if (!form.internalOwner.trim()) {
+        nextFieldErrors.internalOwner = 'Indicá el responsable interno.';
+      }
+      if (!form.contactType.trim()) {
+        nextFieldErrors.contactType = 'Seleccioná el tipo de contacto.';
+      }
+      setFieldErrors((prev) => ({ ...prev, ...nextFieldErrors }));
       setError('Completá los campos obligatorios.');
       return;
     }
@@ -261,16 +296,17 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     const payload = {
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
-      businessName: form.businessName.trim() || undefined,
       contactType: form.contactType,
       internalOwner: form.internalOwner,
-      cuit: form.cuit.trim() || undefined,
-      email: form.email.trim() || undefined,
-      phone: form.phone.trim() || undefined,
       primaryAddress: addressDetails
         ? addressDetails
         : form.addressSearch
         ? { formatted: form.addressSearch }
+        : undefined,
+      secondaryAddress: secondaryAddressDetails
+        ? secondaryAddressDetails
+        : form.secondaryAddressSearch
+        ? { formatted: form.secondaryAddressSearch }
         : undefined,
     };
 
@@ -360,19 +396,6 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="businessName">
-                Razón social (opcional)
-              </label>
-              <input
-                id="businessName"
-                type="text"
-                value={form.businessName}
-                onChange={handleChange('businessName')}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Razón social"
-              />
-            </div>
-            <div>
               <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="internalOwner">
                 Responsable interno
               </label>
@@ -405,55 +428,9 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
                 <option value="client">Cliente</option>
                 <option value="provider">Proveedor</option>
               </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="cuit">
-                CUIT/CUIL (opcional)
-              </label>
-              <input
-                id="cuit"
-                type="text"
-                value={form.cuit}
-                onChange={handleChange('cuit')}
-                className={`w-full rounded-lg border px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-                  fieldErrors.cuit ? 'border-danger' : 'border-gray-300'
-                }`}
-                placeholder="Sin guiones ni espacios"
-              />
-              {fieldErrors.cuit && (
-                <p className="mt-1 text-xs text-danger">{fieldErrors.cuit}</p>
+              {fieldErrors.contactType && (
+                <p className="mt-1 text-xs text-danger">{fieldErrors.contactType}</p>
               )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="email">
-                Email (opcional)
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={handleChange('email')}
-                className={`w-full rounded-lg border px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
-                  fieldErrors.email ? 'border-danger' : 'border-gray-300'
-                }`}
-                placeholder="correo@ejemplo.com"
-              />
-              {fieldErrors.email && (
-                <p className="mt-1 text-xs text-danger">{fieldErrors.email}</p>
-              )}
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="phone">
-                Teléfono (opcional)
-              </label>
-              <input
-                id="phone"
-                type="tel"
-                value={form.phone}
-                onChange={handleChange('phone')}
-                className="w-full rounded-lg border border-gray-300 px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
-                placeholder="Ej. +54 11 5555 5555"
-              />
             </div>
             <div className="md:col-span-2">
               <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="addressSearch">
@@ -466,14 +443,17 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
                   value={form.addressSearch}
                   onChange={handleChange('addressSearch')}
                   onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
-                  onFocus={() => setShowSuggestions(true)}
+                  onFocus={() => {
+                    setActiveAddressField('primary');
+                    setShowSuggestions(true);
+                  }}
                   className={`w-full rounded-lg border px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
                     fieldErrors.address ? 'border-danger' : 'border-gray-300'
                   }`}
                   placeholder="Buscar dirección"
                   autoComplete="off"
                 />
-                {showSuggestions && (addressLoading || suggestions.length > 0) && (
+                {showSuggestions && activeAddressField === 'primary' && (addressLoading || suggestions.length > 0) && (
                   <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
                     {addressLoading && (
                       <div className="px-4 py-2 text-sm text-gray-500 flex items-center">
@@ -490,7 +470,7 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
                       <button
                         key={suggestion.placeId ?? suggestion.description}
                         type="button"
-                        onClick={() => handleSelectAddress(suggestion)}
+                        onClick={() => handleSelectAddress(suggestion, 'primary')}
                         className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
                       >
                         {suggestion.description}
@@ -505,6 +485,62 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
               {addressDetails?.formatted && (
                 <div className="mt-2 rounded-md bg-blue-50 p-3 text-sm text-blue-700">
                   <strong>Dirección seleccionada:</strong> {addressDetails.formatted}
+                </div>
+              )}
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium text-text-primary mb-2" htmlFor="secondaryAddressSearch">
+                Domicilio secundario
+              </label>
+              <div className="relative">
+                <input
+                  id="secondaryAddressSearch"
+                  type="text"
+                  value={form.secondaryAddressSearch}
+                  onChange={handleChange('secondaryAddressSearch')}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                  onFocus={() => {
+                    setActiveAddressField('secondary');
+                    setShowSuggestions(true);
+                  }}
+                  className={`w-full rounded-lg border px-4 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-primary ${
+                    fieldErrors.secondaryAddress ? 'border-danger' : 'border-gray-300'
+                  }`}
+                  placeholder="Buscar dirección"
+                  autoComplete="off"
+                />
+                {showSuggestions && activeAddressField === 'secondary' && (addressLoading || suggestions.length > 0) && (
+                  <div className="absolute z-10 mt-1 max-h-52 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
+                    {addressLoading && (
+                      <div className="px-4 py-2 text-sm text-gray-500 flex items-center">
+                        <i className="fa-solid fa-circle-notch animate-spin mr-2" />
+                        Buscando direcciones…
+                      </div>
+                    )}
+                    {!addressLoading && suggestions.length === 0 && (
+                      <div className="px-4 py-2 text-sm text-gray-500">
+                        Sin sugerencias por el momento.
+                      </div>
+                    )}
+                    {suggestions.map((suggestion) => (
+                      <button
+                        key={`${suggestion.placeId ?? suggestion.description}-secondary`}
+                        type="button"
+                        onClick={() => handleSelectAddress(suggestion, 'secondary')}
+                        className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-100"
+                      >
+                        {suggestion.description}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {fieldErrors.secondaryAddress && (
+                <p className="mt-1 text-xs text-danger">{fieldErrors.secondaryAddress}</p>
+              )}
+              {secondaryAddressDetails?.formatted && (
+                <div className="mt-2 rounded-md bg-blue-50 p-3 text-sm text-blue-700">
+                  <strong>Dirección seleccionada:</strong> {secondaryAddressDetails.formatted}
                 </div>
               )}
             </div>

@@ -98,7 +98,7 @@ export const NotificationsPage: React.FC = () => {
       <div className="mt-4 flex items-center justify-between">
         <button
           type="button"
-          onClick={() => markAsRead(notification.id)}
+          onClick={() => markAsRead(notification.id).catch(() => {})}
           disabled={notification.read}
           className={`rounded-md px-3 py-2 text-xs font-medium transition-colors ${
             notification.read
@@ -142,7 +142,7 @@ export const NotificationsPage: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={markAllAsRead}
+              onClick={() => markAllAsRead().catch(() => {})}
               disabled={unreadCount === 0}
               className="rounded-md border border-primary px-4 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary hover:text-white disabled:cursor-not-allowed disabled:border-gray-300 disabled:text-gray-400 disabled:hover:bg-transparent disabled:hover:text-gray-400"
             >

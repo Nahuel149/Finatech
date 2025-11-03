@@ -1,51 +1,98 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronDownIcon } from '../../icons/HeroiconsOutline';
 
+type MovementTypeValue = 'entrega' | 'transferencia' | 'retiro' | 'custodia';
+
+const MOVEMENT_OPTIONS: Array<{
+  value: MovementTypeValue;
+  label: string;
+  icon: string;
+}> = [
+  { value: 'entrega', label: 'Entrega', icon: 'fa-truck' },
+  { value: 'transferencia', label: 'Transferencia interna', icon: 'fa-arrow-right-arrow-left' },
+  { value: 'retiro', label: 'Retiro', icon: 'fa-arrow-up' },
+  { value: 'custodia', label: 'Custodia', icon: 'fa-shield-halved' },
+];
+
+const RESPONSIBLE_OPTIONS = [
+  { value: 'juan-perez', label: 'Juan Pérez' },
+  { value: 'ana-lopez', label: 'Ana López' },
+  { value: 'luis-garcia', label: 'Luis García' },
+  { value: 'maria-torres', label: 'María Torres' },
+  { value: 'carlos-mendoza', label: 'Carlos Mendoza' },
+];
+
+const LOCATION_OPTIONS = [
+  { value: 'sede-central', label: 'Sede Central' },
+  { value: 'sucursal-norte', label: 'Sucursal Norte' },
+  { value: 'sucursal-sur', label: 'Sucursal Sur' },
+  { value: 'boveda-a', label: 'Bóveda A' },
+  { value: 'boveda-b', label: 'Bóveda B' },
+  { value: 'boveda-principal', label: 'Bóveda Principal' },
+  { value: 'oficina-principal', label: 'Oficina Principal' },
+];
+
 const MovementDataForm: React.FC = () => {
-  const [movementType, setMovementType] = useState('');
-  const [initialState, setInitialState] = useState('');
+  const [movementType, setMovementType] = useState<MovementTypeValue>('entrega');
+  const [initialState, setInitialState] = useState('pendiente');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [internalResponsible, setInternalResponsible] = useState('');
   const [dateTime, setDateTime] = useState('');
   const [reference, setReference] = useState('');
 
+  const movementHint = useMemo(() => {
+    if (movementType === 'transferencia') {
+      return 'Usá origen y destino de sedes o bóvedas internas.';
+    }
+    if (movementType === 'custodia') {
+      return 'Indicá la bóveda o caja de resguardo correspondiente.';
+    }
+    return null;
+  }, [movementType]);
+
+  const referenceCharacterLimit = 200;
+
   return (
-    <div>
-      <h3 className="text-lg font-semibold text-text-primary mb-4">Datos del movimiento</h3>
-      
+    <section>
+      <h3 className="text-lg font-semibold text-text-primary mb-6">Datos del movimiento</h3>
+
       <div className="space-y-6">
-        {/* Movement Type - Radio Pills */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-3">
-            Tipo de movimiento <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-text-primary mb-3">
+            Tipo de movimiento <span className="text-danger">*</span>
           </label>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { value: 'entrega', label: 'Entrega' },
-              { value: 'transferencia-interna', label: 'Transferencia interna' },
-              { value: 'retiro', label: 'Retiro' },
-              { value: 'custodia', label: 'Custodia' }
-            ].map((option) => (
-              <label key={option.value} className="radio-pill-container">
-                <input
-                  type="radio"
-                  name="movementType"
-                  value={option.value}
-                  checked={movementType === option.value}
-                  onChange={(e) => setMovementType(e.target.value)}
-                  className="radio-pill-input"
-                />
-                <span className="radio-pill-label">{option.label}</span>
-              </label>
-            ))}
+          <div className="grid grid-cols-2 gap-3">
+            {MOVEMENT_OPTIONS.map((option) => {
+              const isActive = movementType === option.value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setMovementType(option.value)}
+                  className={`flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all ${
+                    isActive
+                      ? 'border-primary bg-blue-50 text-primary shadow-sm'
+                      : 'border-gray-200 text-text-primary hover:border-primary hover:bg-blue-50'
+                  }`}
+                >
+                  <i
+                    className={`fa-solid ${option.icon} text-2xl mb-2 ${
+                      isActive ? 'text-primary' : 'text-gray-400'
+                    }`}
+                  />
+                  <span className="text-sm font-medium">{option.label}</span>
+                </button>
+              );
+            })}
           </div>
+          <p className="text-xs text-gray-500 mt-2">Elegí el tipo de acción operativa a registrar.</p>
+          {movementHint && <p className="text-xs text-blue-600 mt-1">{movementHint}</p>}
         </div>
 
-        {/* Initial State Dropdown */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Estado inicial <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Estado inicial <span className="text-danger">*</span>
           </label>
           <div className="relative">
             <select
@@ -53,88 +100,60 @@ const MovementDataForm: React.FC = () => {
               onChange={(e) => setInitialState(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
-              <option value="">Seleccionar estado inicial</option>
               <option value="pendiente">Pendiente</option>
-              <option value="en-proceso">En proceso</option>
+              <option value="en-curso">En curso</option>
               <option value="completado">Completado</option>
-              <option value="cancelado">Cancelado</option>
+              <option value="anulado">Anulado</option>
             </select>
-            <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
-        {/* Origin and Destination - Two columns */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Origin */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Origen <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={origin}
-                onChange={(e) => setOrigin(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
-              >
-                <option value="">Seleccionar origen</option>
-                <option value="oficina-central">Oficina Central</option>
-                <option value="sucursal-norte">Sucursal Norte</option>
-                <option value="sucursal-sur">Sucursal Sur</option>
-                <option value="deposito-principal">Depósito Principal</option>
-                <option value="externo">Externo</option>
-              </select>
-              <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-
-          {/* Destination */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Destino <span className="text-red-500">*</span>
-            </label>
-            <div className="relative">
-              <select
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
-              >
-                <option value="">Seleccionar destino</option>
-                <option value="oficina-central">Oficina Central</option>
-                <option value="sucursal-norte">Sucursal Norte</option>
-                <option value="sucursal-sur">Sucursal Sur</option>
-                <option value="deposito-principal">Depósito Principal</option>
-                <option value="externo">Externo</option>
-              </select>
-              <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
-            </div>
-          </div>
-        </div>
-
-        {/* Internal Responsible */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Responsable interno <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Origen <span className="text-danger">*</span>
           </label>
           <div className="relative">
             <select
-              value={internalResponsible}
-              onChange={(e) => setInternalResponsible(e.target.value)}
+              value={origin}
+              onChange={(e) => setOrigin(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
-              <option value="">Seleccionar responsable</option>
-              <option value="juan-perez">Juan Pérez</option>
-              <option value="maria-gonzalez">María González</option>
-              <option value="carlos-rodriguez">Carlos Rodríguez</option>
-              <option value="ana-martinez">Ana Martínez</option>
+              <option value="">Seleccionar origen…</option>
+              {LOCATION_OPTIONS.map((location) => (
+                <option key={location.value} value={location.value}>
+                  {location.label}
+                </option>
+              ))}
             </select>
-            <ChevronDownIcon className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
           </div>
         </div>
 
-        {/* Date and Time */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Fecha y hora <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Destino <span className="text-danger">*</span>
+          </label>
+          <div className="relative">
+            <select
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+            >
+              <option value="">Seleccionar destino…</option>
+              {LOCATION_OPTIONS.map((location) => (
+                <option key={location.value} value={location.value}>
+                  {location.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Fecha y hora <span className="text-danger">*</span>
           </label>
           <input
             type="datetime-local"
@@ -144,21 +163,48 @@ const MovementDataForm: React.FC = () => {
           />
         </div>
 
-        {/* Reference / Observations */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label className="block text-sm font-medium text-text-primary mb-2">
+            Responsable interno <span className="text-danger">*</span>
+          </label>
+          <div className="relative">
+            <select
+              value={internalResponsible}
+              onChange={(e) => setInternalResponsible(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
+            >
+              <option value="">Seleccionar responsable…</option>
+              {RESPONSIBLE_OPTIONS.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+            <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          </div>
+          <p className="text-xs text-gray-500 mt-1">Quién gestiona esta operación logística.</p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-text-primary mb-2">
             Referencia / Observaciones
           </label>
           <textarea
             value={reference}
-            onChange={(e) => setReference(e.target.value)}
+            onChange={(e) => setReference(e.target.value.slice(0, referenceCharacterLimit))}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-            placeholder="Ingresá detalles adicionales sobre el movimiento..."
+            placeholder="Ingresá detalles adicionales sobre el movimiento…"
           />
+          <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+            <span>Máximo {referenceCharacterLimit} caracteres</span>
+            <span>
+              {reference.length}/{referenceCharacterLimit}
+            </span>
+          </div>
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

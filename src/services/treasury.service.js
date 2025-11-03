@@ -6,18 +6,23 @@ const Transaction = require('../models/Transaction');
 const TransferOperation = require('../models/TransferOperation');
 const AppError = require('../utils/AppError');
 const CurrentAccountMovement = require('../models/CurrentAccountMovement');
+const {
+  recordTransactionSettlement,
+  revertTransactionSettlement,
+} = require('./transactionLifecycle.service');
+const { emitBalanceUpdated } = require('../utils/eventBus');
 
 const BALANCE_METADATA = {
   transfers: {
-    label: 'Transferencias (ARS)',
+    label: 'Transferencias en ARS',
     status: 'ok',
   },
   cash: {
-    label: 'Efectivo (ARS)',
+    label: 'Efectivo en ARS',
     status: 'ok',
   },
   usd: {
-    label: 'Caja (USD)',
+    label: 'Caja en USD',
     status: 'warning',
   },
 };
@@ -475,6 +480,31 @@ const resolveAccountLabel = (key, currency) => {
     .join(' ');
 };
 
+const resolveSummaryLabel = (accountKey, currency) => {
+  const normalizedAccountKey = (accountKey || '').toLowerCase();
+  const normalizedCurrency = (currency || '').toUpperCase();
+
+  const keyIncludes = (value) => normalizedAccountKey.includes(value);
+
+  if (normalizedAccountKey === 'usd' || keyIncludes('caja_usd')) {
+    return 'Caja USD';
+  }
+
+  if (keyIncludes('transfer')) {
+    return normalizedCurrency === 'USD' ? 'Transferencias USD' : 'Transferencias ARS';
+  }
+
+  if (keyIncludes('cash') || keyIncludes('efectivo')) {
+    return normalizedCurrency === 'USD' ? 'Efectivo USD' : 'Efectivo ARS';
+  }
+
+  if (keyIncludes('accounts_receivable') || keyIncludes('cuentas_cobrar')) {
+    return normalizedCurrency === 'USD' ? 'Cuentas a Cobrar USD' : 'Cuentas a Cobrar ARS';
+  }
+
+  return resolveAccountLabel(accountKey, currency);
+};
+
 const computeBalanceState = (amount) => {
   if (amount > 0) return 'positive';
   if (amount < 0) return 'negative';
@@ -533,6 +563,20 @@ const getGlobalBalancesOverview = async (query = {}) => {
     sortDirection = 'desc',
   } = query;
 
+  const rawAccountKey = typeof accountKey === 'string' ? accountKey.trim() : '';
+  let normalizedAccountKey = rawAccountKey ? rawAccountKey.toLowerCase() : '';
+  let normalizedCurrency = typeof currency === 'string' && currency.trim().length
+    ? currency.toUpperCase()
+    : null;
+
+  if (normalizedAccountKey.includes('::')) {
+    const [baseKey, currencySuffix] = normalizedAccountKey.split('::');
+    normalizedAccountKey = baseKey;
+    if (!normalizedCurrency && currencySuffix) {
+      normalizedCurrency = currencySuffix.toUpperCase();
+    }
+  }
+
   const numericPage = Math.max(Number(page) || 1, 1);
   const numericLimit = Math.min(Math.max(Number(limit) || DEFAULT_GLOBAL_BALANCES_LIMIT, 1), 100);
   const normalizedSort =
@@ -546,9 +590,9 @@ const getGlobalBalancesOverview = async (query = {}) => {
   const previousWindowStart = new Date(currentWindowStart.getTime() - DEFAULT_VARIATION_WINDOW_DAYS * MS_IN_DAY);
 
   const match = buildOverviewMatch({
-    currency,
-    accountKey,
-    counterpartKey: accountKey,
+    currency: normalizedCurrency,
+    accountKey: normalizedAccountKey,
+    counterpartKey: normalizedAccountKey,
     dateFrom,
     dateTo,
   });
@@ -646,7 +690,7 @@ const getGlobalBalancesOverview = async (query = {}) => {
 
     const accountKeyValue = row._id.accountKey || 'general';
     const currencyValue = row._id.currency || 'ARS';
-    const label = resolveAccountLabel(accountKeyValue, currencyValue);
+    const label = resolveSummaryLabel(accountKeyValue, currencyValue);
     const meta = BALANCE_METADATA[accountKeyValue] || {};
 
     return {
@@ -760,7 +804,11 @@ const getGlobalBalancesOverview = async (query = {}) => {
 
   for (const row of fullyFiltered) {
     currencies.add(row.currency);
-    accountKeys.set(row.accountKey, row.accountLabel);
+
+    const summaryKey = `${row.accountKey || 'general'}::${row.currency || 'ARS'}`.toLowerCase();
+    const summaryLabel = resolveSummaryLabel(row.accountKey, row.currency);
+
+    accountKeys.set(summaryKey, summaryLabel);
     if (row.contact?.contactType) {
       contactTypesSet.add(row.contact.contactType);
     }
@@ -768,10 +816,11 @@ const getGlobalBalancesOverview = async (query = {}) => {
       balanceStatesCount[row.balanceState] += 1;
     }
 
-    if (!summaryByAccount.has(row.accountKey)) {
-      summaryByAccount.set(row.accountKey, {
-        id: row.accountKey,
-        label: row.accountLabel,
+    if (!summaryByAccount.has(summaryKey)) {
+      summaryByAccount.set(summaryKey, {
+        id: summaryKey,
+        accountKey: row.accountKey,
+        label: summaryLabel,
         currency: row.currency,
         status: row.accountStatus || 'ok',
         amount: 0,
@@ -780,7 +829,7 @@ const getGlobalBalancesOverview = async (query = {}) => {
         previousWindowAmount: 0,
       });
     }
-    const entry = summaryByAccount.get(row.accountKey);
+    const entry = summaryByAccount.get(summaryKey);
     entry.amount = roundAmount((entry.amount || 0) + row.amount);
     entry.currentWindowAmount = roundAmount(
       (entry.currentWindowAmount || 0) + (row.variation?.currentWindowAmount || 0)
@@ -817,7 +866,14 @@ const getGlobalBalancesOverview = async (query = {}) => {
   });
 
   summaryCards.sort((a, b) => {
-    const order = ['transfers', 'cash', 'usd'];
+    const order = [
+      'usd::usd',
+      'transfers::usd',
+      'accounts_receivable::usd',
+      'cash::ars',
+      'transfers::ars',
+      'accounts_receivable::ars',
+    ];
     const indexA = order.indexOf(a.id);
     const indexB = order.indexOf(b.id);
     if (indexA === -1 && indexB === -1) {
@@ -846,10 +902,10 @@ const getGlobalBalancesOverview = async (query = {}) => {
       value,
       label: value,
     })),
-    accountKeys: Array.from(accountKeys.entries()).map(([value, label]) => ({
-      value,
-      label,
-    })),
+  accountKeys: Array.from(accountKeys.entries()).map(([value, label]) => ({
+    value,
+    label,
+  })),
     balanceStates: BALANCE_STATE_VALUES.map((value) => ({
       value,
       label:
@@ -889,8 +945,8 @@ const getGlobalBalancesOverview = async (query = {}) => {
       totalsByCurrency,
     },
     appliedFilters: {
-      currency: currency || null,
-      accountKey: accountKey || null,
+      currency: normalizedCurrency || null,
+      accountKey: rawAccountKey || null,
       contactType: normalizedContactType,
       balanceState: normalizedBalanceFilter,
       search: appliedSearch || null,
@@ -1843,6 +1899,9 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
   let contactForResponse = null;
   let operationLinkEntry = null;
   let balanceSnapshot = null;
+  const skipBalanceAdjustments = Boolean(context.skipBalanceAdjustments);
+  const skipSettlement = Boolean(context.skipSettlement);
+  const skipBalanceEvent = Boolean(context.skipBalanceEvent);
 
   try {
     await session.withTransaction(async () => {
@@ -1895,83 +1954,121 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
         };
 
         movement.linkedOperations = [operationLinkEntry];
+
+        if (model === 'TransferOperation') {
+          document.status = 'completed';
+          document.completedAt = document.completedAt || new Date();
+          document.completedBy =
+            context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+              ? context.userId
+              : document.completedBy || null;
+          document.updatedBy =
+            context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+              ? context.userId
+              : document.updatedBy || null;
+          await document.save({ session });
+        }
       }
 
       await movement.save({ session });
 
       const delta = movement.type === 'incoming' ? normalized.amount : -normalized.amount;
-      balanceSnapshot = await adjustTreasuryBalanceForMovement(
-        balanceMovementType,
-        normalized.currency,
-        delta,
-        {
-          session,
-          userId: context.userId,
-        }
-      );
-
-      if (normalized.contactDoc) {
-        const settlementPayload = {
-          _id: movement._id,
-          movementType: balanceMovementType,
-          direction: movement.type,
+      if (!skipBalanceAdjustments) {
+        balanceSnapshot = await adjustTreasuryBalanceForMovement(
+          balanceMovementType,
+          normalized.currency,
+          delta,
+          {
+            session,
+            userId: context.userId,
+          }
+        );
+      } else {
+        balanceSnapshot = await TreasuryBalance.findOne({
+          key: normalizeBalanceKey(balanceMovementType),
           currency: normalized.currency,
-          totalAmount: normalized.amount,
-          distributionLines: [
-            {
-              contact: normalized.contactDoc._id,
-              amount: normalized.amount,
-            },
-          ],
-          operationCode: movement.movementCode,
-        };
+        })
+          .session(session)
+          .lean();
+      }
 
-        await applySettlement(settlementPayload, {
-          session,
-          userId: context.userId,
-        });
+      if (!skipSettlement) {
+        if (normalized.contactDoc) {
+          const settlementPayload = {
+            _id: movement._id,
+            movementType: balanceMovementType,
+            direction: movement.type,
+            currency: normalized.currency,
+            totalAmount: normalized.amount,
+            distributionLines: [
+              {
+                contact: normalized.contactDoc._id,
+                amount: normalized.amount,
+              },
+            ],
+            operationCode: movement.movementCode,
+          };
 
-        movement.contact = normalized.contactDoc._id;
-        contactForResponse = normalized.contactDoc.toObject();
-        movement.metadata = {
-          ...(movement.metadata || {}),
-          settlementApplied: true,
-        };
-      } else if (normalized.operationLink && normalized.operationLink.model === 'Transaction') {
-        const contactCandidate = normalized.operationLink.document.client;
-        if (contactCandidate && mongoose.Types.ObjectId.isValid(contactCandidate)) {
-          const contactDoc = await Client.findById(contactCandidate).session(session);
-          if (contactDoc) {
-            // Map transaction type to treasury direction: buy -> outgoing (ARS leaves), sell -> incoming (ARS enters)
-            const transactionType = normalized.operationLink.document.type;
-            const treasuryDirection = transactionType === 'buy' ? 'outgoing' : 'incoming';
-            
-            const settlementPayload = {
-              _id: movement._id,
-              movementType: balanceMovementType,
-              direction: treasuryDirection,
-              currency: normalized.currency,
-              totalAmount: normalized.amount,
-              distributionLines: [
+          await applySettlement(settlementPayload, {
+            session,
+            userId: context.userId,
+          });
+
+          movement.contact = normalized.contactDoc._id;
+          contactForResponse = normalized.contactDoc.toObject();
+          movement.metadata = {
+            ...(movement.metadata || {}),
+            settlementApplied: true,
+          };
+        } else if (normalized.operationLink && normalized.operationLink.model === 'Transaction') {
+          const contactCandidate = normalized.operationLink.document.client;
+          if (contactCandidate && mongoose.Types.ObjectId.isValid(contactCandidate)) {
+            const contactDoc = await Client.findById(contactCandidate).session(session);
+            if (contactDoc) {
+              // Map transaction type to treasury direction: buy -> incoming (ARS ingresa), sell -> outgoing (ARS egresa)
+              const transactionType = normalized.operationLink.document.type;
+              const treasuryDirection = transactionType === 'buy' ? 'incoming' : 'outgoing';
+
+              const settlementPayload = {
+                _id: movement._id,
+                movementType: balanceMovementType,
+                direction: treasuryDirection,
+                currency: normalized.currency,
+                totalAmount: normalized.amount,
+                distributionLines: [
+                  {
+                    contact: contactDoc._id,
+                    amount: normalized.amount,
+                  },
+                ],
+                operationCode: movement.movementCode,
+              };
+
+              await applySettlement(settlementPayload, {
+                session,
+                userId: context.userId,
+              });
+
+              movement.contact = contactDoc._id;
+              contactForResponse = contactDoc.toObject();
+              movement.metadata = {
+                ...(movement.metadata || {}),
+                settlementApplied: true,
+              };
+
+              await recordTransactionSettlement(
+                normalized.operationLink.document._id,
                 {
-                  contact: contactDoc._id,
+                  movementId: movement._id,
                   amount: normalized.amount,
+                  currency: normalized.currency,
+                  direction: treasuryDirection,
+                  movementType: balanceMovementType,
+                  source: 'treasury_movement',
                 },
-              ],
-              operationCode: movement.movementCode,
-            };
-
-            await applySettlement(settlementPayload, {
-              session,
-              userId: context.userId,
-            });
-
-            movement.contact = contactDoc._id;
-            contactForResponse = contactDoc.toObject();
-            movement.metadata = {
-              ...(movement.metadata || {}),
-              settlementApplied: true,
-            };
+                { session, userId: context.userId }
+              );
+            }
           }
         }
       }
@@ -2002,6 +2099,23 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
   }
 
   const formattedMovement = formatTreasuryMovement(movementDocument, contactForResponse ? [contactForResponse] : []);
+
+  const movementDelta =
+    movementDocument?.type === 'incoming'
+      ? roundAmount(movementDocument.amount || 0)
+      : -roundAmount(movementDocument?.amount || 0);
+
+  if (!skipBalanceEvent) {
+    emitBalanceUpdated({
+      source: 'treasury_movement',
+      movementId: formattedMovement?.id || null,
+      movementCode: formattedMovement?.movementCode || null,
+      balanceKey: formattedMovement?.balanceKey || null,
+      currency: formattedMovement?.currency || null,
+      delta: movementDelta,
+      emittedBy: context.userId || null,
+    });
+  }
 
   return {
     movement: formattedMovement,
@@ -2053,13 +2167,11 @@ const buildMovementQuery = (filters = {}) => {
   }
 
   if (filters.search && typeof filters.search === 'string') {
-    const pattern = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-    query.$or = [
-      { movementCode: pattern },
-      { reference: pattern },
-      { description: pattern },
-      { 'linkedOperations.code': pattern },
-    ];
+    const cleaned = filters.search.trim().replace(/^#/, '');
+    if (cleaned) {
+      // Use MongoDB text search for efficient lookup across indexed text fields. Requires text index on relevant fields.
+      query.$text = { $search: cleaned };
+    }
   }
 
   return query;
@@ -2082,23 +2194,39 @@ const listTreasuryMovements = async ({
   const normalizedSort = allowedSortFields.includes(sortBy) ? sortBy : 'movementAt';
   sort[normalizedSort] = sortDirection === 'asc' ? 1 : -1;
 
-  const [totalItems, movements, totals] = await Promise.all([
-    TreasuryMovement.countDocuments(query),
-    TreasuryMovement.find(query)
-      .sort(sort)
-      .skip((numericPage - 1) * numericLimit)
-      .limit(numericLimit)
-      .lean(),
-    TreasuryMovement.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: { currency: '$currency', type: '$type' },
-          amount: { $sum: '$amount' },
-        },
+  // Single aggregation call with $facet to fetch paginated items, totals and count in one roundtrip
+  const [aggregated] = await TreasuryMovement.aggregate([
+    { $match: query },
+    {
+      $facet: {
+        metadata: [{ $count: 'totalItems' }],
+        totals: [
+          {
+            $group: {
+              _id: { currency: '$currency', type: '$type' },
+              amount: { $sum: '$amount' },
+            },
+          },
+        ],
+        items: [
+          { $sort: sort },
+          { $skip: (numericPage - 1) * numericLimit },
+          { $limit: numericLimit },
+        ],
       },
-    ]),
-  ]);
+    },
+    {
+      $project: {
+        totalItems: { $ifNull: [{ $arrayElemAt: ['$metadata.totalItems', 0] }, 0] },
+        totals: 1,
+        items: 1,
+      },
+    },
+  ]).exec();
+
+  const totalItems = aggregated ? aggregated.totalItems : 0;
+  const movements = aggregated ? aggregated.items : [];
+  const totals = aggregated ? aggregated.totals : [];
 
   const contactIds = movements
     .map((movement) => movement.contact)
@@ -2286,6 +2414,38 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
                 : null,
           });
         }
+
+        if (operationLink.model === 'Transaction') {
+          const transactionDirection =
+            operationLink.document.type === 'buy' ? 'outgoing' : 'incoming';
+          await recordTransactionSettlement(
+            operationLink.document._id,
+            {
+              movementId: movement._id,
+              amount,
+              currency: movement.currency,
+              direction: transactionDirection,
+              movementType: balanceMovementType,
+              source: payload.operation ? 'treasury_compensation' : 'treasury_movements',
+            },
+            { session, userId: context.userId }
+          );
+        }
+
+        if (operationLink.model === 'TransferOperation') {
+          operationLink.document.status = 'completed';
+          operationLink.document.completedAt =
+            operationLink.document.completedAt || new Date();
+          operationLink.document.completedBy =
+            context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+              ? context.userId
+              : operationLink.document.completedBy || null;
+          operationLink.document.updatedBy =
+            context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+              ? context.userId
+              : operationLink.document.updatedBy || null;
+          await operationLink.document.save({ session });
+        }
       }
 
       movement.status = 'compensated';
@@ -2338,6 +2498,10 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
 
       if (movement.status === 'cancelled') {
         throw new AppError('El movimiento ya se encuentra anulado.', 409);
+      }
+
+      if (movement.status === 'compensated') {
+        throw new AppError('No podés anular un movimiento compensado.', 409);
       }
 
       const balanceMovementType = resolveMovementBalanceType(movement.currency, movement.medium);
@@ -2395,6 +2559,51 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
         cancelled: true,
       };
 
+      const linkedOperations = Array.isArray(movement.linkedOperations)
+        ? movement.linkedOperations
+        : [];
+
+      const linkedTransactions = linkedOperations.filter(
+        (op) => op && op.model === 'Transaction' && op.id
+      );
+      if (linkedTransactions.length) {
+        await Promise.all(
+          linkedTransactions.map((op) =>
+            revertTransactionSettlement(op.id, movement._id, {
+              session,
+              userId: context.userId,
+            })
+          )
+        );
+      }
+
+      const linkedTransfers = linkedOperations.filter(
+        (op) => op && op.model === 'TransferOperation' && op.id
+      );
+      if (linkedTransfers.length) {
+        await Promise.all(
+          linkedTransfers.map(async (op) => {
+            const transfer = await TransferOperation.findById(op.id).session(session);
+            if (!transfer) {
+              return;
+            }
+            transfer.status = 'cancelled';
+            transfer.cancelledAt = new Date();
+            transfer.cancelledBy =
+              context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+                ? context.userId
+                : transfer.cancelledBy || null;
+            transfer.cancellationReason =
+              typeof reason === 'string' && reason.trim().length ? reason.trim() : null;
+            transfer.updatedBy =
+              context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+                ? context.userId
+                : transfer.updatedBy || null;
+            await transfer.save({ session });
+          })
+        );
+      }
+
       await movement.save({ session });
       updatedDocument = movement.toObject();
     });
@@ -2450,6 +2659,8 @@ const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) 
           client: 1,
           type: 1,
           operationCode: 1,
+          status: 1,
+          completedAt: 1,
           incomingAsset: 1,
           outgoingAsset: 1,
         })
@@ -2497,20 +2708,47 @@ const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) 
         (movement.contact && entry.contact && movement.contact.toString() === entry.contact.toString() ? 0 : 0.5) +
         (daysDifference || 0) * 0.1);
 
+    const fallbackOperationDescriptor = {
+      id: entry._id.toString(),
+      model: 'CurrentAccountMovement',
+      code: entry.operation?.code || entry.metadata?.operationCode || null,
+      movementType: entry.operation?.type || entry.metadata?.operationType || null,
+      status: entry.operation?.status || entry.metadata?.status || entry.stage || null,
+      confirmedAt: null,
+    };
+
+    const operationDescriptor = transaction
+      ? {
+          id: transaction._id.toString(),
+          model: 'Transaction',
+          code: transaction.operationCode || null,
+          movementType: transaction.type || null,
+          status: transaction.status || null,
+          confirmedAt: transaction.completedAt ? transaction.completedAt.toISOString() : null,
+        }
+      : entry.operation?.id && entry.operation?.model
+      ? {
+          id: entry.operation.id.toString(),
+          model: entry.operation.model,
+          code: entry.operation.code || null,
+          movementType: entry.operation.type || null,
+          status: entry.operation.status || null,
+          confirmedAt: null,
+        }
+      : fallbackOperationDescriptor;
+
     return {
+      suggestionId: entry._id.toString(),
       currentAccountMovementId: entry._id.toString(),
+      operationId: operationDescriptor.id || null,
+      model: operationDescriptor.model || null,
+      code: operationDescriptor.code || null,
       amount: roundAmount(entry.amount),
-      stage: entry.stage,
-      createdAt: entry.createdAt ? new Date(entry.createdAt).toISOString() : null,
-      operation: entry.operation || null,
-      transaction: transaction
-        ? {
-            id: transaction._id.toString(),
-            type: transaction.type,
-            operationCode: transaction.operationCode || null,
-          }
-        : null,
-      contact: contactDoc ? formatContact(contactDoc) : null,
+      currency: entry.currency || movement.currency,
+      contactName: contactDoc ? contactDoc.fullName || contactDoc.shortName || null : null,
+      movementType: operationDescriptor.movementType || null,
+      status: operationDescriptor.status || null,
+      confirmedAt: operationDescriptor.confirmedAt || null,
       match: {
         amountDifference,
         ratio: Number(ratio.toFixed(4)),

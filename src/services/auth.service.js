@@ -23,6 +23,28 @@ const PASSWORD_RESET_WINDOW_MINUTES = Number(process.env.PASSWORD_RESET_WINDOW_M
 
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
 
+const ensureBaselinePermissions = (user) => {
+  if (!user) {
+    return false;
+  }
+
+  if (!Array.isArray(user.permissions)) {
+    user.permissions = [];
+  }
+
+  const requiredPermissions = ['manage-notifications'];
+  let changed = false;
+
+  requiredPermissions.forEach((permission) => {
+    if (!user.permissions.includes(permission)) {
+      user.permissions.push(permission);
+      changed = true;
+    }
+  });
+
+  return changed;
+};
+
 const buildClientUrl = (path) => {
   const normalizedPath = path.startsWith('/') ? path : `/${path}`;
   const clientBase = process.env.CLIENT_URL || undefined;
@@ -309,6 +331,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   }
 
   if (!user.isVerified && user.hasProvider('google')) {
+    ensureBaselinePermissions(user);
     user.passwordHash = passwordHash;
     user.addProvider('local');
     user.isVerified = true;
@@ -349,6 +372,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   user.addProvider('local');
   user.verification = verificationPayload;
   user.isVerified = false;
+  ensureBaselinePermissions(user);
   await user.save();
 
   try {
@@ -465,6 +489,7 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
         createdByAgent: requestMetadata.userAgent || null,
       },
     });
+    ensureBaselinePermissions(user);
     const session = await issueSession({ user, context, rememberMe: false });
     await logSecurityEvent({
       user: user._id,
@@ -499,6 +524,7 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
   user.lockUntil = undefined;
   user.lastFailedLoginAt = undefined;
   user.lastLoginAt = new Date();
+  ensureBaselinePermissions(user);
   if (!user.audit || (!user.audit.createdByIp && !user.audit.createdByAgent)) {
     user.audit = {
       createdByIp: requestMetadata.ipAddress || null,
@@ -555,6 +581,8 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
       retryAt: user.lockUntil,
     });
   }
+
+  ensureBaselinePermissions(user);
 
   const passwordMatches = await bcrypt.compare(password, user.passwordHash || '');
   if (!passwordMatches) {

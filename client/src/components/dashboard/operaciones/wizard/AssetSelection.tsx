@@ -12,6 +12,8 @@ interface Props {
   exitOptions: AssetOption[];
   onEnterChange: (value: string) => void;
   onExitChange: (value: string) => void;
+  enterLabel?: string;
+  exitLabel?: string;
   disabled?: boolean;
 }
 
@@ -22,12 +24,14 @@ export const AssetSelection: React.FC<Props> = ({
   exitOptions,
   onEnterChange,
   onExitChange,
+  enterLabel = 'Cliente recibe',
+  exitLabel = 'Cliente paga',
   disabled = false,
 }) => (
   <div id="asset-selection" className="mb-6">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-2">Cliente recibe</label>
+        <label className="block text-sm font-medium text-text-primary mb-2">{enterLabel}</label>
         <select
           value={enterValue}
           onChange={(event) => onEnterChange(event.target.value)}
@@ -42,7 +46,7 @@ export const AssetSelection: React.FC<Props> = ({
         </select>
       </div>
       <div>
-        <label className="block text-sm font-medium text-text-primary mb-2">Cliente paga</label>
+        <label className="block text-sm font-medium text-text-primary mb-2">{exitLabel}</label>
         <select
           value={exitValue}
           onChange={(event) => onExitChange(event.target.value)}

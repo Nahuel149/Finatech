@@ -151,6 +151,36 @@ export const useTransactionDraft = (draftId?: string | null) => {
     }
   }, [draft?.id, draftId]);
 
+  const voidOperation = useCallback(
+    async (reason?: string | null) => {
+      const targetId = draft?.id || draftId;
+      if (!targetId) {
+        throw new Error('No hay un borrador válido para anular.');
+      }
+
+      setSaving(true);
+      setError(null);
+
+      try {
+        const response = await apiRequest<TransactionDraft>(`/api/transactions/${targetId}/void`, {
+          method: 'POST',
+          body: {
+            reason: reason?.trim() ? reason.trim() : undefined,
+          },
+        });
+        setDraft(response);
+        return response;
+      } catch (err) {
+        const apiErr = handleApiError(err);
+        setError(apiErr);
+        throw apiErr;
+      } finally {
+        setSaving(false);
+      }
+    },
+    [draft?.id, draftId],
+  );
+
   const resetError = useCallback(() => {
     setError(null);
   }, []);
@@ -165,6 +195,7 @@ export const useTransactionDraft = (draftId?: string | null) => {
     advanceStep,
     resetError,
     finalize: finalizeDraft,
+    voidTransaction: voidOperation,
     updateSettlement,
   };
 };

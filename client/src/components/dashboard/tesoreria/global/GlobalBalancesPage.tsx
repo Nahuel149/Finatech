@@ -342,7 +342,15 @@ export const GlobalBalancesPage: React.FC = () => {
   return (
     <div className="bg-gray-50 min-h-screen">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleSearchChange} />
-      <TreasuryBalanceStripe onSelectBalance={handleSelectAccount} />
+      <TreasuryBalanceStripe
+        onSelectBalance={(accountKeyValue: string) => {
+          handleSelectAccount(accountKeyValue);
+          const tableEl = document.getElementById('balance-table');
+          if (tableEl) {
+            tableEl.scrollIntoView({ behavior: 'smooth', block: 'start', inline: 'nearest' });
+          }
+        }}
+      />
 
       <main id="saldos-container" className="pt-[260px] md:pt-[220px] px-6 pb-24">
         <section id="page-header" className="mb-8">
@@ -359,14 +367,6 @@ export const GlobalBalancesPage: React.FC = () => {
           </div>
         </section>
 
-        <GlobalBalancesSummaryCards
-          cards={overview.summaryCards}
-          loading={loading}
-          onSelectCard={overview.summaryCards.length ? handleSelectAccount : undefined}
-          activeAccountKey={filters.accountKey || null}
-          onRefresh={refresh}
-        />
-
         <GlobalBalancesFilters
           values={filters}
           options={overview.filters}
@@ -377,6 +377,14 @@ export const GlobalBalancesPage: React.FC = () => {
           onClearFilters={handleClearFilters}
           onToggleAdvanced={() => setShowAdvancedFilters((prev) => !prev)}
           onApplyAdvanced={handleApplyAdvanced}
+        />
+
+        <GlobalBalancesSummaryCards
+          cards={overview.summaryCards}
+          loading={loading}
+          onSelectCard={overview.summaryCards.length ? handleSelectAccount : undefined}
+          activeAccountKey={filters.accountKey || null}
+          onRefresh={refresh}
         />
 
         <GlobalBalancesTable

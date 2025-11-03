@@ -51,8 +51,8 @@ const ASSET_CATALOG: AssetOption[] = [
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
-  buy: { incoming: 'USD', outgoing: 'ARS' },  // Compra: entrada de bien2 (USD), salida de pesos (ARS)
-  sell: { incoming: 'ARS', outgoing: 'USD' }, // Venta: entrada de pesos (ARS), salida de bien2 (USD)
+  buy: { incoming: 'USD', outgoing: 'ARS' },  // Compra: entra USD y sale ARS
+  sell: { incoming: 'ARS', outgoing: 'USD' }, // Venta: entra ARS y sale USD
 };
 
 const formatMargin = (value?: number | null) => {
@@ -114,21 +114,10 @@ const ratesAreEqual = (first?: number | null, second?: number | null) => {
 };
 
 // Genera labels contextuales según las reglas de negocio
-const getAmountLabels = (operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => {
-  if (operationType === 'buy') {
-    // Compra: entrada de bien2, salida de pesos
-    return {
-      enterLabel: `Recibes (${incomingAsset})`,
-      exitLabel: `Pagas (${outgoingAsset})`
-    };
-  } else {
-    // Venta: entrada de pesos, salida de bien2
-    return {
-      enterLabel: `Recibes (${incomingAsset})`,
-      exitLabel: `Entregas (${outgoingAsset})`
-    };
-  }
-};
+const getAmountLabels = (_operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => ({
+  enterLabel: `Bien que entra (${incomingAsset})`,
+  exitLabel: `Bien que sale (${outgoingAsset})`,
+});
 
 export const OperationWizardStep1Page: React.FC = () => {
   const navigate = useNavigate();
@@ -164,6 +153,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     loading: clientsLoading,
     error: clientsError,
     setClients,
+    search: searchClients,
   } = useClientsList(50);
 
   const {
@@ -337,6 +327,37 @@ export const OperationWizardStep1Page: React.FC = () => {
     }
   }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
 
+  useEffect(() => {
+    const needsBuyCorrection =
+      operationType === 'buy' && incomingAssetCode === 'ARS' && outgoingAssetCode !== 'ARS';
+    const needsSellCorrection =
+      operationType === 'sell' && outgoingAssetCode === 'ARS' && incomingAssetCode !== 'ARS';
+
+    if (!needsBuyCorrection && !needsSellCorrection) {
+      return;
+    }
+
+    const previousIncomingAmount = incomingAmount;
+    const previousOutgoingAmount = outgoingAmount;
+
+    if (needsBuyCorrection) {
+      // Swap so the asset that entra is the foreign currency and the one that sale is ARS
+      setIncomingAssetCode(outgoingAssetCode);
+      setOutgoingAssetCode('ARS');
+      setIncomingAmount(previousOutgoingAmount);
+      setOutgoingAmount(previousIncomingAmount);
+      return;
+    }
+
+    if (needsSellCorrection) {
+      // Swap so the asset that entra is ARS and the one that sale is the foreign currency
+      setIncomingAssetCode('ARS');
+      setOutgoingAssetCode(incomingAssetCode);
+      setIncomingAmount(previousOutgoingAmount);
+      setOutgoingAmount(previousIncomingAmount);
+    }
+  }, [operationType, incomingAssetCode, outgoingAssetCode, incomingAmount, outgoingAmount]);
+
   const activeClient = useMemo(
     () => findClientLabel(clients, clientId) ?? draft?.client ?? null,
     [clients, clientId, draft],
@@ -345,6 +366,16 @@ export const OperationWizardStep1Page: React.FC = () => {
   const marginInfo = useMemo(
     () => formatMargin(activeClient?.lastMarginPercentage ?? null),
     [activeClient],
+  );
+
+  const assetLabels = useMemo(
+    () => ({ enter: 'Bien que entra', exit: 'Bien que sale' }),
+    [],
+  );
+
+  const amountLabels = useMemo(
+    () => getAmountLabels(operationType, incomingAssetCode, outgoingAssetCode),
+    [operationType, incomingAssetCode, outgoingAssetCode],
   );
 
   const showSecondaryRates = outgoingAssetCode !== 'USD';
@@ -661,6 +692,7 @@ export const OperationWizardStep1Page: React.FC = () => {
                 onChange={handleClientChange}
                 clients={clients}
                 onNewClient={handleOpenNewClientModal}
+                onSearch={searchClients}
                 marginInfo={marginInfo}
                 loading={clientsLoading}
                 error={clientsError?.message || null}
@@ -679,6 +711,8 @@ export const OperationWizardStep1Page: React.FC = () => {
                 exitOptions={ASSET_CATALOG}
                 onEnterChange={setIncomingAssetCode}
                 onExitChange={setOutgoingAssetCode}
+                enterLabel={assetLabels.enter}
+                exitLabel={assetLabels.exit}
                 disabled={busy}
               />
 
@@ -704,7 +738,8 @@ export const OperationWizardStep1Page: React.FC = () => {
                 enterAmount={incomingAmount}
                 onEnterAmountChange={setIncomingAmount}
                 exitAmount={outgoingAmount}
-                {...getAmountLabels(operationType, incomingAssetCode, outgoingAssetCode)}
+                enterLabel={amountLabels.enterLabel}
+                exitLabel={amountLabels.exitLabel}
                 disabled={busy}
               />
               <MarginIndicator

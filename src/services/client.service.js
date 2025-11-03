@@ -1,4 +1,5 @@
 const Client = require('../models/Client');
+const { ensureContactBalance } = require('./currentAccount.service');
 
 const SAMPLE_CLIENTS = [
   {
@@ -183,16 +184,33 @@ const createClient = async (payload) => {
     lastName: toTitleCase(payload.lastName),
     internalOwner: toTitleCase(payload.internalOwner),
     contactType: normalizedContactType,
-    cuit: payload.cuit || null,
-    email: payload.email || null,
-    phone: payload.phone || null,
     lastMarginPercentage: null,
     primaryAddress: normalizeAddressInput(payload.primaryAddress),
     secondaryAddress: normalizeAddressInput(payload.secondaryAddress),
   });
 
+  if (payload.cuit && String(payload.cuit).trim()) {
+    document.cuit = String(payload.cuit).trim();
+  }
+  if (payload.email && String(payload.email).trim()) {
+    document.email = String(payload.email).trim();
+  }
+  if (payload.phone && String(payload.phone).trim()) {
+    document.phone = String(payload.phone).trim();
+  }
+
   await document.validate();
   await document.save();
+
+  try {
+    await Promise.all([
+      ensureContactBalance(document._id, 'ARS'),
+      ensureContactBalance(document._id, 'USD'),
+    ]);
+  } catch (balanceError) {
+    // eslint-disable-next-line no-console
+    console.error(`Failed to initialize balances for new client ${document._id}`, balanceError);
+  }
 
   return formatClient(document.toObject());
 };

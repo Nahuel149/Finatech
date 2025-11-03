@@ -23,6 +23,19 @@ const operationTypeBadge = (operation: OperationSuggestion) => {
   return { label: 'Operación', className: 'bg-blue-100 text-blue-800' };
 };
 
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export const ReconciliationOperationsTable: React.FC<Props> = ({
   operations,
   selectedIds,
@@ -96,7 +109,9 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
                       onChange={() => onToggle(operation.id)}
                     />
                   </td>
-                  <td className="px-4 py-4 text-sm text-text-primary">—</td>
+                  <td className="px-4 py-4 text-sm text-text-primary">
+                    {formatDate(operation.confirmedAt)}
+                  </td>
                   <td className="px-4 py-4">
                     <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.className}`}>
                       {badge.label}

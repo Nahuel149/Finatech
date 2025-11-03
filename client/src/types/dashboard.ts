@@ -23,6 +23,7 @@ export interface DashboardNotification {
   actionUrl?: string;
   read?: boolean;
   message?: string;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface DashboardNotificationsResponse {

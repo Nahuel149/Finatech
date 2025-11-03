@@ -6,10 +6,8 @@ import {
   useNotifications,
   useAuth,
   useCurrentUser,
-  useUserPermissions,
 } from '../../../hooks';
 import { ApiError } from '../../../types';
-import { DashboardBalanceWidget } from './DashboardBalanceWidget';
 
 interface Props {
   search: string;
@@ -61,7 +59,7 @@ interface NotificationsDropdownProps {
   unreadCount: number;
   onNotificationClick: (notification: NotificationItem) => void;
   onSeeAll: () => void;
-  onMarkAllRead: () => void;
+  onMarkAllRead: () => Promise<void> | void;
   className?: string;
   loading?: boolean;
   error?: ApiError | null;
@@ -85,7 +83,12 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
       {unreadCount > 0 && (
         <button
           type="button"
-          onClick={onMarkAllRead}
+          onClick={() => {
+            const result = onMarkAllRead();
+            if (result && typeof (result as Promise<void>).catch === 'function') {
+              (result as Promise<void>).catch(() => {});
+            }
+          }}
           className="text-xs font-medium text-primary hover:text-blue-700"
         >
           Marcar todas como leídas
@@ -174,8 +177,6 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     loading: notificationsLoading,
     error: notificationsError,
   } = useNotifications();
-  const { permissions } = useUserPermissions();
-  const canViewBalances = permissions.includes('view-balances');
   const displayName = user?.fullName?.trim() || (userLoading ? 'Cargando perfil…' : 'Usuario FinaTech');
   const secondaryText = user?.email || (userLoading ? 'Sincronizando…' : 'Sin correo configurado');
 
@@ -223,7 +224,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [mobileMenuOpen]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -251,7 +252,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   };
 
   const handleNotificationClick = (notification: NotificationItem) => {
-    markAsRead(notification.id);
+    markAsRead(notification.id).catch(() => {});
     setNotificationsOpen(false);
   };
 
@@ -289,7 +290,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       {/* Mobile header */}
       <header className="fixed top-0 left-0 right-0 bg-white shadow-sm border-b border-gray-200 z-50 lg:hidden">
         <div className="px-4 py-3">
-          <div className="flex items-center justify-between">
+          <div className="grid grid-cols-[auto,1fr,auto] items-center gap-3">
             <div className="flex items-center">
               <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
                 <i className="fa-solid fa-chart-line text-white text-sm"></i>
@@ -299,20 +300,19 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               </Link>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center justify-end space-x-1.5">
               <button
                 type="button"
-                className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+                className="inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label="Buscar"
                 onClick={openSearchOnMobile}
               >
                 <i className="fa-solid fa-search text-lg" />
               </button>
-              <DashboardBalanceWidget canView={canViewBalances} />
               <div ref={mobileNotificationsRef} className="relative">
                 <button
                   type="button"
-                  className="relative p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+                  className="relative inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                   aria-label="Notificaciones"
                   aria-expanded={notificationsOpen}
                   onClick={handleOpenNotifications}
@@ -331,7 +331,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     unreadCount={unreadCount}
                     onNotificationClick={handleNotificationClick}
                     onSeeAll={handleSeeAllNotifications}
-                    onMarkAllRead={markAllAsRead}
+                    onMarkAllRead={() => markAllAsRead().catch(() => {})}
                     loading={notificationsLoading}
                     error={notificationsError}
                   />
@@ -340,7 +340,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               <button
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
-                className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+                className="inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
                 ref={mobileMenuButtonRef}
               >
@@ -473,7 +473,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       >
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
-            <div id="logo-section" className="flex items-center space-x-8">
+            <div id="logo-section" className="flex items-center space-x-8 flex-1 min-w-0">
               <div className="flex items-center">
                 <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
                   <i className="fa-solid fa-chart-line text-white text-sm" />
@@ -483,56 +483,57 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 </Link>
               </div>
 
-              <div id="main-nav" className="flex space-x-8">
-                {NAV_ITEMS.map((item) => {
-                  if (!item.path) {
+              <div className="flex items-center space-x-8 flex-1 min-w-0">
+                <div id="main-nav" className="flex space-x-8">
+                  {NAV_ITEMS.map((item) => {
+                    if (!item.path) {
+                      return (
+                        <span
+                          key={item.label}
+                          className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer"
+                        >
+                          <i className={`fa-solid ${item.icon} mr-2`} />
+                          {item.label}
+                        </span>
+                      );
+                    }
+
+                    const isActive = item.path === activePath;
                     return (
-                      <span
-                        key={item.label}
-                        className="flex items-center px-3 py-2 text-text-primary hover:text-primary transition-colors cursor-pointer"
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`flex items-center px-3 py-2 transition-colors cursor-pointer ${
+                          isActive
+                            ? 'text-primary font-medium border-b-2 border-primary'
+                            : 'text-text-primary hover:text-primary'
+                        }`}
                       >
                         <i className={`fa-solid ${item.icon} mr-2`} />
                         {item.label}
-                      </span>
+                      </Link>
                     );
-                  }
-
-                  const isActive = item.path === activePath;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center px-3 py-2 transition-colors cursor-pointer ${
-                        isActive
-                          ? 'text-primary font-medium border-b-2 border-primary'
-                          : 'text-text-primary hover:text-primary'
-                      }`}
-                    >
-                      <i className={`fa-solid ${item.icon} mr-2`} />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div id="global-search" className="flex-1 max-w-md mx-8">
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <i className="fa-solid fa-search text-gray-400" />
+                  })}
                 </div>
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => onSearchChange(event.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                  placeholder="Buscar cliente u operación…"
-                />
+
+                <div id="global-search" className="flex-1 max-w-md">
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <i className="fa-solid fa-search text-gray-400" />
+                    </div>
+                    <input
+                      type="text"
+                      value={search}
+                      onChange={(event) => onSearchChange(event.target.value)}
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+                      placeholder="Buscar cliente u operación…"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
             <div id="navbar-right" className="flex items-center space-x-4">
-              <DashboardBalanceWidget canView={canViewBalances} />
               <div ref={desktopNotificationsRef} className="relative">
                 <button
                   type="button"

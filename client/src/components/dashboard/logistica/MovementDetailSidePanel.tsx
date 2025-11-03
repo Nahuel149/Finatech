@@ -1,11 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   XMarkIcon,
   DocumentIcon,
-  ClockIcon,
-  UserIcon,
-  TruckIcon,
-  CheckCircleIcon,
   PencilIcon,
   EyeIcon,
   PlusIcon,
@@ -22,6 +18,108 @@ interface MovementDetailSidePanelProps {
   onRegisterIncident: () => void;
 }
 
+const STATUS_CONFIG: Record<
+  string,
+  { label: string; badgeClass: string; iconClass: string }
+> = {
+  pendiente: {
+    label: 'Pendiente',
+    badgeClass: 'bg-yellow-100 text-yellow-800',
+    iconClass: 'fa-regular fa-clock',
+  },
+  'en-progreso': {
+    label: 'En curso',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    iconClass: 'fa-solid fa-clock',
+  },
+  encurso: {
+    label: 'En curso',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    iconClass: 'fa-solid fa-clock',
+  },
+  completado: {
+    label: 'Completado',
+    badgeClass: 'bg-success text-white',
+    iconClass: 'fa-solid fa-check',
+  },
+  anulado: {
+    label: 'Anulado',
+    badgeClass: 'bg-danger text-white',
+    iconClass: 'fa-solid fa-circle-xmark',
+  },
+};
+
+const getStatusDisplay = (status?: string) => {
+  if (!status) {
+    return STATUS_CONFIG.pendiente;
+  }
+  const normalized = status.toLowerCase();
+  return STATUS_CONFIG[normalized] || STATUS_CONFIG.pendiente;
+};
+
+const movementTypeIcon = (type?: string) => {
+  const normalized = (type || '').toLowerCase();
+  if (normalized.includes('entrega')) return 'fa-truck';
+  if (normalized.includes('transfer')) return 'fa-right-left';
+  if (normalized.includes('retiro')) return 'fa-arrow-up';
+  if (normalized.includes('custodia')) return 'fa-shield';
+  return 'fa-box';
+};
+
+const timelineIconClass = (eventType?: string) => {
+  switch (eventType) {
+    case 'created':
+      return 'fa-solid fa-plus text-white';
+    case 'started':
+    case 'updated':
+      return 'fa-solid fa-play text-white';
+    case 'received':
+      return 'fa-solid fa-check text-white';
+    case 'completed':
+      return 'fa-solid fa-flag text-white';
+    default:
+      return 'fa-regular fa-circle text-white';
+  }
+};
+
+const timelineColor = (eventType?: string, isCompleted?: boolean) => {
+  if (isCompleted) {
+    return 'bg-success';
+  }
+  switch (eventType) {
+    case 'created':
+      return 'bg-success';
+    case 'updated':
+    case 'started':
+      return 'bg-primary';
+    default:
+      return 'bg-gray-300';
+  }
+};
+
+const formatDate = (iso?: string) => {
+  if (!iso) return '—';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '—';
+  return date.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const formatCurrency = (amount?: number, currency?: string) => {
+  if (typeof amount !== 'number') return '—';
+  const code = currency === 'USD' ? 'USD' : 'ARS';
+  return new Intl.NumberFormat(code === 'USD' ? 'en-US' : 'es-AR', {
+    style: 'currency',
+    currency: code,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
 export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = ({
   isOpen,
   movement,
@@ -32,370 +130,408 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
   onCancel,
   onRegisterIncident,
 }) => {
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      'pendiente': { color: 'bg-yellow-100 text-yellow-800', label: 'Pendiente' },
-      'en-progreso': { color: 'bg-blue-100 text-blue-800', label: 'En progreso' },
-      'completado': { color: 'bg-green-100 text-green-800', label: 'Completado' },
-      'anulado': { color: 'bg-red-100 text-red-800', label: 'Anulado' }
-    };
-    
-    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.pendiente;
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
+  const statusDisplay = useMemo(
+    () => getStatusDisplay(movement?.status),
+    [movement?.status]
+  );
 
-  const getTimelineIcon = (type: string) => {
-    switch (type) {
-      case 'created':
-        return <ClockIcon className="h-4 w-4 text-blue-500" />;
-      case 'updated':
-        return <UserIcon className="h-4 w-4 text-yellow-500" />;
-      case 'completed':
-        return <CheckCircleIcon className="h-4 w-4 text-green-500" />;
-      case 'cancelled':
-        return <XMarkIcon className="h-4 w-4 text-red-500" />;
-      default:
-        return <TruckIcon className="h-4 w-4 text-gray-500" />;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-AR', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const formatCurrency = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: currency === 'ARS' ? 'ARS' : 'USD',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-
-  if (!isOpen) return null;
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">
-      <div className="absolute inset-0 bg-black bg-opacity-50" onClick={onClose}></div>
-      
-      <div className="absolute right-0 top-0 h-full w-full sm:max-w-2xl lg:max-w-4xl bg-white shadow-xl overflow-y-auto">
-        {/* Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-4 sm:px-6 py-4 z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <nav className="flex items-center space-x-2 text-sm text-gray-500">
-                <span onClick={onClose} className="text-primary font-medium cursor-pointer">Logística</span>
-                <span>/</span>
-                <span className="text-gray-900">Detalle de movimiento</span>
-              </nav>
+      <div
+        className="absolute inset-0 bg-black/50"
+        role="presentation"
+        onClick={onClose}
+      />
+
+      <aside
+        className="absolute right-0 top-0 flex h-full w-full flex-col bg-white shadow-2xl sm:w-[460px] lg:w-[520px]"
+        role="dialog"
+        aria-modal="true"
+      >
+        <header className="border-b border-gray-200 bg-gray-50 px-6 py-6">
+          <nav
+            className="mb-3 flex items-center space-x-2 text-sm text-gray-600"
+            aria-label="Breadcrumb"
+          >
+            <button
+              type="button"
+              onClick={onClose}
+              className="text-primary font-medium hover:underline"
+            >
+              Logística
+            </button>
+            <i className="fa-solid fa-chevron-right text-xs" aria-hidden="true" />
+            <span>{movement?.id || 'Movimiento'}</span>
+          </nav>
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-xl font-bold text-text-primary">
+                Detalle del movimiento
+              </h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Consulta la información operativa y el estado completo.
+              </p>
             </div>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600 p-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full p-2 text-gray-400 transition-colors hover:text-gray-600"
+              aria-label="Cerrar panel"
+            >
               <XMarkIcon className="h-6 w-6" />
             </button>
           </div>
-          
-          <div className="mt-4">
-            <h1 className="text-lg sm:text-xl font-bold text-gray-900">
-              {isLoading ? 'Cargando...' : `Movimiento ${movement?.id}`}
-            </h1>
-          </div>
-        </div>
+        </header>
 
         {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          <div className="flex flex-1 items-center justify-center">
+            <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
           </div>
         ) : (
-          <div className="px-4 sm:px-6 py-6 space-y-6 sm:space-y-8">
-            {/* Movement Summary */}
-            <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Resumen del movimiento</h2>
-              
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">ID</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.id}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tipo</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.type}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Fecha</label>
-                  <p className="mt-1 text-sm text-gray-900">{formatDate(movement.date)}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Responsable</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.responsible}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Contacto</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.contact}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Referencia</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.reference}</p>
-                </div>
-              </div>
-              
-              <div className="mt-4 flex items-center justify-between">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Estado</label>
-                  <div className="mt-1">
-                    {getStatusBadge(movement.status)}
+          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-start justify-between">
+                <div className="flex items-center">
+                  <div className="mr-4 flex h-12 w-12 items-center justify-center rounded-lg bg-blue-100">
+                    <i
+                      className={`fa-solid ${movementTypeIcon(movement?.type)} text-primary text-lg`}
+                    />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-text-primary">
+                      {movement?.id || '—'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {movement?.type || 'Sin tipo definido'}
+                    </p>
                   </div>
                 </div>
-                
-                {movement.status !== 'completado' && movement.status !== 'anulado' && (
+                <span
+                  className={`inline-flex items-center rounded-full px-3 py-1 text-sm font-medium ${statusDisplay.badgeClass}`}
+                >
+                  <i className={`${statusDisplay.iconClass} mr-2`} aria-hidden="true" />
+                  {statusDisplay.label}
+                </span>
+              </div>
+
+              <dl className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Fecha y hora</dt>
+                  <dd className="font-medium text-text-primary">
+                    {formatDate(movement?.date)}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Responsable</dt>
+                  <dd className="font-medium text-text-primary">
+                    {movement?.responsible || '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Contacto</dt>
+                  <dd className="font-medium text-text-primary">
+                    {movement?.contact || '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Referencia</dt>
+                  <dd className="text-text-primary">
+                    {movement?.reference || '—'}
+                  </dd>
+                </div>
+                <div className="flex justify-between">
+                  <dt className="text-gray-600">Última actualización</dt>
+                  <dd className="text-gray-500">
+                    {formatDate(movement?.audit?.lastModifiedAt)}
+                  </dd>
+                </div>
+              </dl>
+
+              {movement?.status &&
+                !['completado', 'anulado'].includes(
+                  movement.status.toLowerCase()
+                ) && (
                   <button
+                    type="button"
                     onClick={onMarkAsCompleted}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium w-full sm:w-auto"
+                    className="mt-4 w-full rounded-lg bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
+                  >
+                    <i className="fa-solid fa-check mr-2" aria-hidden="true" />
+                    Marcar como completado
+                  </button>
+                )}
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-text-primary">
+                Timeline de estados
+              </h3>
+              <div className="space-y-4">
+                {(movement?.timeline || []).map((event: any) => {
+                  const isCompleted =
+                    event.type === 'completed' || event.type === 'received';
+                  return (
+                    <div key={event.id} className="timeline-item flex items-start">
+                      <div
+                        className={`mr-4 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full ${timelineColor(
+                          event.type,
+                          isCompleted
+                        )}`}
+                      >
+                        <i
+                          className={`${timelineIconClass(event.type)} text-sm`}
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-text-primary">
+                          {event.title}
+                        </p>
+                        <p className="text-xs text-gray-600">
+                          {formatDate(event.date)}
+                          {event.user ? ` • ${event.user}` : null}
+                        </p>
+                        {event.description && (
+                          <p className="mt-1 text-xs text-gray-500">
+                            {event.description}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+                {!movement?.timeline?.length && (
+                  <p className="text-sm text-gray-500">
+                    Aún no hay eventos registrados en la cronología.
+                  </p>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-text-primary">
+                Detalle operativo
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Origen</span>
+                  <span className="font-medium text-text-primary">
+                    {movement?.origin || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Destino</span>
+                  <span className="font-medium text-text-primary">
+                    {movement?.destination || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Medio</span>
+                  <span className="font-medium text-text-primary">
+                    {movement?.medium || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Moneda</span>
+                  <span className="font-medium text-text-primary">
+                    {movement?.currency || '—'}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Monto total</span>
+                  <span className="font-medium text-text-primary">
+                    {formatCurrency(movement?.totalAmount, movement?.currency)}
+                  </span>
+                </div>
+                <div className="flex justify-between pt-2">
+                  <span className="text-gray-600">Operación vinculada</span>
+                  <span className="font-medium text-primary">
+                    {movement?.linkedOperation || '—'}
+                  </span>
+                </div>
+              </div>
+              <div className="mt-4 rounded-lg bg-gray-50 p-3 text-xs text-gray-600">
+                <span className="inline-flex items-center rounded-full bg-gray-200 px-2 py-1 text-xs font-medium text-gray-700">
+                  <i className="fa-solid fa-info-circle mr-2" aria-hidden="true" />
+                  Sin impacto contable directo
+                </span>
+              </div>
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-text-primary">
+                  Ítems asociados
+                </h3>
+                <button
+                  type="button"
+                  onClick={onRegisterIncident}
+                  className="inline-flex items-center text-sm font-medium text-primary hover:text-blue-700"
+                >
+                  <PlusIcon className="mr-2 h-4 w-4" />
+                  Registrar incidencia
+                </button>
+              </div>
+              <div className="overflow-x-auto rounded-lg border border-gray-200">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3">Descripción</th>
+                      <th className="px-4 py-3">Identificador</th>
+                      <th className="px-4 py-3">Cantidad</th>
+                      <th className="px-4 py-3 text-right">Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {(movement?.associatedItems || []).map((item: any) => (
+                      <tr key={item.id}>
+                        <td className="px-4 py-3 text-text-primary">{item.description}</td>
+                        <td className="px-4 py-3 text-gray-600">{item.identifier}</td>
+                        <td className="px-4 py-3 text-text-primary">
+                          {item.quantity} {item.unit}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            className="mr-3 text-primary transition-colors hover:text-blue-700"
+                            aria-label="Ver ítem"
+                          >
+                            <EyeIcon className="inline h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            className="text-gray-400 transition-colors hover:text-gray-600"
+                            aria-label="Editar ítem"
+                          >
+                            <PencilIcon className="inline h-4 w-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!movement?.associatedItems?.length && (
+                <p className="mt-3 text-sm text-gray-500">
+                  No hay ítems asociados todavía.
+                </p>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-text-primary">
+                Documentos adjuntos
+              </h3>
+              <div className="space-y-3">
+                {(movement?.attachments || []).map((attachment: any) => (
+                  <div
+                    key={attachment.id}
+                    className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <DocumentIcon className="h-6 w-6 text-gray-400" />
+                      <div>
+                        <p className="text-sm font-medium text-text-primary">
+                          {attachment.name}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {attachment.type} • {attachment.size}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      className="text-sm font-medium text-primary hover:text-blue-700"
+                    >
+                      Ver
+                    </button>
+                  </div>
+                ))}
+              </div>
+              {!movement?.attachments?.length && (
+                <p className="text-sm text-gray-500">
+                  No hay documentos adjuntos disponibles.
+                </p>
+              )}
+            </section>
+
+            <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+              <h3 className="mb-4 text-lg font-semibold text-text-primary">
+                Auditoría y registro
+              </h3>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Creado por</span>
+                  <span className="text-text-primary">
+                    {movement?.audit?.createdBy || '—'} •{' '}
+                    {formatDate(movement?.audit?.createdAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">Última modificación</span>
+                  <span className="text-text-primary">
+                    {movement?.audit?.lastModifiedBy || '—'} •{' '}
+                    {formatDate(movement?.audit?.lastModifiedAt)}
+                  </span>
+                </div>
+                <div className="flex justify-between border-b border-gray-100 pb-2">
+                  <span className="text-gray-600">IP de registro</span>
+                  <span className="text-gray-500">{movement?.audit?.ipAddress || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">Log de cambios</span>
+                  <span className="text-gray-400">No disponible</span>
+                </div>
+              </div>
+            </section>
+          </div>
+        )}
+
+        <footer className="border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-200"
+            >
+              <i className="fa-solid fa-arrow-left mr-2" aria-hidden="true" />
+              Volver a Logística
+            </button>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+              <button
+                type="button"
+                onClick={onEdit}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-text-primary transition-colors hover:bg-gray-100"
+              >
+                Editar movimiento
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="inline-flex items-center justify-center rounded-lg border border-danger px-4 py-2 text-sm font-medium text-danger transition-colors hover:bg-red-50"
+              >
+                Anular movimiento
+              </button>
+              {movement?.status &&
+                !['completado', 'anulado'].includes(
+                  movement.status.toLowerCase()
+                ) && (
+                  <button
+                    type="button"
+                    onClick={onMarkAsCompleted}
+                    className="inline-flex items-center justify-center rounded-lg bg-success px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-600"
                   >
                     Marcar como completado
                   </button>
                 )}
-              </div>
-            </div>
-
-            {/* Status Timeline */}
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Cronología de estados</h2>
-              
-              <div className="space-y-4">
-                {movement.timeline?.map((event: any, index: number) => (
-                  <div key={event.id} className="flex items-start space-x-3">
-                    <div className="flex-shrink-0 mt-1">
-                      {getTimelineIcon(event.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
-                        <h3 className="text-sm font-medium text-gray-900">{event.title}</h3>
-                        <span className="text-xs text-gray-500">{formatDate(event.date)}</span>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1">{event.description}</p>
-                      <p className="text-xs text-gray-500 mt-1">Por {event.user}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Operational Details */}
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Detalles operativos</h2>
-              
-              <div className="bg-gray-50 rounded-lg p-4 sm:p-6">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Origen</label>
-                    <p className="mt-1 text-sm text-gray-900">{movement.origin}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Destino</label>
-                    <p className="mt-1 text-sm text-gray-900">{movement.destination}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Medio</label>
-                    <p className="mt-1 text-sm text-gray-900">{movement.medium}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Moneda</label>
-                    <p className="mt-1 text-sm text-gray-900">{movement.currency}</p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Monto total</label>
-                    <p className="mt-1 text-sm font-semibold text-gray-900">
-                      {formatCurrency(movement.totalAmount, movement.currency)}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Operación vinculada</label>
-                    <p className="mt-1 text-sm text-primary cursor-pointer hover:underline">
-                      {movement.linkedOperation}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Associated Items */}
-            <div>
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
-                <h2 className="text-base sm:text-lg font-semibold text-gray-900">Ítems asociados</h2>
-                <button className="flex items-center justify-center px-3 py-2 text-sm text-primary border border-primary rounded-lg hover:bg-blue-50 transition-colors">
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Agregar ítem
-                </button>
-              </div>
-              
-              <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[600px]">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Descripción
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Identificador
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Cantidad
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Acciones
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200">
-                      {movement.associatedItems?.map((item: any) => (
-                        <tr key={item.id}>
-                          <td className="px-4 py-3 text-sm text-gray-900">{item.description}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">{item.identifier}</td>
-                          <td className="px-4 py-3 text-sm text-gray-500">
-                            {item.quantity} {item.unit}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            <div className="flex space-x-2">
-                              <button className="text-blue-600 hover:text-blue-800">
-                                <EyeIcon className="h-4 w-4" />
-                              </button>
-                              <button className="text-gray-600 hover:text-gray-800">
-                                <PencilIcon className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            {/* Attached Documents */}
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Documentos adjuntos</h2>
-              
-              <div className="space-y-3">
-                {movement.attachments?.map((attachment: any) => (
-                  <div key={attachment.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <DocumentIcon className="h-8 w-8 text-gray-400 flex-shrink-0" />
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{attachment.name}</p>
-                        <p className="text-xs text-gray-500">{attachment.type} • {attachment.size}</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-2 flex-shrink-0">
-                      <button className="text-blue-600 hover:text-blue-800 text-sm">
-                        Ver
-                      </button>
-                      <button className="text-red-600 hover:text-red-800 text-sm">
-                        Eliminar
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Audit and Registry */}
-            <div>
-              <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Auditoría y registro</h2>
-              
-              <div className="bg-gray-50 rounded-lg p-4 sm:p-6 space-y-3">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Creado por</label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {movement.audit?.createdBy} el {formatDate(movement.audit?.createdAt)}
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Última modificación</label>
-                  <p className="mt-1 text-sm text-gray-900">
-                    {movement.audit?.lastModifiedBy} el {formatDate(movement.audit?.lastModifiedAt)}
-                  </p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Dirección IP</label>
-                  <p className="mt-1 text-sm text-gray-900">{movement.audit?.ipAddress}</p>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Log de cambios</label>
-                  <p className="mt-1 text-sm text-gray-500">No hay cambios registrados</p>
-                </div>
-              </div>
             </div>
           </div>
-        )}
-
-        {/* Panel Footer */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-4">
-          <div className="flex flex-col sm:flex-row flex-wrap gap-3">
-            <button
-              onClick={onClose}
-              className="flex items-center justify-center px-4 py-2 text-gray-700 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              Volver a Logística
-            </button>
-            
-            <button
-              onClick={onEdit}
-              className="flex items-center justify-center px-4 py-2 text-blue-600 border border-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
-            >
-              Editar movimiento
-            </button>
-            
-            <button
-              onClick={onCancel}
-              className="flex items-center justify-center px-4 py-2 text-red-600 border border-red-600 rounded-lg hover:bg-red-50 transition-colors"
-            >
-              Anular movimiento
-            </button>
-            
-            <button
-              onClick={onRegisterIncident}
-              className="flex items-center justify-center px-4 py-2 text-orange-600 border border-orange-600 rounded-lg hover:bg-orange-50 transition-colors"
-            >
-              <i className="fa-solid fa-exclamation-triangle mr-2"></i>
-              Registrar incidencia
-            </button>
-            
-            {movement && movement.status !== 'completado' && movement.status !== 'anulado' && (
-              <button
-                onClick={onMarkAsCompleted}
-                className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors sm:ml-auto"
-              >
-                Marcar como completado
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
+        </footer>
+      </aside>
     </div>
   );
 };

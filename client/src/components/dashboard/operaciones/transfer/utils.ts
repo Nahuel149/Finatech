@@ -39,6 +39,8 @@ export type AccountingSummaryEntry = {
   amount: number;
   sign: 1 | -1;
   contact: string | null;
+  originalAmount?: number;
+  originalCurrency?: string | null;
 };
 
 export const buildAccountingEntries = (operation: TransferOperation): AccountingSummaryEntry[] => {
@@ -61,10 +63,12 @@ export const buildAccountingEntries = (operation: TransferOperation): Accounting
   operation.distributionLines.forEach((line) => {
     entries.push({
       label: ACCOUNT_LABEL[line.method] || `Cuentas a Cobrar ${line.method}`,
-      currency: line.method,
-      amount: line.amount,
+      currency: 'ARS',
+      amount: line.amountArs ?? line.amount,
       sign: counterpartySign,
       contact: line.contactName || null,
+      originalAmount: line.method === 'USD' ? line.amount : undefined,
+      originalCurrency: line.method === 'USD' ? 'USD' : undefined,
     });
   });
 

@@ -23,7 +23,9 @@ import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 // import { apiRequest, handleApiError } from '../../../../utils/api';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
+import { VoidOperationModal } from './VoidOperationModal';
 import { emitDashboardBalanceRefresh } from '../../../../utils';
+import { WizardCompleteSummary } from './WizardCompleteSummary';
 
 const WIZARD_STEPS = [
   { label: 'Datos', description: 'Información de la operación' },
@@ -51,14 +53,6 @@ const formatCurrency = (value: number, currency: string) => {
 };
 
 // Función helper para formatear porcentajes
-const formatPercentage = (value: number) => {
-  if (!Number.isFinite(value)) {
-    return '0.00%';
-  }
-  const prefix = value > 0 ? '+' : '';
-  return `${prefix}${value.toFixed(2)}%`;
-};
-
 // Agregar estilos para la animación del check
 const SuccessAnimationStyles = () => (
   <style>
@@ -75,19 +69,6 @@ const SuccessAnimationStyles = () => (
   </style>
 );
 
-// Componente local para items de resumen (basado en wizardstep3.html)
-const SummaryItem: React.FC<{ label: string; children: React.ReactNode }> = ({
-  label,
-  children,
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-600 mb-1">
-      {label}
-    </label>
-    <div className="text-text-primary font-medium">{children}</div>
-  </div>
-);
-
 export const OperationWizardStep3Page: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -102,6 +83,7 @@ export const OperationWizardStep3Page: React.FC = () => {
     error: draftError,
     fetchDraft,
     finalize,
+    voidTransaction,
   } = useTransactionDraft(draftId);
 
   const { clients, setClients } = useClientsList(50);
@@ -109,6 +91,9 @@ export const OperationWizardStep3Page: React.FC = () => {
   const [search, setSearch] = useState('');
   const [operationType, setOperationType] = useState<TransactionType>('buy');
   const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [voidModalOpen, setVoidModalOpen] = useState(false);
+  const [voidSubmitting, setVoidSubmitting] = useState(false);
+  const [voidError, setVoidError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [successStateVisible, setSuccessStateVisible] = useState(false);
@@ -171,6 +156,8 @@ export const OperationWizardStep3Page: React.FC = () => {
   const settlementPercentage =
     draft?.settlement?.totalPercentage ??
     (draft?.settlement?.mode === 'simple' ? 100 : 0);
+
+  const summaryClient = clientSummary ?? draft?.client ?? null;
 
   // Lógica de validación (CA15)
   const validationItems = useMemo(
@@ -246,6 +233,50 @@ export const OperationWizardStep3Page: React.FC = () => {
     navigate('/dashboard');
   }, [navigate]);
 
+  const handleOpenVoidModal = useCallback(() => {
+    if (isVoided) {
+      return;
+    }
+    setVoidError(null);
+    setVoidModalOpen(true);
+  }, [isVoided]);
+
+  const handleCloseVoidModal = useCallback(() => {
+    if (voidSubmitting) {
+      return;
+    }
+    setVoidModalOpen(false);
+    setVoidError(null);
+  }, [voidSubmitting]);
+
+  const handleConfirmVoid = useCallback(
+    async (reason: string) => {
+      if (!draft?.id) {
+        return;
+      }
+
+      setVoidSubmitting(true);
+      setVoidError(null);
+
+      try {
+        await voidTransaction(reason);
+        emitDashboardBalanceRefresh();
+        setSuccessMessage('Operación anulada correctamente.');
+        setFormError(null);
+        setShowToast(true);
+        setVoidModalOpen(false);
+        setSuccessStateVisible(false);
+        navigate('/dashboard');
+      } catch (err) {
+        const apiErr = err as ApiError;
+        setVoidError(apiErr.message || 'No pudimos anular la operación.');
+      } finally {
+        setVoidSubmitting(false);
+      }
+    },
+    [draft?.id, voidTransaction, navigate],
+  );
+
   const handleSaveDraft = useCallback(async () => {
     // Aquí iría la lógica para guardar el borrador sin finalizar
     // (usando un hook o API call)
@@ -260,7 +291,6 @@ export const OperationWizardStep3Page: React.FC = () => {
       setFormError(
         'Algunas validaciones fallaron. Revisá los pasos anteriores.',
       );
-      // Scroll to validation card
       document
         .getElementById('final-validation')
         ?.scrollIntoView({ behavior: 'smooth' });
@@ -271,24 +301,20 @@ export const OperationWizardStep3Page: React.FC = () => {
     setSuccessMessage(null);
 
     try {
-      const confirmedDraft = await finalize(); // Llama al hook para finalizar
+      const confirmedDraft = await finalize();
       emitDashboardBalanceRefresh();
-      // Redirige a la pantalla de detalle de la operación confirmada
-      if (confirmedDraft?.id) {
-        navigate(`/dashboard/operaciones/detalle/${confirmedDraft.id}`);
-        return; // Evita seguir ejecutando código innecesario
-      }
-      // Si por alguna razón no hay id, mostramos el estado de éxito interno
-      setSuccessMessage('Operación confirmada correctamente.');
       setSuccessStateVisible(true);
-      await fetchDraft();
+      if (confirmedDraft?.id) {
+        await fetchDraft();
+      }
+      setSuccessMessage('Operación confirmada correctamente.');
       setShowToast(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       const apiError = error as ApiError;
       setFormError(apiError.message || 'No pudimos confirmar la operación.');
     }
-  }, [canConfirm, draft?.id, fetchDraft, finalize, navigate]);
+  }, [canConfirm, draft?.id, fetchDraft, finalize]);
 
   // --- Handlers para la pantalla de ÉXITO (sin cambios) ---
   const handleViewDetails = useCallback(() => {
@@ -309,36 +335,113 @@ export const OperationWizardStep3Page: React.FC = () => {
   }, [navigate]);
 
   const handleExportPDF = useCallback(() => {
-    // Exporta únicamente la tarjeta de éxito (o el contenido principal) a PDF
     const card = document.getElementById('success-card');
-
-    // Si no encontramos la tarjeta, hacemos un print tradicional como respaldo
     if (!card) {
       window.print();
       return;
     }
 
-    // Abrimos una nueva ventana emergente con solo el contenido relevante
-    const printWindow = window.open('', '_blank', 'width=800,height=600');
+    const clone = card.cloneNode(true) as HTMLElement;
+    clone.classList.add('print-card');
+    clone.querySelector('#primary-actions')?.remove();
+    clone.querySelector('#secondary-actions')?.remove();
+    clone.querySelectorAll('button').forEach((button) => button.remove());
+    const markup = clone.outerHTML;
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
     if (!printWindow) {
       window.print();
       return;
     }
 
-    // Construimos el HTML mínimo necesario, incluyendo los estilos de Tailwind y FontAwesome
-    // Ajusta la ruta al CSS si tu app lo sirve en un path distinto en producción
     printWindow.document.write(`
-      <html>
+      <!DOCTYPE html>
+      <html lang="es">
         <head>
-          <title>Operación ${draft?.operationCode ?? ''}</title>
-          <link rel="stylesheet" href="/index.css" />
-          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-aEcp2S5XpjHaX18U9BMRQPzEebNFKWvH6L37kiRmX5zVscxG59Oo1ZBa6g6kK0bkZ37N3/QkpB+X1uiGykNcZA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+          <meta charset="utf-8" />
+          <title>Resumen de operación</title>
+          <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" integrity="sha512-QZ6Hg0b6vE11D7nLJ8yKkB0pDZhOiabuX41ZJLdnOjFkWDXLI4YAlnXrhIRbkIuAeGHNirMRH3RkNv1dVQVOMA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
           <style>
-            @media print { .no-print { display: none !important; } }
+            :root {
+              color-scheme: light;
+            }
+            * {
+              box-sizing: border-box;
+              font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            }
+            body {
+              margin: 0;
+              padding: 32px;
+              background: #f9fafb;
+              color: #0f172a;
+            }
+            .print-wrapper {
+              max-width: 720px;
+              margin: 0 auto;
+            }
+            .print-card {
+              background: #ffffff;
+              border-radius: 16px;
+              border: 1px solid #e2e8f0;
+              box-shadow: 0 20px 45px -20px rgba(30, 41, 59, 0.25);
+              padding: 48px;
+            }
+            .print-card .text-text-primary {
+              color: #0f172a !important;
+            }
+            .print-card .text-gray-600,
+            .print-card .text-gray-500 {
+              color: #64748b !important;
+            }
+            .print-card .bg-primary,
+            .print-card .text-primary {
+              color: #1d4ed8 !important;
+            }
+            .print-card .bg-primary {
+              background: #eff6ff !important;
+            }
+            .print-card .bg-success {
+              background: #ecfdf3 !important;
+            }
+            .print-card .text-success {
+              color: #15803d !important;
+            }
+            .print-card .bg-danger {
+              background: #fef2f2 !important;
+            }
+            .print-card .text-danger {
+              color: #b91c1c !important;
+            }
+            .print-card .rounded-full {
+              border-radius: 9999px;
+            }
+            .print-card .inline-flex {
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
+            }
+            .print-card .fa-solid {
+              color: inherit;
+            }
+            @media print {
+              body {
+                background: #ffffff;
+                padding: 0;
+              }
+              .print-wrapper {
+                margin: 0;
+                max-width: none;
+              }
+              .print-card {
+                box-shadow: none;
+              }
+            }
           </style>
         </head>
-        <body class="p-8">
-          ${card.outerHTML}
+        <body>
+          <div class="print-wrapper">
+            ${markup}
+          </div>
         </body>
       </html>
     `);
@@ -347,7 +450,7 @@ export const OperationWizardStep3Page: React.FC = () => {
     printWindow.focus();
     printWindow.print();
     printWindow.close();
-  }, [draft?.operationCode]);
+  }, []);
 
   const handleDuplicate = useCallback(() => {
     console.log(`Duplicando operación ${draft?.id}`);
@@ -361,8 +464,32 @@ export const OperationWizardStep3Page: React.FC = () => {
   // Calcula el monto total para la liquidación
   const totalSettlementAmount =
     draft?.type === 'buy' ? draft?.outgoingAmount : draft?.incomingAmount;
-  const totalSettlementCurrency =
-    draft?.type === 'buy' ? outgoingCurrency : incomingCurrency;
+
+  const summarySettlementMode = draft?.settlement?.mode ?? 'simple';
+  const summarySimpleMethod = draft?.settlement?.simpleMethod ?? null;
+
+  const summarySettlementLines =
+    (draft?.settlement?.lines ?? []).map((line) => {
+      const baseAmount =
+        totalSettlementAmount && Number.isFinite(totalSettlementAmount)
+          ? totalSettlementAmount
+          : 0;
+      const fallbackPercentage =
+        line.allocationType === 'percentage'
+          ? line.value
+          : baseAmount > 0
+          ? (line.value / baseAmount) * 100
+          : 0;
+      const computedPercentage = Number.isFinite(line.computedPercentage)
+        ? line.computedPercentage
+        : fallbackPercentage;
+      return {
+        method: line.method,
+        allocationType: line.allocationType,
+        value: line.value,
+        computedPercentage,
+      };
+    }) ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -462,286 +589,29 @@ export const OperationWizardStep3Page: React.FC = () => {
 
             {/* Contenido del Resumen (CA13, CA14) */}
             {isReady && draft && (
-              <section id="summary-content" className="space-y-6 mb-8">
-                {/* --- Cliente Card (nuevo) --- */}
-                <div
-                  id="cliente-summary"
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm"
-                >
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-text-primary flex items-center">
-                        <i className="fa-solid fa-user mr-2 text-primary"></i>
-                        Cliente
-                      </h3>
-                      <button
-                        className="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm"
-                        onClick={() => handleBackToStep(1)}
-                      >
-                        <i className="fa-solid fa-edit mr-2"></i>
-                        Editar
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <SummaryItem label="Nombre / Razón social">
-                          {clientSummary?.fullName ?? '—'}
-                        </SummaryItem>
-                        <SummaryItem label="CUIT">
-                          {clientSummary?.cuit ?? '—'}
-                        </SummaryItem>
-                      </div>
-                      <div className="space-y-4">
-                        <SummaryItem label="Responsable interno">
-                          {clientSummary?.internalOwner ?? '—'}
-                        </SummaryItem>
-                        <SummaryItem label="Último margen con este cliente">
-                          {clientSummary?.lastMarginPercentage ? (
-                            <span
-                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                                clientSummary.lastMarginPercentage > 0
-                                  ? 'bg-success bg-opacity-10 text-success'
-                                  : 'bg-danger bg-opacity-10 text-danger'
-                              }`}
-                            >
-                              {clientSummary.lastMarginPercentage > 0 ? (
-                                <i className="fa-solid fa-arrow-up mr-1"></i>
-                              ) : (
-                                <i className="fa-solid fa-arrow-down mr-1"></i>
-                              )}
-                              {formatPercentage(
-                                clientSummary.lastMarginPercentage,
-                              )}
-                            </span>
-                          ) : (
-                            'N/A'
-                          )}
-                        </SummaryItem>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* --- Operación Card (nuevo) --- */}
-                <div
-                  id="operacion-summary"
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm"
-                >
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-text-primary flex items-center">
-                        <i className="fa-solid fa-exchange-alt mr-2 text-primary"></i>
-                        Operación
-                      </h3>
-                      <button
-                        className="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm"
-                        onClick={() => handleBackToStep(1)}
-                      >
-                        <i className="fa-solid fa-edit mr-2"></i>
-                        Editar
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <SummaryItem label="Tipo de operación">
-                          <span
-                            className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
-                              draft.type === 'buy'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-green-100 text-green-800'
-                            }`}
-                          >
-                            {draft.type === 'buy' ? (
-                              <i className="fa-solid fa-arrow-down mr-1"></i>
-                            ) : (
-                              <i className="fa-solid fa-arrow-up mr-1"></i>
-                            )}
-                            {draft.type === 'buy' ? 'Compra' : 'Venta'}
-                          </span>
-                        </SummaryItem>
-                        <SummaryItem
-                          label={
-                            draft.type === 'buy'
-                              ? 'Bien que entra'
-                              : 'Bien que sale'
-                          }
-                        >
-                          {`${formatCurrency(
-                            draft.incomingAmount,
-                            incomingCurrency,
-                          )} (${draft.incomingAsset?.label ?? '—'})`}
-                        </SummaryItem>
-                        <SummaryItem
-                          label={
-                            draft.type === 'buy'
-                              ? 'Bien que sale'
-                              : 'Bien que entra'
-                          }
-                        >
-                          {`${formatCurrency(
-                            draft.outgoingAmount,
-                            outgoingCurrency,
-                          )} (${draft.outgoingAsset?.label ?? '—'})`}
-                        </SummaryItem>
-                      </div>
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <SummaryItem label="TC Operación">
-                            {`$${(draft.apr ?? 0).toFixed(2)}`}
-                          </SummaryItem>
-                          <SummaryItem label="TC de mercado">
-                            {`$${(draft.marketApr ?? 0).toFixed(2)}`}
-                          </SummaryItem>
-                        </div>
-                        <SummaryItem label="Margen estimado">
-                          <div className="flex items-center">
-                            <span
-                              className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mr-2 ${
-                                marginValue > 0
-                                  ? 'bg-success bg-opacity-10 text-success'
-                                  : 'bg-danger bg-opacity-10 text-danger'
-                              }`}
-                            >
-                              {marginValue > 0 ? (
-                                <i className="fa-solid fa-arrow-up mr-1"></i>
-                              ) : (
-                                <i className="fa-solid fa-arrow-down mr-1"></i>
-                              )}
-                              {formatPercentage(marginValue)}
-                            </span>
-                            <div className="relative group">
-                              <i className="fa-solid fa-info-circle text-gray-400 hover:text-gray-600"></i>
-                              <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10">
-                                vs. TC de mercado
-                              </div>
-                            </div>
-                          </div>
-                        </SummaryItem>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* --- Liquidación Card (nuevo) --- */}
-                <div
-                  id="liquidacion-summary"
-                  className="bg-white rounded-lg border border-gray-200 shadow-sm"
-                >
-                  <div className="p-6 border-b border-gray-200">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-lg font-semibold text-text-primary flex items-center">
-                        <i className="fa-solid fa-credit-card mr-2 text-primary"></i>
-                        Liquidación
-                      </h3>
-                      <button
-                        className="flex items-center px-4 py-2 text-primary hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors text-sm"
-                        onClick={() => handleBackToStep(2)}
-                      >
-                        <i className="fa-solid fa-edit mr-2"></i>
-                        Editar
-                      </button>
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <div className="space-y-4">
-                      <SummaryItem label="Tipo de liquidación">
-                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
-                          <i
-                            className={`fa-solid ${
-                              draft.settlement?.mode === 'compound'
-                                ? 'fa-layer-group'
-                                : 'fa-stream'
-                            } mr-1`}
-                          />
-                          {draft.settlement?.mode === 'compound'
-                            ? 'Compuesta'
-                            : 'Simple'}
-                        </span>
-                      </SummaryItem>
-
-                      {draft.settlement?.mode === 'simple' && (
-                        <SummaryItem label="Método de liquidación">
-                          {draft.settlement.simpleMethod ?? '—'}
-                        </SummaryItem>
-                      )}
-
-                      {draft.settlement?.mode === 'compound' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-600 mb-3">
-                            Detalle de liquidación
-                          </label>
-                          <div className="bg-gray-50 rounded-lg border border-gray-200 overflow-hidden">
-                            <div className="px-4 py-3 border-b border-gray-200 bg-gray-100 hidden md:block">
-                              <div className="grid grid-cols-3 gap-4">
-                                <div className="text-sm font-medium text-gray-700">
-                                  Método
-                                </div>
-                                <div className="text-sm font-medium text-gray-700">
-                                  Monto
-                                </div>
-                                <div className="text-sm font-medium text-gray-700">
-                                  Porcentaje
-                                </div>
-                              </div>
-                            </div>
-                            <div className="divide-y divide-gray-200">
-                              {(draft.settlement.lines ?? []).map(
-                                (line, idx) => (
-                                  <div key={idx} className="px-4 py-3">
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                                      <div className="text-text-primary font-medium md:hidden">
-                                        Método
-                                      </div>
-                                      <div className="text-text-primary">
-                                        {line.method}
-                                      </div>
-                                      <div className="text-text-primary font-medium md:hidden mt-2">
-                                        Monto
-                                      </div>
-                                      <div className="text-text-primary">
-                                        {formatCurrency(
-                                          (line.computedPercentage / 100) *
-                                            (totalSettlementAmount ?? 0),
-                                          totalSettlementCurrency,
-                                        )}
-                                      </div>
-                                      <div className="text-text-primary font-medium md:hidden mt-2">
-                                        Porcentaje
-                                      </div>
-                                      <div className="text-text-primary">
-                                        {line.computedPercentage.toFixed(2)}%
-                                      </div>
-                                    </div>
-                                  </div>
-                                ),
-                              )}
-                            </div>
-                            <div className="px-4 py-3 bg-success bg-opacity-5 border-t border-gray-200 rounded-b-lg">
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="text-sm font-semibold text-success">
-                                  Total
-                                </div>
-                                <div className="text-sm font-semibold text-success">
-                                  {formatCurrency(
-                                    totalSettlementAmount ?? 0,
-                                    totalSettlementCurrency,
-                                  )}
-                                </div>
-                                <div className="text-sm font-semibold text-success">
-                                  {settlementPercentage.toFixed(2)}%
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
+              <>
+                <WizardCompleteSummary
+                  clientName={summaryClient?.fullName ?? '—'}
+                  clientDocument={summaryClient?.cuit ?? null}
+                  contact={summaryClient?.internalOwner ?? null}
+                  type={draft.type}
+                  clientLastMargin={summaryClient?.lastMarginPercentage ?? null}
+                  incomingAssetLabel={draft.incomingAsset?.label ?? incomingCurrency}
+                  outgoingAssetLabel={draft.outgoingAsset?.label ?? outgoingCurrency}
+                  incomingAmount={draft.incomingAmount ?? 0}
+                  outgoingAmount={draft.outgoingAmount ?? 0}
+                  incomingCurrency={incomingCurrency}
+                  outgoingCurrency={outgoingCurrency}
+                  apr={draft.apr ?? 0}
+                  marketApr={draft.marketApr ?? 0}
+                  marginPercentage={marginValue}
+                  settlementMode={summarySettlementMode}
+                  settlementSimpleMethod={summarySimpleMethod}
+                  settlementLines={summarySettlementLines}
+                  lastUpdated={draft.updatedAt ?? undefined}
+                  onEditStep1={() => handleBackToStep(1)}
+                  onEditStep2={() => handleBackToStep(2)}
+                />
 
                 {/* --- Validación final Card (nuevo) (CA15) --- */}
                 <section
@@ -756,8 +626,7 @@ export const OperationWizardStep3Page: React.FC = () => {
                     {validationItems.map((item) => (
                       <div
                         key={item.label}
-                        className={`flex items-center justify-between p-3 rounded-lg border ${
-                          item.passed
+                        className={`flex items-center justify-between p-3 rounded-lg border ${item.passed
                             ? 'bg-success bg-opacity-5 border-success border-opacity-20'
                             : 'bg-danger bg-opacity-5 border-danger border-opacity-20'
                         }`}
@@ -769,9 +638,7 @@ export const OperationWizardStep3Page: React.FC = () => {
                             <i className="fa-solid fa-exclamation-triangle text-danger mr-3"></i>
                           )}
                           <span
-                            className={`text-sm font-medium ${
-                              item.passed ? 'text-success' : 'text-danger'
-                            }`}
+                            className={`text-sm font-medium ${item.passed ? 'text-success' : 'text-danger'}`}
                           >
                             {item.label}
                           </span>
@@ -781,8 +648,7 @@ export const OperationWizardStep3Page: React.FC = () => {
                   </div>
                   {/* Mensaje de estado de validación */}
                   <div
-                    className={`mt-4 p-3 rounded-lg border ${
-                      canConfirm
+                    className={`mt-4 p-3 rounded-lg border ${canConfirm
                         ? 'bg-green-50 border-green-200'
                         : 'bg-red-50 border-red-200'
                     }`}
@@ -794,9 +660,7 @@ export const OperationWizardStep3Page: React.FC = () => {
                         <i className="fa-solid fa-times-circle text-red-600 mr-2"></i>
                       )}
                       <span
-                        className={`text-sm font-medium ${
-                          canConfirm ? 'text-green-800' : 'text-red-800'
-                        }`}
+                        className={`text-sm font-medium ${canConfirm ? 'text-green-800' : 'text-red-800'}`}
                       >
                         {canConfirm
                           ? 'Operación lista para confirmar'
@@ -805,9 +669,8 @@ export const OperationWizardStep3Page: React.FC = () => {
                     </div>
                   </div>
                 </section>
-              </section>
+              </>
             )}
-
             {/*
               * Acciones (CA17)
               * Reutiliza WizardActions pero con el botón de "Confirmar"
@@ -842,6 +705,8 @@ export const OperationWizardStep3Page: React.FC = () => {
             onNewOperation={handleNewOperation}
             onExportPDF={handleExportPDF}
             onDuplicate={handleDuplicate}
+            onVoid={handleOpenVoidModal}
+            canVoid={!isVoided && !voidSubmitting}
             // Props para el resumen
             clientName={clientSummary?.fullName ?? '—'}
             clientDocument={clientSummary?.cuit}
@@ -856,6 +721,7 @@ export const OperationWizardStep3Page: React.FC = () => {
               draft.outgoingAmount,
               outgoingCurrency,
             )}
+            outgoingAssetLabel={draft.outgoingAsset?.label ?? outgoingCurrency}
             operationRate={draft.apr}
           />
         )}
@@ -868,6 +734,13 @@ export const OperationWizardStep3Page: React.FC = () => {
         open={cancelModalOpen}
         onClose={() => setCancelModalOpen(false)}
         onConfirm={handleConfirmCancel}
+      />
+      <VoidOperationModal
+        open={voidModalOpen}
+        loading={voidSubmitting}
+        error={voidError}
+        onClose={handleCloseVoidModal}
+        onConfirm={handleConfirmVoid}
       />
 
       {/* Toast (sin cambios) */}

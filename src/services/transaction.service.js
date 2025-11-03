@@ -509,6 +509,10 @@ const updateTransactionSettlement = async (id, payload = {}, context = {}) => {
     };
   }
 
+  if (transaction.status === 'draft') {
+    transaction.status = 'pending';
+  }
+
   transaction.currentStep = Math.max(Number(transaction.currentStep) || 1, 2);
   transaction.lastUpdatedBy = userId;
   await transaction.save();
@@ -535,6 +539,9 @@ const advanceTransactionStep = async (id, step = 1, context = {}) => {
     throw new Error('Transaction not found');
   }
 
+  if (numericStep >= 2 && transaction.status === 'draft') {
+    transaction.status = 'pending';
+  }
   transaction.currentStep = Math.max(Number(transaction.currentStep) || 1, numericStep);
   transaction.lastUpdatedBy = userId;
   await transaction.save();

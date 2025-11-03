@@ -11,6 +11,8 @@ export interface NotificationItem {
   level: NotificationLevel;
   read: boolean;
   actionLabel?: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export const useNotifications = () => {
@@ -19,8 +21,8 @@ export const useNotifications = () => {
     loading,
     error,
     refresh,
-    markRead: markReadInStore,
-    markAllRead: markAllReadInStore,
+    markRead: markReadRemote,
+    markAllRead: markAllReadRemote,
   } = useDashboardNotifications();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -38,6 +40,8 @@ export const useNotifications = () => {
           level,
           read: existing?.read ?? Boolean(notification.read),
           actionLabel: notification.actionLabel,
+          actionUrl: notification.actionUrl ?? null,
+          metadata: notification.metadata ?? null,
         };
       });
     });
@@ -62,21 +66,40 @@ export const useNotifications = () => {
     [sortedNotifications]
   );
 
-  const markAsRead = useCallback((id: string) => {
-    markReadInStore(id);
-    setNotifications((prev) =>
-      prev.map((notification) =>
-        notification.id === id ? { ...notification, read: true } : notification
-      )
-    );
-  }, [markReadInStore]);
+  const markAsRead = useCallback(
+    async (id: string) => {
+      let previous: NotificationItem[] = [];
+      setNotifications((prev) => {
+        previous = prev;
+        return prev.map((notification) =>
+          notification.id === id ? { ...notification, read: true } : notification
+        );
+      });
 
-  const markAllAsRead = useCallback(() => {
-    markAllReadInStore();
-    setNotifications((prev) =>
-      prev.map((notification) => ({ ...notification, read: true }))
-    );
-  }, [markAllReadInStore]);
+      try {
+        await markReadRemote(id);
+      } catch (err) {
+        setNotifications(previous);
+        throw err;
+      }
+    },
+    [markReadRemote]
+  );
+
+  const markAllAsRead = useCallback(async () => {
+    let previous: NotificationItem[] = [];
+    setNotifications((prev) => {
+      previous = prev;
+      return prev.map((notification) => ({ ...notification, read: true }));
+    });
+
+    try {
+      await markAllReadRemote();
+    } catch (err) {
+      setNotifications(previous);
+      throw err;
+    }
+  }, [markAllReadRemote]);
 
   const addNotification = useCallback(
     (notification: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => {

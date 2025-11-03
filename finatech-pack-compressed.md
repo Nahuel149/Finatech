@@ -62,7 +62,6 @@ client/src/components/recover/
 client/src/components/shared/
 client/src/components/shared/design-system/
 client/src/components/ui/
-client/src/contexts/
 client/src/hooks/
 client/src/hooks/dashboard/
 client/src/types/
@@ -85,7 +84,6 @@ tests/unit/services/
 .eslintrc.cjs
 .gitignore
 AGENTS.md
-AUDIT_REPORT.md
 client/package.json
 client/postcss.config.js
 client/public/index.html
@@ -140,6 +138,7 @@ client/src/components/dashboard/operaciones/Footer.tsx
 client/src/components/dashboard/operaciones/index.ts
 client/src/components/dashboard/operaciones/Navbar.tsx
 client/src/components/dashboard/operaciones/NotificationsPage.tsx
+client/src/components/dashboard/operaciones/OperationDetailPage.tsx
 client/src/components/dashboard/operaciones/OperationsHeader.tsx
 client/src/components/dashboard/operaciones/RecentOperationsTable.tsx
 client/src/components/dashboard/operaciones/RecentValidations.tsx
@@ -172,6 +171,7 @@ client/src/components/dashboard/operaciones/wizard/SettlementModeSelector.tsx
 client/src/components/dashboard/operaciones/wizard/SettlementProgress.tsx
 client/src/components/dashboard/operaciones/wizard/SimpleSettlementForm.tsx
 client/src/components/dashboard/operaciones/wizard/ValidationChecklist.tsx
+client/src/components/dashboard/operaciones/wizard/VoidOperationModal.tsx
 client/src/components/dashboard/operaciones/wizard/WizardActions.tsx
 client/src/components/dashboard/operaciones/wizard/WizardCompleteSummary.tsx
 client/src/components/dashboard/operaciones/wizard/WizardHeader.tsx
@@ -298,14 +298,10 @@ client/src/utils/useEffectGuard.ts
 client/src/utils/validation.ts
 client/tailwind.config.js
 client/tsconfig.json
-cookies_fresh.txt
-cookies_new.txt
-cookies_test.txt
-cookies.txt
+docs/MOBILE_RESPONSIVENESS_IMPLEMENTATION.md
+docs/MOBILE_TESTING_CHECKLIST.md
 docs/navigation-standardization.md
-full-codebase.md
-future.md
-futureimplement.md
+docs/TESTING_PERMISSIONS_CONFIG.md
 html-examples-dont-touch/dashboard-operaciones-responsive.html
 html-examples-dont-touch/dashboard-operaciones.html
 html-examples-dont-touch/login.html
@@ -336,12 +332,10 @@ html-examples-dont-touch/transferencia-pesos.html
 html-examples-dont-touch/wizardstep1.html
 html-examples-dont-touch/wizardstep2.html
 html-examples-dont-touch/wizardstep3.html
-LIQUIDACIONES_NAVIGATION_ANALYSIS.md
-MOBILE_RESPONSIVENESS_IMPLEMENTATION.md
-MOBILE_TESTING_CHECKLIST.md
 nodemon.json
 package.json
 playwright.config.ts
+problems.md
 scripts/generate-import-graph.js
 src/app.js
 src/config/database.js
@@ -366,6 +360,8 @@ src/models/CurrentAccountBalance.js
 src/models/CurrentAccountMovement.js
 src/models/LogisticsOperation.js
 src/models/MarketRateOverride.js
+src/models/Notification.js
+src/models/NotificationState.js
 src/models/SecurityLog.js
 src/models/Session.js
 src/models/Transaction.js
@@ -395,6 +391,7 @@ src/services/marketRate.service.js
 src/services/securityLog.service.js
 src/services/session.service.js
 src/services/transaction.service.js
+src/services/transactionLifecycle.service.js
 src/services/transfer.service.js
 src/services/treasury.service.js
 src/services/treasuryEvent.service.js
@@ -405,8 +402,8 @@ src/utils/eventBus.js
 src/utils/responseCache.js
 src/utils/seedLogisticsOperations.js
 src/utils/token.js
-TESTING_PERMISSIONS_CONFIG.md
 tests/unit/services/transaction.service.test.js
+tests/unit/services/transactionLifecycle.service.test.js
 tsconfig.json
 ```
 
@@ -425,6 +422,7 @@ import { NotificationsPage } from './components/dashboard/operaciones/Notificati
 import { OperationWizardStep1Page } from './components/dashboard/operaciones/wizard/OperationWizardStep1Page';
 import { OperationWizardStep2Page } from './components/dashboard/operaciones/wizard/OperationWizardStep2Page';
 import { OperationWizardStep3Page } from './components/dashboard/operaciones/wizard/OperationWizardStep3Page';
+import { OperationDetailPage } from './components/dashboard/operaciones/OperationDetailPage';
 import {
   TreasuryMovementsPage,
   LinkedBalancesPage,
@@ -488,15 +486,14 @@ export interface NewClientModalProps {
 interface FieldErrors {
   firstName?: string;
   lastName?: string;
-  cuit?: string;
-  email?: string;
-  phone?: string;
   address?: string;
+  secondaryAddress?: string;
   internalOwner?: string;
+  contactType?: string;
 }
 ⋮----
 const handleChange = (field: keyof typeof form)
-const handleSelectAddress = async (suggestion: AddressSuggestion) =>
+const handleSelectAddress = async (suggestion: AddressSuggestion, target?: 'primary' | 'secondary') =>
 const mapFieldErrors = (details?: Array<
 const handleSubmit = async (event: FormEvent) =>
 ⋮----
@@ -505,10 +502,12 @@ onChange=
 
 ## File: client/src/components/dashboard/logistica/AssociationsDocumentsForm.tsx
 ```typescript
-import React, { useState } from 'react';
-import { MagnifyingGlassIcon } from '../../icons/HeroiconsOutline';
+import React, { useMemo, useState } from 'react';
+const AssociationsDocumentsForm: React.FC = () =>
 ⋮----
 onChange=
+⋮----
+// Placeholder action until modal is implemented
 ```
 
 ## File: client/src/components/dashboard/logistica/AttachmentsForm.tsx
@@ -985,11 +984,11 @@ const addItem = () =>
 const removeItem = (id: string) =>
 const updateItem = (id: string, field: keyof Item, value: any) =>
 ⋮----
-{/* Description */}
-⋮----
 onChange=
 ⋮----
-Peso (kg)
+updateItem(item.id, 'quantity', Number.parseInt(e.target.value, 10) || 1)
+⋮----
+updateItem(item.id, 'weight', Number.parseFloat(e.target.value) || undefined)
 ```
 
 ## File: client/src/components/dashboard/logistica/LogisticaPage.tsx
@@ -1011,12 +1010,11 @@ import { OperationDetailPanel } from './OperationDetailPanel';
 import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
-import { PlusIcon } from '../../icons/HeroiconsOutline';
 import NewMovementModal from './NewMovementModal';
 import { LogisticsOperation, DEFAULT_LOGISTICS_FILTERS } from '../../../types/logistics';
 import { useDashboardBalances } from '../../../hooks';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
-import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
+import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType, Button } from '../../shared/design-system';
 import { TreasuryBalance, ApiError } from '../../../types';
 type ToastState = {
   type: 'success' | 'info';
@@ -1031,6 +1029,9 @@ interface LogisticsBalanceStripeProps {
   refresh: () => Promise<void>;
   mapBalanceToCardData: (balance: TreasuryBalance) => BalanceCardData;
 }
+⋮----
+const handleShowTooltip = () =>
+const handleHideTooltip = () =>
 ⋮----
 data=
 ⋮----
@@ -1313,12 +1314,9 @@ const formatNumber = (num: number): string =>
 
 ## File: client/src/components/dashboard/logistica/MovementDataForm.tsx
 ```typescript
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ChevronDownIcon } from '../../icons/HeroiconsOutline';
-⋮----
-{/* Movement Type - Radio Pills */}
-⋮----
-onChange=
+type MovementTypeValue = 'entrega' | 'transferencia' | 'retiro' | 'custodia';
 ```
 
 ## File: client/src/components/dashboard/logistica/MovementDetailPage.tsx
@@ -1347,14 +1345,10 @@ const handleRegisterIncident = () =>
 
 ## File: client/src/components/dashboard/logistica/MovementDetailSidePanel.tsx
 ```typescript
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   XMarkIcon,
   DocumentIcon,
-  ClockIcon,
-  UserIcon,
-  TruckIcon,
-  CheckCircleIcon,
   PencilIcon,
   EyeIcon,
   PlusIcon,
@@ -1370,11 +1364,12 @@ interface MovementDetailSidePanelProps {
   onRegisterIncident: () => void;
 }
 ⋮----
-const getStatusBadge = (status: string) =>
-const getTimelineIcon = (type: string) =>
-const formatDate = (dateString: string) =>
-const formatCurrency = (amount: number, currency: string) =>
-⋮----
+const getStatusDisplay = (status?: string) =>
+const movementTypeIcon = (type?: string) =>
+const timelineIconClass = (eventType?: string) =>
+const timelineColor = (eventType?: string, isCompleted?: boolean) =>
+const formatDate = (iso?: string) =>
+const formatCurrency = (amount?: number, currency?: string) =>
 ```
 
 ## File: client/src/components/dashboard/logistica/NewMovementModal.tsx
@@ -1410,7 +1405,7 @@ const handleConfirmRegistration = () =>
 ⋮----
 const handleCloseConfirmation = () =>
 ⋮----
-{/* No renderizar contenido cuando el modal está cerrado */}
+onClick=
 ```
 
 ## File: client/src/components/dashboard/logistica/OperationDetailPanel.tsx
@@ -1637,7 +1632,7 @@ onClick=
 
 ## File: client/src/components/dashboard/operaciones/BalanceStripe.tsx
 ```typescript
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
@@ -1647,21 +1642,25 @@ const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => (
 ⋮----
 const handleBalanceClick = () =>
 ⋮----
+const handleShowTooltip = () =>
+const handleHideTooltip = () =>
+⋮----
 data=
 ```
 
 ## File: client/src/components/dashboard/operaciones/DashboardBalanceWidget.tsx
 ```typescript
-import React from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances } from '../../../hooks';
 import { Button } from '../../shared/design-system';
 interface Props {
   canView: boolean;
 }
-export const DashboardBalanceWidget: React.FC<Props> = (
 ⋮----
 const handleClick = () =>
+const handleShowTooltip = () =>
+const handleHideTooltip = () =>
 ```
 
 ## File: client/src/components/dashboard/operaciones/DashboardOperacionesPage.tsx
@@ -1706,10 +1705,8 @@ import {
   useNotifications,
   useAuth,
   useCurrentUser,
-  useUserPermissions,
 } from '../../../hooks';
 import { ApiError } from '../../../types';
-import { DashboardBalanceWidget } from './DashboardBalanceWidget';
 interface Props {
   search: string;
   onSearchChange: (q: string) => void;
@@ -1726,7 +1723,7 @@ interface NotificationsDropdownProps {
   unreadCount: number;
   onNotificationClick: (notification: NotificationItem) => void;
   onSeeAll: () => void;
-  onMarkAllRead: () => void;
+  onMarkAllRead: () => Promise<void> | void;
   className?: string;
   loading?: boolean;
   error?: ApiError | null;
@@ -1736,6 +1733,8 @@ const location = useLocation();
 const navigate = useNavigate();
 ⋮----
 const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+const mobileMenuRef = useRef<HTMLDivElement>(null);
+const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
 ⋮----
 const desktopNotificationsRef = useRef<HTMLDivElement>(null);
 const mobileNotificationsRef = useRef<HTMLDivElement>(null);
@@ -1745,29 +1744,24 @@ const handleClickOutside = (event: MouseEvent) =>
 ⋮----
 const handleKeyDown = (event: KeyboardEvent) =>
 ⋮----
+const handleSeeAllNotifications = () =>
 const handleLogout = async () =>
 const openSearchOnMobile = () =>
 ⋮----
-// Focus the input shortly after opening the menu
-⋮----
-// If already open, just focus
-⋮----
-{/* Mobile header */}
-⋮----
 return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={`flex items-center px-3 py-2 transition-colors cursor-pointer ${
-                        isActive
-                          ? 'text-primary font-medium border-b-2 border-primary'
-                          : 'text-text-primary hover:text-primary'
-                      }`}
-                    >
-                      <i className={`fa-solid ${item.icon} mr-2`} />
-                      {item.label}
-                    </Link>
-                  );
+                      <Link
+                        key={item.path}
+                        to={item.path}
+                        className={`flex items-center px-3 py-2 transition-colors cursor-pointer ${
+                          isActive
+                            ? 'text-primary font-medium border-b-2 border-primary'
+                            : 'text-text-primary hover:text-primary'
+                        }`}
+                      >
+                        <i className={`fa-solid ${item.icon} mr-2`} />
+                        {item.label}
+                      </Link>
+                    );
 ⋮----
 src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
 ```
@@ -1783,10 +1777,38 @@ const formatRelativeTime = (isoDate: string) =>
 const levelBadgeClass = (level: NotificationItem['level']) =>
 ```
 
+## File: client/src/components/dashboard/operaciones/OperationDetailPage.tsx
+```typescript
+import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
+import { DashboardNavbar } from './Navbar';
+import { BalanceStripe } from './BalanceStripe';
+import { DashboardFooter } from './Footer';
+import { LoadingSpinner } from '../../ui/LoadingSpinner';
+import { Alert } from '../../ui/Alert';
+import { useTransactionDraft } from '../../../hooks/dashboard';
+import { subscribeDashboardBalanceRefresh } from '../../../utils';
+import { formatCurrency, formatDateTime } from './transfer/utils';
+import { TransactionAccountingEntry } from '../../../types';
+type StatusTone = {
+  label: string;
+  badgeClass: string;
+};
+⋮----
+const formatPercentage = (value: number | null | undefined) =>
+⋮----
+const handleBack = () =>
+const handleViewContact = () =>
+const handleRefresh = () =>
+⋮----
+<span>Confirmada:
+```
+
 ## File: client/src/components/dashboard/operaciones/OperationsHeader.tsx
 ```typescript
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../../shared/design-system';
 interface Props {
   onTransferPesos: () => void;
 }
@@ -1822,6 +1844,7 @@ interface TableRow {
   marginClassName: string;
   statusLabel: string;
   statusClassName: string;
+  isEditable: boolean;
 }
 ⋮----
 const formatCurrencyLabel = (amount: number | null | undefined, currency: string) =>
@@ -1849,13 +1872,15 @@ const formatTableRows = (
 ): TableRow[]
 ⋮----
 const handleViewDetail = (operationId: string) =>
+const handleEditOperation = (row: TableRow) =>
 ⋮----
 onChange=
 ```
 
 ## File: client/src/components/dashboard/operaciones/RecentValidations.tsx
 ```typescript
-import React from 'react';
+import React, { useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useDashboardNotifications } from '../../../hooks';
 import { DashboardNotification } from '../../../types';
 const timeAgo = (iso?: string) =>
@@ -1888,6 +1913,7 @@ interface Props {
   operation: TransferOperation;
   summary: AccountingSummary;
 }
+⋮----
 ```
 
 ## File: client/src/components/dashboard/operaciones/transfer/TransferPesosBuilderPage.tsx
@@ -1907,6 +1933,7 @@ import { Alert } from '../../../ui';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
 import { NewClientModal } from '../../../clients/NewClientModal';
+import { useLatestMarketRate } from '../../../../hooks/dashboard/useLatestMarketRate';
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
@@ -1949,6 +1976,38 @@ const handleAmountInput = (value: string) =>
 ⋮----
 onChange=
 ⋮----
+onChange={(event) => onMethodChange(event.target.value as MovementMethod)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+        >
+          {Object.entries(METHOD_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
+      </td>
+      <td className="px-4 py-4 align-top">
+        <input
+          type="number"
+          value={Number.isFinite(amount) ? amount : 0}
+          onChange={(event) => handleAmountInput(event.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+          step="0.01"
+          min="0"
+        />
+      </td>
+      <td className="px-4 py-4 align-top text-right">
+        <button
+          type="button"
+          onClick={onRemove}
+          className="text-sm text-danger hover:text-red-700"
+        >
+          <i className="fa-solid fa-trash" />
+        </button>
+      </td>
+    </tr>
+  );
+⋮----
 const navigate = useNavigate();
 const [searchParams, setSearchParams] = useSearchParams();
 const currentStepParam = searchParams.get('step');
@@ -1972,9 +2031,12 @@ const handleOpenConfirm = () =>
 const handleCancel = () =>
 const handleSaveDraft = async () =>
 ⋮----
-<DashboardNavbar search="" onSearchChange=
+Detalle:
+⋮----
+<> ·
 ⋮----
 setLineContact(line.id,
+⋮----
 ```
 
 ## File: client/src/components/dashboard/operaciones/transfer/TransferPesosConfirmPage.tsx
@@ -1987,6 +2049,7 @@ import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
+import { useLatestMarketRate } from '../../../../hooks/dashboard/useLatestMarketRate';
 interface ToastState {
   type: 'success' | 'error' | 'warning' | 'info';
   message: string;
@@ -2116,6 +2179,8 @@ export type AccountingSummaryEntry = {
   amount: number;
   sign: 1 | -1;
   contact: string | null;
+  originalAmount?: number;
+  originalCurrency?: string | null;
 };
 export const buildAccountingEntries = (operation: TransferOperation): AccountingSummaryEntry[] =>
 ```
@@ -2180,6 +2245,8 @@ interface Props {
   exitOptions: AssetOption[];
   onEnterChange: (value: string) => void;
   onExitChange: (value: string) => void;
+  enterLabel?: string;
+  exitLabel?: string;
   disabled?: boolean;
 }
 ⋮----
@@ -2199,7 +2266,7 @@ interface Props {
 
 ## File: client/src/components/dashboard/operaciones/wizard/ClientSelection.tsx
 ```typescript
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ClientSummary } from '../../../../types';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 interface Props {
@@ -2210,8 +2277,15 @@ interface Props {
   marginInfo?: string;
   loading?: boolean;
   error?: string | null;
+  onSearch?: (term: string) => void;
 }
 const renderOptionLabel = (client: ClientSummary) =>
+⋮----
+const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) =>
+const handleSelectClient = (client: ClientSummary) =>
+const handleBlur = () =>
+⋮----
+Seleccionado:
 ```
 
 ## File: client/src/components/dashboard/operaciones/wizard/CompletionSuccessState.tsx
@@ -2233,6 +2307,8 @@ interface Props {
   onNewOperation: () => void;
   onExportPDF: () => void;
   onDuplicate: () => void;
+  onVoid?: () => void;
+  canVoid?: boolean;
   clientName: string;
   clientDocument?: string | null;
   operationType: 'buy' | 'sell';
@@ -2240,6 +2316,7 @@ interface Props {
   incomingAmountLabel: string;
   incomingAssetLabel: string;
   outgoingAmountLabel: string;
+  outgoingAssetLabel: string;
   operationRate: number;
 }
 ```
@@ -2429,10 +2506,10 @@ const encodeNotes = (rate: number, marketRate: number, code: string)
 const findClientLabel = (clients: ClientSummary[], clientId: string)
 const findAssetLabel = (code: string)
 const sanitizeNumber = (value: number)
-// Genera labels contextuales según las reglas de negocio
-const getAmountLabels = (operationType: TransactionType, incomingAsset: string, outgoingAsset: string) =>
 ⋮----
-// Debug: Track all clientId changes
+const ratesAreEqual = (first?: number | null, second?: number | null) =>
+// Genera labels contextuales según las reglas de negocio
+const getAmountLabels = (_operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => (
 ⋮----
 // eslint-disable-next-line react-hooks/exhaustive-deps
 ```
@@ -2495,11 +2572,11 @@ import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
+import { VoidOperationModal } from './VoidOperationModal';
 import { emitDashboardBalanceRefresh } from '../../../../utils';
+import { WizardCompleteSummary } from './WizardCompleteSummary';
 ⋮----
 const formatCurrency = (value: number, currency: string) =>
-const formatPercentage = (value: number) =>
-// Agregar estilos para la animación del check
 const SuccessAnimationStyles = () => (
   <style>
     {`
@@ -2513,18 +2590,6 @@ const SuccessAnimationStyles = () => (
       }
     `}
   </style>
-);
-// Componente local para items de resumen (basado en wizardstep3.html)
-const SummaryItem: React.FC<{ label: string; children: React.ReactNode }> = ({
-  label,
-  children,
-}) => (
-  <div>
-    <label className="block text-sm font-medium text-gray-600 mb-1">
-      {label}
-    </label>
-    <div className="text-text-primary font-medium">{children}</div>
-  </div>
 );
 ```
 
@@ -2609,6 +2674,21 @@ interface Props {
   items: string[];
   loading?: boolean;
 }
+```
+
+## File: client/src/components/dashboard/operaciones/wizard/VoidOperationModal.tsx
+```typescript
+import React, { useEffect, useState } from 'react';
+import { Modal } from '../../../ui/Modal';
+import { Alert } from '../../../ui/Alert';
+interface Props {
+  open: boolean;
+  loading?: boolean;
+  error?: string | null;
+  onClose: () => void;
+  onConfirm: (reason: string) => void;
+}
+export const VoidOperationModal: React.FC<Props> = (
 ```
 
 ## File: client/src/components/dashboard/operaciones/wizard/WizardActions.tsx
@@ -3438,6 +3518,7 @@ import {
   useTreasuryMovements,
   useReconciliationSuggestions,
   useCompensateTreasuryMovement,
+  useUserPermissions,
 } from '../../../../hooks';
 import { ApiError, TreasuryMovement, OperationSuggestion } from '../../../../types';
 import { ReconciliationFilters, ReconciliationFiltersState } from './ReconciliationFilters';
@@ -3492,6 +3573,7 @@ interface Props {
   error: string | null;
 }
 const operationTypeBadge = (operation: OperationSuggestion) =>
+const formatDate = (iso?: string | null) =>
 ```
 
 ## File: client/src/components/dashboard/tesoreria/reconciliation/ReconciliationSummary.tsx
@@ -3559,6 +3641,7 @@ import {
   useClientSearch,
   useCreateTreasuryMovement,
   useOperationSearch,
+  useUserPermissions,
 } from '../../../../hooks';
 import { Alert } from '../../../ui';
 import { MovementTypeSelector } from './MovementTypeSelector';
@@ -3572,19 +3655,16 @@ interface RegisterMovementModalProps {
 }
 type MovementTypeValue = 'incoming' | 'outgoing' | '';
 type MovementMediumValue = 'cash' | 'transfer' | 'deposit' | '';
-type MovementStatusValue = 'registrado' | 'compensado' | 'anulado';
 interface FormValues {
   type: MovementTypeValue;
   medium: MovementMediumValue;
   currency: 'ARS' | 'USD' | '';
   amount: string;
   movementAt: string;
-  status: MovementStatusValue;
   reference: string;
 }
 ⋮----
 const formatDateTimeLocal = (date: Date) =>
-const mapStatusToMetadata = (status: MovementStatusValue) =>
 const sanitizeAmountInput = (value: string) =>
 const hasValidationErrors = (errors: Partial<Record<keyof FormValues, string>>)
 ⋮----
@@ -3597,7 +3677,6 @@ const handleCurrencyChange = (event: React.ChangeEvent<HTMLSelectElement>) =>
 const handleAmountChange = (event: React.ChangeEvent<HTMLInputElement>) =>
 const handleReferenceChange = (event: React.ChangeEvent<HTMLTextAreaElement>) =>
 const handleMovementAtChange = (event: React.ChangeEvent<HTMLInputElement>) =>
-const handleStatusChange = (event: React.ChangeEvent<HTMLSelectElement>) =>
 const handleContactInputChange = (event: React.ChangeEvent<HTMLInputElement>) =>
 const handleOperationInputChange = (event: React.ChangeEvent<HTMLInputElement>) =>
 const handleSelectContact = (contact: ClientSummary) =>
@@ -3615,7 +3694,7 @@ const handleSubmit = async () =>
 
 ## File: client/src/components/dashboard/tesoreria/TreasuryBalanceStripe.tsx
 ```typescript
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
@@ -3628,6 +3707,9 @@ const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => (
 ⋮----
 const handleBalanceClick = () =>
 const handleCardClick = (balanceId: string) =>
+⋮----
+const handleShowTooltip = () =>
+const handleHideTooltip = () =>
 ⋮----
 data=
 ```
@@ -3657,6 +3739,7 @@ const labelForStatus = (value: string) =>
 ```typescript
 import React from 'react';
 import { Button } from '../../shared/design-system';
+import { useUserPermissions } from '../../../hooks';
 interface Props {
   onRegisterMovement: () => void;
   onOpenConciliation: () => void;
@@ -3666,57 +3749,7 @@ export const TreasuryHeader: React.FC<Props> = ({
   onRegisterMovement,
   onOpenConciliation,
   onOpenSettings,
-}) => (
-  <section id="page-header" className="mb-8">
-    <nav
-      id="breadcrumbs"
-      className="flex items-center space-x-2 text-sm text-gray-600 mb-4"
-      aria-label="Breadcrumb"
-    >
-      <span className="text-primary font-medium">Tesorería</span>
-    </nav>
-    <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-      <div>
-        <h1 className="text-xl sm:text-2xl font-bold text-text-primary mb-2">Tesorería</h1>
-        <p className="text-sm sm:text-base text-gray-600">
-          Registro y control de movimientos de fondos en efectivo y transferencias
-        </p>
-      </div>
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3 sm:gap-0">
-        <Button
-          variant="outline"
-          size="md"
-          onClick={onOpenSettings}
-          icon="fa-solid fa-cog"
-          className="mobile-button touch-friendly"
-        >
-          <span className="hidden sm:inline">Configuración</span>
-          <span className="sm:hidden">Config.</span>
-        </Button>
-        <Button
-          variant="outline"
-          size="md"
-          onClick={onOpenConciliation}
-          icon="fa-solid fa-balance-scale"
-          className="mobile-button touch-friendly"
-        >
-          <span className="hidden sm:inline">Conciliar operaciones</span>
-          <span className="sm:hidden">Conciliar</span>
-        </Button>
-        <Button
-          variant="primary"
-          size="md"
-          onClick={onRegisterMovement}
-          icon="fa-solid fa-plus"
-          className="mobile-button touch-friendly font-medium"
-        >
-          <span className="hidden sm:inline">Registrar movimiento</span>
-          <span className="sm:hidden">Registrar</span>
-        </Button>
-      </div>
-    </div>
-  </section>
-);
+}) =>
 ```
 
 ## File: client/src/components/dashboard/tesoreria/TreasuryMovementsPage.tsx
@@ -3821,6 +3854,9 @@ const linkedOperationCode = (movement: TreasuryMovement) =>
 ⋮----
 key=
 ⋮----
+
+⋮----
+onClick=
 ```
 
 ## File: client/src/components/dashboard/tesoreria/TreasuryNavbar.tsx
@@ -4334,7 +4370,7 @@ export const useClientSearch = (initialQuery = '') =>
 
 ## File: client/src/hooks/dashboard/useClientsList.ts
 ```typescript
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ApiError, ClientSummary, ListClientsResponse } from '../../types';
 import { apiRequest, handleApiError } from '../../utils/api';
 export const useClientsList = (limit = 25) =>
@@ -4413,7 +4449,13 @@ export const useCreateTreasuryMovement = () =>
 ## File: client/src/hooks/dashboard/useDashboardBalances.ts
 ```typescript
 import { useCallback, useSyncExternalStore } from 'react';
-import { apiRequest, handleApiError, subscribeDashboardBalanceRefresh } from '../../utils';
+import {
+  apiRequest,
+  handleApiError,
+  subscribeDashboardBalanceRefresh,
+  ensureDashboardBalanceStream,
+  stopDashboardBalanceStream,
+} from '../../utils';
 import { ApiError, DashboardBalancesResponse, TreasuryBalance } from '../../types';
 export interface UseDashboardBalancesOptions {
   enabled?: boolean;
@@ -4443,7 +4485,7 @@ export const useDashboardBalances = (
 ## File: client/src/hooks/dashboard/useDashboardNotifications.ts
 ```typescript
 import { useCallback, useSyncExternalStore } from 'react';
-import { apiRequest, handleApiError } from '../../utils';
+import { api, apiRequest, handleApiError } from '../../utils';
 import { ApiError, DashboardNotification, DashboardNotificationsResponse } from '../../types';
 interface NotificationsState {
   notifications: DashboardNotification[];
@@ -4453,11 +4495,13 @@ interface NotificationsState {
 ⋮----
 const notify = () =>
 const setState = (partial: Partial<NotificationsState>) =>
-const fetchNotifications = async (): Promise<void> =>
+const fetchNotifications = async (options:
 const subscribe = (listener: () => void) =>
 const noopSubscribe = () => () =>
 const getSnapshot = (): NotificationsState =>
 const getDisabledSnapshot = (): NotificationsState => (
+const markNotificationAsRead = async (notificationId: string) =>
+const markAllNotificationsAsRead = async () =>
 export const useDashboardNotifications = (enabled: boolean = true) =>
 ```
 
@@ -4590,7 +4634,7 @@ import {
   TransferOperation,
 } from '../../types';
 import { apiRequest, handleApiError } from '../../utils/api';
-const normalizeOperationToSuggestion = (operation: TransferOperation): OperationSuggestion => (
+const normalizeOperationToSuggestion = (operation: TransferOperation): OperationSuggestion =>
 interface UseOperationSearchOptions {
   minimumQueryLength?: number;
   limit?: number;
@@ -4603,20 +4647,23 @@ export const useOperationSearch = (options: UseOperationSearchOptions =
 import { useCallback, useEffect, useState } from 'react';
 import { apiRequest, handleApiError } from '../../utils';
 import { ApiError, TreasuryMovement, OperationSuggestion } from '../../types';
+interface ReconciliationSuggestionDTO {
+  suggestionId: string;
+  operationId: string | null;
+  model: string | null;
+  code: string | null;
+  amount: number;
+  currency: string;
+  contactName: string | null;
+  movementType: string | null;
+  status: string | null;
+  confirmedAt: string | null;
+}
 interface ReconciliationResponse {
   movement: TreasuryMovement;
-  suggestions: Array<{
-    operationId: string;
-    score: number;
-    currency: string;
-    amount: number;
-    contactName: string | null;
-    operationCode: string | null;
-    movementType: string | null;
-    status: string | null;
-  }>;
+  suggestions: ReconciliationSuggestionDTO[];
 }
-const normalizeSuggestion = (item: ReconciliationResponse['suggestions'][number]): OperationSuggestion => (
+const normalizeSuggestion = (item: ReconciliationSuggestionDTO): OperationSuggestion => (
 export const useReconciliationSuggestions = (movementId: string | null) =>
 ```
 
@@ -4838,6 +4885,8 @@ export interface NotificationItem {
   level: NotificationLevel;
   read: boolean;
   actionLabel?: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 export const useNotifications = () =>
 ```
@@ -5153,8 +5202,10 @@ export interface DashboardNotification {
   createdAt: string;
   severity?: 'info' | 'warning' | 'error' | 'success';
   actionLabel?: string;
+  actionUrl?: string;
   read?: boolean;
   message?: string;
+  metadata?: Record<string, unknown> | null;
 }
 export interface DashboardNotificationsResponse {
   notifications: DashboardNotification[];
@@ -5353,7 +5404,7 @@ export interface TransactionSettlement {
   isComplete: boolean;
 }
 export interface TransactionAccountingEntry {
-  action: 'settlement_completed';
+  action: 'settlement_completed' | 'settlement_reverted';
   performedAt: string | null;
   performedBy: string | null;
   metadata: {
@@ -5447,6 +5498,7 @@ export interface TransferDistributionLine {
   contactType: string | null;
   method: MovementMethod;
   amount: number;
+  amountArs?: number;
 }
 export interface TransferOperation {
   id: string;
@@ -5456,8 +5508,13 @@ export interface TransferOperation {
   currency: 'ARS' | 'USD' | string;
   totalAmount: number;
   distributionLines: TransferDistributionLine[];
-  status: string;
+  status: 'pending' | 'registered' | 'completed' | 'cancelled';
   confirmedAt: string | null;
+  completedAt: string | null;
+  completedBy?: string | null;
+  cancelledAt?: string | null;
+  cancelledBy?: string | null;
+  cancellationReason?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
 }
@@ -5466,6 +5523,9 @@ export interface CreateTransferPayload {
   direction: MovementDirection;
   totalAmount: number;
   distributionLines: TransferDistributionLineInput[];
+  exchangeRates?: {
+    usdArs?: number;
+  };
 }
 export interface CreateTransferResponse {
   operation: TransferOperation;
@@ -5481,6 +5541,9 @@ export interface CreateTransferResponse {
     status: string;
     createdAt: string | null;
   }>;
+  exchangeRates?: {
+    usdArs?: number;
+  } | null;
 }
 export interface ListTransfersResponse {
   items: TransferOperation[];
@@ -6393,7 +6456,9 @@ next(error);
 ⋮----
 const getDraft = async (req, res, next) => {
 ⋮----
-const transaction = await getTransactionDraft(id);
+throw new AppError('Autenticación requerida', 401);
+⋮----
+const transaction = await getTransactionDraft(id, userId);
 ⋮----
 throw new AppError('Transacción no encontrada', 404);
 ⋮----
@@ -6600,15 +6665,24 @@ next(error);
 ```javascript
 const normalizePermission = (permission) =>
 (typeof permission === 'string' ? permission.trim() : '').toLowerCase();
-const requirePermission = (permission) => {
+const toPermissionList = (permission) => {
+if (Array.isArray(permission)) {
+⋮----
+.map(normalizePermission)
+.filter(Boolean);
+⋮----
 const normalized = normalizePermission(permission);
+⋮----
+const requirePermission = (permission) => {
+const required = toPermissionList(permission);
 ⋮----
 throw new Error('Permission name is required');
 ⋮----
 const permissions = Array.isArray(req.user?.permissions)
 ? req.user.permissions.map(normalizePermission)
 ⋮----
-if (!permissions.includes(normalized)) {
+const hasPermission = required.some((perm) => permissions.includes(perm));
+⋮----
 throw new AppError('No tenés permisos suficientes para realizar esta acción.', 403);
 ⋮----
 next();
@@ -6718,6 +6792,24 @@ marketRateOverrideSchema.index({ baseAsset: 1, quoteAsset: 1, validFrom: -1 });
 module.exports = mongoose.model('MarketRateOverride', marketRateOverrideSchema);
 ```
 
+## File: src/models/Notification.js
+```javascript
+const notificationSchema = new mongoose.Schema(
+⋮----
+notificationSchema.index({ createdAt: -1 });
+const Notification = mongoose.model('Notification', notificationSchema);
+```
+
+## File: src/models/NotificationState.js
+```javascript
+const notificationStateSchema = new mongoose.Schema(
+⋮----
+default: () => new Date(),
+⋮----
+notificationStateSchema.index({ user: 1, notificationId: 1 }, { unique: true });
+const NotificationState = mongoose.model('NotificationState', notificationStateSchema);
+```
+
 ## File: src/models/SecurityLog.js
 ```javascript
 const securityLogSchema = new mongoose.Schema(
@@ -6743,6 +6835,7 @@ new mongoose.Schema(
 ⋮----
 default: () => new Date(),
 ⋮----
+transactionSchema.index({ user: 1, createdAt: -1 });
 transactionSchema.index({ client: 1, createdAt: -1 });
 transactionSchema.index({ status: 1, currentStep: 1 });
 transactionSchema.pre('validate', function applySettlementDefaults(next) {
@@ -6759,12 +6852,17 @@ module.exports = mongoose.model('Transaction', transactionSchema);
 ```javascript
 const distributionLineSchema = new mongoose.Schema(
 ⋮----
+default() {
+return Number(this.amount || 0);
+⋮----
 const transferOperationSchema = new mongoose.Schema(
 ⋮----
 validator(lines) {
 if (!Array.isArray(lines) || lines.length === 0) {
 ⋮----
-const sum = lines.reduce((acc, line) => acc + Number(line.amount || 0), 0);
+const sum = lines.reduce(
+(acc, line) => acc + Number(line.amountArs != null ? line.amountArs : line.amount || 0),
+⋮----
 const total = Number(this.totalAmount || 0);
 return Math.abs(sum - total) < 0.01;
 ⋮----
@@ -6815,6 +6913,9 @@ treasuryMovementSchema.index({ status: 1, movementAt: -1 });
 treasuryMovementSchema.index({ currency: 1, movementAt: -1 });
 treasuryMovementSchema.index({ medium: 1, movementAt: -1 });
 treasuryMovementSchema.index({ contact: 1, movementAt: -1 });
+treasuryMovementSchema.index({ currency: 1, type: 1, movementAt: -1 });
+treasuryMovementSchema.index(
+⋮----
 treasuryMovementSchema.pre('validate', function assignBalanceKey(next) {
 ⋮----
 next();
@@ -6909,6 +7010,16 @@ body('token').isString().withMessage('Se requiere el token de restablecimiento d
 router.post('/register', authLimiter, ...registerValidators, validateRequest, register);
 router.get('/verify-email', verifyEmail);
 router.post('/google', authLimiter, ...googleValidators, validateRequest, googleAuth);
+router.get('/google', (req, res) => {
+⋮----
+const redirectUrl = new URL('/login', clientBase);
+redirectUrl.searchParams.set('provider', 'google');
+res.redirect(302, redirectUrl.toString());
+⋮----
+router.get('/google/callback', (req, res) => {
+⋮----
+redirectUrl.searchParams.set('oauth', 'completed');
+⋮----
 router.post('/login', authLimiter, ...loginValidators, validateRequest, login);
 router.post('/login/2fa', authLimiter, ...twoFactorValidators, validateRequest, verifyTwoFactor);
 router.post(
@@ -6957,6 +7068,31 @@ router.get('/contacts/:contactId', contactDetail);
 ## File: src/routes/dashboard.routes.js
 ```javascript
 const router = Router();
+const formatNotification = (notification, readSet = new Set()) => {
+const id = notification._id.toString();
+⋮----
+read: readSet.has(id),
+⋮----
+const seedDefaultNotificationsIfEmpty = async () => {
+const count = await Notification.estimatedDocumentCount();
+⋮----
+const now = new Date();
+const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000);
+⋮----
+createdAt: minutesAgo(5),
+updatedAt: minutesAgo(5),
+⋮----
+createdAt: minutesAgo(18),
+updatedAt: minutesAgo(18),
+⋮----
+createdAt: minutesAgo(42),
+updatedAt: minutesAgo(42),
+⋮----
+createdAt: minutesAgo(120),
+updatedAt: minutesAgo(120),
+⋮----
+await Notification.insertMany(defaults);
+⋮----
 router.get(
 ⋮----
 requirePermission('view-balances'),
@@ -7007,22 +7143,117 @@ keyGenerator: (req) => {
 ⋮----
 const userKey = userId ? String(userId) : ipKeyGenerator(req.ip);
 ⋮----
+body('title').isString().trim().notEmpty().withMessage('El título es obligatorio.'),
+body('message').isString().trim().notEmpty().withMessage('La descripción es obligatoria.'),
+body('severity')
+.optional()
+.isIn(['info', 'success', 'warning', 'error'])
+.withMessage('La severidad es inválida.'),
+body('actionLabel')
+⋮----
+.isString()
+.trim()
+.isLength({ max: 120 })
+.withMessage('La etiqueta de acción es demasiado larga.'),
+body('actionUrl')
+⋮----
+.isLength({ max: 1024 })
+.withMessage('La URL de acción es demasiado larga.'),
+body('metadata')
+⋮----
+.custom((value, { req }) => {
+⋮----
+req.body.metadata = JSON.parse(value);
+⋮----
+throw new Error('El metadata debe ser un objeto JSON válido.');
+⋮----
+throw new Error('El metadata debe ser un objeto.');
+⋮----
 router.get('/notifications', requireAuth, notificationsLimiter, async (req, res, next) => {
 ⋮----
-const now = new Date();
-const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000).toISOString();
-const key = buildUserAwareKey(req, 'dashboard:notifications');
-await sendCached({
+await seedDefaultNotificationsIfEmpty();
+const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 100);
 ⋮----
-compute: async () => ({
+const since = req.query.since ? new Date(req.query.since) : null;
 ⋮----
-createdAt: minutesAgo(5),
+if (since && !Number.isNaN(since.getTime())) {
 ⋮----
-createdAt: minutesAgo(18),
+const notifications = await Notification.find(match)
+.sort({ createdAt: -1 })
+.limit(limit)
+.lean()
+.exec();
+const ids = notifications.map((notification) => notification._id.toString());
+let readSet = new Set();
 ⋮----
-createdAt: minutesAgo(42),
+const readStates = await NotificationState.find({
 ⋮----
-createdAt: minutesAgo(120),
+readSet = new Set(readStates.map((state) => state.notificationId));
+⋮----
+let payload = notifications.map((notification) => formatNotification(notification, readSet));
+⋮----
+payload = payload.filter((notification) => !notification.read);
+⋮----
+res.json({ notifications: payload });
+⋮----
+router.post('/notifications/:id/read', requireAuth, async (req, res, next) => {
+⋮----
+return res.status(400).json({ message: 'El identificador de la notificación es obligatorio.' });
+⋮----
+if (!mongoose.Types.ObjectId.isValid(id)) {
+return res.status(400).json({ message: 'Identificador inválido.' });
+⋮----
+const exists = await Notification.exists({ _id: id });
+⋮----
+return res.status(404).json({ message: 'Notificación no encontrada.' });
+⋮----
+await NotificationState.findOneAndUpdate(
+⋮----
+{ $set: { readAt: new Date() } },
+⋮----
+).exec();
+res.json({ success: true });
+⋮----
+router.post('/notifications/read-all', requireAuth, async (req, res, next) => {
+⋮----
+const notifications = await Notification.find({}, { _id: 1 }).lean().exec();
+⋮----
+return res.json({ success: true });
+⋮----
+const bulkOperations = notifications.map((notification) => ({
+⋮----
+notificationId: notification._id.toString(),
+⋮----
+readAt: new Date(),
+⋮----
+await NotificationState.bulkWrite(bulkOperations, { ordered: false });
+⋮----
+router.post(
+⋮----
+requirePermission('manage-notifications'),
+⋮----
+const notification = await Notification.create({
+⋮----
+res.status(201).json({ notification: formatNotification(notification) });
+⋮----
+router.patch(
+⋮----
+param('id').isMongoId().withMessage('Identificador inválido.'),
+body('title').optional().isString().trim().notEmpty().withMessage('El título no puede estar vacío.'),
+body('message').optional().isString().trim().notEmpty().withMessage('La descripción no puede estar vacía.'),
+⋮----
+allowedFields.forEach((field) => {
+⋮----
+const notification = await Notification.findByIdAndUpdate(id, update, {
+⋮----
+res.json({ notification: formatNotification(notification) });
+⋮----
+router.delete(
+⋮----
+const notification = await Notification.findByIdAndDelete(id);
+⋮----
+await NotificationState.deleteMany({ notificationId: id });
+res.status(204).send();
 ```
 
 ## File: src/routes/geocoding.routes.js
@@ -7152,6 +7383,9 @@ body('distributionLines.*.method')
 body('distributionLines.*.amount')
 ⋮----
 .withMessage('Los montos asignados deben ser mayores a 0.'),
+body('exchangeRates.usdArs')
+⋮----
+.withMessage('La tasa USD/ARS debe ser mayor a 0.'),
 ⋮----
 const transfersReadLimiter = rateLimit({
 ⋮----
@@ -7166,14 +7400,17 @@ router.get('/pesos/:id', requireAuth, fetchTransferOperation);
 ## File: src/routes/treasury.routes.js
 ```javascript
 const router = Router();
+⋮----
 router.use(requireAuth);
-router.get('/balances', requirePermission('access-treasury'), balances);
-router.get('/balances/overview', requirePermission('access-treasury'), globalOverview);
+router.get('/balances', requirePermission(VIEW_BALANCES_PERMISSIONS), balances);
+router.get('/balances/overview', requirePermission(VIEW_BALANCES_PERMISSIONS), globalOverview);
 router.get(
 ⋮----
-requirePermission('access-treasury'),
+requirePermission(VIEW_BALANCES_PERMISSIONS),
 ⋮----
-router.get('/linked-balances', requirePermission('access-treasury'), linkedBalancesSummary);
+router.get('/linked-balances', requirePermission(VIEW_BALANCES_PERMISSIONS), linkedBalancesSummary);
+⋮----
+requirePermission('access-treasury'),
 ⋮----
 router.get('/movements', requirePermission('access-treasury'), list);
 router.post('/movements', requirePermission('manage-treasury'), create);
@@ -7210,6 +7447,14 @@ Number(process.env.TWO_FACTOR_CHALLENGE_DURATION_MINUTES) || 5;
 ⋮----
 const PASSWORD_RESET_WINDOW_MINUTES = Number(process.env.PASSWORD_RESET_WINDOW_MINUTES) || 30;
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
+const ensureBaselinePermissions = (user) => {
+⋮----
+if (!Array.isArray(user.permissions)) {
+⋮----
+requiredPermissions.forEach((permission) => {
+if (!user.permissions.includes(permission)) {
+user.permissions.push(permission);
+⋮----
 const buildClientUrl = (path) => {
 const normalizedPath = path.startsWith('/') ? path : `/${path}`;
 ⋮----
@@ -7289,10 +7534,12 @@ console.error('Failed to send verification email on registration', error);
 const appErr = new AppError(
 ⋮----
 if (!user.isVerified && user.hasProvider('google')) {
+ensureBaselinePermissions(user);
 ⋮----
 user.addProvider('local');
 ⋮----
 user.lastLoginAt = new Date();
+⋮----
 await user.save();
 const session = await issueSession({ user, context, rememberMe: false });
 ⋮----
@@ -7470,8 +7717,24 @@ internalOwner: toTitleCase(payload.internalOwner),
 primaryAddress: normalizeAddressInput(payload.primaryAddress),
 secondaryAddress: normalizeAddressInput(payload.secondaryAddress),
 ⋮----
+if (payload.cuit && String(payload.cuit).trim()) {
+document.cuit = String(payload.cuit).trim();
+⋮----
+if (payload.email && String(payload.email).trim()) {
+document.email = String(payload.email).trim();
+⋮----
+if (payload.phone && String(payload.phone).trim()) {
+document.phone = String(payload.phone).trim();
+⋮----
 await document.validate();
 await document.save();
+⋮----
+await Promise.all([
+ensureContactBalance(document._id, 'ARS'),
+ensureContactBalance(document._id, 'USD'),
+⋮----
+console.error(`Failed to initialize balances for new client ${document._id}`, balanceError);
+⋮----
 return formatClient(document.toObject());
 ```
 
@@ -7559,28 +7822,33 @@ await registerMovements(movements, { session });
 ⋮----
 const reverseTransactionRegistration = async (transaction, { session, userId } = {}) => {
 ⋮----
-const applyTreasurySettlement = async (operationDoc, { session, userId } = {}) => {
+const registerTransferRegistration = async (operationDoc, { session, userId } = {}) => {
 ⋮----
 const currency = String(operationDoc.currency || 'ARS').toUpperCase();
 const totalAmount = roundAmount(operationDoc.totalAmount || operationDoc.amount || 0);
 if (!Number.isFinite(totalAmount) || totalAmount <= 0) {
 ⋮----
-const counterpartKey = normalizeBalanceKey(operationDoc.movementType || 'cash');
-⋮----
 const lines = Array.isArray(operationDoc.distributionLines)
-⋮----
-: Array.isArray(operationDoc.payload?.contacts)
 ⋮----
 await Promise.all(
 lines.map(async (line) => {
 ⋮----
 if (!mongoose.Types.ObjectId.isValid(contactId)) {
 ⋮----
-const amount = Number(line.amount);
-if (!Number.isFinite(amount) || amount <= 0) {
+const amountOriginal = Number(line.amount);
+const amountArs = Number(line.amountArs ?? amountOriginal);
+if (!Number.isFinite(amountArs) || amountArs <= 0) {
 ⋮----
-const contactDelta = direction === 'incoming' ? -roundAmount(amount) : roundAmount(amount);
+direction === 'incoming' ? roundAmount(amountArs) : -roundAmount(amountArs);
 await adjustContactBalance(contactId, currency, contactDelta, { session, userId });
+⋮----
+const applyTreasurySettlement = async (operationDoc, { session, userId } = {}) => {
+⋮----
+const counterpartKey = normalizeBalanceKey(operationDoc.movementType || 'cash');
+⋮----
+: Array.isArray(operationDoc.payload?.contacts)
+⋮----
+direction === 'incoming' ? -roundAmount(amountArs) : roundAmount(amountArs);
 ⋮----
 const getCurrentAccountSummary = async ({ topContacts = 5 } = {}) => {
 ⋮----
@@ -8020,6 +8288,7 @@ movementType: mapSettlementMethodToMovementType(line.method),
 const formatTransaction = (transaction) => {
 ⋮----
 id: transaction._id.toString(),
+userId: userId ? userId.toString() : null,
 clientId: clientId ? clientId.toString() : null,
 ⋮----
 voidedBy: transaction.voidedBy ? transaction.voidedBy.toString() : null,
@@ -8036,6 +8305,8 @@ performedAt: entry.performedAt ? entry.performedAt.toISOString() : null,
 performedBy: entry.performedBy ? entry.performedBy.toString() : null,
 ⋮----
 const createTransactionDraft = async (payload, context = {}) => {
+⋮----
+throw new Error('User ID is required in context to create a draft');
 ⋮----
 if (!mongoose.Types.ObjectId.isValid(clientId)) {
 throw new Error('Invalid client identifier');
@@ -8056,10 +8327,12 @@ const transaction = await Transaction.create({
 ⋮----
 return formatTransaction(transaction);
 ⋮----
-const getTransactionDraft = async (id) => {
+const getTransactionDraft = async (id, userId) => {
 if (!mongoose.Types.ObjectId.isValid(id)) {
 ⋮----
-const transaction = await Transaction.findById(id).lean();
+throw new Error('User ID is required to fetch a draft');
+⋮----
+const transaction = await Transaction.findOne({ _id: id, user: userId }).lean();
 ⋮----
 const buildWizardDraftResponse = async (transaction) => {
 ⋮----
@@ -8069,7 +8342,9 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
 ⋮----
 throw new Error('Invalid transaction identifier');
 ⋮----
-const transaction = await Transaction.findById(id);
+throw new Error('User ID is required to update a draft');
+⋮----
+const transaction = await Transaction.findOne({ _id: id, user: userId });
 ⋮----
 throw new Error('Transaction not found');
 ⋮----
@@ -8082,6 +8357,8 @@ throw new Error('Outgoing amount must be greater than 0');
 await transaction.save();
 ⋮----
 const updateTransactionSettlement = async (id, payload = {}, context = {}) => {
+⋮----
+throw new Error('User ID is required to update settlement');
 ⋮----
 const method = typeof payload.simpleMethod === 'string' ? payload.simpleMethod.trim() : '';
 ⋮----
@@ -8128,6 +8405,8 @@ const numericStep = Number(step);
 if (!Number.isInteger(numericStep) || numericStep < 1 || numericStep > 3) {
 throw new Error('Paso inválido.');
 ⋮----
+throw new Error('User ID is required to advance step');
+⋮----
 transaction.currentStep = Math.max(Number(transaction.currentStep) || 1, numericStep);
 ⋮----
 const generateOperationCode = async () => {
@@ -8164,10 +8443,12 @@ throw new Error('La liquidación debe completar exactamente el 100%.');
 ⋮----
 const finalizeTransaction = async (id, context = {}) => {
 ⋮----
+throw new Error('User ID is required to finalize');
+⋮----
 const session = await mongoose.startSession();
 ⋮----
 await session.withTransaction(async () => {
-const transaction = await Transaction.findById(id).session(session);
+const transaction = await Transaction.findOne({ _id: id, user: userId }).session(session);
 ⋮----
 formatted = formatTransaction(transaction);
 ⋮----
@@ -8186,6 +8467,8 @@ emitBalanceUpdated({
 ⋮----
 const voidTransaction = async (id, reason = '', context = {}) => {
 ⋮----
+throw new Error('User ID is required to void');
+⋮----
 throw new Error('No podés anular una operación que ya fue liquidada.');
 ⋮----
 throw new Error('El estado actual de la operación no permite anularla.');
@@ -8198,6 +8481,90 @@ transaction.voidReason = reason ? String(reason).trim() || null : null;
 if (!Array.isArray(transaction.accountingAudit)) {
 ⋮----
 transaction.accountingAudit.push({
+⋮----
+performedAt: new Date(),
+```
+
+## File: src/services/transactionLifecycle.service.js
+```javascript
+const ensureAuditTrail = (transaction) => {
+if (!Array.isArray(transaction.accountingAudit)) {
+⋮----
+const toNumberOrZero = (value) => {
+const numeric = Number(value);
+return Number.isFinite(numeric) ? numeric : 0;
+⋮----
+const resolveTransactionBaseAmount = (transaction, preferredCurrency) => {
+⋮----
+? String(transaction.incomingAsset.code).toUpperCase()
+⋮----
+? String(transaction.outgoingAsset.code).toUpperCase()
+⋮----
+const incomingAmount = Math.abs(toNumberOrZero(transaction.incomingAmount));
+const outgoingAmount = Math.abs(toNumberOrZero(transaction.outgoingAmount));
+const preferred = preferredCurrency ? String(preferredCurrency).toUpperCase() : null;
+⋮----
+const sumSettledAmount = (auditTrail, currency, excludeMovementId) => {
+if (!Array.isArray(auditTrail) || auditTrail.length === 0) {
+⋮----
+const normalizedCurrency = currency ? String(currency).toUpperCase() : null;
+const excludedId = excludeMovementId ? String(excludeMovementId) : null;
+⋮----
+.filter((entry) => entry && entry.action === 'settlement_completed')
+.filter((entry) => {
+⋮----
+? String(entry.metadata.currency).toUpperCase()
+⋮----
+.reduce((total, entry) => total + Math.abs(toNumberOrZero(entry?.metadata?.amount)), 0);
+⋮----
+const normalizeMovementId = (movementId) => {
+⋮----
+return mongoose.Types.ObjectId.isValid(movementId)
+? new mongoose.Types.ObjectId(movementId).toString()
+: String(movementId);
+⋮----
+return String(movementId);
+⋮----
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(value);
+const recordTransactionSettlement = async (
+⋮----
+if (!isValidObjectId(transactionId)) {
+⋮----
+const transaction = await Transaction.findById(transactionId).session(session || null);
+⋮----
+const now = new Date();
+const normalizedMovementId = normalizeMovementId(impact.movementId);
+ensureAuditTrail(transaction);
+⋮----
+currency: impact.currency ? String(impact.currency).toUpperCase() : null,
+⋮----
+const impactAmount = Math.abs(toNumberOrZero(impact.amount));
+⋮----
+const baseAmount = resolveTransactionBaseAmount(transaction, auditMetadata.currency);
+⋮----
+const alreadySettled = sumSettledAmount(
+⋮----
+throw new Error('La operación ya fue compensada en su totalidad.');
+⋮----
+const existingIndex = transaction.accountingAudit.findIndex(
+⋮----
+userId && isValidObjectId(userId) ? userId : null;
+⋮----
+transaction.accountingAudit.push({
+⋮----
+performedBy: userId && isValidObjectId(userId) ? userId : null,
+⋮----
+if (userId && isValidObjectId(userId)) {
+⋮----
+await transaction.save({ session });
+⋮----
+const revertTransactionSettlement = async (
+⋮----
+const normalizedMovementId = normalizeMovementId(movementId);
+⋮----
+transaction.accountingAudit = transaction.accountingAudit.filter(
+⋮----
+const settlementEntriesRemaining = transaction.accountingAudit.some(
 ⋮----
 performedAt: new Date(),
 ```
@@ -8236,12 +8603,18 @@ const contact = contactMap.get(contactId) || formatContact(line.contact);
 lineId: `${operation._id.toString()}-${index}`,
 ⋮----
 amount: roundAmount(line.amount),
+amountArs: roundAmount(line.amountArs == null ? line.amount : line.amountArs),
 ⋮----
 id: operation._id.toString(),
 ⋮----
 totalAmount: roundAmount(operation.totalAmount),
 ⋮----
 ? new Date(operation.confirmedAt).toISOString()
+⋮----
+completedAt: operation.completedAt ? new Date(operation.completedAt).toISOString() : null,
+completedBy: operation.completedBy ? operation.completedBy.toString() : null,
+cancelledAt: operation.cancelledAt ? new Date(operation.cancelledAt).toISOString() : null,
+cancelledBy: operation.cancelledBy ? operation.cancelledBy.toString() : null,
 ⋮----
 createdAt: operation.createdAt ? new Date(operation.createdAt).toISOString() : null,
 updatedAt: operation.updatedAt ? new Date(operation.updatedAt).toISOString() : null,
@@ -8265,18 +8638,32 @@ const lines = Array.isArray(payload.distributionLines) ? payload.distributionLin
 ⋮----
 throw new AppError('Agregá al menos un contacto a la distribución.', 400);
 ⋮----
+const needsUsdRate = lines.some(
+(line) => String(line.method || line.currency || '').toUpperCase() === 'USD'
+⋮----
+const rateFromPayload = Number(payload?.exchangeRates?.usdArs);
+if (Number.isFinite(rateFromPayload) && rateFromPayload > 0) {
+⋮----
+const marketRate = await getLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+if (marketRate?.rate && Number.isFinite(marketRate.rate) && marketRate.rate > 0) {
+⋮----
+throw new AppError('No hay una tasa USD/ARS disponible. Intentá nuevamente.', 400);
+⋮----
 const normalizedLines = lines.map((line, index) => {
 ⋮----
 if (!contactId || !mongoose.Types.ObjectId.isValid(contactId)) {
 throw new AppError(`La línea ${index + 1} no tiene un contacto válido.`, 400);
 ⋮----
+const method = String(line.method || '').toUpperCase() === 'USD' ? 'USD' : 'ARS';
 const amount = roundAmount(line.amount);
 if (!Number.isFinite(amount) || amount <= 0) {
 throw new AppError(`Ingresá un monto válido en la línea ${index + 1}.`, 400);
 ⋮----
+const amountArs = method === 'USD' ? roundAmount(amount * usdArsRate) : amount;
+⋮----
 contact: new mongoose.Types.ObjectId(contactId),
 ⋮----
-const assignedTotal = normalizedLines.reduce((sum, line) => sum + line.amount, 0);
+const assignedTotal = normalizedLines.reduce((sum, line) => sum + line.amountArs, 0);
 const difference = Math.abs(assignedTotal - totalAmount);
 ⋮----
 throw new AppError(
@@ -8301,16 +8688,29 @@ operationCode: await generateTransferOperationCode(),
 confirmedAt: new Date(),
 ⋮----
 await operation.save({ session });
+const operationPayload = operation.toObject();
+⋮----
+await registerTransferRegistration(operationPayload, {
 ⋮----
 balance = await adjustTreasuryBalanceForMovement(movementType, 'ARS', delta, {
 ⋮----
-await applyTreasurySettlement(operationDocument.toObject(), {
+await applyTreasurySettlement(operationPayload, {
 ⋮----
 eventDocuments = await createTransferOperationEvents(operationDocument, { session });
 ⋮----
 session.endSession();
 ⋮----
-const formattedOperation = formatTransferOperation(operationDocument.toObject(), contacts);
+const formattedOperation = formatTransferOperation(operationDocument, contacts);
+⋮----
+new Date().toISOString(),
+⋮----
+distributionLines: normalizedLines.map((line) => ({
+contact: line.contact.toString(),
+⋮----
+amountArs: roundAmount(line.amountArs),
+⋮----
+treasuryMovementResult = await registerTreasuryMovement(treasuryPayload, treasuryContext);
+emitBalanceUpdated({
 ⋮----
 id: normalizeBalanceKey(movementType),
 ⋮----
@@ -8534,6 +8934,12 @@ const normalized = String(key)
 .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
 .join(' ');
 ⋮----
+const resolveSummaryLabel = (accountKey, currency) => {
+const normalizedAccountKey = (accountKey || '').toLowerCase();
+const normalizedCurrency = (currency || '').toUpperCase();
+⋮----
+return resolveAccountLabel(accountKey, currency);
+⋮----
 const computeBalanceState = (amount) => {
 ⋮----
 const buildOverviewMatch = (filters = {}) => {
@@ -8551,6 +8957,16 @@ const to = parseDateFilter(filters.dateTo, { endOfDay: true });
 if (Object.keys(dateFilters).length) {
 ⋮----
 const getGlobalBalancesOverview = async (query = {}) => {
+⋮----
+const rawAccountKey = typeof accountKey === 'string' ? accountKey.trim() : '';
+let normalizedAccountKey = rawAccountKey ? rawAccountKey.toLowerCase() : '';
+let normalizedCurrency = typeof currency === 'string' && currency.trim().length
+? currency.toUpperCase()
+⋮----
+if (normalizedAccountKey.includes('::')) {
+const [baseKey, currencySuffix] = normalizedAccountKey.split('::');
+⋮----
+normalizedCurrency = currencySuffix.toUpperCase();
 ⋮----
 const numericPage = Math.max(Number(page) || 1, 1);
 const numericLimit = Math.min(Math.max(Number(limit) || DEFAULT_GLOBAL_BALANCES_LIMIT, 1), 100);
@@ -8590,7 +9006,7 @@ const amount = roundAmount(row.balance || 0);
 const state = computeBalanceState(amount);
 const variationChange = computeVariationPercentage(
 ⋮----
-const label = resolveAccountLabel(accountKeyValue, currencyValue);
+const label = resolveSummaryLabel(accountKeyValue, currencyValue);
 ⋮----
 id: `${accountKeyValue}-${contactId || 'general'}-${currencyValue}`.toLowerCase(),
 ⋮----
@@ -8629,16 +9045,18 @@ const accountKeys = new Map();
 const contactTypesSet = new Set();
 ⋮----
 currencies.add(row.currency);
-accountKeys.set(row.accountKey, row.accountLabel);
+const summaryKey = `${row.accountKey || 'general'}::${row.currency || 'ARS'}`.toLowerCase();
+const summaryLabel = resolveSummaryLabel(row.accountKey, row.currency);
+accountKeys.set(summaryKey, summaryLabel);
 ⋮----
 contactTypesSet.add(row.contact.contactType);
 ⋮----
 if (BALANCE_STATE_VALUES.includes(row.balanceState)) {
 ⋮----
-if (!summaryByAccount.has(row.accountKey)) {
-summaryByAccount.set(row.accountKey, {
+if (!summaryByAccount.has(summaryKey)) {
+summaryByAccount.set(summaryKey, {
 ⋮----
-const entry = summaryByAccount.get(row.accountKey);
+const entry = summaryByAccount.get(summaryKey);
 entry.amount = roundAmount((entry.amount || 0) + row.amount);
 entry.currentWindowAmount = roundAmount(
 ⋮----
@@ -9006,6 +9424,10 @@ typeof payload.description === 'string' && payload.description.trim().length
 const registerTreasuryMovement = async (payload = {}, context = {}) => {
 const session = await mongoose.startSession();
 ⋮----
+const skipBalanceAdjustments = Boolean(context.skipBalanceAdjustments);
+const skipSettlement = Boolean(context.skipSettlement);
+const skipBalanceEvent = Boolean(context.skipBalanceEvent);
+⋮----
 await session.withTransaction(async () => {
 const normalized = await validateAndNormalizeMovementPayload(payload, { session });
 const applySettlement = getApplyTreasurySettlement();
@@ -9027,9 +9449,18 @@ matchedAt: new Date(),
 ⋮----
 context.userId && mongoose.Types.ObjectId.isValid(context.userId)
 ⋮----
+document.completedAt = document.completedAt || new Date();
+⋮----
+await document.save({ session });
+⋮----
 await movement.save({ session });
 ⋮----
 balanceSnapshot = await adjustTreasuryBalanceForMovement(
+⋮----
+balanceSnapshot = await TreasuryBalance.findOne({
+key: normalizeBalanceKey(balanceMovementType),
+⋮----
+.session(session)
 ⋮----
 await applySettlement(settlementPayload, {
 ⋮----
@@ -9039,6 +9470,8 @@ if (contactCandidate && mongoose.Types.ObjectId.isValid(contactCandidate)) {
 const contactDoc = await Client.findById(contactCandidate).session(session);
 ⋮----
 contactForResponse = contactDoc.toObject();
+⋮----
+await recordTransactionSettlement(
 ⋮----
 movement.compensatedAt = new Date();
 ⋮----
@@ -9052,6 +9485,11 @@ movementDocument = movement.toObject();
 session.endSession();
 ⋮----
 const formattedMovement = formatTreasuryMovement(movementDocument, contactForResponse ? [contactForResponse] : []);
+⋮----
+? roundAmount(movementDocument.amount || 0)
+: -roundAmount(movementDocument?.amount || 0);
+⋮----
+emitBalanceUpdated({
 ⋮----
 balance: balanceSnapshot ? formatBalance(balanceSnapshot) : null,
 ⋮----
@@ -9078,7 +9516,9 @@ to.setHours(23, 59, 59, 999);
 ⋮----
 if (Object.keys(query.movementAt).length === 0) {
 ⋮----
-const pattern = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+const cleaned = filters.search.trim().replace(/^#/, '');
+⋮----
+// Use MongoDB text search for efficient lookup across indexed text fields. Requires text index on relevant fields.
 ⋮----
 const listTreasuryMovements = async ({
 ⋮----
@@ -9087,13 +9527,9 @@ const query = buildMovementQuery(filters);
 ⋮----
 const normalizedSort = allowedSortFields.includes(sortBy) ? sortBy : 'movementAt';
 ⋮----
-const [totalItems, movements, totals] = await Promise.all([
-TreasuryMovement.countDocuments(query),
-TreasuryMovement.find(query)
-.sort(sort)
-.skip((numericPage - 1) * numericLimit)
+const [aggregated] = await TreasuryMovement.aggregate([
 ⋮----
-TreasuryMovement.aggregate([
+]).exec();
 ⋮----
 const items = movements.map((movement) => formatTreasuryMovement(movement, contacts));
 const totalsByCurrency = totals.reduce((acc, total) => {
@@ -9162,6 +9598,10 @@ movement.linkedOperations.push({
 ⋮----
 amount: roundAmount(operationAmount || amount),
 ⋮----
+operationLink.document.completedAt || new Date();
+⋮----
+await operationLink.document.save({ session });
+⋮----
 buildAuditEntry('compensated', context.userId, {
 ⋮----
 updatedDocument = movement.toObject();
@@ -9172,6 +9612,8 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
 ⋮----
 throw new AppError('El movimiento ya se encuentra anulado.', 409);
 ⋮----
+throw new AppError('No podés anular un movimiento compensado.', 409);
+⋮----
 await adjustTreasuryBalanceForMovement(balanceMovementType, movement.currency, -delta, {
 ⋮----
 const contactDoc = await Client.findById(movement.contact).session(session);
@@ -9181,6 +9623,23 @@ movement.cancelledAt = new Date();
 typeof reason === 'string' && reason.trim().length ? reason.trim() : null;
 ⋮----
 buildAuditEntry('cancelled', context.userId, {
+⋮----
+const linkedOperations = Array.isArray(movement.linkedOperations)
+⋮----
+const linkedTransactions = linkedOperations.filter(
+⋮----
+await Promise.all(
+linkedTransactions.map((op) =>
+revertTransactionSettlement(op.id, movement._id, {
+⋮----
+const linkedTransfers = linkedOperations.filter(
+⋮----
+linkedTransfers.map(async (op) => {
+const transfer = await TransferOperation.findById(op.id).session(session);
+⋮----
+transfer.cancelledAt = new Date();
+⋮----
+await transfer.save({ session });
 ⋮----
 const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) => {
 ⋮----
@@ -9216,9 +9675,16 @@ const movementDate = movement.movementAt ? new Date(movement.movementAt) : null;
 ⋮----
 (movement.contact && entry.contact && movement.contact.toString() === entry.contact.toString() ? 0 : 0.5) +
 ⋮----
-currentAccountMovementId: entry._id.toString(),
+id: entry._id.toString(),
 ⋮----
 id: transaction._id.toString(),
+⋮----
+confirmedAt: transaction.completedAt ? transaction.completedAt.toISOString() : null,
+⋮----
+id: entry.operation.id.toString(),
+⋮----
+suggestionId: entry._id.toString(),
+currentAccountMovementId: entry._id.toString(),
 ⋮----
 ratio: Number(ratio.toFixed(4)),
 ⋮----
@@ -9375,6 +9841,8 @@ const etag = `W/"${crypto.createHash('md5').update(body).digest('hex')}"`;
 const expiresAt = Date.now() + Number(ttlMs || 0);
 ⋮----
 cache.set(key, value);
+⋮----
+function invalidateEntry(key) {
 ⋮----
 async function sendCached({ req, res, compute, key, ttlMs }) {
 let entry = getEntry(key);
