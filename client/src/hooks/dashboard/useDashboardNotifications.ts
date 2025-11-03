@@ -30,9 +30,9 @@ const setState = (partial: Partial<NotificationsState>) => {
   notify();
 };
 
-const fetchNotifications = async (): Promise<void> => {
+const fetchNotifications = async (options: { force?: boolean } = {}): Promise<void> => {
   const now = Date.now();
-  if (inFlight) {
+  if (inFlight && !options.force) {
     return inFlight;
   }
   if (now - lastFetchTs < DEDUPE_WINDOW_MS) {
@@ -49,8 +49,19 @@ const fetchNotifications = async (): Promise<void> => {
 
   inFlight = apiRequest<DashboardNotificationsResponse>('/api/dashboard/notifications')
     .then((response) => {
+      const serverNotifications = response?.notifications ?? [];
+      const previousReadMap = new Map(
+        state.notifications.map((notification) => [notification.id, Boolean(notification.read)])
+      );
+      const merged = serverNotifications.map((notification) => ({
+        ...notification,
+        read: previousReadMap.has(notification.id)
+          ? previousReadMap.get(notification.id)
+          : Boolean(notification.read),
+      }));
+
       setState({
-        notifications: response?.notifications ?? [],
+        notifications: merged,
         loading: false,
         error: null,
       });
@@ -115,6 +126,24 @@ export const useDashboardNotifications = (enabled: boolean = true) => {
     notifications: snapshot.notifications,
     loading: enabled ? snapshot.loading : false,
     error: enabled ? snapshot.error : null,
-    refresh: fetchNotifications,
+    refresh: (options?: { force?: boolean }) => fetchNotifications(options),
+    markRead: (id: string) => {
+      setState({
+        notifications: state.notifications.map((notification) =>
+          notification.id === id ? { ...notification, read: true } : notification
+        ),
+      });
+    },
+    markAllRead: () => {
+      if (state.notifications.every((notification) => notification.read)) {
+        return;
+      }
+      setState({
+        notifications: state.notifications.map((notification) => ({
+          ...notification,
+          read: true,
+        })),
+      });
+    },
   };
 };

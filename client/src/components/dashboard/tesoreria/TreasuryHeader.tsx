@@ -12,7 +12,7 @@ export const TreasuryHeader: React.FC<Props> = ({
   onOpenConciliation,
   onOpenSettings,
 }) => (
-  <section id="page-header" className="mb-8">
+  <section id="page-header" className="mb-8 pt-44 lg:pt-0">
     <nav
       id="breadcrumbs"
       className="flex items-center space-x-2 text-sm text-gray-600 mb-4"
@@ -35,30 +35,27 @@ export const TreasuryHeader: React.FC<Props> = ({
           size="md"
           onClick={onOpenSettings}
           icon="fa-solid fa-cog"
-          className="mobile-button touch-friendly"
+          className="hidden sm:inline-flex"
         >
-          <span className="hidden sm:inline">Configuración</span>
-          <span className="sm:hidden">Config.</span>
+          Configuración
         </Button>
         <Button
           variant="outline"
           size="md"
           onClick={onOpenConciliation}
           icon="fa-solid fa-balance-scale"
-          className="mobile-button touch-friendly"
+          className="w-full sm:w-auto text-sm sm:text-base"
         >
-          <span className="hidden sm:inline">Conciliar operaciones</span>
-          <span className="sm:hidden">Conciliar</span>
+          Conciliar operaciones
         </Button>
         <Button
           variant="primary"
           size="md"
           onClick={onRegisterMovement}
           icon="fa-solid fa-plus"
-          className="mobile-button touch-friendly font-medium"
+          className="w-full sm:w-auto text-sm sm:text-base font-medium"
         >
-          <span className="hidden sm:inline">Registrar movimiento</span>
-          <span className="sm:hidden">Registrar</span>
+          Registrar movimiento
         </Button>
       </div>
     </div>

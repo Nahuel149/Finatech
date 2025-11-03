@@ -14,8 +14,14 @@ export interface NotificationItem {
 }
 
 export const useNotifications = () => {
-  const { notifications: fetchedNotifications, loading, error, refresh } =
-    useDashboardNotifications();
+  const {
+    notifications: fetchedNotifications,
+    loading,
+    error,
+    refresh,
+    markRead: markReadInStore,
+    markAllRead: markAllReadInStore,
+  } = useDashboardNotifications();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   useEffect(() => {
@@ -57,18 +63,20 @@ export const useNotifications = () => {
   );
 
   const markAsRead = useCallback((id: string) => {
+    markReadInStore(id);
     setNotifications((prev) =>
       prev.map((notification) =>
         notification.id === id ? { ...notification, read: true } : notification
       )
     );
-  }, []);
+  }, [markReadInStore]);
 
   const markAllAsRead = useCallback(() => {
+    markAllReadInStore();
     setNotifications((prev) =>
       prev.map((notification) => ({ ...notification, read: true }))
     );
-  }, []);
+  }, [markAllReadInStore]);
 
   const addNotification = useCallback(
     (notification: Omit<NotificationItem, 'id' | 'createdAt' | 'read'>) => {

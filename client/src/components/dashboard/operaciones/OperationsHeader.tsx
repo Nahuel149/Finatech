@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../../shared/design-system';
 
 interface Props {
   onTransferPesos: () => void;
@@ -29,60 +30,66 @@ export const OperationsHeader: React.FC<Props> = ({ onTransferPesos }) => {
       </div>
       
       {/* Desktop Layout */}
-      <div id="header-actions" className="hidden lg:flex lg:items-center lg:space-x-4">
-        <button
-          type="button"
+      <div id="header-actions" className="hidden lg:flex lg:items-center lg:space-x-3">
+        <Button
+          variant="primary"
+          size="md"
           onClick={handleNuevaOperacion}
-          className="flex items-center justify-center px-6 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+          icon="fa-solid fa-plus"
+          className="font-medium"
         >
-          <i className="fa-solid fa-plus mr-2" />
           Nueva operación
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="outline"
+          size="md"
           onClick={handleTransferirPesos}
-          className="flex items-center justify-center px-6 py-3 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          icon="fa-solid fa-paper-plane"
+          className="font-medium"
         >
-          <i className="fa-solid fa-paper-plane mr-2" />
           Transferir pesos
-        </button>
-        <button
-          type="button"
+        </Button>
+        <Button
+          variant="outline"
+          size="md"
           onClick={handleVerCuentasCorrientes}
-          className="flex items-center justify-center px-6 py-3 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors font-medium"
+          icon="fa-solid fa-file-invoice"
+          className="font-medium"
         >
-          <i className="fa-solid fa-file-invoice mr-2" />
           Ver cuentas corrientes
-        </button>
+        </Button>
       </div>
 
       {/* Mobile Layout */}
       <div className="lg:hidden grid grid-cols-1 gap-3">
-        <button
-          type="button"
+        <Button
+          variant="primary"
+          size="md"
           onClick={handleNuevaOperacion}
-          className="flex items-center justify-center px-4 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+          icon="fa-solid fa-plus"
+          className="w-full font-medium"
         >
-          <i className="fa-solid fa-plus mr-2" />
           Nueva operación
-        </button>
+        </Button>
         <div className="grid grid-cols-2 gap-3">
-          <button
-            type="button"
+          <Button
+            variant="outline"
+            size="md"
             onClick={handleTransferirPesos}
-            className="flex items-center justify-center px-3 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            icon="fa-solid fa-paper-plane"
+            className="w-full text-sm"
           >
-            <i className="fa-solid fa-paper-plane mr-1" />
             Transferir pesos
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="outline"
+            size="md"
             onClick={handleVerCuentasCorrientes}
-            className="flex items-center justify-center px-3 py-2 bg-white border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors text-sm"
+            icon="fa-solid fa-file-invoice"
+            className="w-full text-sm"
           >
-            <i className="fa-solid fa-file-invoice mr-1" />
             Ver cuentas corrientes
-          </button>
+          </Button>
         </div>
       </div>
     </div>

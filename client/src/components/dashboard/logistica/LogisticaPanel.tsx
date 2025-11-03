@@ -8,12 +8,11 @@ import { OperationDetailPanel } from './OperationDetailPanel';
 import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
-import { PlusIcon } from '../../icons/HeroiconsOutline';
 import NewMovementModal from './NewMovementModal';
 import { LogisticsOperation, DEFAULT_LOGISTICS_FILTERS } from '../../../types/logistics';
 import { useDashboardBalances } from '../../../hooks';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
-import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
+import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType, Button } from '../../shared/design-system';
 import { TreasuryBalance, ApiError } from '../../../types';
 
 type ToastState = {
@@ -223,7 +222,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
   return (
     <div
       id="logistics-balance-stripe"
-      className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
+      className="fixed top-[55px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
       <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8">
         {/* Desktop Layout */}
@@ -457,14 +456,15 @@ export const LogisticaPanel: React.FC = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <button
-                type="button"
+              <Button
+                variant="primary"
+                size="md"
                 onClick={handleRegisterNewMovement}
-                className="inline-flex items-center justify-center px-4 py-3 sm:px-5 sm:py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors text-sm sm:text-base font-medium"
+                icon="fa-solid fa-plus"
+                className="w-full sm:w-auto font-medium"
               >
-                <PlusIcon className="h-5 w-5 mr-2" />
                 Registrar nuevo movimiento logístico
-              </button>
+              </Button>
             </div>
           </section>
 

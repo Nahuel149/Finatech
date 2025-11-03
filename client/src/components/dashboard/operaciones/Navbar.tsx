@@ -155,7 +155,10 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
   const desktopNotificationsRef = useRef<HTMLDivElement>(null);
@@ -207,6 +210,15 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       if (accountMenuRef.current && !accountMenuRef.current.contains(target)) {
         setAccountMenuOpen(false);
       }
+      if (
+        mobileMenuOpen &&
+        mobileMenuRef.current &&
+        !mobileMenuRef.current.contains(target) &&
+        !(mobileMenuButtonRef.current && mobileMenuButtonRef.current.contains(target))
+      ) {
+        setMobileMenuOpen(false);
+        setMobileProfileOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -227,7 +239,16 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   useEffect(() => {
     setNotificationsOpen(false);
     setAccountMenuOpen(false);
+    setMobileProfileOpen(false);
   }, [location.pathname]);
+
+  const handleOpenNotifications = () => {
+    setNotificationsOpen((prev) => !prev);
+    if (!notificationsOpen) {
+      setMobileMenuOpen(false);
+      setMobileProfileOpen(false);
+    }
+  };
 
   const handleNotificationClick = (notification: NotificationItem) => {
     markAsRead(notification.id);
@@ -294,7 +315,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   className="relative p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                   aria-label="Notificaciones"
                   aria-expanded={notificationsOpen}
-                  onClick={() => setNotificationsOpen((prev) => !prev)}
+                  onClick={handleOpenNotifications}
                 >
                   <i className="fa-solid fa-bell text-lg" />
                   {unreadCount > 0 && (
@@ -321,6 +342,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
                 className="p-2 text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
                 aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                ref={mobileMenuButtonRef}
               >
                 <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'} text-lg`} />
               </button>
@@ -332,46 +354,62 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       <div
         id="mobile-menu"
         className={`${mobileMenuOpen ? 'block' : 'hidden'} lg:hidden fixed top-[65px] left-0 right-0 bg-white border-b border-gray-200 z-50 shadow-lg max-h-[calc(100vh-65px)] overflow-y-auto`}
+        ref={mobileMenuRef}
       >
         <div className="px-4 py-4">
-          <div className="flex items-center mb-6 pb-4 border-b border-gray-200">
-            <img
-              src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
-              alt="Usuario"
-              className="w-12 h-12 rounded-full mr-4"
-            />
-            <div className="flex-1">
-              <div className="text-base font-medium text-text-primary">{displayName}</div>
-              <div className="text-sm text-gray-500">{secondaryText}</div>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 mb-6">
+          <div className="mb-4">
             <button
               type="button"
-              className="w-full rounded-lg border border-gray-200 py-3 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
-              disabled
-              aria-disabled="true"
+              onClick={() => setMobileProfileOpen((prev) => !prev)}
+              className="w-full flex items-center justify-between rounded-lg border border-gray-200 px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
             >
-              <i className="fa-solid fa-user-gear mr-2" />
-              Perfil
+              <div className="flex items-center">
+                <img
+                  src="https://storage.googleapis.com/uxpilot-auth.appspot.com/avatars/avatar-2.jpg"
+                  alt="Usuario"
+                  className="w-12 h-12 rounded-full mr-4"
+                />
+                <div className="text-left">
+                  <div className="text-base font-medium text-text-primary">{displayName}</div>
+                  <div className="text-sm text-gray-500">{secondaryText}</div>
+                </div>
+              </div>
+              <i
+                className={`fa-solid fa-chevron-down text-gray-400 transition-transform duration-200 ${
+                  mobileProfileOpen ? 'rotate-180' : ''
+                }`}
+              />
             </button>
-            <button
-              type="button"
-              className="w-full rounded-lg border border-gray-200 py-3 text-sm text-gray-400 bg-gray-50 cursor-not-allowed"
-              disabled
-              aria-disabled="true"
-            >
-              <i className="fa-solid fa-sliders mr-2" />
-              Configuración
-            </button>
-            <button
-              type="button"
-              className="w-full rounded-lg border border-danger/30 text-danger py-3 text-sm hover:bg-danger/10 flex items-center justify-center space-x-2"
-              onClick={handleLogout}
-            >
-              <i className="fa-solid fa-right-from-bracket text-sm" />
-              <span>Cerrar sesión</span>
-            </button>
+            {mobileProfileOpen && (
+              <div className="mt-3 space-y-2">
+                <button
+                  type="button"
+                  className="w-full flex items-center px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg cursor-not-allowed"
+                  disabled
+                  aria-disabled="true"
+                >
+                  <i className="fa-solid fa-user-gear mr-2" />
+                  Perfil
+                </button>
+                <button
+                  type="button"
+                  className="w-full flex items-center px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg cursor-not-allowed"
+                  disabled
+                  aria-disabled="true"
+                >
+                  <i className="fa-solid fa-sliders mr-2" />
+                  Configuración
+                </button>
+                <button
+                  type="button"
+                  className="w-full flex items-center justify-center px-4 py-2 text-sm text-danger border border-danger/30 rounded-lg hover:bg-danger/10"
+                  onClick={handleLogout}
+                >
+                  <i className="fa-solid fa-right-from-bracket mr-2" />
+                  Cerrar sesión
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="mb-6">
@@ -501,7 +539,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   className="relative p-2 text-text-primary hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
                   aria-label="Notificaciones"
                   aria-expanded={notificationsOpen}
-                  onClick={() => setNotificationsOpen((prev) => !prev)}
+                onClick={handleOpenNotifications}
                 >
                   <i className="fa-solid fa-bell text-lg" />
                   {unreadCount > 0 && (

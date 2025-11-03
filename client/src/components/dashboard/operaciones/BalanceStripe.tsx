@@ -32,7 +32,7 @@ export const BalanceStripe: React.FC = () => {
   return (
     <div
       id="balance-stripe"
-      className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
+      className="fixed top-[55px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
       <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8">
         {/* Desktop Layout */}
