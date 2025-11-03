@@ -120,7 +120,7 @@ export const useGlobalBalancesOverview = (filters: GlobalBalancesFilters) => {
 
   useEffect(() => {
     execute().catch(() => {});
-  }, [execute]);
+  }, [endpoint, execute]);
 
   useEffect(() => {
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {

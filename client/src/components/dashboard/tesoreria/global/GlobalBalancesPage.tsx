@@ -15,6 +15,7 @@ import {
 } from '../../../../types';
 import { useGlobalBalancesOverview } from '../../../../hooks';
 import { Footer } from '../../operaciones/Footer';
+import { RecentOperationsTable } from '../../operaciones/RecentOperationsTable';
 
 type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -386,6 +387,8 @@ export const GlobalBalancesPage: React.FC = () => {
           activeAccountKey={filters.accountKey || null}
           onRefresh={refresh}
         />
+
+        <RecentOperationsTable variant="compact" limit={5} />
 
         <GlobalBalancesTable
           rows={overview.table.items}

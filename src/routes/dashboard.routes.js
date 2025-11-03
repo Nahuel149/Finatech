@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const { Router } = require('express');
 const { body, param } = require('express-validator');
 const { getTreasuryBalances } = require('../services/treasury.service');
+const { listRecentOperations } = require('../services/dashboard.service');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 const { validateRequest } = require('../middleware/validateRequest');
@@ -142,6 +143,21 @@ router.get(
 
     req.on('close', cleanup);
     req.on('error', cleanup);
+  }
+);
+
+router.get(
+  '/operations/recent',
+  requireAuth,
+  requirePermission('view-balances'),
+  async (req, res, next) => {
+    try {
+      const limit = Number(req.query.limit);
+      const items = await listRecentOperations({ limit });
+      res.json({ items });
+    } catch (error) {
+      next(error);
+    }
   }
 );
 

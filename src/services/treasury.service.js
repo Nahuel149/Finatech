@@ -1258,7 +1258,7 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
   const totals = {
     balance: roundAmount(totalsEntry.balance || 0),
     incoming: {
-      amount: roundAmount(totalsEntry.incoming || 0),
+      amount: roundAmount(Math.abs(totalsEntry.incoming || 0)),
       count: totalsEntry.incomingCount || 0,
     },
     outgoing: {

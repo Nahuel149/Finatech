@@ -29,3 +29,31 @@ export interface DashboardNotification {
 export interface DashboardNotificationsResponse {
   notifications: DashboardNotification[];
 }
+
+export type DashboardOperationSource = 'transaction' | 'transfer';
+
+export interface DashboardOperationRow {
+  id: string;
+  source: DashboardOperationSource;
+  createdAt: string;
+  dateLabel: string;
+  clientName: string;
+  clientIdentifier: string;
+  clientInitials: string;
+  typeLabel: string;
+  typeClassName: string;
+  receivesText: string;
+  paysText: string;
+  rateLabel: string;
+  marginLabel: string;
+  marginClassName: string;
+  statusLabel: string;
+  statusClassName: string;
+  detailPath: string | null;
+  editPath: string | null;
+  isEditable: boolean;
+}
+
+export interface DashboardRecentOperationsResponse {
+  items: DashboardOperationRow[];
+}
