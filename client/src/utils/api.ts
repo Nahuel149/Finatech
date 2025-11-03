@@ -22,6 +22,43 @@ const getCSRFToken = (): string | null => {
   return null;
 };
 
+const CSRF_COOKIE_NAME = 'finatech_csrf';
+let csrfEnsured = false;
+
+const hasCsrfCookie = () => {
+  if (typeof document === 'undefined') {
+    return false;
+  }
+  return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${CSRF_COOKIE_NAME}=`));
+};
+
+const ensureCsrfCookie = async () => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (hasCsrfCookie()) {
+    csrfEnsured = true;
+    return;
+  }
+
+  if (csrfEnsured) {
+    return;
+  }
+
+  csrfEnsured = true;
+  try {
+    await fetch('/api/config', {
+      method: 'GET',
+      credentials: 'include',
+    });
+  } catch (error) {
+    csrfEnsured = false;
+    // eslint-disable-next-line no-console
+    console.warn('No se pudo obtener la cookie CSRF:', error);
+  }
+};
+
 // Default headers for API requests
 const getDefaultHeaders = (): Record<string, string> => {
   const headers: Record<string, string> = {
@@ -86,8 +123,12 @@ export const apiRequest = async <T = any>(
   endpoint: string,
   config: Partial<RequestConfig> = {}
 ): Promise<T> => {
+  if (typeof window !== 'undefined') {
+    await ensureCsrfCookie();
+  }
+
   const url = `${API_BASE_URL}${endpoint}`;
-  
+
   const requestConfig: RequestInit = {
     method: config.method || 'GET',
     headers: {
