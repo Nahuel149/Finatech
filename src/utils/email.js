@@ -1,4 +1,4 @@
-const { Resend } = require('@resendlabs/resend');
+const { Resend } = require('resend');
 
 let cachedClient = null;
 
@@ -70,4 +70,3 @@ const verifySmtpConnection = async () => {
 };
 
 module.exports = { sendEmail, verifySmtpConnection };
-
