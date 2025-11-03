@@ -20,6 +20,7 @@ const TWO_FACTOR_CHALLENGE_DURATION_MINUTES =
 const TWO_FACTOR_CODE_LENGTH = 6;
 const LOGIN_WINDOW_MS = LOGIN_LOCK_MINUTES * 60 * 1000;
 const PASSWORD_RESET_WINDOW_MINUTES = Number(process.env.PASSWORD_RESET_WINDOW_MINUTES) || 30;
+const SKIP_EMAIL_VERIFICATION = process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'true';
 
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
 
@@ -252,6 +253,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   const normalizedEmail = email.trim().toLowerCase();
   let user = await User.findOne({ email: normalizedEmail });
   const requestMetadata = buildRequestMetadata(context);
+  const skipVerification = SKIP_EMAIL_VERIFICATION;
 
   if (user && user.isVerified) {
     await logSecurityEvent({
@@ -270,7 +272,9 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   }
 
   const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
-  const { plainToken, verificationPayload } = buildVerificationDetails();
+  const verificationDetails = skipVerification ? null : buildVerificationDetails();
+  const plainToken = verificationDetails?.plainToken;
+  const verificationPayload = verificationDetails?.verificationPayload;
 
   if (!user) {
     user = await User.create({
@@ -278,13 +282,45 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
       email: normalizedEmail,
       passwordHash,
       providers: [{ provider: 'local' }],
-      isVerified: false,
-      verification: verificationPayload,
+      isVerified: skipVerification,
+      verification: skipVerification ? undefined : verificationPayload,
+      lastLoginAt: skipVerification ? new Date() : undefined,
       audit: {
         createdByIp: requestMetadata.ipAddress || null,
         createdByAgent: requestMetadata.userAgent || null,
       },
     });
+
+    const permissionsChanged = ensureBaselinePermissions(user);
+    if (permissionsChanged) {
+      await user.save();
+    }
+
+    if (skipVerification) {
+      const session = await issueSession({ user, context, rememberMe: false });
+      await logSecurityEvent({
+        user: user._id,
+        email: normalizedEmail,
+        eventType: 'registration',
+        provider: 'local',
+        status: 'verified_without_email',
+        ...requestMetadata,
+      });
+      await logSecurityEvent({
+        user: user._id,
+        email: normalizedEmail,
+        eventType: 'login',
+        provider: 'local',
+        status: 'login_success',
+        ...requestMetadata,
+      });
+      return {
+        type: 'verified',
+        message: 'Cuenta creada y verificada. Ya podés usar la app.',
+        user,
+        session,
+      };
+    }
 
     try {
       await sendVerificationEmail(user, plainToken);
@@ -370,9 +406,45 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   user.fullName = fullName;
   user.passwordHash = passwordHash;
   user.addProvider('local');
+  ensureBaselinePermissions(user);
+
+  if (skipVerification) {
+    user.isVerified = true;
+    user.verification = undefined;
+    user.failedLoginAttempts = 0;
+    user.lockUntil = undefined;
+    user.lastFailedLoginAt = undefined;
+    user.lastLoginAt = new Date();
+    await user.save();
+
+    const session = await issueSession({ user, context, rememberMe: false });
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'registration',
+      provider: 'local',
+      status: 'verified_without_email',
+      ...requestMetadata,
+    });
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'login',
+      provider: 'local',
+      status: 'login_success',
+      ...requestMetadata,
+    });
+
+    return {
+      type: 'verified',
+      message: 'Cuenta creada y verificada. Ya podés usar la app.',
+      user,
+      session,
+    };
+  }
+
   user.verification = verificationPayload;
   user.isVerified = false;
-  ensureBaselinePermissions(user);
   await user.save();
 
   try {

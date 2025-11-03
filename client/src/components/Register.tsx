@@ -136,7 +136,7 @@ export const Register: React.FC = () => {
       setRegisterResult(response);
       setLastSubmittedEmail(formData.email.trim().toLowerCase());
 
-      if (response && response.type === 'merged_google') {
+      if (response && (response.type === 'merged_google' || response.type === 'verified')) {
         navigate('/dashboard');
         return;
       }
@@ -474,7 +474,11 @@ export const Register: React.FC = () => {
                     <i className="fa-solid fa-check-circle text-success mr-3 mt-1"></i>
                     <div className="flex-1">
                       <h3 className="text-sm md:text-sm font-medium text-green-800">
-                        {registerResult.type === 'pending_verification' ? '¡Registro exitoso!' : 'Cuenta vinculada'}
+                        {registerResult.type === 'pending_verification'
+                          ? '¡Registro exitoso!'
+                          : registerResult.type === 'merged_google'
+                          ? 'Cuenta vinculada'
+                          : 'Registro completado'}
                       </h3>
                       <p className="text-sm md:text-sm text-green-700 mt-1">
                         {registerResult.message || 'Revisá tu correo para conocer los próximos pasos.'}

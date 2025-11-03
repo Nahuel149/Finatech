@@ -10,6 +10,7 @@ const DEFAULT_EXCLUDED_PATHS = [
   '/api/auth/register',
   '/api/auth/recover',
   '/api/auth/reset',
+  '/api/auth/resend-verification',
   '/api/auth/logout', // logout should not require CSRF as it simply clears the session cookie
 ];
 
