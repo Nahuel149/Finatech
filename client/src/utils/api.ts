@@ -32,6 +32,18 @@ const hasCsrfCookie = () => {
   return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${CSRF_COOKIE_NAME}=`));
 };
 
+const getConfigEndpoint = () => {
+  if (!API_BASE_URL) {
+    return '/api/config';
+  }
+
+  const trimmedBase = API_BASE_URL.endsWith('/')
+    ? API_BASE_URL.slice(0, -1)
+    : API_BASE_URL;
+
+  return `${trimmedBase}/api/config`;
+};
+
 const ensureCsrfCookie = async () => {
   if (typeof window === 'undefined') {
     return;
@@ -48,10 +60,16 @@ const ensureCsrfCookie = async () => {
 
   csrfEnsured = true;
   try {
-    await fetch('/api/config', {
+    await fetch(getConfigEndpoint(), {
       method: 'GET',
       credentials: 'include',
     });
+
+    if (!hasCsrfCookie()) {
+      csrfEnsured = false;
+      // eslint-disable-next-line no-console
+      console.warn('No CSRF cookie present after ensure request');
+    }
   } catch (error) {
     csrfEnsured = false;
     // eslint-disable-next-line no-console
