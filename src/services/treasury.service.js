@@ -27,6 +27,8 @@ const BALANCE_METADATA = {
   },
 };
 
+const TREASURY_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd']);
+
 const LINKED_BALANCE_CONFIG = {
   usd: {
     id: 'usd',
@@ -845,25 +847,30 @@ const getGlobalBalancesOverview = async (query = {}) => {
     }
   }
 
-  const summaryCards = Array.from(summaryByAccount.values()).map((entry) => {
-    const variationPercentage = computeVariationPercentage(
-      entry.currentWindowAmount,
-      entry.previousWindowAmount
-    );
-    return {
-      id: entry.id,
-      label: entry.label,
-      currency: entry.currency,
-      amount: roundAmount(entry.amount),
-      status: entry.status,
-      updatedAt: entry.updatedAt,
-      variation: {
-        percentage: variationPercentage,
-        direction: directionFromVariation(variationPercentage),
-        windowDays: DEFAULT_VARIATION_WINDOW_DAYS,
-      },
-    };
-  });
+  const summaryCards = Array.from(summaryByAccount.values())
+    .filter((entry) => {
+      const key = (entry.accountKey || '').toLowerCase();
+      return key && !TREASURY_ACCOUNT_KEYS.has(key);
+    })
+    .map((entry) => {
+      const variationPercentage = computeVariationPercentage(
+        entry.currentWindowAmount,
+        entry.previousWindowAmount
+      );
+      return {
+        id: entry.id,
+        label: entry.label,
+        currency: entry.currency,
+        amount: roundAmount(entry.amount),
+        status: entry.status,
+        updatedAt: entry.updatedAt,
+        variation: {
+          percentage: variationPercentage,
+          direction: directionFromVariation(variationPercentage),
+          windowDays: DEFAULT_VARIATION_WINDOW_DAYS,
+        },
+      };
+    });
 
   summaryCards.sort((a, b) => {
     const order = [
