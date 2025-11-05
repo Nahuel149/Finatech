@@ -39,7 +39,8 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
-app.get('/api/csrf-token', (_req, res) => {
+app.get('/api/csrf-token', (req, res) => {
+  console.log('[CSRF] Token requested from', req.headers.origin || req.hostname);
   res.json({ csrfToken: res.locals.csrfToken || null });
 });
 

@@ -26,15 +26,6 @@ function ensureCsrfCookie(options = {}) {
     sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
     secure = process.env.NODE_ENV === 'production',
     httpOnly = false,
-    // In production, set cookie domain to the parent domain so that
-    // both the frontend and API sub-domains share the same cookie.
-    // e.g. frontend: finatech-cs2p.onrender.com
-    //       backend:  finatech-qp5l.onrender.com
-    // We trim the first sub-domain and keep the eTLD+1 (onrender.com) to
-    // allow cross-subdomain access while staying scoped to our deployment.
-    // This can be overridden via the CSRF_COOKIE_DOMAIN env variable when
-    // running locally or if the default inference is not correct.
-
   } = options;
 
   return (req, res, next) => {
@@ -43,18 +34,13 @@ function ensureCsrfCookie(options = {}) {
     if (!token) {
       token = generateCsrfToken();
       // Determine cookie domain dynamically on first request if not provided
-      const inferredDomain = process.env.CSRF_COOKIE_DOMAIN ||
-        (process.env.NODE_ENV === 'production' && req.hostname?.split('.').slice(-2).join('.') !== 'localhost'
-          ? `.${req.hostname.split('.').slice(-2).join('.')}`
-          : undefined);
-
       res.cookie(cookieName, token, {
         maxAge,
         path,
         sameSite,
         secure,
         httpOnly,
-        ...(inferredDomain ? { domain: inferredDomain } : {})
+        ...(process.env.CSRF_COOKIE_DOMAIN ? { domain: process.env.CSRF_COOKIE_DOMAIN } : {})
       });
     }
 

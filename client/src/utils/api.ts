@@ -42,11 +42,18 @@ const CSRF_COOKIE_NAME = 'finatech_csrf';
 let csrfEnsured = false;
 let csrfTokenCache: string | null = null;
 
-const hasCsrfCookie = () => {
+const hasCsrfTokenAvailable = () => {
   if (typeof document === 'undefined') {
     return false;
   }
-  return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${CSRF_COOKIE_NAME}=`));
+
+  const cookieToken = getCSRFToken();
+  if (cookieToken) {
+    csrfTokenCache = cookieToken;
+    return true;
+  }
+
+  return Boolean(csrfTokenCache);
 };
 
 const ensureCsrfCookie = async () => {
@@ -54,11 +61,8 @@ const ensureCsrfCookie = async () => {
     return;
   }
 
-  if (hasCsrfCookie()) {
+  if (hasCsrfTokenAvailable()) {
     csrfEnsured = true;
-    if (!csrfTokenCache) {
-      csrfTokenCache = getCSRFToken();
-    }
     return;
   }
 
@@ -81,11 +85,7 @@ const ensureCsrfCookie = async () => {
       csrfTokenCache = data.csrfToken;
     }
 
-    if (!hasCsrfCookie()) {
-      csrfEnsured = false;
-      // eslint-disable-next-line no-console
-      console.warn('No CSRF cookie present after ensure request');
-    }
+    csrfEnsured = true;
   } catch (error) {
     csrfEnsured = false;
     // eslint-disable-next-line no-console
