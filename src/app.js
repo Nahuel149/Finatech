@@ -39,6 +39,10 @@ app.get('/api/config', (_req, res) => {
   });
 });
 
+app.get('/api/csrf-token', (_req, res) => {
+  res.json({ csrfToken: res.locals.csrfToken || null });
+});
+
 // Apply CSRF protection to all API routes
 console.log('[APP] Applying CSRF protection to /api routes');
 app.use('/api', (req, res, next) => {

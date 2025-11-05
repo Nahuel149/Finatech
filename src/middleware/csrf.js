@@ -38,23 +38,31 @@ function ensureCsrfCookie(options = {}) {
   } = options;
 
   return (req, res, next) => {
-    if (!req.cookies || !req.cookies[cookieName]) {
-      const token = generateCsrfToken();
-              // Determine cookie domain dynamically on first request if not provided
-        const inferredDomain = process.env.CSRF_COOKIE_DOMAIN ||
-          (process.env.NODE_ENV === 'production' && req.hostname?.split('.').slice(-2).join('.') !== 'localhost'
-            ? `.${req.hostname.split('.').slice(-2).join('.')}`
-            : undefined);
+    let token = req.cookies?.[cookieName];
 
-        res.cookie(cookieName, token, {
-          maxAge,
-          path,
-          sameSite,
-          secure,
-          httpOnly,
-          ...(inferredDomain ? { domain: inferredDomain } : {})
-        });
+    if (!token) {
+      token = generateCsrfToken();
+      // Determine cookie domain dynamically on first request if not provided
+      const inferredDomain = process.env.CSRF_COOKIE_DOMAIN ||
+        (process.env.NODE_ENV === 'production' && req.hostname?.split('.').slice(-2).join('.') !== 'localhost'
+          ? `.${req.hostname.split('.').slice(-2).join('.')}`
+          : undefined);
+
+      res.cookie(cookieName, token, {
+        maxAge,
+        path,
+        sameSite,
+        secure,
+        httpOnly,
+        ...(inferredDomain ? { domain: inferredDomain } : {})
+      });
     }
+
+    if (token) {
+      res.locals.csrfToken = token;
+      res.setHeader('X-CSRF-Token', token);
+    }
+
     next();
   };
 }

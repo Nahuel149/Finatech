@@ -2,6 +2,22 @@ import { ApiError, RequestConfig } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
+const buildApiUrl = (path: string) => {
+  if (!API_BASE_URL) {
+    return path;
+  }
+
+  const trimmedBase = API_BASE_URL.endsWith('/')
+    ? API_BASE_URL.slice(0, -1)
+    : API_BASE_URL;
+
+  if (path.startsWith('/')) {
+    return `${trimmedBase}${path}`;
+  }
+
+  return `${trimmedBase}/${path}`;
+};
+
 // Get CSRF token from meta tag or cookie
 const getCSRFToken = (): string | null => {
   // Try to get from meta tag first
@@ -24,24 +40,13 @@ const getCSRFToken = (): string | null => {
 
 const CSRF_COOKIE_NAME = 'finatech_csrf';
 let csrfEnsured = false;
+let csrfTokenCache: string | null = null;
 
 const hasCsrfCookie = () => {
   if (typeof document === 'undefined') {
     return false;
   }
   return document.cookie.split(';').some((cookie) => cookie.trim().startsWith(`${CSRF_COOKIE_NAME}=`));
-};
-
-const getConfigEndpoint = () => {
-  if (!API_BASE_URL) {
-    return '/api/config';
-  }
-
-  const trimmedBase = API_BASE_URL.endsWith('/')
-    ? API_BASE_URL.slice(0, -1)
-    : API_BASE_URL;
-
-  return `${trimmedBase}/api/config`;
 };
 
 const ensureCsrfCookie = async () => {
@@ -51,6 +56,9 @@ const ensureCsrfCookie = async () => {
 
   if (hasCsrfCookie()) {
     csrfEnsured = true;
+    if (!csrfTokenCache) {
+      csrfTokenCache = getCSRFToken();
+    }
     return;
   }
 
@@ -60,10 +68,18 @@ const ensureCsrfCookie = async () => {
 
   csrfEnsured = true;
   try {
-    await fetch(getConfigEndpoint(), {
+    const response = await fetch(buildApiUrl('/api/csrf-token'), {
       method: 'GET',
       credentials: 'include',
     });
+
+    const data = await response
+      .json()
+      .catch(() => null);
+
+    if (data?.csrfToken) {
+      csrfTokenCache = data.csrfToken;
+    }
 
     if (!hasCsrfCookie()) {
       csrfEnsured = false;
@@ -83,7 +99,12 @@ const getDefaultHeaders = (): Record<string, string> => {
     'Content-Type': 'application/json',
   };
   
-  const csrfToken = getCSRFToken();
+  const cookieToken = getCSRFToken();
+  if (cookieToken) {
+    csrfTokenCache = cookieToken;
+  }
+
+  const csrfToken = cookieToken || csrfTokenCache;
   if (csrfToken) {
     headers['X-CSRF-Token'] = csrfToken;
   }
@@ -145,7 +166,7 @@ export const apiRequest = async <T = any>(
     await ensureCsrfCookie();
   }
 
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   const requestConfig: RequestInit = {
     method: config.method || 'GET',
