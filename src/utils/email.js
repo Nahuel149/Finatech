@@ -21,6 +21,7 @@ const buildSmtpTransport = () => {
   const secure = forceSecure || port === 465;
   const requireTls = process.env.SMTP_REQUIRE_TLS !== 'false';
   const pool = process.env.SMTP_USE_POOL === 'true';
+  const forceIpv4 = process.env.SMTP_FORCE_IPV4 === 'true';
 
   const transporter = nodemailer.createTransport({
     host,
@@ -32,6 +33,7 @@ const buildSmtpTransport = () => {
       user,
       pass,
     },
+    family: forceIpv4 ? 4 : undefined,
     connectionTimeout: Number(process.env.SMTP_CONNECTION_TIMEOUT_MS) || 15000,
     socketTimeout: Number(process.env.SMTP_SOCKET_TIMEOUT_MS) || 20000,
     greetingTimeout: Number(process.env.SMTP_GREETING_TIMEOUT_MS) || 10000,
@@ -71,13 +73,18 @@ const sendEmail = async ({ to, subject, html, text, from: explicitFrom }) => {
     const defaultFrom = fromName && resolvedFromEmail ? `${fromName} <${resolvedFromEmail}>` : resolvedFromEmail;
     const fromAddress = explicitFrom || defaultFrom;
 
-    await smtpTransport.sendMail({
-      from: fromAddress,
-      to: recipients,
-      subject,
-      text,
-      html,
-    });
+    try {
+      await smtpTransport.sendMail({
+        from: fromAddress,
+        to: recipients,
+        subject,
+        text,
+        html,
+      });
+    } catch (error) {
+      // Propagate nodemailer error so callers can surface context
+      throw error;
+    }
     return;
   }
 
