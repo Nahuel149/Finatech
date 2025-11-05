@@ -95,13 +95,14 @@ Este enlace caduca en 24 horas.`;
       html,
     });
   } catch (err) {
-    // Annotate with a recognizable code so the controller/client can respond accordingly
+    // Provide context for diagnosis when SMTP fails
     throw new AppError(
       'No pudimos enviar el correo de verificación. Intentá nuevamente más tarde.',
       502,
       {
         code: 'VERIFICATION_EMAIL_FAILED',
         originalError: err?.message,
+        smtp: err?.smtp,
       },
     );
   }

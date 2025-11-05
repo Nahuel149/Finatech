@@ -82,8 +82,16 @@ const sendEmail = async ({ to, subject, html, text, from: explicitFrom }) => {
         html,
       });
     } catch (error) {
-      // Propagate nodemailer error so callers can surface context
-      throw error;
+      const appError = new Error(error?.message || 'SMTP connection failed');
+      appError.code = error?.code || 'SMTP_SEND_ERROR';
+      appError.responseCode = error?.responseCode;
+      appError.smtp = {
+        code: error?.code,
+        command: error?.command,
+        response: error?.response,
+        responseCode: error?.responseCode,
+      };
+      throw appError;
     }
     return;
   }
