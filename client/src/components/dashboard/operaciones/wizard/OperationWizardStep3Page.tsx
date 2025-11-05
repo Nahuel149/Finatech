@@ -228,10 +228,21 @@ export const OperationWizardStep3Page: React.FC = () => {
     setCancelModalOpen(true);
   }, []);
 
-  const handleConfirmCancel = useCallback(() => {
+  const handleConfirmCancel = useCallback(async () => {
     setCancelModalOpen(false);
+
+    try {
+      await voidTransaction('cancelled_from_wizard');
+      emitDashboardBalanceRefresh();
+    } catch (error) {
+      const apiError = error as ApiError;
+      setFormError(apiError.message || 'No se pudo cancelar la operación.');
+      setSuccessMessage(null);
+      setShowToast(true);
+    }
+
     navigate('/dashboard');
-  }, [navigate]);
+  }, [navigate, voidTransaction]);
 
   const handleOpenVoidModal = useCallback(() => {
     if (isVoided) {
