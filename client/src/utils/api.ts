@@ -2,7 +2,7 @@ import { ApiError, RequestConfig } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 
-const buildApiUrl = (path: string) => {
+export const buildApiUrl = (path: string) => {
   if (!API_BASE_URL) {
     return path;
   }

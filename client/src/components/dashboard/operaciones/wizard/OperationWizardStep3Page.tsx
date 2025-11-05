@@ -164,7 +164,7 @@ export const OperationWizardStep3Page: React.FC = () => {
     () => [
       {
         label: 'Cliente válido y con documentación vigente',
-        passed: Boolean(clientSummary?.cuit),
+        passed: Boolean(clientSummary?.id),
       },
       {
         label: 'Montos coherentes y mayores a cero',

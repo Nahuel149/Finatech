@@ -1,5 +1,7 @@
+import { buildApiUrl } from './api';
+
 const DASHBOARD_BALANCE_REFRESH_EVENT = 'dashboard:balances:refresh';
-const BALANCE_STREAM_URL = '/api/dashboard/balances/events';
+const BALANCE_STREAM_URL = buildApiUrl('/api/dashboard/balances/events');
 const RECONNECT_DELAY_MS = 5000;
 
 export const emitDashboardBalanceRefresh = () => {
