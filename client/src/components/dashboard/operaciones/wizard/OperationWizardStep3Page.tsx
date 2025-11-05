@@ -192,7 +192,7 @@ export const OperationWizardStep3Page: React.FC = () => {
       },
     ],
     [
-      clientSummary?.cuit,
+      clientSummary?.id,
       draft?.incomingAmount,
       draft?.outgoingAmount,
       draft?.apr,

@@ -1,6 +1,7 @@
 import { ApiError, RequestConfig } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
+const CSRF_COOKIE_NAME = 'finatech_csrf';
 
 export const buildApiUrl = (path: string) => {
   if (!API_BASE_URL) {
@@ -30,7 +31,7 @@ const getCSRFToken = (): string | null => {
   const cookies = document.cookie.split(';');
   for (let cookie of cookies) {
     const [name, value] = cookie.trim().split('=');
-    if (name === 'finatech_csrf' || name === 'csrfToken') {
+    if (name === CSRF_COOKIE_NAME || name === 'csrfToken') {
       return decodeURIComponent(value);
     }
   }
@@ -38,7 +39,6 @@ const getCSRFToken = (): string | null => {
   return null;
 };
 
-const CSRF_COOKIE_NAME = 'finatech_csrf';
 let csrfEnsured = false;
 let csrfTokenCache: string | null = null;
 
