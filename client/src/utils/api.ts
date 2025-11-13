@@ -1,4 +1,11 @@
-import { ApiError, RequestConfig } from '../types';
+import {
+  ApiError,
+  LogisticsDiscrepancyPayload,
+  LogisticsItemsHandoverPayload,
+  LogisticsOrderPayload,
+  LogisticsPartialCompletionPayload,
+  RequestConfig,
+} from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 const CSRF_COOKIE_NAME = 'finatech_csrf';
@@ -178,7 +185,18 @@ export const apiRequest = async <T = any>(
   };
   
   if (config.body && (requestConfig.method || 'GET') !== 'GET') {
-    requestConfig.body = JSON.stringify(config.body);
+    const isFormData = typeof FormData !== 'undefined' && config.body instanceof FormData;
+    if (isFormData) {
+      if (requestConfig.headers) {
+        const headersRecord = requestConfig.headers as Record<string, string>;
+        if (headersRecord['Content-Type']) {
+          delete headersRecord['Content-Type'];
+        }
+      }
+      requestConfig.body = config.body as FormData;
+    } else {
+      requestConfig.body = JSON.stringify(config.body);
+    }
   }
 
   if (config.signal) {
@@ -335,6 +353,70 @@ export const api = {
   // Logistics
   getLogisticsOperations: (params?: Record<string, unknown>) =>
     apiRequest(`/api/logistics/operations${buildQueryString(params)}`),
+
+  getOperationLogisticsOrders: (operationId: string) =>
+    apiRequest(`/api/operations/${encodeURIComponent(operationId)}/logistics-orders`),
+
+  createLogisticsOrder: (operationId: string, payload: LogisticsOrderPayload) =>
+    apiRequest(`/api/operations/${encodeURIComponent(operationId)}/logistics-orders`, {
+      method: 'POST',
+      body: payload,
+    }),
+
+  updateLogisticsOrder: (orderId: string, payload: LogisticsOrderPayload) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}`, {
+      method: 'PUT',
+      body: payload,
+    }),
+
+  getLogisticsOrder: (orderId: string) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}`),
+
+  getMyLogisticsOrders: (params?: Record<string, unknown>) =>
+    apiRequest(`/api/logistics/my-orders${buildQueryString(params)}`),
+
+  startLogisticsRoute: (orderId: string) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/start-route`, {
+      method: 'PATCH',
+    }),
+
+  arriveAtLogisticsOrder: (orderId: string, payload: { gpsLat?: number; gpsLng?: number }) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/arrive`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  updateLogisticsOrderItems: (orderId: string, payload: LogisticsItemsHandoverPayload) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/items`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  uploadLogisticsEvidence: (orderId: string, formData: FormData) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/evidences`, {
+      method: 'POST',
+      body: formData,
+    }),
+
+  completeLogisticsOrderTotal: (orderId: string) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/complete-total`, {
+      method: 'PATCH',
+    }),
+
+  completeLogisticsOrderPartial: (orderId: string, payload: LogisticsPartialCompletionPayload) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/complete-partial`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  reportLogisticsDiscrepancy: (orderId: string, payload: LogisticsDiscrepancyPayload) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/discrepancy`, {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  getLogisticsOrderTimeline: (orderId: string) =>
+    apiRequest(`/api/logistics-orders/${encodeURIComponent(orderId)}/timeline`),
 };
 
 // Error handling utility

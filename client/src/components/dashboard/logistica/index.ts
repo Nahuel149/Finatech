@@ -10,6 +10,11 @@ export { OperationDetailPanel } from './OperationDetailPanel';
 // Movement Detail Components
 export { MovementDetailPage } from './MovementDetailPage';
 export { MovementDetailSidePanel } from './MovementDetailSidePanel';
+export { LogisticsOrderDetailPage } from './LogisticsOrderDetailPage';
+export { MyLogisticsOrdersPage } from './MyLogisticsOrdersPage';
+export { HandoverWizard } from './HandoverWizard';
+export { DiscrepancyModal } from './DiscrepancyModal';
+export { OfflineSyncBanner } from './OfflineSyncBanner';
 
 // New Movement Modal Components
 export { default as NewMovementModal } from './NewMovementModal';

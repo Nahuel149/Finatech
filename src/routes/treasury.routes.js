@@ -11,6 +11,10 @@ const {
   linkedBalanceDetail,
   globalOverview,
   contactBalanceDetail,
+  listReceptions,
+  confirmReception,
+  omitReception,
+  revertReception,
 } = require('../controllers/treasury.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
@@ -32,6 +36,27 @@ router.get(
   '/linked-balances/:balanceKey',
   requirePermission(VIEW_BALANCES_PERMISSIONS),
   linkedBalanceDetail
+);
+
+router.get(
+  '/receptions',
+  requirePermission('treasury:receptions'),
+  listReceptions
+);
+router.post(
+  '/receptions/:id/confirm',
+  requirePermission('treasury:receptions'),
+  confirmReception
+);
+router.post(
+  '/receptions/:id/omit',
+  requirePermission('treasury:receptions'),
+  omitReception
+);
+router.post(
+  '/receptions/:id/revert',
+  requirePermission('treasury:receptions:revert'),
+  revertReception
 );
 
 router.get(

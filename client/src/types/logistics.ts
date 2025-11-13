@@ -1,3 +1,5 @@
+import { TransactionType } from './transaction';
+
 // Logistics domain types mapped from backend payloads
 
 export type OperationType = 'entrega' | 'transferencia' | 'retiro' | 'custodia' | 'transferencia-interna';
@@ -120,3 +122,236 @@ export const DEFAULT_LOGISTICS_FILTERS: LogisticsFilters = {
   contact: '',
   responsible: '',
 };
+
+export type LogisticsOrderType = 'RETIRO' | 'ENTREGA';
+export type LogisticsOrderStatus =
+  | 'BORRADOR'
+  | 'PROGRAMADA'
+  | 'ASIGNADA'
+  | 'EN_CAMINO'
+  | 'EN_SITIO'
+  | 'COMPLETADA'
+  | 'COMPLETADA_TOTAL'
+  | 'COMPLETADA_PARCIAL'
+  | 'DISCREPANCIA'
+  | 'CANCELADA';
+export type LogisticsOrderItemType = 'CURRENCY' | 'CHEQUE' | 'METAL' | 'OTHER';
+
+export interface LogisticsOrderItemMetadata {
+  bank?: string;
+  number?: string;
+  dueDate?: string;
+  metalType?: string;
+  purity?: string;
+  weight?: number;
+  description?: string;
+}
+
+export interface LogisticsOrderItem {
+  id?: string;
+  assetCode: string;
+  assetType: LogisticsOrderItemType;
+  expectedAmount: number;
+  metadata: LogisticsOrderItemMetadata;
+  notes?: string | null;
+  receivedAmount?: number | null;
+  pendingAmount?: number | null;
+  discrepancyFlag?: boolean;
+  discrepancyReason?: string | null;
+}
+
+export type LogisticsEvidenceType = 'DNI_PHOTO' | 'SIGNATURE' | 'PACKAGE_PHOTO' | 'GPS' | string;
+
+export interface LogisticsEvidenceMetadata {
+  fileName?: string;
+  mimeType?: string;
+  size?: number;
+  note?: string | null;
+  gpsLat?: number;
+  gpsLng?: number;
+  [key: string]: unknown;
+}
+
+export interface LogisticsEvidence {
+  id?: string;
+  type: LogisticsEvidenceType;
+  url: string;
+  createdAt?: string;
+  metadata?: LogisticsEvidenceMetadata | null;
+}
+
+export interface LogisticsOrderTimelineEvent {
+  id?: string;
+  type: string;
+  title: string;
+  description?: string | null;
+  metadata?: Record<string, unknown> | null;
+  createdAt?: string;
+  createdBy?: string | null;
+}
+
+export interface LogisticsOrderBalance {
+  assetCode: string;
+  assetLabel: string;
+  role: 'incoming' | 'outgoing';
+  totalAmount: number;
+  allocatedAmount: number;
+  pendingAmount: number;
+}
+
+export interface LogisticsOrderOperationAssets {
+  code: string;
+  label: string;
+  amount: number;
+}
+
+export interface LogisticsOrderOperationContext {
+  id: string;
+  code: string | null;
+  type: TransactionType;
+  clientId: string | null;
+  clientName: string | null;
+  assets: {
+    incoming: LogisticsOrderOperationAssets | null;
+    outgoing: LogisticsOrderOperationAssets | null;
+  };
+  balances: LogisticsOrderBalance[];
+}
+
+export interface LogisticsOrderClientSnapshot {
+  id: string | null;
+  fullName: string | null;
+  shortName: string | null;
+  contactType: string | null;
+  phone: string | null;
+  email: string | null;
+}
+
+export interface LogisticsOrderSnapshotEntry {
+  role: 'incoming' | 'outgoing';
+  code: string;
+  label: string;
+  amount: number;
+}
+
+export interface LogisticsOrder {
+  id: string;
+  orderNumber: string;
+  status: LogisticsOrderStatus;
+  type: LogisticsOrderType;
+  origin: string;
+  destination: string;
+  windowStart: string;
+  windowEnd: string;
+  contactName: string;
+  contactPhone: string;
+  messenger: string | null;
+  assignedTo: string | null;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  notes: string | null;
+  internalNotes: string | null;
+  items: LogisticsOrderItem[];
+  liquidationPercentage: number;
+  operationId: string;
+  operationCode: string | null;
+  operationModel: string | null;
+  operationType: TransactionType | null;
+  operationSnapshot: LogisticsOrderSnapshotEntry[];
+  client: LogisticsOrderClientSnapshot | null;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string | null;
+  updatedBy: string | null;
+  createdByName: string | null;
+  updatedByName: string | null;
+  requiredEvidences: string[];
+  evidences: LogisticsEvidence[];
+  geofenceOK: boolean;
+  startedAt: string | null;
+  arrivedAt: string | null;
+  completedAt: string | null;
+  receiptId: string | null;
+  receiptUrl: string | null;
+  timeline: LogisticsOrderTimelineEvent[];
+}
+
+export interface LogisticsOrderListResponse {
+  operation: LogisticsOrderOperationContext;
+  orders: LogisticsOrder[];
+  balances: LogisticsOrderBalance[];
+}
+
+export interface LogisticsOrderItemPayload {
+  assetCode: string;
+  assetType: LogisticsOrderItemType;
+  expectedAmount: number;
+  metadata?: LogisticsOrderItemMetadata;
+  notes?: string | null;
+}
+
+export interface LogisticsOrderPayload {
+  type: LogisticsOrderType;
+  origin: string;
+  destination: string;
+  contactName: string;
+  contactPhone: string;
+  windowStart: string;
+  windowEnd: string;
+  status: LogisticsOrderStatus;
+  items: LogisticsOrderItemPayload[];
+  notes?: string | null;
+  internalNotes?: string | null;
+  messenger?: string | null;
+}
+
+export interface LogisticsAssignedOrdersResponse {
+  orders: LogisticsOrder[];
+}
+
+export interface LogisticsHandoverItemPayload {
+  id: string;
+  receivedAmount?: number;
+  pendingAmount?: number;
+  discrepancyFlag?: boolean;
+  discrepancyReason?: string | null;
+  metadata?: LogisticsOrderItemMetadata;
+}
+
+export interface LogisticsItemsHandoverPayload {
+  items: LogisticsHandoverItemPayload[];
+}
+
+export interface LogisticsPartialCompletionItem {
+  id: string;
+  pendingAmount: number;
+  receivedAmount?: number;
+  note?: string | null;
+}
+
+export interface LogisticsPartialCompletionPayload {
+  items: LogisticsPartialCompletionItem[];
+  reason?: string;
+}
+
+export interface LogisticsDiscrepancyPayload {
+  reason: string;
+  description?: string;
+  evidenceIds?: string[];
+}
+
+export type LogisticsOfflineActionType =
+  | 'start-route'
+  | 'arrive'
+  | 'update-items'
+  | 'complete-total'
+  | 'complete-partial'
+  | 'report-discrepancy'
+  | 'add-evidence';
+
+export interface LogisticsOfflineAction {
+  id: string;
+  orderId: string;
+  type: LogisticsOfflineActionType;
+  payload?: unknown;
+  createdAt: string;
+}

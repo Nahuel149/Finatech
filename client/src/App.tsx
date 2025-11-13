@@ -15,6 +15,7 @@ import {
   LinkedBalancesPage,
   GlobalBalancesPage,
   ContactBalanceDetailPage,
+  PendingReceptionsPage,
 } from './components/dashboard/tesoreria';
 import {
   TransferPesosFlow,
@@ -28,6 +29,7 @@ import { LogisticsGeneralSummaryPage } from './components/dashboard/logistica/Lo
 import { MovementDetailPage } from './components/dashboard/logistica/MovementDetailPage';
 import { IncidentDetailPage } from './components/dashboard/logistica/IncidentDetailPage';
 import { ResolvedIncidentDetailPage } from './components/dashboard/logistica/ResolvedIncidentDetailPage';
+import { LogisticsOrderDetailPage } from './components/dashboard/logistica/LogisticsOrderDetailPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import { devPerformanceUtils } from './utils/performanceMonitor';
 
@@ -73,9 +75,11 @@ const App: React.FC = () => {
             <Route path="/dashboard/logistica/movimiento/:movementId" element={<ErrorBoundary><MovementDetailPage /></ErrorBoundary>} />
             <Route path="/dashboard/logistica/incidencia/:incidentId" element={<ErrorBoundary><IncidentDetailPage /></ErrorBoundary>} />
             <Route path="/dashboard/logistica/incidencia-resuelta/:incidentId" element={<ErrorBoundary><ResolvedIncidentDetailPage /></ErrorBoundary>} />
+            <Route path="/dashboard/logistica/orden/:orderId" element={<ErrorBoundary><LogisticsOrderDetailPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria" element={<ErrorBoundary><TreasuryMovementsPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria/saldos" element={<ErrorBoundary><GlobalBalancesPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria/saldos/vinculados" element={<ErrorBoundary><LinkedBalancesPage /></ErrorBoundary>} />
+            <Route path="/dashboard/tesoreria/recepciones" element={<ErrorBoundary><PendingReceptionsPage /></ErrorBoundary>} />
             <Route
               path="/dashboard/tesoreria/saldos/contacto/:contactId"
               element={<ErrorBoundary><ContactBalanceDetailPage /></ErrorBoundary>}

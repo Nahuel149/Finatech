@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
-// const path = require('path');  // Removed unused import
+const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const clientRoutes = require('./routes/client.routes');
 const transactionRoutes = require('./routes/transaction.routes');
@@ -10,6 +10,7 @@ const dashboardRoutes = require('./routes/dashboard.routes');
 const geocodingRoutes = require('./routes/geocoding.routes');
 const logisticsRoutes = require('./routes/logistics.routes');
 const currentAccountRoutes = require('./routes/currentAccount.routes');
+const logisticsOrderRoutes = require('./routes/logisticsOrder.routes');
 const treasuryRoutes = require('./routes/treasury.routes');
 const ratesRoutes = require('./routes/rates.routes');
 const { requestLogger } = require('./middleware/requestLogger');
@@ -22,6 +23,7 @@ app.set('trust proxy', 1);
 
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use(cookieParser());
 app.use(ensureCsrfCookie());
 app.use(requestLogger);
@@ -58,6 +60,7 @@ app.use('/api/transfers', transferRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/geocoding', geocodingRoutes);
 app.use('/api/logistics', logisticsRoutes);
+app.use('/api', logisticsOrderRoutes);
 app.use('/api/current-accounts', currentAccountRoutes);
 app.use('/api/treasury', treasuryRoutes);
 app.use('/api/rates', ratesRoutes);

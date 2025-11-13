@@ -1,0 +1,452 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  LogisticsOrder,
+  LogisticsOrderBalance,
+  LogisticsOrderOperationContext,
+  LogisticsOrderStatus,
+} from '../../../../types';
+import { Modal } from '../../../ui/Modal';
+import { Alert } from '../../../ui/Alert';
+import { LoadingSpinner } from '../../../ui/LoadingSpinner';
+import { useCreateOrUpdateLogisticsOrder } from '../../../../hooks/dashboard';
+import { OrderWizardStep1 } from './OrderWizardStep1';
+import { OrderWizardStep2 } from './OrderWizardStep2';
+import { OrderWizardSummary } from './OrderWizardSummary';
+import {
+  FormFieldErrors,
+  FormItemErrors,
+  LogisticsOrderFormItem,
+  LogisticsOrderFormState,
+  WizardSubmissionMode,
+} from './types';
+
+interface LogisticsOrderWizardProps {
+  isOpen: boolean;
+  onClose: () => void;
+  operation: LogisticsOrderOperationContext | null;
+  balances: LogisticsOrderBalance[];
+  onCompleted: (order: LogisticsOrder, status: LogisticsOrderStatus) => void;
+}
+
+const MIN_WINDOW_OFFSET_MINUTES = 30;
+
+const buildDefaultDate = (minutesFromNow: number) => {
+  const date = new Date(Date.now() + minutesFromNow * 60 * 1000);
+  date.setSeconds(0, 0);
+  return date.toISOString().slice(0, 16);
+};
+
+const createItemId = () => `order-item-${Math.random().toString(36).slice(2, 9)}`;
+
+const buildInitialForm = (operation: LogisticsOrderOperationContext | null): LogisticsOrderFormState => {
+  const defaultAsset = operation?.balances?.[0]?.assetCode || operation?.assets?.outgoing?.code || 'ARS';
+  return {
+    type: 'RETIRO',
+    origin: operation?.clientName ? `Cliente ${operation.clientName}` : '',
+    destination: '',
+    contactName: operation?.clientName || '',
+    contactPhone: '',
+    windowStart: buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 30),
+    windowEnd: buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 90),
+    messenger: '',
+    notes: '',
+    internalNotes: '',
+    items: [
+      {
+        id: createItemId(),
+        assetCode: defaultAsset,
+        assetType: 'CURRENCY',
+        expectedAmount: '',
+        metadata: {},
+        notes: '',
+      },
+    ],
+  };
+};
+
+const validateStep1 = (form: LogisticsOrderFormState): FormFieldErrors => {
+  const errors: FormFieldErrors = {};
+  if (!form.origin.trim()) {
+    errors.origin = 'Ingresá el origen.';
+  }
+  if (!form.destination.trim()) {
+    errors.destination = 'Ingresá el destino.';
+  }
+  if (!form.contactName.trim()) {
+    errors.contactName = 'Indicá el nombre del contacto.';
+  }
+  if (!form.contactPhone.trim()) {
+    errors.contactPhone = 'Indicá el teléfono del contacto.';
+  }
+  const start = new Date(form.windowStart);
+  const end = new Date(form.windowEnd);
+  if (Number.isNaN(start.getTime())) {
+    errors.windowStart = 'Fecha inválida.';
+  }
+  if (Number.isNaN(end.getTime())) {
+    errors.windowEnd = 'Fecha inválida.';
+  }
+  if (!errors.windowStart && !errors.windowEnd && start >= end) {
+    errors.windowEnd = 'La ventana debe finalizar después del inicio.';
+  }
+  const minStart = Date.now() + MIN_WINDOW_OFFSET_MINUTES * 60 * 1000;
+  if (!errors.windowStart && start.getTime() < minStart) {
+    errors.windowStart = `La ventana debe comenzar al menos ${MIN_WINDOW_OFFSET_MINUTES} minutos en el futuro.`;
+  }
+  return errors;
+};
+
+const validateItems = (
+  form: LogisticsOrderFormState,
+  balances: LogisticsOrderBalance[],
+  getAvailableAmount: (assetCode: string, itemId: string) => number
+): FormItemErrors => {
+  const errors: FormItemErrors = {};
+  const balanceMap = new Map(balances.map((entry) => [entry.assetCode, entry]));
+  form.items.forEach((item) => {
+    const currentErrors: Record<string, string> = {};
+    if (!item.assetCode) {
+      currentErrors.assetCode = 'Elegí la divisa/activo.';
+    } else if (!balanceMap.has(item.assetCode)) {
+      currentErrors.assetCode = 'El activo no pertenece a esta operación.';
+    }
+
+    const numericAmount = Number(item.expectedAmount);
+    if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      currentErrors.expectedAmount = 'Ingresá un monto mayor a 0.';
+    } else if (item.assetCode) {
+      const available = getAvailableAmount(item.assetCode, item.id);
+      if (numericAmount - available > 0.01) {
+        currentErrors.expectedAmount = 'Supera el saldo pendiente de la operación.';
+      }
+    }
+
+    if (item.assetType === 'CHEQUE') {
+      if (!item.metadata.bank?.trim()) {
+        currentErrors.bank = 'Indicá el banco.';
+      }
+      if (!item.metadata.number?.trim()) {
+        currentErrors.number = 'Indicá el número de cheque.';
+      }
+      if (!item.metadata.dueDate) {
+        currentErrors.dueDate = 'Indicá la fecha de cobro.';
+      }
+    }
+
+    if (item.assetType === 'METAL') {
+      if (!item.metadata.metalType?.trim()) {
+        currentErrors.metalType = 'Indicá el metal.';
+      }
+      if (!item.metadata.purity?.trim()) {
+        currentErrors.purity = 'Indicá la pureza.';
+      }
+      if (!item.metadata.weight || Number(item.metadata.weight) <= 0) {
+        currentErrors.weight = 'Indicá el peso.';
+      }
+    }
+
+    if (item.assetType === 'OTHER' && !item.metadata.description?.trim()) {
+      currentErrors.description = 'Describí el valor a trasladar.';
+    }
+
+    if (Object.keys(currentErrors).length) {
+      errors[item.id] = currentErrors;
+    }
+  });
+  return errors;
+};
+
+const mapFormToPayload = (form: LogisticsOrderFormState, status: WizardSubmissionMode) => ({
+  type: form.type,
+  origin: form.origin.trim(),
+  destination: form.destination.trim(),
+  contactName: form.contactName.trim(),
+  contactPhone: form.contactPhone.trim(),
+  windowStart: form.windowStart,
+  windowEnd: form.windowEnd,
+  status,
+  notes: form.notes?.trim() || null,
+  internalNotes: form.internalNotes?.trim() || null,
+  messenger: form.messenger?.trim() || null,
+  items: form.items.map((item) => ({
+    assetCode: item.assetCode,
+    assetType: item.assetType,
+    expectedAmount: Number(item.expectedAmount) || 0,
+    metadata: item.metadata,
+    notes: item.notes?.trim() || null,
+  })),
+});
+
+export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
+  isOpen,
+  onClose,
+  operation,
+  balances,
+  onCompleted,
+}) => {
+  const [form, setForm] = useState<LogisticsOrderFormState>(buildInitialForm(operation));
+  const [step, setStep] = useState(1);
+  const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
+  const [itemErrors, setItemErrors] = useState<FormItemErrors>({});
+  const [bannerError, setBannerError] = useState<string | null>(null);
+
+  const { createOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
+
+  useEffect(() => {
+    if (isOpen) {
+      setForm(buildInitialForm(operation));
+      setStep(1);
+      setFieldErrors({});
+      setItemErrors({});
+      setBannerError(null);
+      resetError();
+    }
+  }, [isOpen, operation, resetError]);
+
+  const balancesMap = useMemo(() => new Map(balances.map((entry) => [entry.assetCode, entry])), [balances]);
+
+  const handleFieldChange = (field: keyof LogisticsOrderFormState, value: any) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const handleItemChange = (itemId: string, field: keyof LogisticsOrderFormItem, value: any) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) => (item.id === itemId ? { ...item, [field]: value } : item)),
+    }));
+    setItemErrors((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...(prev[itemId] || {}),
+        [field]: '',
+      },
+    }));
+  };
+
+  const handleMetadataChange = (itemId: string, field: keyof LogisticsOrderFormItem['metadata'], value: any) => {
+    setForm((prev) => ({
+      ...prev,
+      items: prev.items.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              metadata: {
+                ...item.metadata,
+                [field]: value,
+              },
+            }
+          : item
+      ),
+    }));
+    setItemErrors((prev) => ({
+      ...prev,
+      [itemId]: {
+        ...(prev[itemId] || {}),
+        [field]: '',
+      },
+    }));
+  };
+
+  const handleAddItem = () => {
+    const defaultAsset = balances[0]?.assetCode || form.items[0]?.assetCode || 'ARS';
+    setForm((prev) => ({
+      ...prev,
+      items: [
+        ...prev.items,
+        {
+          id: createItemId(),
+          assetCode: defaultAsset,
+          assetType: 'CURRENCY',
+          expectedAmount: '',
+          metadata: {},
+          notes: '',
+        },
+      ],
+    }));
+  };
+
+  const handleRemoveItem = (itemId: string) => {
+    if (form.items.length === 1) {
+      return;
+    }
+    setForm((prev) => ({ ...prev, items: prev.items.filter((item) => item.id !== itemId) }));
+    setItemErrors((prev) => {
+      const next = { ...prev };
+      delete next[itemId];
+      return next;
+    });
+  };
+
+  const getAvailableAmount = (assetCode: string, itemId: string) => {
+    const balance = balancesMap.get(assetCode);
+    if (!balance) {
+      return 0;
+    }
+    const otherItems = form.items.filter((item) => item.assetCode === assetCode && item.id !== itemId);
+    const used = otherItems.reduce((sum, item) => sum + (Number(item.expectedAmount) || 0), 0);
+    return Math.max(0, balance.pendingAmount - used);
+  };
+
+  const handleNext = () => {
+    if (step === 1) {
+      const errors = validateStep1(form);
+      setFieldErrors(errors);
+      if (Object.keys(errors).length === 0) {
+        setStep(2);
+      }
+    } else if (step === 2) {
+      const errors = validateItems(form, balances, getAvailableAmount);
+      setItemErrors(errors);
+      if (Object.keys(errors).length === 0 && form.items.length > 0) {
+        setStep(3);
+      } else if (form.items.length === 0) {
+        setBannerError('Agregá al menos un ítem de valor.');
+      }
+    }
+  };
+
+  const handlePrev = () => {
+    setBannerError(null);
+    setStep((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleSubmit = async (mode: WizardSubmissionMode) => {
+    const stepErrors = validateStep1(form);
+    const itemValidation = validateItems(form, balances, getAvailableAmount);
+    setFieldErrors(stepErrors);
+    setItemErrors(itemValidation);
+    if (Object.keys(stepErrors).length > 0 || Object.keys(itemValidation).length > 0 || form.items.length === 0) {
+      if (form.items.length === 0) {
+        setBannerError('Agregá al menos un ítem para la orden.');
+      }
+      setStep((prev) => (Object.keys(stepErrors).length ? 1 : 2));
+      return;
+    }
+
+    try {
+      const payload = mapFormToPayload(form, mode);
+      const order = await createOrder(payload);
+      onCompleted(order, mode);
+      onClose();
+    } catch (err) {
+      setBannerError((err as Error).message || 'No pudimos guardar la orden.');
+    }
+  };
+
+  const renderStep = () => {
+    if (!operation) {
+      return (
+        <div className="py-12 flex items-center justify-center">
+          <LoadingSpinner />
+        </div>
+      );
+    }
+    if (step === 1) {
+      return (
+        <OrderWizardStep1
+          form={form}
+          errors={fieldErrors}
+          operation={operation}
+          onChange={handleFieldChange}
+        />
+      );
+    }
+    if (step === 2) {
+      return (
+        <OrderWizardStep2
+          items={form.items}
+          balances={balances}
+          errors={itemErrors}
+          onItemChange={handleItemChange}
+          onMetadataChange={handleMetadataChange}
+          onAddItem={handleAddItem}
+          onRemoveItem={handleRemoveItem}
+          getAvailableAmount={getAvailableAmount}
+        />
+      );
+    }
+    return <OrderWizardSummary form={form} operation={operation} balances={balances} />;
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nueva orden logística">
+      <div className="space-y-4">
+        <div className="flex items-center justify-between text-sm text-gray-500">
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${step >= 1 ? 'bg-primary' : 'bg-gray-300'}`} />
+            Datos básicos
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${step >= 2 ? 'bg-primary' : 'bg-gray-300'}`} />
+            Ítems
+          </div>
+          <div className="flex items-center gap-2">
+            <span className={`w-2.5 h-2.5 rounded-full ${step === 3 ? 'bg-primary' : 'bg-gray-300'}`} />
+            Resumen
+          </div>
+        </div>
+
+        {bannerError && (
+          <Alert type="error" message={bannerError} onClose={() => setBannerError(null)} />
+        )}
+        {error && <Alert type="error" message={error.message} onClose={resetError} />}
+
+        {renderStep()}
+
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-4 border-t border-gray-100">
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="px-4 py-2 text-sm text-gray-600 hover:text-text-primary"
+              onClick={onClose}
+              disabled={saving}
+            >
+              Cancelar
+            </button>
+            {step > 1 && (
+              <button
+                type="button"
+                className="px-4 py-2 text-sm text-gray-600 hover:text-text-primary"
+                onClick={handlePrev}
+                disabled={saving}
+              >
+                Anterior
+              </button>
+            )}
+          </div>
+
+          {step < 3 ? (
+            <button
+              type="button"
+              className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
+              onClick={handleNext}
+              disabled={saving}
+            >
+              Siguiente
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                type="button"
+                className="px-4 py-2 border border-gray-300 text-sm rounded-lg"
+                onClick={() => handleSubmit('BORRADOR')}
+                disabled={saving}
+              >
+                {saving ? 'Guardando…' : 'Guardar borrador'}
+              </button>
+              <button
+                type="button"
+                className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
+                onClick={() => handleSubmit('PROGRAMADA')}
+                disabled={saving}
+              >
+                {saving ? 'Programando…' : 'Programar'}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </Modal>
+  );
+};

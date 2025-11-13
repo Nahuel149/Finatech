@@ -5,10 +5,12 @@ import { BalanceStripe } from './BalanceStripe';
 import { DashboardFooter } from './Footer';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { Alert } from '../../ui/Alert';
-import { useTransactionDraft } from '../../../hooks/dashboard';
+import { useTransactionDraft, useLogisticsOrdersByOperation } from '../../../hooks/dashboard';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { formatCurrency, formatDateTime } from './transfer/utils';
 import { TransactionAccountingEntry } from '../../../types';
+import { LinkedLogisticsOrdersSection } from './logistics/LinkedLogisticsOrdersSection';
+import { LogisticsOrderWizard } from '../logistica/order-wizard/LogisticsOrderWizard';
 
 type StatusTone = {
   label: string;
@@ -45,8 +47,18 @@ export const OperationDetailPage: React.FC = () => {
   const { operationId } = useParams<{ operationId: string }>();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
+  const [isWizardOpen, setWizardOpen] = useState(false);
+  const [toast, setToast] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
 
   const { draft, loading, error, fetchDraft } = useTransactionDraft(operationId);
+  const {
+    operation: logisticsContext,
+    orders: logisticsOrders,
+    balances: logisticsBalances,
+    loading: logisticsLoading,
+    error: logisticsError,
+    refresh: refreshLogistics,
+  } = useLogisticsOrdersByOperation(operationId);
 
   const statusTone = STATUS_TONES[draft?.status ?? 'draft'] ?? STATUS_TONES.draft;
   const typeTone = TYPE_TONES[draft?.type ?? 'buy'] ?? TYPE_TONES.buy;
@@ -80,6 +92,7 @@ export const OperationDetailPage: React.FC = () => {
 
   const handleRefresh = () => {
     fetchDraft().catch(() => {});
+    refreshLogistics().catch(() => {});
   };
 
   useEffect(() => {
@@ -88,6 +101,14 @@ export const OperationDetailPage: React.FC = () => {
     });
     return unsubscribe;
   }, [fetchDraft]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeout = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timeout);
+  }, [toast]);
 
   const renderAccountingAudit = (entries?: TransactionAccountingEntry[]) => {
     if (!entries || !entries.length) {
@@ -158,6 +179,9 @@ export const OperationDetailPage: React.FC = () => {
 
       <main className="flex-grow px-4 lg:px-6 pb-8">
         <div className="max-w-6xl mx-auto pt-[420px] lg:pt-[260px] space-y-6">
+          {toast && (
+            <Alert type={toast.type === 'success' ? 'success' : toast.type === 'error' ? 'error' : 'info'} message={toast.message} onClose={() => setToast(null)} />
+          )}
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <h1 className="text-2xl font-semibold text-text-primary">Detalle de operación</h1>
@@ -382,12 +406,39 @@ export const OperationDetailPage: React.FC = () => {
                 </header>
                 {renderAccountingAudit(draft.accountingAudit)}
               </section>
+
+              <LinkedLogisticsOrdersSection
+                loading={logisticsLoading}
+                error={logisticsError}
+                orders={logisticsOrders}
+                balances={logisticsBalances}
+                onRetry={refreshLogistics}
+                onCreateOrder={() => setWizardOpen(true)}
+                disableCreate={!logisticsContext}
+              />
             </div>
           )}
         </div>
       </main>
 
       <DashboardFooter />
+
+      <LogisticsOrderWizard
+        isOpen={isWizardOpen}
+        onClose={() => setWizardOpen(false)}
+        operation={logisticsContext}
+        balances={logisticsBalances}
+        onCompleted={(newOrder, status) => {
+          setToast({
+            type: status === 'PROGRAMADA' ? 'success' : 'info',
+            message:
+              status === 'PROGRAMADA'
+                ? `Orden ${newOrder.orderNumber} programada correctamente.`
+                : `Borrador ${newOrder.orderNumber} guardado.`,
+          });
+          refreshLogistics();
+        }}
+      />
     </div>
   );
 };

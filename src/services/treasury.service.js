@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const TreasuryBalance = require('../models/TreasuryBalance');
 const TreasuryMovement = require('../models/TreasuryMovement');
+const LogisticsOrder = require('../models/LogisticsOrder');
 const Client = require('../models/Client');
 const Transaction = require('../models/Transaction');
 const TransferOperation = require('../models/TransferOperation');
@@ -25,9 +26,13 @@ const BALANCE_METADATA = {
     label: 'Caja en USD',
     status: 'warning',
   },
+  courier_in_transit: {
+    label: 'Fondos en tránsito',
+    status: 'warning',
+  },
 };
 
-const TREASURY_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd']);
+const TREASURY_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd', 'courier_in_transit']);
 
 const LINKED_BALANCE_CONFIG = {
   usd: {
@@ -57,6 +62,15 @@ const GLOBAL_BALANCE_SORT_FIELDS = new Set(['balance', 'name', 'variation', 'las
 const BALANCE_STATE_VALUES = ['positive', 'negative', 'zero'];
 const CONTACT_BALANCE_DEFAULT_LIMIT = 20;
 const CONTACT_BALANCE_SORT_FIELDS = new Set(['date', 'amount', 'type']);
+
+const LOGISTICS_COMPLETED_STATUSES = [
+  'COMPLETADA',
+  'COMPLETADA_TOTAL',
+  'COMPLETADA_PARCIAL',
+  'DISCREPANCIA',
+];
+const RECEPTION_STATUS_VALUES = ['pending', 'confirmed', 'omitted'];
+const DEFAULT_RECEPTIONS_LIMIT = 25;
 
 const MOVEMENT_MEDIUMS = ['cash', 'transfer', 'deposit'];
 const MOVEMENT_TYPES = ['incoming', 'outgoing'];
@@ -1628,6 +1642,9 @@ const roundAmount = (value) => {
 };
 
 const normalizeBalanceKey = (movementType) => {
+  if (movementType === 'courier_in_transit') {
+    return 'courier_in_transit';
+  }
   if (movementType === 'cash') {
     return 'cash';
   }
@@ -1709,6 +1726,459 @@ const formatBalance = (balance) => {
     status: meta.status,
     updatedAt: (balance.updatedAt || balance.createdAt || new Date()).toISOString(),
   };
+};
+
+const toObjectId = (value) =>
+  value && mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
+
+const ensureActionUser = (context = {}) => {
+  const userId = context.userId || context.user?._id || context.user?.id;
+  if (!userId) {
+    throw new AppError('Autenticación requerida.', 401);
+  }
+  return userId;
+};
+
+const computeReceptionTotals = (order) => {
+  if (!order) {
+    return { totalsByCurrency: [], totalAmount: 0 };
+  }
+  const map = new Map();
+  (order.items || []).forEach((item) => {
+    const currency = String(item?.assetCode || 'ARS').toUpperCase();
+    const amount = roundAmount(
+      Number(item?.receivedAmount ?? item?.expectedAmount ?? item?.pendingAmount ?? 0)
+    );
+    if (!amount) {
+      return;
+    }
+    map.set(currency, roundAmount((map.get(currency) || 0) + amount));
+  });
+  const totalsByCurrency = Array.from(map.entries()).map(([currency, amount]) => ({
+    currency,
+    amount,
+  }));
+  const totalAmount = roundAmount(
+    totalsByCurrency.reduce((acc, entry) => acc + (Number(entry.amount) || 0), 0)
+  );
+  return { totalsByCurrency, totalAmount };
+};
+
+const formatReceptionEvents = (events = []) =>
+  events
+    .slice()
+    .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
+    .map((event) => ({
+      id: event?._id ? event._id.toString() : null,
+      type: event?.type || null,
+      user: event?.user ? event.user.toString() : null,
+      userName: event?.userName || null,
+      timestamp: event?.createdAt || null,
+      reason: event?.reason || null,
+      notes: event?.notes || null,
+      ip: event?.ip || null,
+      userAgent: event?.userAgent || null,
+      totalsByCurrency: Array.isArray(event?.totalsByCurrency)
+        ? event.totalsByCurrency.map((entry) => ({
+            currency: (entry?.currency || '').toUpperCase(),
+            amount: roundAmount(entry?.amount || 0),
+          }))
+        : [],
+    }));
+
+const formatReception = (order, totalsOverride) => {
+  if (!order) {
+    return null;
+  }
+  const plain = order.toObject ? order.toObject() : order;
+  const totals = totalsOverride || computeReceptionTotals(plain);
+  return {
+    id: plain._id ? plain._id.toString() : null,
+    orderId: plain._id ? plain._id.toString() : null,
+    orderNumber: plain.orderNumber,
+    orderType: plain.type,
+    completedAt: plain.completedAt,
+    courier: {
+      id: plain.assignedTo ? plain.assignedTo.toString() : null,
+      name: plain.messenger || null,
+    },
+    origin: plain.origin || null,
+    destination: plain.destination || null,
+    originContact: plain.clientSnapshot
+      ? {
+          id: plain.clientSnapshot.id || null,
+          fullName: plain.clientSnapshot.fullName || plain.contactName || null,
+        }
+      : null,
+    destinationContact: plain.contactName
+      ? {
+          fullName: plain.contactName,
+          phone: plain.contactPhone || null,
+        }
+      : null,
+    operationId: plain.operationId ? plain.operationId.toString() : null,
+    operationCode: plain.operationCode || null,
+    items: Array.isArray(plain.items)
+      ? plain.items.map((item) => ({
+          id: item?._id ? item._id.toString() : null,
+          assetCode: item?.assetCode,
+          assetType: item?.assetType,
+          expectedAmount: item?.expectedAmount ?? null,
+          receivedAmount: item?.receivedAmount ?? null,
+          pendingAmount: item?.pendingAmount ?? null,
+          metadata: item?.metadata || null,
+        }))
+      : [],
+    totalsByCurrency: totals.totalsByCurrency,
+    totalAmount: totals.totalAmount,
+    receptionStatus: plain.treasuryReceptionStatus || null,
+    accountingStatus: plain.treasuryReceptionStatus || null,
+    closedWithoutAccountingImpact: Boolean(
+      plain.treasuryReception?.closedWithoutAccountingImpact
+    ),
+    evidences: Array.isArray(plain.evidences) ? plain.evidences : [],
+    events: formatReceptionEvents(plain.treasuryReception?.events || []),
+  };
+};
+
+const pushReceptionEvent = (order, eventPayload = {}) => {
+  order.treasuryReception = order.treasuryReception || {};
+  if (!Array.isArray(order.treasuryReception.events)) {
+    order.treasuryReception.events = [];
+  }
+  order.treasuryReception.events.push({
+    type: eventPayload.type,
+    user: eventPayload.userId ? toObjectId(eventPayload.userId) : null,
+    userName: eventPayload.userName || null,
+    reason: eventPayload.reason || null,
+    notes: eventPayload.notes || null,
+    ip: eventPayload.ip || null,
+    userAgent: eventPayload.userAgent || null,
+    totalsByCurrency: Array.isArray(eventPayload.totalsByCurrency)
+      ? eventPayload.totalsByCurrency.map((entry) => ({
+          currency: (entry?.currency || '').toUpperCase(),
+          amount: roundAmount(entry?.amount || 0),
+        }))
+      : [],
+    createdAt: new Date(),
+  });
+};
+
+const getDestinationBalanceKey = (order, currency) => {
+  const normalizedCurrency = String(currency || 'ARS').toUpperCase();
+  if (normalizedCurrency === 'USD') {
+    return 'usd';
+  }
+  return order?.type === 'ENTREGA' ? 'cash' : 'cash';
+};
+
+const emitBalanceDelta = ({ key, currency, delta, orderId, status, userId }) => {
+  emitBalanceUpdated({
+    source: 'treasury_reception',
+    balanceKey: key,
+    currency,
+    delta,
+    orderId,
+    receptionStatus: status,
+    emittedBy: userId || null,
+  });
+};
+
+const applyReceptionBalances = async (order, totals, context = {}, { reverse = false } = {}) => {
+  for (const entry of totals.totalsByCurrency) {
+    const currency = (entry.currency || 'ARS').toUpperCase();
+    const amount = roundAmount(entry.amount || 0);
+    if (!amount) {
+      continue;
+    }
+    const destinationKey = getDestinationBalanceKey(order, currency);
+    const transitDelta = reverse ? amount : -amount;
+    const destinationDelta = reverse ? -amount : amount;
+
+    await adjustTreasuryBalanceForMovement('courier_in_transit', currency, transitDelta, {
+      userId: context.userId,
+    });
+    emitBalanceDelta({
+      key: 'courier_in_transit',
+      currency,
+      delta: transitDelta,
+      orderId: order._id,
+      status: order.treasuryReceptionStatus,
+      userId: context.userId,
+    });
+
+    await adjustTreasuryBalanceForMovement(destinationKey, currency, destinationDelta, {
+      userId: context.userId,
+    });
+    emitBalanceDelta({
+      key: destinationKey,
+      currency,
+      delta: destinationDelta,
+      orderId: order._id,
+      status: order.treasuryReceptionStatus,
+      userId: context.userId,
+    });
+  }
+};
+
+const sanitizePositiveNumber = (value, fallback) => {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return fallback;
+  }
+  return numeric;
+};
+
+const buildReceptionQuery = (filters = {}) => {
+  const match = {
+    status: { $in: LOGISTICS_COMPLETED_STATUSES },
+  };
+
+  if (filters.status && RECEPTION_STATUS_VALUES.includes(filters.status)) {
+    match.treasuryReceptionStatus = filters.status;
+  } else {
+    match.treasuryReceptionStatus = { $ne: null };
+  }
+
+  if (filters.dateFrom || filters.dateTo) {
+    match.completedAt = {};
+    if (filters.dateFrom) {
+      const from = new Date(filters.dateFrom);
+      if (!Number.isNaN(from.getTime())) {
+        match.completedAt.$gte = from;
+      }
+    }
+    if (filters.dateTo) {
+      const to = new Date(filters.dateTo);
+      if (!Number.isNaN(to.getTime())) {
+        to.setHours(23, 59, 59, 999);
+        match.completedAt.$lte = to;
+      }
+    }
+    if (Object.keys(match.completedAt).length === 0) {
+      delete match.completedAt;
+    }
+  }
+
+  if (filters.courierId && mongoose.Types.ObjectId.isValid(filters.courierId)) {
+    match.assignedTo = new mongoose.Types.ObjectId(filters.courierId);
+  } else if (filters.courier) {
+    match.messenger = new RegExp(filters.courier, 'i');
+  }
+
+  if (filters.contactId) {
+    match['clientSnapshot.id'] = filters.contactId;
+  }
+
+  const orConditions = [];
+  if (filters.contact) {
+    const regex = new RegExp(filters.contact, 'i');
+    orConditions.push({ contactName: regex }, { 'clientSnapshot.fullName': regex });
+  }
+
+  if (filters.operationId && mongoose.Types.ObjectId.isValid(filters.operationId)) {
+    match.operationId = new mongoose.Types.ObjectId(filters.operationId);
+  }
+
+  if (filters.currency) {
+    match['items.assetCode'] = String(filters.currency).toUpperCase();
+  }
+
+  if (filters.search) {
+    const regex = new RegExp(filters.search, 'i');
+    orConditions.push({ orderNumber: regex }, { contactName: regex }, { origin: regex }, { destination: regex });
+  }
+
+  if (orConditions.length) {
+    match.$or = orConditions;
+  }
+
+  return match;
+};
+
+const applyAmountFilters = (decoratedOrders, filters = {}) => {
+  const parseAmount = (value) => {
+    if (value === undefined || value === null || value === '') {
+      return null;
+    }
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? numeric : null;
+  };
+  const min = parseAmount(filters.amountMin);
+  const max = parseAmount(filters.amountMax);
+  const currency = filters.currency ? String(filters.currency).toUpperCase() : null;
+  if (min === null && max === null) {
+    return decoratedOrders;
+  }
+
+  return decoratedOrders.filter(({ totals }) => {
+    const relevantTotals = currency
+      ? totals.totalsByCurrency.filter((entry) => entry.currency === currency)
+      : totals.totalsByCurrency;
+    const amount = relevantTotals.reduce((acc, entry) => acc + (entry.amount || 0), 0);
+    if (min !== null && amount < min) {
+      return false;
+    }
+    if (max !== null && amount > max) {
+      return false;
+    }
+    return true;
+  });
+};
+
+const listTreasuryReceptions = async (options = {}) => {
+  const page = sanitizePositiveNumber(options.page, 1);
+  const limit = Math.min(sanitizePositiveNumber(options.limit, DEFAULT_RECEPTIONS_LIMIT), 100);
+  const match = buildReceptionQuery(options);
+  const orders = await LogisticsOrder.find(match)
+    .sort({ completedAt: -1, createdAt: -1 })
+    .lean();
+
+  const decorated = orders.map((order) => ({ order, totals: computeReceptionTotals(order) }));
+  const filtered = applyAmountFilters(decorated, options);
+  const totalItems = filtered.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / limit));
+  const start = (page - 1) * limit;
+  const pageItems = filtered.slice(start, start + limit).map((entry) =>
+    formatReception(entry.order, entry.totals)
+  );
+
+  return {
+    items: pageItems,
+    pagination: {
+      page,
+      limit,
+      totalItems,
+      totalPages,
+    },
+    filters: {
+      status: options.status || null,
+      dateFrom: options.dateFrom || null,
+      dateTo: options.dateTo || null,
+      courier: options.courier || options.courierId || null,
+      contact: options.contact || options.contactId || null,
+      operationId: options.operationId || null,
+      amountMin: options.amountMin || null,
+      amountMax: options.amountMax || null,
+      currency: options.currency || null,
+      search: options.search || null,
+    },
+  };
+};
+
+const loadReceptionOrder = async (receptionId) => {
+  if (!mongoose.Types.ObjectId.isValid(receptionId)) {
+    throw new AppError('Orden logística no encontrada.', 404);
+  }
+  const order = await LogisticsOrder.findById(receptionId);
+  if (!order) {
+    throw new AppError('Orden logística no encontrada.', 404);
+  }
+  return order;
+};
+
+const confirmTreasuryReception = async (receptionId, payload = {}, context = {}) => {
+  const userId = ensureActionUser(context);
+  const order = await loadReceptionOrder(receptionId);
+
+  if (order.treasuryReceptionStatus !== 'pending') {
+    throw new AppError('La recepción ya fue gestionada.', 409);
+  }
+
+  const totals = computeReceptionTotals(order);
+  if (!totals.totalAmount) {
+    throw new AppError('No hay valores para impactar en Tesorería.', 422);
+  }
+
+  await applyReceptionBalances(order, totals, { userId }, { reverse: false });
+
+  order.treasuryReceptionStatus = 'confirmed';
+  order.treasuryReception = order.treasuryReception || {};
+  order.treasuryReception.closedWithoutAccountingImpact = false;
+  pushReceptionEvent(order, {
+    type: 'recepcion.confirmada',
+    userId,
+    userName: context.userName,
+    reason: payload.notes || null,
+    notes: payload.notes || null,
+    ip: context.ip,
+    userAgent: context.userAgent,
+    totalsByCurrency: totals.totalsByCurrency,
+  });
+  order.updatedBy = toObjectId(userId);
+  order.updatedByName = context.userName || null;
+
+  await order.save();
+
+  return formatReception(order, totals);
+};
+
+const omitTreasuryReception = async (receptionId, payload = {}, context = {}) => {
+  const userId = ensureActionUser(context);
+  const reason = String(payload.reason || '').trim();
+  if (!reason) {
+    throw new AppError('Indicá el motivo de la omisión.', 422);
+  }
+
+  const order = await loadReceptionOrder(receptionId);
+  if (order.treasuryReceptionStatus !== 'pending') {
+    throw new AppError('La recepción ya fue gestionada.', 409);
+  }
+
+  const totals = computeReceptionTotals(order);
+
+  order.treasuryReceptionStatus = 'omitted';
+  order.treasuryReception = order.treasuryReception || {};
+  order.treasuryReception.closedWithoutAccountingImpact = true;
+  pushReceptionEvent(order, {
+    type: 'recepcion.omitida',
+    userId,
+    userName: context.userName,
+    reason,
+    notes: payload.notes || null,
+    ip: context.ip,
+    userAgent: context.userAgent,
+    totalsByCurrency: totals.totalsByCurrency,
+  });
+  order.updatedBy = toObjectId(userId);
+  order.updatedByName = context.userName || null;
+
+  await order.save();
+
+  return formatReception(order, totals);
+};
+
+const revertTreasuryReception = async (receptionId, payload = {}, context = {}) => {
+  const userId = ensureActionUser(context);
+  const order = await loadReceptionOrder(receptionId);
+
+  if (!['confirmed', 'omitted'].includes(order.treasuryReceptionStatus)) {
+    throw new AppError('Sólo podés revertir recepciones confirmadas u omitidas.', 409);
+  }
+
+  const totals = computeReceptionTotals(order);
+  if (order.treasuryReceptionStatus === 'confirmed' && totals.totalAmount) {
+    await applyReceptionBalances(order, totals, { userId }, { reverse: true });
+  }
+
+  order.treasuryReceptionStatus = 'pending';
+  order.treasuryReception = order.treasuryReception || {};
+  order.treasuryReception.closedWithoutAccountingImpact = false;
+  pushReceptionEvent(order, {
+    type: 'recepcion.revertida',
+    userId,
+    userName: context.userName,
+    reason: String(payload.reason || '').trim() || null,
+    ip: context.ip,
+    userAgent: context.userAgent,
+    totalsByCurrency: totals.totalsByCurrency,
+  });
+  order.updatedBy = toObjectId(userId);
+  order.updatedByName = context.userName || null;
+
+  await order.save();
+
+  return formatReception(order, totals);
 };
 
 const getTreasuryBalances = async () => {
@@ -2873,3 +3343,7 @@ exports.getLinkedBalancesSummary = getLinkedBalancesSummary;
 exports.getLinkedBalanceDetail = getLinkedBalanceDetail;
 exports.getGlobalBalancesOverview = getGlobalBalancesOverview;
 exports.getContactBalanceDetail = getContactBalanceDetail;
+exports.listTreasuryReceptions = listTreasuryReceptions;
+exports.confirmTreasuryReception = confirmTreasuryReception;
+exports.omitTreasuryReception = omitTreasuryReception;
+exports.revertTreasuryReception = revertTreasuryReception;

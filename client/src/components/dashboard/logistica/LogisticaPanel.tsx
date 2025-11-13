@@ -14,6 +14,7 @@ import { useDashboardBalances } from '../../../hooks';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType, Button } from '../../shared/design-system';
 import { TreasuryBalance, ApiError } from '../../../types';
+import { MyLogisticsOrdersPage } from './MyLogisticsOrdersPage';
 
 type ToastState = {
   type: 'success' | 'info';
@@ -409,6 +410,7 @@ export const LogisticaPanel: React.FC = () => {
     updatedAt: balance.updatedAt,
   });
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
+  const [activeView, setActiveView] = useState<'overview' | 'my-orders'>('overview');
 
   useEffect(() => {
     if (!toast) return;
@@ -522,33 +524,61 @@ export const LogisticaPanel: React.FC = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                variant="primary"
-                size="md"
-                onClick={handleRegisterNewMovement}
-                icon="fa-solid fa-plus"
-                className="w-full sm:w-auto font-medium"
-              >
-                Registrar nuevo movimiento logístico
-              </Button>
+              <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
+                <button
+                  type="button"
+                  onClick={() => setActiveView('overview')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                    activeView === 'overview' ? 'bg-primary text-white shadow' : 'text-gray-600'
+                  }`}
+                >
+                  Panel operativo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('my-orders')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                    activeView === 'my-orders' ? 'bg-primary text-white shadow' : 'text-gray-600'
+                  }`}
+                >
+                  Mis órdenes
+                </button>
+              </div>
+              {activeView === 'overview' && (
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleRegisterNewMovement}
+                  icon="fa-solid fa-plus"
+                  className="w-full sm:w-auto font-medium"
+                >
+                  Registrar nuevo movimiento logístico
+                </Button>
+              )}
             </div>
           </section>
 
-          <GeneralSummarySection metrics={null} loading={false} />
+          {activeView === 'overview' ? (
+            <>
+              <GeneralSummarySection metrics={null} loading={false} />
 
-          <LogisticsOperationsSection
-            operations={filteredOperations}
-            selectedOperations={selectedOperations}
-            onSelectionChange={handleSelectionChange}
-            onFilterClick={handleFilterToggle}
-            onBulkAction={handleBulkAction}
-            onViewOperation={handleViewOperation}
-            totalOperations={totalOperations}
-            loading={false}
-            error={null}
-          />
+              <LogisticsOperationsSection
+                operations={filteredOperations}
+                selectedOperations={selectedOperations}
+                onSelectionChange={handleSelectionChange}
+                onFilterClick={handleFilterToggle}
+                onBulkAction={handleBulkAction}
+                onViewOperation={handleViewOperation}
+                totalOperations={totalOperations}
+                loading={false}
+                error={null}
+              />
 
-          <TreasuryIntegrationSection />
+              <TreasuryIntegrationSection />
+            </>
+          ) : (
+            <MyLogisticsOrdersPage />
+          )}
         </div>
       </main>
 

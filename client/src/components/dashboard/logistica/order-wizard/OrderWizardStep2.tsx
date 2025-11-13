@@ -1,0 +1,241 @@
+import React from 'react';
+import {
+  LogisticsOrderBalance,
+  LogisticsOrderItemMetadata,
+} from '../../../../types';
+import {
+  FormItemErrors,
+  LogisticsOrderFormItem,
+} from './types';
+import { formatCurrency } from '../../operaciones/transfer/utils';
+
+interface OrderWizardStep2Props {
+  items: LogisticsOrderFormItem[];
+  balances: LogisticsOrderBalance[];
+  errors: FormItemErrors;
+  onItemChange: (itemId: string, field: keyof LogisticsOrderFormItem, value: any) => void;
+  onMetadataChange: (itemId: string, field: keyof LogisticsOrderItemMetadata, value: string) => void;
+  onAddItem: () => void;
+  onRemoveItem: (itemId: string) => void;
+  getAvailableAmount: (assetCode: string, itemId: string) => number;
+}
+
+const ITEM_TYPE_OPTIONS = [
+  { value: 'CURRENCY', label: 'Efectivo / Transferencia' },
+  { value: 'CHEQUE', label: 'Cheque' },
+  { value: 'METAL', label: 'Metal precioso' },
+  { value: 'OTHER', label: 'Otro valor' },
+];
+
+const metadataHelper = (item: LogisticsOrderFormItem) => {
+  if (item.assetType === 'CHEQUE') {
+    return 'Banco, número y fecha son obligatorios.';
+  }
+  if (item.assetType === 'METAL') {
+    return 'Indicá tipo, pureza y peso del metal.';
+  }
+  if (item.assetType === 'OTHER') {
+    return 'Describí el valor a trasladar.';
+  }
+  return 'Podés agregar observaciones específicas.';
+};
+
+export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
+  items,
+  balances,
+  errors,
+  onItemChange,
+  onMetadataChange,
+  onAddItem,
+  onRemoveItem,
+  getAvailableAmount,
+}) => {
+  const totalPending = balances.reduce((acc, entry) => acc + (entry.pendingAmount || 0), 0);
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4">
+        <p className="text-sm text-indigo-800">
+          Disponés de {formatCurrency(totalPending, balances[0]?.assetCode || 'ARS')} para asignar en órdenes logísticas. Los montos no pueden superar el saldo pendiente por activo.
+        </p>
+      </div>
+
+      <div className="space-y-4">
+        {items.map((item, index) => {
+          const itemError = errors[item.id] || {};
+          const available = getAvailableAmount(item.assetCode, item.id);
+          return (
+            <div key={item.id} className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm font-semibold text-text-primary">Ítem #{index + 1}</p>
+                <button
+                  type="button"
+                  className="text-sm text-red-600 hover:text-red-700"
+                  onClick={() => onRemoveItem(item.id)}
+                  disabled={items.length === 1}
+                >
+                  <i className="fa-solid fa-trash mr-1" />
+                  Eliminar
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs uppercase text-gray-500">Tipo</label>
+                  <select
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetType ? 'border-red-300' : 'border-gray-300'}`}
+                    value={item.assetType}
+                    onChange={(event) => onItemChange(item.id, 'assetType', event.target.value)}
+                  >
+                    {ITEM_TYPE_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs uppercase text-gray-500">Activo / Divisa</label>
+                  <select
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetCode ? 'border-red-300' : 'border-gray-300'}`}
+                    value={item.assetCode}
+                    onChange={(event) => onItemChange(item.id, 'assetCode', event.target.value)}
+                  >
+                    {balances.map((balance) => (
+                      <option key={`${balance.assetCode}-${balance.role}`} value={balance.assetCode}>
+                        {balance.assetLabel} ({balance.assetCode})
+                      </option>
+                    ))}
+                  </select>
+                  {itemError.assetCode && <p className="text-xs text-red-600 mt-1">{itemError.assetCode}</p>}
+                </div>
+                <div>
+                  <label className="text-xs uppercase text-gray-500">Monto esperado</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.expectedAmount ? 'border-red-300' : 'border-gray-300'}`}
+                    value={item.expectedAmount}
+                    onChange={(event) => onItemChange(item.id, 'expectedAmount', event.target.value === '' ? '' : Number(event.target.value))}
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Disponible: {formatCurrency(Math.max(0, available), item.assetCode)}
+                  </p>
+                  {itemError.expectedAmount && <p className="text-xs text-red-600">{itemError.expectedAmount}</p>}
+                </div>
+              </div>
+
+              <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                {item.assetType === 'CHEQUE' && (
+                  <>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Banco *</label>
+                      <input
+                        type="text"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.bank ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.bank || ''}
+                        onChange={(event) => onMetadataChange(item.id, 'bank', event.target.value)}
+                      />
+                      {itemError.bank && <p className="text-xs text-red-600">{itemError.bank}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Número *</label>
+                      <input
+                        type="text"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.number ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.number || ''}
+                        onChange={(event) => onMetadataChange(item.id, 'number', event.target.value)}
+                      />
+                      {itemError.number && <p className="text-xs text-red-600">{itemError.number}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Fecha *</label>
+                      <input
+                        type="date"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.dueDate ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.dueDate ? item.metadata.dueDate.slice(0, 10) : ''}
+                        onChange={(event) => onMetadataChange(item.id, 'dueDate', event.target.value)}
+                      />
+                      {itemError.dueDate && <p className="text-xs text-red-600">{itemError.dueDate}</p>}
+                    </div>
+                  </>
+                )}
+
+                {item.assetType === 'METAL' && (
+                  <>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Tipo *</label>
+                      <input
+                        type="text"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.metalType ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.metalType || ''}
+                        onChange={(event) => onMetadataChange(item.id, 'metalType', event.target.value)}
+                      />
+                      {itemError.metalType && <p className="text-xs text-red-600">{itemError.metalType}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Pureza *</label>
+                      <input
+                        type="text"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.purity ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.purity || ''}
+                        onChange={(event) => onMetadataChange(item.id, 'purity', event.target.value)}
+                      />
+                      {itemError.purity && <p className="text-xs text-red-600">{itemError.purity}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs uppercase text-gray-500">Peso *</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.weight ? 'border-red-300' : 'border-gray-300'}`}
+                        value={item.metadata.weight ?? ''}
+                        onChange={(event) => onMetadataChange(item.id, 'weight', event.target.value)}
+                      />
+                      {itemError.weight && <p className="text-xs text-red-600">{itemError.weight}</p>}
+                    </div>
+                  </>
+                )}
+
+                {item.assetType === 'OTHER' && (
+                  <div className="md:col-span-3">
+                    <label className="text-xs uppercase text-gray-500">Descripción *</label>
+                    <textarea
+                      className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.description ? 'border-red-300' : 'border-gray-300'}`}
+                      rows={2}
+                      value={item.metadata.description || ''}
+                      onChange={(event) => onMetadataChange(item.id, 'description', event.target.value)}
+                    />
+                    {itemError.description && <p className="text-xs text-red-600">{itemError.description}</p>}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-3">
+                <label className="text-xs uppercase text-gray-500">Notas del ítem</label>
+                <textarea
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
+                  rows={2}
+                  value={item.notes || ''}
+                  onChange={(event) => onItemChange(item.id, 'notes', event.target.value)}
+                />
+                <p className="text-xs text-gray-500 mt-1">{metadataHelper(item)}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <button
+        type="button"
+        onClick={onAddItem}
+        className="inline-flex items-center px-4 py-2 border border-dashed border-primary text-primary rounded-lg text-sm"
+      >
+        <i className="fa-solid fa-plus mr-2" />
+        Agregar ítem
+      </button>
+    </div>
+  );
+};

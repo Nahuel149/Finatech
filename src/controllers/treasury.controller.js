@@ -10,6 +10,10 @@ const {
   getLinkedBalanceDetail,
   getGlobalBalancesOverview,
   getContactBalanceDetail,
+  listTreasuryReceptions,
+  confirmTreasuryReception,
+  omitTreasuryReception,
+  revertTreasuryReception,
 } = require('../services/treasury.service');
 
 const parseFilters = (query) => {
@@ -24,6 +28,32 @@ const parseFilters = (query) => {
   if (query.search) filters.search = query.search;
   return filters;
 };
+
+const parseReceptionFilters = (query = {}) => {
+  const filters = {};
+  if (query.status) {
+    filters.status = String(query.status).toLowerCase();
+  }
+  if (query.dateFrom) filters.dateFrom = query.dateFrom;
+  if (query.dateTo) filters.dateTo = query.dateTo;
+  if (query.courierId) filters.courierId = query.courierId;
+  if (query.courier) filters.courier = query.courier;
+  if (query.contactId) filters.contactId = query.contactId;
+  if (query.contact) filters.contact = query.contact;
+  if (query.operationId) filters.operationId = query.operationId;
+  if (query.amountMin !== undefined) filters.amountMin = query.amountMin;
+  if (query.amountMax !== undefined) filters.amountMax = query.amountMax;
+  if (query.currency) filters.currency = String(query.currency).toUpperCase();
+  if (query.search) filters.search = query.search;
+  return filters;
+};
+
+const buildActionContext = (req) => ({
+  userId: req.user?._id || req.user?.id || null,
+  userName: req.user?.fullName || req.user?.email || null,
+  ip: req.ip,
+  userAgent: req.get('user-agent') || null,
+});
 
 const balances = async (_req, res, next) => {
   try {
@@ -182,6 +212,55 @@ const contactBalanceDetail = async (req, res, next) => {
   }
 };
 
+const listReceptions = async (req, res, next) => {
+  try {
+    const { page, limit, ...rest } = req.query || {};
+    const filters = parseReceptionFilters(rest);
+    const response = await listTreasuryReceptions({
+      ...filters,
+      page,
+      limit,
+    });
+    res.json(response);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const confirmReception = async (req, res, next) => {
+  try {
+    const context = buildActionContext(req);
+    const reception = await confirmTreasuryReception(req.params.id || req.params.receptionId, req.body || {}, context);
+    res.json(reception);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const omitReception = async (req, res, next) => {
+  try {
+    const context = buildActionContext(req);
+    const reception = await omitTreasuryReception(req.params.id || req.params.receptionId, req.body || {}, context);
+    res.json(reception);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const revertReception = async (req, res, next) => {
+  try {
+    const context = buildActionContext(req);
+    const reception = await revertTreasuryReception(
+      req.params.id || req.params.receptionId,
+      req.body || {},
+      context
+    );
+    res.json(reception);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   balances,
   list,
@@ -194,4 +273,8 @@ module.exports = {
   linkedBalanceDetail,
   globalOverview,
   contactBalanceDetail,
+  listReceptions,
+  confirmReception,
+  omitReception,
+  revertReception,
 };

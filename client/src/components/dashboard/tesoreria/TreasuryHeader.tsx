@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '../../shared/design-system';
 import { useUserPermissions } from '../../../hooks';
 
@@ -15,6 +16,7 @@ export const TreasuryHeader: React.FC<Props> = ({
 }) => {
   const { permissions, loading } = useUserPermissions();
   const canManageTreasury = permissions.includes('manage-treasury');
+  const canViewReceptions = permissions.includes('treasury:receptions');
 
   return (
     <section id="page-header" className="mb-8 pt-44 lg:pt-0">
@@ -35,6 +37,21 @@ export const TreasuryHeader: React.FC<Props> = ({
         </div>
 
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3 sm:gap-0">
+          <Link
+            to="/dashboard/tesoreria/recepciones"
+            className="w-full sm:w-auto"
+          >
+            <Button
+              variant="ghost"
+              size="md"
+              className="w-full sm:w-auto text-sm sm:text-base"
+              icon="fa-solid fa-inbox"
+              disabled={loading || !canViewReceptions}
+              title={!canViewReceptions ? 'Necesitás permiso de Tesorería para ver recepciones.' : undefined}
+            >
+              Recepciones pendientes
+            </Button>
+          </Link>
           <Button
             variant="outline"
             size="md"

@@ -5,8 +5,11 @@ const {
   createLogisticsOperation,
   patchLogisticsOperationState,
 } = require('../controllers/logistics.controller');
+const { requireAuth } = require('../middleware/requireAuth');
 
 const router = Router();
+
+router.use(requireAuth);
 
 router.get('/operations', getLogisticsOperations);
 router.post('/operations', createLogisticsOperation);

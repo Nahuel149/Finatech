@@ -12,6 +12,7 @@ export * from './transfer';
 export * from './client';
 export * from './transaction';
 export * from './treasury';
+export * from './treasuryReceptions';
 export * from './logistics';
 
 // Form Data Types
