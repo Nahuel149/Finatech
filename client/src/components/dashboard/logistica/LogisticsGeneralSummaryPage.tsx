@@ -157,7 +157,7 @@ export const LogisticsGeneralSummaryPage: React.FC = () => {
 
   const handleCloseDetailPanel = () => {
     setIsDetailPanelOpen(false);
-    setSelectedMovement(null);
+    setSelectedMovementId(null);
   };
 
   const handleNavigateToMovementDetail = (movementId: string) => {

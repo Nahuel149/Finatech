@@ -32,7 +32,7 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
     return <DocumentIcon className="h-5 w-5 text-gray-400" />;
   };
 
-  const handleDownload = (document: IncidentDocument) => {
+  const handleDownload = (document: LogisticsIncidentDocument) => {
     if (onDownload) {
       onDownload(document);
     } else {
@@ -41,7 +41,7 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
     }
   };
 
-  const handleView = (document: IncidentDocument) => {
+  const handleView = (document: LogisticsIncidentDocument) => {
     if (onView) {
       onView(document);
     } else {

@@ -199,26 +199,26 @@ export const LogisticsActiveIncidentsSection: React.FC<LogisticsActiveIncidentsS
       )}
 
       {/* Summary footer */}
-      {activeIncidents.length > 0 && (
+      {incidents.length > 0 && (
         <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-4">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center space-x-6">
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
                 <span className="text-gray-600">
-                  {activeIncidents.filter(i => i.severity === 'high').length} Alta prioridad
+                  {incidents.filter((incident: ActiveIncident) => incident.severity === 'high').length} Alta prioridad
                 </span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></div>
                 <span className="text-gray-600">
-                  {activeIncidents.filter(i => i.severity === 'medium').length} Media prioridad
+                  {incidents.filter((incident: ActiveIncident) => incident.severity === 'medium').length} Media prioridad
                 </span>
               </div>
               <div className="flex items-center">
                 <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
                 <span className="text-gray-600">
-                  {activeIncidents.filter(i => i.severity === 'low').length} Baja prioridad
+                  {incidents.filter((incident: ActiveIncident) => incident.severity === 'low').length} Baja prioridad
                 </span>
               </div>
             </div>

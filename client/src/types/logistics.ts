@@ -14,6 +14,7 @@ export interface LogisticsApiAttachment {
   name: string;
   size?: string | null;
   url?: string | null;
+  type?: string | null;
   icon?: string | null;
   color?: string | null;
 }

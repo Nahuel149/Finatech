@@ -6,7 +6,7 @@ interface IncidentItemsSectionProps {
 }
 
 export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ items }) => {
-  const getStatusBadge = (status: string) => {
+  const getStatusBadge = (status?: string) => {
     const baseClasses = "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium";
     
     switch (status) {
@@ -23,7 +23,7 @@ export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ item
     }
   };
 
-  const getStatusText = (status: string) => {
+  const getStatusText = (status?: string) => {
     switch (status) {
       case 'affected':
         return 'Afectado';
@@ -34,7 +34,7 @@ export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ item
       case 'recovered':
         return 'Recuperado';
       default:
-        return status;
+        return status || 'Sin estado';
     }
   };
 

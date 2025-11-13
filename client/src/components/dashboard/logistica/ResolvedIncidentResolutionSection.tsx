@@ -16,7 +16,10 @@ export const ResolvedIncidentResolutionSection: React.FC<ResolvedIncidentResolut
     );
   }
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) {
+      return '—';
+    }
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
       day: '2-digit',
