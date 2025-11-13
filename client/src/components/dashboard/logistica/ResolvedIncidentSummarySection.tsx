@@ -1,18 +1,8 @@
 import React from 'react';
-
-interface ResolvedIncidentData {
-  id: string;
-  type: string;
-  severity: 'baja' | 'media' | 'alta' | 'critica';
-  status: 'resuelta';
-  reportDate: string;
-  resolutionDate: string;
-  responsible: string;
-  associatedMovement: string;
-}
+import { LogisticsIncident } from '../../../types';
 
 interface ResolvedIncidentSummarySectionProps {
-  incident: ResolvedIncidentData;
+  incident: LogisticsIncident;
 }
 
 export const ResolvedIncidentSummarySection: React.FC<ResolvedIncidentSummarySectionProps> = ({
@@ -68,12 +58,12 @@ export const ResolvedIncidentSummarySection: React.FC<ResolvedIncidentSummarySec
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium text-gray-500">ID de Incidencia</label>
-            <p className="mt-1 text-sm text-gray-900 font-mono">{incident.id}</p>
+            <p className="mt-1 text-sm text-gray-900 font-mono">{incident.incidentCode || incident.id}</p>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-500">Tipo</label>
-            <p className="mt-1 text-sm text-gray-900">{incident.type}</p>
+            <p className="mt-1 text-sm text-gray-900">{incident.type || 'Incidente'}</p>
           </div>
           
           <div>
@@ -99,19 +89,19 @@ export const ResolvedIncidentSummarySection: React.FC<ResolvedIncidentSummarySec
           
           <div>
             <label className="block text-sm font-medium text-gray-500">Fecha de resolución</label>
-            <p className="mt-1 text-sm text-gray-900">{formatDate(incident.resolutionDate)}</p>
+            <p className="mt-1 text-sm text-gray-900">{incident.resolutionDate ? formatDate(incident.resolutionDate) : 'Pendiente'}</p>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-500">Tiempo de resolución</label>
             <p className="mt-1 text-sm text-gray-900 font-medium text-green-600">
-              {calculateResolutionTime(incident.reportDate, incident.resolutionDate)}
+              {incident.resolutionDate ? calculateResolutionTime(incident.reportDate, incident.resolutionDate) : '—'}
             </p>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-gray-500">Responsable</label>
-            <p className="mt-1 text-sm text-gray-900">{incident.responsible}</p>
+            <p className="mt-1 text-sm text-gray-900">{incident.responsible || 'Sin responsable'}</p>
           </div>
         </div>
       </div>
@@ -120,7 +110,7 @@ export const ResolvedIncidentSummarySection: React.FC<ResolvedIncidentSummarySec
         <div>
           <label className="block text-sm font-medium text-gray-500">Movimiento asociado</label>
           <p className="mt-1 text-sm text-blue-600 hover:text-blue-800 cursor-pointer font-mono">
-            {incident.associatedMovement}
+            {incident.associatedMovement || '—'}
           </p>
         </div>
       </div>

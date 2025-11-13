@@ -1,20 +1,21 @@
 import React from 'react';
-
-interface ResolutionDetails {
-  resolutionType: string;
-  resolutionDescription: string;
-  resolvedBy: string;
-  resolutionDate: string;
-  followUpActions: string[];
-}
+import { LogisticsIncidentResolutionDetails } from '../../../types';
 
 interface ResolvedIncidentResolutionSectionProps {
-  resolutionDetails: ResolutionDetails;
+  resolutionDetails?: LogisticsIncidentResolutionDetails | null;
 }
 
 export const ResolvedIncidentResolutionSection: React.FC<ResolvedIncidentResolutionSectionProps> = ({
   resolutionDetails
 }) => {
+  if (!resolutionDetails) {
+    return (
+      <div className="bg-gray-50 rounded-lg p-4 border border-dashed border-gray-200 text-sm text-gray-600">
+        No se registraron detalles de resolución para esta incidencia.
+      </div>
+    );
+  }
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('es-ES', {
@@ -60,11 +61,11 @@ export const ResolvedIncidentResolutionSection: React.FC<ResolvedIncidentResolut
           <p className="mt-1 text-sm text-green-900 leading-relaxed">{resolutionDetails.resolutionDescription}</p>
         </div>
         
-        {resolutionDetails.followUpActions.length > 0 && (
+        {(resolutionDetails.followUpActions || []).length > 0 && (
           <div>
             <label className="block text-sm font-medium text-green-700 mb-2">Acciones de seguimiento</label>
             <ul className="space-y-2">
-              {resolutionDetails.followUpActions.map((action, index) => (
+              {(resolutionDetails.followUpActions || []).map((action, index) => (
                 <li key={index} className="flex items-start">
                   <div className="flex-shrink-0 mt-1">
                     <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">

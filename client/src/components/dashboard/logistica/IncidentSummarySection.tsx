@@ -1,18 +1,8 @@
 import React from 'react';
-
-interface IncidentData {
-  id: string;
-  type: string;
-  severity: 'baja' | 'media' | 'alta' | 'critica';
-  status: 'abierta' | 'en-proceso' | 'resuelta' | 'anulada';
-  reportDate: string;
-  resolutionDate?: string;
-  responsible: string;
-  associatedMovement: string;
-}
+import { LogisticsIncident } from '../../../types';
 
 interface IncidentSummarySectionProps {
-  incident: IncidentData;
+  incident: LogisticsIncident;
 }
 
 export const IncidentSummarySection: React.FC<IncidentSummarySectionProps> = ({ incident }) => {
@@ -74,13 +64,15 @@ export const IncidentSummarySection: React.FC<IncidentSummarySectionProps> = ({ 
         {/* ID */}
         <div>
           <dt className="text-sm font-medium text-gray-500">ID de incidencia</dt>
-          <dd className="mt-1 text-sm font-semibold text-gray-900">{incident.id}</dd>
+          <dd className="mt-1 text-sm font-semibold text-gray-900">
+            {incident.incidentCode || incident.id}
+          </dd>
         </div>
 
         {/* Type */}
         <div>
           <dt className="text-sm font-medium text-gray-500">Tipo</dt>
-          <dd className="mt-1 text-sm text-gray-900">{incident.type}</dd>
+          <dd className="mt-1 text-sm text-gray-900">{incident.type || 'Incidente'}</dd>
         </div>
 
         {/* Severity */}
@@ -120,7 +112,7 @@ export const IncidentSummarySection: React.FC<IncidentSummarySectionProps> = ({ 
         {/* Responsible */}
         <div>
           <dt className="text-sm font-medium text-gray-500">Responsable</dt>
-          <dd className="mt-1 text-sm text-gray-900">{incident.responsible}</dd>
+          <dd className="mt-1 text-sm text-gray-900">{incident.responsible || 'Sin responsable'}</dd>
         </div>
 
         {/* Associated Movement */}
@@ -128,7 +120,7 @@ export const IncidentSummarySection: React.FC<IncidentSummarySectionProps> = ({ 
           <dt className="text-sm font-medium text-gray-500">Movimiento asociado</dt>
           <dd className="mt-1">
             <button className="text-sm font-medium text-blue-600 hover:text-blue-500">
-              {incident.associatedMovement}
+              {incident.associatedMovement || '—'}
             </button>
           </dd>
         </div>

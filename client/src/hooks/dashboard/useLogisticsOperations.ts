@@ -219,3 +219,40 @@ export const useLogisticsOperations = () => {
 };
 
 export type UseLogisticsOperationsReturn = ReturnType<typeof useLogisticsOperations>;
+
+export const useLogisticsOperationDetail = (operationId?: string | null) => {
+  const [operation, setOperation] = useState<LogisticsOperationRecord | null>(null);
+  const [loading, setLoading] = useState(Boolean(operationId));
+  const [error, setError] = useState<ApiError | null>(null);
+
+  const fetchOperation = useCallback(async () => {
+    if (!operationId) {
+      setOperation(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    try {
+      const response = (await api.getLogisticsOperationById(operationId)) as LogisticsOperationRecord;
+      setOperation(response);
+    } catch (err) {
+      setError(handleApiError(err));
+      setOperation(null);
+    } finally {
+      setLoading(false);
+    }
+  }, [operationId]);
+
+  useEffect(() => {
+    fetchOperation();
+  }, [fetchOperation]);
+
+  return {
+    operation,
+    loading,
+    error,
+    refresh: fetchOperation,
+  };
+};

@@ -191,6 +191,10 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
           <div className="flex flex-1 items-center justify-center">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
           </div>
+        ) : !movement ? (
+          <div className="flex flex-1 items-center justify-center px-6 text-center text-gray-500">
+            No encontramos información del movimiento seleccionado.
+          </div>
         ) : (
           <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6">
             <section className="rounded-lg border border-gray-200 bg-white p-6 shadow-sm">

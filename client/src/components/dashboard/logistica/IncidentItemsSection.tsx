@@ -1,17 +1,8 @@
 import React from 'react';
-
-interface IncidentItem {
-  id: string;
-  code: string;
-  description: string;
-  quantity: number;
-  unit: string;
-  status: 'affected' | 'damaged' | 'lost' | 'recovered';
-  location: string;
-}
+import { LogisticsIncidentItem } from '../../../types';
 
 interface IncidentItemsSectionProps {
-  items: IncidentItem[];
+  items: LogisticsIncidentItem[];
 }
 
 export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ items }) => {
@@ -84,7 +75,7 @@ export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ item
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
-                  {item.quantity} {item.unit}
+                  {item.quantity} {item.unit || ''}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900">
                   <span className={getStatusBadge(item.status)}>
@@ -92,7 +83,7 @@ export const IncidentItemsSection: React.FC<IncidentItemsSectionProps> = ({ item
                   </span>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {item.location}
+                  {item.location || '—'}
                 </td>
               </tr>
             ))}

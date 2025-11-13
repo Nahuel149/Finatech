@@ -1,16 +1,8 @@
 import React from 'react';
-
-interface ChangeHistoryItem {
-  id: string;
-  action: string;
-  description: string;
-  date: string;
-  user: string;
-  type: 'created' | 'updated' | 'in_review' | 'comment' | 'resolved';
-}
+import { LogisticsIncidentHistoryEntry } from '../../../types';
 
 interface ResolvedIncidentTimelineSectionProps {
-  changeHistory: ChangeHistoryItem[];
+  changeHistory: LogisticsIncidentHistoryEntry[];
 }
 
 export const ResolvedIncidentTimelineSection: React.FC<ResolvedIncidentTimelineSectionProps> = ({
@@ -105,7 +97,7 @@ export const ResolvedIncidentTimelineSection: React.FC<ResolvedIncidentTimelineS
       <div className="flow-root">
         <ul className="-mb-8">
           {changeHistory.map((event, eventIdx) => (
-            <li key={event.id}>
+            <li key={event.id || `${event.action}-${eventIdx}` }>
               <div className="relative pb-8">
                 {eventIdx !== changeHistory.length - 1 ? (
                   <span

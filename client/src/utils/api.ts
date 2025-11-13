@@ -353,6 +353,22 @@ export const api = {
   // Logistics
   getLogisticsOperations: (params?: Record<string, unknown>) =>
     apiRequest(`/api/logistics/operations${buildQueryString(params)}`),
+  getLogisticsOperationById: (operationId: string) =>
+    apiRequest(`/api/logistics/operations/${encodeURIComponent(operationId)}`),
+  updateLogisticsOperationState: (operationId: string, payload: { state: string }) =>
+    apiRequest(`/api/logistics/operations/${encodeURIComponent(operationId)}/state`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
+  getLogisticsIncidents: (params?: Record<string, unknown>) =>
+    apiRequest(`/api/logistics/incidents${buildQueryString(params)}`),
+  getLogisticsIncident: (incidentId: string) =>
+    apiRequest(`/api/logistics/incidents/${encodeURIComponent(incidentId)}`),
+  updateLogisticsIncidentStatus: (incidentId: string, payload: { status: string }) =>
+    apiRequest(`/api/logistics/incidents/${encodeURIComponent(incidentId)}/status`, {
+      method: 'PATCH',
+      body: JSON.stringify(payload),
+    }),
 
   getOperationLogisticsOrders: (operationId: string) =>
     apiRequest(`/api/operations/${encodeURIComponent(operationId)}/logistics-orders`),

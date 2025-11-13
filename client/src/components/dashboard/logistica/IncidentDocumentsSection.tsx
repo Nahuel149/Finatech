@@ -4,21 +4,12 @@ import {
   ArrowDownTrayIcon,
   EyeIcon 
 } from '../../icons/HeroiconsOutline';
-
-interface IncidentDocument {
-  id: string;
-  name: string;
-  type: string;
-  size: string;
-  uploadDate: string;
-  uploadedBy: string;
-  url?: string;
-}
+import { LogisticsIncidentDocument } from '../../../types';
 
 interface IncidentDocumentsSectionProps {
-  documents: IncidentDocument[];
-  onDownload?: (document: IncidentDocument) => void;
-  onView?: (document: IncidentDocument) => void;
+  documents: LogisticsIncidentDocument[];
+  onDownload?: (document: LogisticsIncidentDocument) => void;
+  onView?: (document: LogisticsIncidentDocument) => void;
 }
 
 export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> = ({ 
@@ -26,7 +17,10 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
   onDownload,
   onView 
 }) => {
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString?: string | null) => {
+    if (!dateString) {
+      return '—';
+    }
     return new Date(dateString).toLocaleDateString('es-ES', {
       year: 'numeric',
       month: 'short',
@@ -96,16 +90,16 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
                   </div>
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {document.type.toUpperCase()}
+                  {(document.type || 'DOC').toUpperCase()}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {document.size}
+                  {document.size || '—'}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {formatDate(document.uploadDate)}
+                  {formatDate(document.uploadedAt)}
                 </td>
                 <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                  {document.uploadedBy}
+                  {document.uploadedBy || '—'}
                 </td>
                 <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                   <div className="flex items-center justify-end space-x-2">

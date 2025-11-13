@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { BalanceStripe } from '../operaciones/BalanceStripe';
@@ -8,6 +8,9 @@ import { LogisticsRecentMovementsSection } from './LogisticsRecentMovementsSecti
 import { LogisticsActiveIncidentsSection } from './LogisticsActiveIncidentsSection';
 import { LogisticsQuickActionsSection } from './LogisticsQuickActionsSection';
 import { Footer } from '../operaciones/Footer';
+import { useLogisticsIncidents, useLogisticsOperations } from '../../../hooks';
+import { LogisticsIncident, LogisticsOperation, OperationStatus, OperationType } from '../../../types';
+import { Alert } from '../../ui/Alert';
 
 interface MovementData {
   id: string;
@@ -35,78 +38,121 @@ interface SummaryStats {
   resolvedIncidents: number;
 }
 
+const mapOperationType = (type: OperationType): MovementData['type'] => {
+  switch (type) {
+    case 'transferencia':
+      return 'Transferencia';
+    case 'retiro':
+      return 'Recogida';
+    case 'custodia':
+      return 'Devolución';
+    default:
+      return 'Entrega';
+  }
+};
+
+const mapOperationStatus = (status: OperationStatus): MovementData['status'] => {
+  switch (status) {
+    case 'completado':
+      return 'Completado';
+    case 'en-curso':
+      return 'En tránsito';
+    case 'anulado':
+      return 'Cancelado';
+    default:
+      return 'Pendiente';
+  }
+};
+
 export const LogisticsGeneralSummaryPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
-  const [selectedMovement, setSelectedMovement] = useState<MovementData | null>(null);
+  const [selectedMovementId, setSelectedMovementId] = useState<string | null>(null);
   const [isDetailPanelOpen, setIsDetailPanelOpen] = useState(false);
 
-  // Mock data for summary statistics
-  const summaryStats: SummaryStats = {
-    totalMovements: 1247,
-    pendingMovements: 23,
-    completedMovements: 1224,
-    totalValue: 2847650,
-    activeIncidents: 3,
-    resolvedIncidents: 47
-  };
+  const { operations, error, pagination } = useLogisticsOperations();
+  const {
+    incidents: activeIncidents,
+    loading: incidentsLoading,
+    error: incidentsError,
+  } = useLogisticsIncidents({ status: 'en-proceso', limit: 10 });
+  const { incidents: resolvedIncidents } = useLogisticsIncidents({ status: 'resuelta', limit: 20 });
 
-  const movements: MovementData[] = useMemo(
-    () => [
-      {
-        id: 'MOV-2024-001',
-        date: '2024-01-15T13:30:00Z',
-        type: 'Entrega',
-        origin: 'Centro de Distribución CABA',
-        destination: 'Sucursal Rosario',
-        client: 'Juan Pérez',
-        driver: 'María García',
-        status: 'En tránsito',
-        value: 125000,
-        estimatedTime: '02:45',
-        hasIncident: false,
-        notes: 'Entrega programada para el mediodía.'
-      },
-      {
-        id: 'MOV-2024-002',
-        date: '2024-01-14T09:15:00Z',
-        type: 'Recogida',
-        origin: 'Sucursal Córdoba',
-        destination: 'Centro de Distribución CABA',
-        client: 'Ana López',
-        driver: 'Carlos Rodríguez',
-        status: 'Completado',
-        value: 89500,
-        estimatedTime: '03:10',
-        actualTime: '03:05',
-        hasIncident: false,
-        notes: 'Mercadería consolidada sin novedades.'
-      },
-      {
-        id: 'MOV-2024-003',
-        date: '2024-01-13T16:00:00Z',
-        type: 'Transferencia',
-        origin: 'Depósito Norte',
-        destination: 'Depósito Sur',
-        client: 'Roberto Silva',
-        driver: 'Laura Martínez',
-        status: 'Pendiente',
-        value: 67800,
-        estimatedTime: '01:50',
-        hasIncident: true,
-        incidentId: 'INC-2024-045',
-        notes: 'Requiere confirmación de disponibilidad en destino.'
-      }
-    ],
-    []
+  const movementRows: MovementData[] = useMemo(() => {
+    return operations.map((operation: LogisticsOperation) => ({
+      id: operation.operationCode || operation.id,
+      date: operation.date,
+      type: mapOperationType(operation.type),
+      origin: operation.origin || operation.route?.split('→')[0]?.trim() || '—',
+      destination: operation.destination || operation.route?.split('→')[1]?.trim() || '—',
+      client: operation.contact || 'Sin contacto',
+      driver: operation.responsible || 'Sin asignar',
+      status: mapOperationStatus(operation.status),
+      value: operation.amount ?? 0,
+      estimatedTime: '—',
+      actualTime: undefined,
+      hasIncident: false,
+      notes: operation.notes,
+    }));
+  }, [operations]);
+
+  const summaryStats: SummaryStats = useMemo(() => {
+    const totalMovements = pagination.totalItems || operations.length;
+    const pendingMovements = operations.filter((op) => op.status === 'pendiente').length;
+    const completedMovements = operations.filter((op) => op.status === 'completado').length;
+    const totalValue = operations.reduce((acc, op) => acc + (op.amount || 0), 0);
+    return {
+      totalMovements,
+      pendingMovements,
+      completedMovements,
+      totalValue,
+      activeIncidents: activeIncidents.length,
+      resolvedIncidents: resolvedIncidents.length,
+    };
+  }, [operations, pagination.totalItems, activeIncidents.length, resolvedIncidents.length]);
+
+  const activeIncidentsCards = useMemo(() => {
+    const severityMap: Record<string, 'low' | 'medium' | 'high'> = {
+      baja: 'low',
+      media: 'medium',
+      alta: 'high',
+      critica: 'high',
+    };
+    const statusLabels: Record<string, string> = {
+      abierta: 'Abierta',
+      'en-proceso': 'En investigación',
+      resuelta: 'Resuelta',
+      anulada: 'Anulada',
+    };
+    return activeIncidents.map((incident: LogisticsIncident) => ({
+      id: incident.incidentCode || incident.id,
+      title: incident.type || 'Incidencia logística',
+      description: incident.description,
+      severity: severityMap[incident.severity] || 'medium',
+      status: statusLabels[incident.status] || incident.status,
+      reportedDate: incident.reportDate,
+      reportedBy: incident.reportedBy || 'Sistema',
+      assignedTo: incident.responsible || 'Sin responsable',
+      movementId: incident.associatedMovement || undefined,
+      estimatedResolution: incident.resolutionDate || undefined,
+    }));
+  }, [activeIncidents]);
+
+  useEffect(() => {
+    if (selectedMovementId && !movementRows.some((movement) => movement.id === selectedMovementId)) {
+      setSelectedMovementId(null);
+      setIsDetailPanelOpen(false);
+    }
+  }, [movementRows, selectedMovementId]);
+
+  const selectedMovement = useMemo(
+    () => movementRows.find((movement) => movement.id === selectedMovementId) || null,
+    [movementRows, selectedMovementId]
   );
 
   const handleMovementClick = (movementId: string) => {
-    const movement = movements.find(item => item.id === movementId);
-    if (movement) {
-      setSelectedMovement(movement);
-      setIsDetailPanelOpen(true);
-    }
+    setSelectedMovementId(movementId);
+    setIsDetailPanelOpen(true);
   };
 
   const handleCloseDetailPanel = () => {
@@ -118,8 +164,11 @@ export const LogisticsGeneralSummaryPage: React.FC = () => {
     navigate(`/dashboard/logistica/movimiento/${movementId}`);
   };
 
-  const handleNavigateToIncidentDetail = (incidentId: string) => {
-    navigate(`/dashboard/logistica/incidencia/${incidentId}`);
+  const handleNavigateToIncidentDetail = (clickedIncidentId: string) => {
+    if (!clickedIncidentId) {
+      return;
+    }
+    navigate(`/dashboard/logistica/incidencia/${clickedIncidentId}`);
   };
 
   const formatCurrency = (amount: number) => {
@@ -150,19 +199,32 @@ export const LogisticsGeneralSummaryPage: React.FC = () => {
         
         <div className="space-y-6">
           {/* Summary Statistics Section */}
+          {(error || incidentsError) && (
+            <div className="mb-4">
+              <Alert
+                type="error"
+                message={
+                  error?.message || incidentsError?.message || 'No pudimos cargar el resumen logístico.'
+                }
+              />
+            </div>
+          )}
+
           <LogisticsSummaryStatsSection stats={summaryStats} />
           
           {/* Quick Actions Section */}
           <LogisticsQuickActionsSection />
           
           {/* Active Incidents Section */}
-          <LogisticsActiveIncidentsSection 
+          <LogisticsActiveIncidentsSection
+            incidents={activeIncidentsCards}
+            loading={incidentsLoading}
             onIncidentClick={handleNavigateToIncidentDetail}
           />
           
           {/* Recent Movements Section */}
           <LogisticsRecentMovementsSection
-            movements={movements}
+            movements={movementRows}
             onMovementClick={handleMovementClick}
             onIncidentClick={handleNavigateToIncidentDetail}
           />
@@ -266,7 +328,7 @@ export const LogisticsGeneralSummaryPage: React.FC = () => {
                   <div>
                     <h3 className="text-sm font-medium text-gray-500">Valor declarado</h3>
                     <p className="mt-1 text-sm text-gray-900">
-                      {formatCurrency(selectedMovement.value)}
+                    {formatCurrency(selectedMovement.value || 0)}
                     </p>
                   </div>
 

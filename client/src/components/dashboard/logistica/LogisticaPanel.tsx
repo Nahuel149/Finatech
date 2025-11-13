@@ -9,8 +9,8 @@ import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
 import NewMovementModal from './NewMovementModal';
-import { LogisticsOperation, DEFAULT_LOGISTICS_FILTERS } from '../../../types/logistics';
-import { useDashboardBalances } from '../../../hooks';
+import { LogisticsFilters, LogisticsOperation } from '../../../types/logistics';
+import { useDashboardBalances, useLogisticsOperations } from '../../../hooks';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType, Button } from '../../shared/design-system';
 import { TreasuryBalance, ApiError } from '../../../types';
@@ -20,180 +20,6 @@ type ToastState = {
   type: 'success' | 'info';
   message: string;
 };
-
-const logisticsOperations: LogisticsOperation[] = [
-  {
-    id: 'FT-LOG-000345',
-    operationCode: 'LOG-ENT-345',
-    date: '2025-10-17T14:30:00Z',
-    type: 'entrega',
-    contact: 'María González',
-    route: 'Sede Central → Sucursal Norte',
-    status: 'en-curso',
-    amount: 5250,
-    currency: 'USD',
-    responsible: 'Juan Pérez',
-    notes:
-      'Entrega de documentación legal y efectivo en caja fuerte. El mensajero confirmó salida a las 14:05.',
-    timeline: [
-      {
-        id: '1',
-        title: 'Operación registrada',
-        description: 'Creada por Ana López',
-        date: '2025-10-17T13:45:00Z',
-        user: 'Sistema',
-        state: 'completed',
-      },
-      {
-        id: '2',
-        title: 'En curso',
-        description: 'Vehículo FT-03 en tránsito',
-        date: '2025-10-17T14:20:00Z',
-        user: 'Juan Pérez',
-        state: 'current',
-      },
-      {
-        id: '3',
-        title: 'Recibida',
-        description: 'Pendiente de confirmación',
-        date: '2025-10-17T15:10:00Z',
-        user: 'Sucursal Norte',
-        state: 'upcoming',
-      },
-    ],
-    attachments: [
-      { id: '1', name: 'comprobante_entrega.pdf', type: 'pdf', size: '245 KB' },
-      { id: '2', name: 'foto_mercaderia.jpg', type: 'image', size: '1.2 MB' },
-    ],
-  },
-  {
-    id: 'FT-LOG-000346',
-    operationCode: 'LOG-TRF-346',
-    date: '2025-10-17T13:15:00Z',
-    type: 'transferencia',
-    contact: 'Empresa ABC',
-    route: 'Bóveda A → Bóveda B',
-    status: 'completado',
-    amount: 850000,
-    currency: 'ARS',
-    responsible: 'Ana López',
-    notes:
-      'Transferencia interna registrada en Tesorería con confirmación de cajero responsable.',
-    timeline: [
-      {
-        id: '1',
-        title: 'Operación registrada',
-        description: 'Creada por Sistema',
-        date: '2025-10-17T12:55:00Z',
-        user: 'Sistema',
-        state: 'completed',
-      },
-      {
-        id: '2',
-        title: 'Traslado en bóveda',
-        description: 'Se realizó la compensación física',
-        date: '2025-10-17T13:05:00Z',
-        user: 'Ana López',
-        state: 'completed',
-      },
-      {
-        id: '3',
-        title: 'Finalizada',
-        description: 'Actualizado en Tesorería',
-        date: '2025-10-17T13:15:00Z',
-        user: 'Tesorería',
-        state: 'completed',
-      },
-    ],
-    attachments: [
-      { id: '1', name: 'resumen_movimiento.pdf', type: 'pdf', size: '180 KB' },
-    ],
-  },
-  {
-    id: 'FT-LOG-000347',
-    operationCode: 'LOG-RET-347',
-    date: '2025-10-17T11:45:00Z',
-    type: 'retiro',
-    contact: 'Carlos Mendoza',
-    route: 'Oficina Central → Oficina Principal',
-    status: 'pendiente',
-    amount: 2100,
-    currency: 'USD',
-    responsible: 'Luis García',
-    notes:
-      'Retiro programado para documentación y efectivo. Pendiente de confirmación de retiro.',
-    timeline: [
-      {
-        id: '1',
-        title: 'Programado',
-        description: 'Agendado para las 12:15',
-        date: '2025-10-17T11:45:00Z',
-        user: 'Carlos Mendoza',
-        state: 'completed',
-      },
-      {
-        id: '2',
-        title: 'Listo para retiro',
-        description: 'Documentación en mostrador',
-        date: '2025-10-17T12:00:00Z',
-        user: 'Oficina Central',
-        state: 'current',
-      },
-      {
-        id: '3',
-        title: 'Retirado',
-        description: 'Pendiente de confirmación',
-        date: '2025-10-17T12:30:00Z',
-        user: 'Luis García',
-        state: 'upcoming',
-      },
-    ],
-    attachments: [],
-  },
-  {
-    id: 'FT-LOG-000348',
-    operationCode: 'LOG-CUS-348',
-    date: '2025-10-17T10:20:00Z',
-    type: 'custodia',
-    contact: 'Proveedor XYZ',
-    route: 'Depósito Av. Belgrano → Bóveda Principal',
-    status: 'en-curso',
-    amount: 1200000,
-    currency: 'ARS',
-    responsible: 'María Torres',
-    notes:
-      'Custodia de valores en tránsito. Vehículo FT-05 con seguimiento activo.',
-    timeline: [
-      {
-        id: '1',
-        title: 'Carga completada',
-        description: 'Verificado por Proveedor XYZ',
-        date: '2025-10-17T09:55:00Z',
-        user: 'Proveedor XYZ',
-        state: 'completed',
-      },
-      {
-        id: '2',
-        title: 'En tránsito',
-        description: 'Trayecto monitorizado',
-        date: '2025-10-17T10:15:00Z',
-        user: 'María Torres',
-        state: 'current',
-      },
-      {
-        id: '3',
-        title: 'Recepción',
-        description: 'Esperando confirmación de bóveda',
-        date: '2025-10-17T11:05:00Z',
-        user: 'Bóveda Principal',
-        state: 'upcoming',
-      },
-    ],
-    attachments: [
-      { id: '1', name: 'checklist_seguridad.pdf', type: 'pdf', size: '96 KB' },
-    ],
-  },
-];
 
 interface LogisticsBalanceStripeProps {
   onBalanceClick?: () => void;
@@ -384,16 +210,33 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
 
 export const LogisticaPanel: React.FC = () => {
   const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState('');
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailOpen, setDetailOpen] = useState(false);
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<LogisticsOperation | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
 
-  // Add dashboard balances hook for mobile layout
-  const { balances, loading, error, refresh } = useDashboardBalances();
+  const {
+    operations,
+    metrics,
+    filters,
+    loading: operationsLoading,
+    error: operationsError,
+    refresh: refreshOperations,
+    updateFilters,
+    resetFilters,
+    contacts,
+    responsibles,
+    pagination,
+  } = useLogisticsOperations();
 
+  // Add dashboard balances hook for mobile layout
+  const {
+    balances,
+    loading: balancesLoading,
+    error: balancesError,
+    refresh: refreshBalances,
+  } = useDashboardBalances();
 
 
   const handleBalanceClick = () => {
@@ -421,7 +264,7 @@ export const LogisticaPanel: React.FC = () => {
 
 
   const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
+    updateFilters({ search: value });
   };
 
   const handleFilterToggle = () => {
@@ -450,12 +293,14 @@ export const LogisticaPanel: React.FC = () => {
     setSelectedOperation(null);
   };
 
-  const handleApplyFilters = (_filters: unknown) => {
+  const handleApplyFilters = (nextFilters: LogisticsFilters) => {
+    updateFilters(() => nextFilters);
     setToast({ type: 'success', message: 'Filtros aplicados correctamente.' });
     setFilterOpen(false);
   };
 
   const handleClearFilters = () => {
+    resetFilters();
     setToast({ type: 'info', message: 'Filtros limpiados.' });
   };
 
@@ -467,44 +312,23 @@ export const LogisticaPanel: React.FC = () => {
     setIsNewMovementModalOpen(false);
   };
 
-  const filteredOperations = useMemo(() => {
-    const term = searchTerm.trim().toLowerCase();
-    if (!term) {
-      return logisticsOperations;
-    }
-    return logisticsOperations.filter((operation) => {
-      const haystack = [
-        operation.id,
-        operation.contact,
-        operation.route,
-        operation.status,
-        operation.responsible,
-        operation.notes,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [searchTerm]);
-
   useEffect(() => {
     setSelectedOperations((prev) =>
-      prev.filter((operationId) => filteredOperations.some((operation) => operation.id === operationId))
+      prev.filter((operationId) => operations.some((operation) => operation.id === operationId))
     );
-  }, [filteredOperations]);
+  }, [operations]);
 
-  const totalOperations = useMemo(() => filteredOperations.length, [filteredOperations]);
+  const totalOperations = pagination.totalItems || operations.length;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <DashboardNavbar search={searchTerm} onSearchChange={handleSearchChange} />
+      <DashboardNavbar search={filters.search} onSearchChange={handleSearchChange} />
       <LogisticsBalanceStripe 
         onBalanceClick={handleBalanceClick}
         balances={balances}
-        loading={loading}
-        error={error}
-        refresh={refresh}
+        loading={balancesLoading}
+        error={balancesError}
+        refresh={refreshBalances}
         mapBalanceToCardData={mapBalanceToCardData}
       />
 
@@ -560,18 +384,19 @@ export const LogisticaPanel: React.FC = () => {
 
           {activeView === 'overview' ? (
             <>
-              <GeneralSummarySection metrics={null} loading={false} />
+              <GeneralSummarySection metrics={metrics} loading={operationsLoading} />
 
               <LogisticsOperationsSection
-                operations={filteredOperations}
+                operations={operations}
                 selectedOperations={selectedOperations}
                 onSelectionChange={handleSelectionChange}
                 onFilterClick={handleFilterToggle}
                 onBulkAction={handleBulkAction}
                 onViewOperation={handleViewOperation}
                 totalOperations={totalOperations}
-                loading={false}
-                error={null}
+                loading={operationsLoading}
+                error={operationsError}
+                onRetry={refreshOperations}
               />
 
               <TreasuryIntegrationSection />
@@ -586,10 +411,12 @@ export const LogisticaPanel: React.FC = () => {
 
       <FilterPanel
         isOpen={filterOpen}
-        filters={DEFAULT_LOGISTICS_FILTERS}
+        filters={filters}
         onClose={() => setFilterOpen(false)}
         onApplyFilters={handleApplyFilters}
         onClearFilters={handleClearFilters}
+        contactOptions={contacts}
+        responsibleOptions={responsibles}
       />
 
       <OperationDetailPanel

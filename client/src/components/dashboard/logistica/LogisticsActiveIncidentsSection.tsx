@@ -22,49 +22,16 @@ interface ActiveIncident {
 }
 
 interface LogisticsActiveIncidentsSectionProps {
-  onIncidentClick: (incidentId: string) => void;
+  incidents: ActiveIncident[];
+  loading?: boolean;
+  onIncidentClick?: (incidentId: string) => void;
 }
 
-export const LogisticsActiveIncidentsSection: React.FC<LogisticsActiveIncidentsSectionProps> = ({ 
-  onIncidentClick 
+export const LogisticsActiveIncidentsSection: React.FC<LogisticsActiveIncidentsSectionProps> = ({
+  incidents,
+  loading = false,
+  onIncidentClick,
 }) => {
-  // Mock data for active incidents
-  const activeIncidents: ActiveIncident[] = [
-    {
-      id: 'INC-2024-001',
-      title: 'Retraso en entrega crítica',
-      description: 'Entrega programada para cliente premium presenta retraso de 2 horas debido a problemas de tráfico.',
-      severity: 'high',
-      status: 'En investigación',
-      reportedDate: '2024-01-15T10:30:00Z',
-      reportedBy: 'Juan Pérez',
-      assignedTo: 'María García',
-      movementId: 'MOV-2024-001',
-      estimatedResolution: '2024-01-15T16:00:00Z'
-    },
-    {
-      id: 'INC-2024-002',
-      title: 'Discrepancia en inventario',
-      description: 'Se detectó diferencia entre inventario físico y sistema en almacén central.',
-      severity: 'medium',
-      status: 'Asignado',
-      reportedDate: '2024-01-15T08:15:00Z',
-      reportedBy: 'Ana López',
-      assignedTo: 'Carlos Rodríguez',
-      estimatedResolution: '2024-01-16T12:00:00Z'
-    },
-    {
-      id: 'INC-2024-003',
-      title: 'Falla en sistema de tracking',
-      description: 'El sistema de seguimiento no actualiza ubicaciones en tiempo real.',
-      severity: 'low',
-      status: 'Pendiente',
-      reportedDate: '2024-01-14T16:45:00Z',
-      reportedBy: 'Roberto Silva',
-      assignedTo: 'Laura Martínez',
-      estimatedResolution: '2024-01-17T10:00:00Z'
-    }
-  ];
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
@@ -130,20 +97,16 @@ export const LogisticsActiveIncidentsSection: React.FC<LogisticsActiveIncidentsS
           </p>
         </div>
         
-        <div className="flex items-center space-x-2">
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-            {activeIncidents.filter(i => i.severity === 'high').length} críticas
-          </span>
-          <button
-            onClick={() => window.location.href = '/dashboard/logistica/incidencias'}
-            className="text-sm text-blue-600 hover:text-blue-800 font-medium"
-          >
-            Ver todas →
-          </button>
+        <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          {incidents.filter((incident) => incident.severity === 'high').length} críticas
         </div>
       </div>
 
-      {activeIncidents.length === 0 ? (
+      {loading ? (
+        <div className="bg-white border border-gray-200 rounded-lg p-6 text-center text-sm text-gray-600">
+          Cargando incidencias recientes…
+        </div>
+      ) : incidents.length === 0 ? (
         <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
           <div className="flex justify-center mb-3">
             <svg className="h-12 w-12 text-green-400" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
@@ -159,14 +122,14 @@ export const LogisticsActiveIncidentsSection: React.FC<LogisticsActiveIncidentsS
         </div>
       ) : (
         <div className="space-y-4">
-          {activeIncidents.map((incident) => {
+          {incidents.map((incident) => {
             const SeverityIcon = getSeverityIcon(incident.severity);
             
             return (
               <div
                 key={incident.id}
                 className={`border rounded-lg p-6 transition-all duration-200 hover:shadow-md cursor-pointer ${getSeverityColor(incident.severity)}`}
-                onClick={() => onIncidentClick(incident.id)}
+                onClick={() => incident.id && onIncidentClick?.(incident.id)}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">

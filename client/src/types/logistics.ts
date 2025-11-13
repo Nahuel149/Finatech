@@ -85,6 +85,77 @@ export interface LogisticsAttachment {
   url?: string | null;
 }
 
+export type LogisticsIncidentSeverity = 'baja' | 'media' | 'alta' | 'critica';
+export type LogisticsIncidentStatus = 'abierta' | 'en-proceso' | 'resuelta' | 'anulada';
+
+export interface LogisticsIncidentDocument {
+  id?: string;
+  name: string;
+  type: string;
+  size?: string | null;
+  url?: string | null;
+  uploadedBy?: string | null;
+  uploadedAt?: string | null;
+  status?: string | null;
+}
+
+export interface LogisticsIncidentItem {
+  id?: string;
+  code: string;
+  description: string;
+  quantity: number;
+  unit?: string | null;
+  status?: string;
+  location?: string | null;
+}
+
+export type LogisticsIncidentHistoryType =
+  | 'created'
+  | 'updated'
+  | 'in_review'
+  | 'comment'
+  | 'resolved'
+  | 'cancelled';
+
+export interface LogisticsIncidentHistoryEntry {
+  id?: string;
+  action: string;
+  description?: string | null;
+  date: string;
+  user: string;
+  type: LogisticsIncidentHistoryType;
+}
+
+export interface LogisticsIncidentResolutionDetails {
+  resolutionType?: string | null;
+  resolutionDescription?: string | null;
+  resolvedBy?: string | null;
+  resolutionDate?: string | null;
+  followUpActions?: string[];
+}
+
+export interface LogisticsIncident {
+  id: string;
+  incidentCode: string;
+  type?: string;
+  status: LogisticsIncidentStatus;
+  severity: LogisticsIncidentSeverity;
+  reportDate: string;
+  resolutionDate?: string | null;
+  responsible?: string | null;
+  reportedBy?: string | null;
+  associatedMovement?: string | null;
+  logisticsOrderId?: string | null;
+  description: string;
+  operationalImpacts: string[];
+  involvedItems: LogisticsIncidentItem[];
+  attachedDocuments: LogisticsIncidentDocument[];
+  changeHistory: LogisticsIncidentHistoryEntry[];
+  resolutionDetails?: LogisticsIncidentResolutionDetails | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface LogisticsOperation {
   id: string;
   operationCode: string;

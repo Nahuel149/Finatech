@@ -4,49 +4,12 @@ import { IncidentSummarySection } from './IncidentSummarySection';
 import { IncidentTimelineSection } from './IncidentTimelineSection';
 import { IncidentItemsSection } from './IncidentItemsSection';
 import { IncidentDocumentsSection } from './IncidentDocumentsSection';
-
-interface IncidentData {
-  id: string;
-  type: string;
-  severity: 'baja' | 'media' | 'alta' | 'critica';
-  status: 'abierta' | 'en-proceso' | 'resuelta' | 'anulada';
-  reportDate: string;
-  resolutionDate?: string;
-  responsible: string;
-  associatedMovement: string;
-  description: string;
-  operationalImpacts: string[];
-  involvedItems: Array<{
-    id: string;
-    code: string;
-    description: string;
-    quantity: number;
-    unit: string;
-    status: 'affected' | 'damaged' | 'lost' | 'recovered';
-    location: string;
-  }>;
-  attachedDocuments: Array<{
-    id: string;
-    name: string;
-    type: string;
-    size: string;
-    uploadDate: string;
-    uploadedBy: string;
-  }>;
-  changeHistory: Array<{
-    id: string;
-    action: string;
-    description: string;
-    date: string;
-    user: string;
-    type: 'created' | 'updated' | 'resolved' | 'cancelled';
-  }>;
-}
+import { LogisticsIncident } from '../../../types';
 
 interface IncidentDetailSidePanelProps {
   isOpen: boolean;
   onClose: () => void;
-  incident: IncidentData;
+  incident: LogisticsIncident;
   onEditIncident: () => void;
   onMarkAsResolved: () => void;
   onCancelIncident: () => void;
@@ -79,7 +42,7 @@ export const IncidentDetailSidePanel: React.FC<IncidentDetailSidePanelProps> = (
                 <span>›</span>
                 <span>Incidencias</span>
                 <span>›</span>
-                <span className="font-medium text-gray-900">{incident.id}</span>
+                <span className="font-medium text-gray-900">{incident.incidentCode || incident.id}</span>
               </div>
             </div>
             <button
@@ -103,25 +66,29 @@ export const IncidentDetailSidePanel: React.FC<IncidentDetailSidePanelProps> = (
                 
                 <div>
                   <h4 className="mb-2 font-medium text-gray-900">Impactos operacionales:</h4>
-                  <ul className="space-y-1">
-                    {incident.operationalImpacts.map((impact, index) => (
-                      <li key={index} className="flex items-start">
-                        <span className="mr-2 mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-400"></span>
-                        <span className="text-gray-700">{impact}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {incident.operationalImpacts && incident.operationalImpacts.length > 0 ? (
+                    <ul className="space-y-1">
+                      {incident.operationalImpacts.map((impact, index) => (
+                        <li key={index} className="flex items-start">
+                          <span className="mr-2 mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-gray-400"></span>
+                          <span className="text-gray-700">{impact}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-gray-500">No se registraron impactos adicionales.</p>
+                  )}
                 </div>
               </div>
 
               {/* Involved Items */}
-              <IncidentItemsSection items={incident.involvedItems} />
+              <IncidentItemsSection items={incident.involvedItems || []} />
 
               {/* Attached Documents */}
-              <IncidentDocumentsSection documents={incident.attachedDocuments} />
+              <IncidentDocumentsSection documents={incident.attachedDocuments || []} />
 
               {/* Change History */}
-              <IncidentTimelineSection history={incident.changeHistory} />
+              <IncidentTimelineSection history={incident.changeHistory || []} />
             </div>
           </div>
 

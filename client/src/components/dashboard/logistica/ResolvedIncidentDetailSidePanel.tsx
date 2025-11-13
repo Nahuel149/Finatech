@@ -4,55 +4,10 @@ import { ResolvedIncidentResolutionSection } from './ResolvedIncidentResolutionS
 import { IncidentItemsSection } from './IncidentItemsSection';
 import { IncidentDocumentsSection } from './IncidentDocumentsSection';
 import { ResolvedIncidentTimelineSection } from './ResolvedIncidentTimelineSection';
-
-interface ResolvedIncidentData {
-  id: string;
-  type: string;
-  severity: 'baja' | 'media' | 'alta' | 'critica';
-  status: 'resuelta';
-  reportDate: string;
-  resolutionDate: string;
-  responsible: string;
-  associatedMovement: string;
-  description: string;
-  operationalImpacts: string[];
-  resolutionDetails: {
-    resolutionType: string;
-    resolutionDescription: string;
-    resolvedBy: string;
-    resolutionDate: string;
-    followUpActions: string[];
-  };
-  involvedItems: Array<{
-    id: string;
-    code: string;
-    description: string;
-    quantity: number;
-    unit: string;
-    status: 'affected' | 'damaged' | 'lost' | 'recovered';
-    location: string;
-  }>;
-  attachedDocuments: Array<{
-    id: string;
-    name: string;
-    type: string;
-    size: string;
-    uploadDate: string;
-    uploadedBy: string;
-    status: string;
-  }>;
-  changeHistory: Array<{
-    id: string;
-    action: string;
-    description: string;
-    date: string;
-    user: string;
-    type: 'created' | 'updated' | 'in_review' | 'comment' | 'resolved';
-  }>;
-}
+import { LogisticsIncident } from '../../../types';
 
 interface ResolvedIncidentDetailSidePanelProps {
-  incident: ResolvedIncidentData;
+  incident: LogisticsIncident;
   onGoBack: () => void;
 }
 
@@ -81,7 +36,7 @@ export const ResolvedIncidentDetailSidePanel: React.FC<ResolvedIncidentDetailSid
                 <span className="text-gray-300">›</span>
                 <span className="text-sm text-gray-500">Incidencias</span>
                 <span className="text-gray-300">›</span>
-                <span className="text-sm text-blue-600">{incident.id}</span>
+                <span className="text-sm text-blue-600">{incident.incidentCode || incident.id}</span>
               </div>
             </div>
           </div>
@@ -119,13 +74,13 @@ export const ResolvedIncidentDetailSidePanel: React.FC<ResolvedIncidentDetailSid
         <ResolvedIncidentResolutionSection resolutionDetails={incident.resolutionDetails} />
 
         {/* Involved Items */}
-        <IncidentItemsSection items={incident.involvedItems} />
+        <IncidentItemsSection items={incident.involvedItems || []} />
 
         {/* Attached Documents */}
-        <IncidentDocumentsSection documents={incident.attachedDocuments} />
+        <IncidentDocumentsSection documents={incident.attachedDocuments || []} />
 
         {/* Change History */}
-        <ResolvedIncidentTimelineSection changeHistory={incident.changeHistory} />
+        <ResolvedIncidentTimelineSection changeHistory={incident.changeHistory || []} />
       </div>
 
       {/* Fixed Footer */}

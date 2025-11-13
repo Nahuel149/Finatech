@@ -6,18 +6,10 @@ import {
   XCircleIcon,
   ClockIcon 
 } from '../../icons/HeroiconsOutline';
-
-interface TimelineEvent {
-  id: string;
-  action: string;
-  description: string;
-  date: string;
-  user: string;
-  type: 'created' | 'updated' | 'resolved' | 'cancelled';
-}
+import { LogisticsIncidentHistoryEntry } from '../../../types';
 
 interface IncidentTimelineSectionProps {
-  history: TimelineEvent[];
+  history: LogisticsIncidentHistoryEntry[];
 }
 
 export const IncidentTimelineSection: React.FC<IncidentTimelineSectionProps> = ({ history }) => {
@@ -39,6 +31,10 @@ export const IncidentTimelineSection: React.FC<IncidentTimelineSectionProps> = (
         return <PlusCircleIcon className={`${iconClass} text-blue-600`} />;
       case 'updated':
         return <PencilSquareIcon className={`${iconClass} text-yellow-600`} />;
+      case 'in_review':
+        return <ClockIcon className={`${iconClass} text-orange-500`} />;
+      case 'comment':
+        return <PencilSquareIcon className={`${iconClass} text-indigo-600`} />;
       case 'resolved':
         return <CheckCircleIcon className={`${iconClass} text-green-600`} />;
       case 'cancelled':
@@ -54,6 +50,10 @@ export const IncidentTimelineSection: React.FC<IncidentTimelineSectionProps> = (
         return 'bg-blue-600';
       case 'updated':
         return 'bg-yellow-600';
+      case 'in_review':
+        return 'bg-orange-500';
+      case 'comment':
+        return 'bg-indigo-500';
       case 'resolved':
         return 'bg-green-600';
       case 'cancelled':
@@ -70,7 +70,7 @@ export const IncidentTimelineSection: React.FC<IncidentTimelineSectionProps> = (
       <div className="flow-root">
         <ul className="-mb-8">
           {history.map((event, eventIdx) => (
-            <li key={event.id}>
+            <li key={event.id || `${event.action}-${eventIdx}` }>
               <div className="relative pb-8">
                 {eventIdx !== history.length - 1 ? (
                   <span
@@ -87,7 +87,9 @@ export const IncidentTimelineSection: React.FC<IncidentTimelineSectionProps> = (
                   <div className="flex min-w-0 flex-1 justify-between space-x-4 pt-1.5">
                     <div>
                       <p className="text-sm font-medium text-gray-900">{event.action}</p>
-                      <p className="mt-1 text-sm text-gray-500">{event.description}</p>
+                      {event.description && (
+                        <p className="mt-1 text-sm text-gray-500">{event.description}</p>
+                      )}
                     </div>
                     <div className="whitespace-nowrap text-right text-sm text-gray-500">
                       <div>{formatDate(event.date)}</div>
