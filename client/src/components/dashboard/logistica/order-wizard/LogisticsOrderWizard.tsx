@@ -1,8 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   LogisticsOrder,
   LogisticsOrderBalance,
   LogisticsOrderOperationContext,
+  LogisticsOrderOperationAssets,
   LogisticsOrderStatus,
 } from '../../../../types';
 import { Modal } from '../../../ui/Modal';
@@ -26,6 +27,7 @@ interface LogisticsOrderWizardProps {
   operation: LogisticsOrderOperationContext | null;
   balances: LogisticsOrderBalance[];
   onCompleted: (order: LogisticsOrder, status: LogisticsOrderStatus) => void;
+  editingOrder?: LogisticsOrder | null;
 }
 
 const MIN_WINDOW_OFFSET_MINUTES = 30;
@@ -38,7 +40,32 @@ const buildDefaultDate = (minutesFromNow: number) => {
 
 const createItemId = () => `order-item-${Math.random().toString(36).slice(2, 9)}`;
 
-const buildInitialForm = (operation: LogisticsOrderOperationContext | null): LogisticsOrderFormState => {
+const buildInitialForm = (
+  operation: LogisticsOrderOperationContext | null,
+  editingOrder?: LogisticsOrder | null
+): LogisticsOrderFormState => {
+  if (editingOrder) {
+    return {
+      type: editingOrder.type,
+      origin: editingOrder.origin,
+      destination: editingOrder.destination,
+      contactName: editingOrder.contactName,
+      contactPhone: editingOrder.contactPhone,
+      windowStart: editingOrder.windowStart?.slice(0, 16) || buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 30),
+      windowEnd: editingOrder.windowEnd?.slice(0, 16) || buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 90),
+      messenger: editingOrder.messenger || '',
+      notes: editingOrder.notes || '',
+      internalNotes: editingOrder.internalNotes || '',
+      items: editingOrder.items.map((item) => ({
+        id: item.id || createItemId(),
+        assetCode: item.assetCode,
+        assetType: item.assetType,
+        expectedAmount: item.expectedAmount,
+        metadata: item.metadata || {},
+        notes: item.notes || '',
+      })),
+    };
+  }
   const defaultAsset = operation?.balances?.[0]?.assetCode || operation?.assets?.outgoing?.code || 'ARS';
   return {
     type: 'RETIRO',
@@ -183,27 +210,94 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   operation,
   balances,
   onCompleted,
+  editingOrder,
 }) => {
-  const [form, setForm] = useState<LogisticsOrderFormState>(buildInitialForm(operation));
+  const [form, setForm] = useState<LogisticsOrderFormState>(buildInitialForm(operation, editingOrder));
   const [step, setStep] = useState(1);
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [itemErrors, setItemErrors] = useState<FormItemErrors>({});
   const [bannerError, setBannerError] = useState<string | null>(null);
 
-  const { createOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
+  const { createOrder, updateOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
 
   useEffect(() => {
     if (isOpen) {
-      setForm(buildInitialForm(operation));
+      setForm(buildInitialForm(operation, editingOrder));
       setStep(1);
       setFieldErrors({});
       setItemErrors({});
       setBannerError(null);
       resetError();
     }
-  }, [isOpen, operation, resetError]);
+  }, [isOpen, operation, editingOrder, resetError]);
 
-  const balancesMap = useMemo(() => new Map(balances.map((entry) => [entry.assetCode, entry])), [balances]);
+  const effectiveBalances = useMemo(() => {
+    if (!editingOrder) {
+      return balances;
+    }
+    const map = new Map<string, LogisticsOrderBalance>(
+      balances.map((entry) => [entry.assetCode, { ...entry }])
+    );
+    editingOrder.items.forEach((item) => {
+      const entry = map.get(item.assetCode);
+      if (entry) {
+        entry.pendingAmount = Number(entry.pendingAmount || 0) + (Number(item.expectedAmount) || 0);
+      } else {
+        map.set(item.assetCode, {
+          assetCode: item.assetCode,
+          assetLabel: item.assetCode,
+          role: 'incoming',
+          totalAmount: Number(item.expectedAmount) || 0,
+          allocatedAmount: 0,
+          pendingAmount: Number(item.expectedAmount) || 0,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [balances, editingOrder]);
+
+  const balancesMap = useMemo(
+    () => new Map(effectiveBalances.map((entry) => [entry.assetCode, entry])),
+    [effectiveBalances]
+  );
+  const conversionMap = useMemo(() => {
+    const map = new Map<string, number>();
+    const register = (from?: LogisticsOrderOperationAssets | null, to?: LogisticsOrderOperationAssets | null) => {
+      if (!from || !to || !from.code || !to.code) {
+        return;
+      }
+      const fromAmount = Number(from.amount);
+      const toAmount = Number(to.amount);
+      if (!Number.isFinite(fromAmount) || !Number.isFinite(toAmount) || fromAmount === 0) {
+        return;
+      }
+      map.set(`${from.code}->${to.code}`, toAmount / fromAmount);
+    };
+    const incoming = operation?.assets?.incoming || null;
+    const outgoing = operation?.assets?.outgoing || null;
+    register(incoming, outgoing);
+    register(outgoing, incoming);
+    return map;
+  }, [operation]);
+
+  const convertExpectedAmount = useCallback(
+    (value: number | '', fromCode: string, toCode: string): number | '' => {
+      if (value === '' || !fromCode || !toCode || fromCode === toCode) {
+        return value;
+      }
+      const rate = conversionMap.get(`${fromCode}->${toCode}`);
+      if (!rate || !Number.isFinite(rate)) {
+        return value;
+      }
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return value;
+      }
+      const converted = numeric * rate;
+      return Math.round(converted * 100) / 100;
+    },
+    [conversionMap]
+  );
 
   const handleFieldChange = (field: keyof LogisticsOrderFormState, value: any) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -213,7 +307,19 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   const handleItemChange = (itemId: string, field: keyof LogisticsOrderFormItem, value: any) => {
     setForm((prev) => ({
       ...prev,
-      items: prev.items.map((item) => (item.id === itemId ? { ...item, [field]: value } : item)),
+      items: prev.items.map((item) => {
+        if (item.id !== itemId) {
+          return item;
+        }
+        if (field === 'assetCode') {
+          return {
+            ...item,
+            assetCode: value,
+            expectedAmount: convertExpectedAmount(item.expectedAmount, item.assetCode, value),
+          };
+        }
+        return { ...item, [field]: value };
+      }),
     }));
     setItemErrors((prev) => ({
       ...prev,
@@ -249,7 +355,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   };
 
   const handleAddItem = () => {
-    const defaultAsset = balances[0]?.assetCode || form.items[0]?.assetCode || 'ARS';
+    const defaultAsset = effectiveBalances[0]?.assetCode || form.items[0]?.assetCode || 'ARS';
     setForm((prev) => ({
       ...prev,
       items: [
@@ -296,7 +402,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
         setStep(2);
       }
     } else if (step === 2) {
-      const errors = validateItems(form, balances, getAvailableAmount);
+      const errors = validateItems(form, effectiveBalances, getAvailableAmount);
       setItemErrors(errors);
       if (Object.keys(errors).length === 0 && form.items.length > 0) {
         setStep(3);
@@ -313,7 +419,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
 
   const handleSubmit = async (mode: WizardSubmissionMode) => {
     const stepErrors = validateStep1(form);
-    const itemValidation = validateItems(form, balances, getAvailableAmount);
+    const itemValidation = validateItems(form, effectiveBalances, getAvailableAmount);
     setFieldErrors(stepErrors);
     setItemErrors(itemValidation);
     if (Object.keys(stepErrors).length > 0 || Object.keys(itemValidation).length > 0 || form.items.length === 0) {
@@ -326,7 +432,9 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
 
     try {
       const payload = mapFormToPayload(form, mode);
-      const order = await createOrder(payload);
+      const order = editingOrder
+        ? await updateOrder(editingOrder.id, payload)
+        : await createOrder(payload);
       onCompleted(order, mode);
       onClose();
     } catch (err) {
@@ -356,7 +464,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
       return (
         <OrderWizardStep2
           items={form.items}
-          balances={balances}
+          balances={effectiveBalances}
           errors={itemErrors}
           onItemChange={handleItemChange}
           onMetadataChange={handleMetadataChange}
@@ -366,7 +474,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
         />
       );
     }
-    return <OrderWizardSummary form={form} operation={operation} balances={balances} />;
+    return <OrderWizardSummary form={form} operation={operation} balances={effectiveBalances} />;
   };
 
   return (

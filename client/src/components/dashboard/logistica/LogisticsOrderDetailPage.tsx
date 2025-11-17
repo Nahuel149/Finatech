@@ -112,6 +112,7 @@ export const LogisticsOrderDetailPage: React.FC = () => {
   const [evidenceType, setEvidenceType] = useState('');
   const [evidenceFiles, setEvidenceFiles] = useState<FileList | null>(null);
   const [uploadingEvidence, setUploadingEvidence] = useState(false);
+  const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [syncingOffline, setSyncingOffline] = useState(false);
 
@@ -193,7 +194,11 @@ export const LogisticsOrderDetailPage: React.FC = () => {
       await uploadEvidence(orderId, formData);
       setEvidenceType('');
       setEvidenceFiles(null);
+      setEvidenceError(null);
       await refresh();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'No pudimos cargar la evidencia.';
+      setEvidenceError(message);
     } finally {
       setUploadingEvidence(false);
     }
@@ -213,6 +218,18 @@ export const LogisticsOrderDetailPage: React.FC = () => {
     if (!order) return null;
     const base =
       'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60';
+    if (order.status === 'BORRADOR') {
+      return (
+        <button
+          type="button"
+          className={`${base} border border-gray-300 text-gray-700 hover:bg-gray-50`}
+          onClick={() => navigate(`/dashboard/operaciones/detalle/${order.operationId}`)}
+        >
+          <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
+          Completar desde operación
+        </button>
+      );
+    }
     if (order.status === 'PROGRAMADA' || order.status === 'ASIGNADA') {
       return (
         <button
@@ -497,6 +514,13 @@ export const LogisticsOrderDetailPage: React.FC = () => {
                       <i className="fa-solid fa-cloud-arrow-up" aria-hidden="true" />
                       {uploadingEvidence ? 'Subiendo…' : 'Cargar evidencia'}
                     </button>
+                    {evidenceError && (
+                      <Alert
+                        type="error"
+                        message={evidenceError}
+                        onClose={() => setEvidenceError(null)}
+                      />
+                    )}
                   </form>
                 </div>
               </section>

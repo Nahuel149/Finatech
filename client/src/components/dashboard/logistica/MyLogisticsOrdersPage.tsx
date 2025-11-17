@@ -74,15 +74,15 @@ export const MyLogisticsOrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | LogisticsOrderType>('ALL');
-  const [statusFilter, setStatusFilter] = useState<LogisticsOrderStatus[]>(ACTIVE_STATUSES);
+  const [statusFilter, setStatusFilter] = useState<LogisticsOrderStatus[]>(() =>
+    Object.keys(STATUS_LABELS) as LogisticsOrderStatus[]
+  );
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [actionMessage, setActionMessage] = useState<ApiError | null>(null);
   const [syncingOffline, setSyncingOffline] = useState(false);
 
-  const { orders, loading, error, setFilters, refresh } = useMyLogisticsOrders({
-    status: ACTIVE_STATUSES,
-  });
+  const { orders, loading, error, setFilters, refresh } = useMyLogisticsOrders({});
 
   const {
     startRoute,

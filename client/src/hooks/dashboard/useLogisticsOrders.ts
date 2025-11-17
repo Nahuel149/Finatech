@@ -147,6 +147,10 @@ export const useMyLogisticsOrders = (initialFilters: Record<string, unknown> = {
           ...(override || {}),
         })) as LogisticsAssignedOrdersResponse;
         const list = response.orders || [];
+        if (typeof window !== 'undefined') {
+          // eslint-disable-next-line no-console
+          console.log('[useMyLogisticsOrders] fetched', list.length, 'orders with filters', filters);
+        }
         setOrders(list);
         return list;
       } catch (err) {

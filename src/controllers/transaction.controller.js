@@ -39,7 +39,12 @@ const getDraft = async (req, res, next) => {
       throw new AppError('Autenticación requerida', 401);
     }
 
-    const transaction = await getTransactionDraft(id, userId);
+    const permissions = Array.isArray(req.user?.permissions)
+      ? req.user.permissions.map((perm) => (typeof perm === 'string' ? perm.toLowerCase() : perm))
+      : [];
+    const canViewAll = permissions.some((perm) => ['manage-operations', 'manage-treasury'].includes(perm));
+
+    const transaction = await getTransactionDraft(id, userId, { bypassOwnership: canViewAll });
     if (!transaction) {
       throw new AppError('Transacción no encontrada', 404);
     }

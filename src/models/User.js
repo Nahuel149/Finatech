@@ -74,11 +74,12 @@ const userSchema = new mongoose.Schema(
       // TODO: Implement proper RBAC before production deployment
       default: [
         'view-balances',
-        'access-treasury', 
+        'access-treasury',
         'access-transfers',
         'manage-treasury',
         'manage-market-rates',
-        'manage-notifications'
+        'manage-notifications',
+        'access-logistics'
       ],
     },
     audit: {

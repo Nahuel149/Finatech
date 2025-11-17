@@ -17,6 +17,7 @@ type LinkedLogisticsOrdersSectionProps = {
   onRetry: () => void;
   onCreateOrder: () => void;
   disableCreate?: boolean;
+  onEditOrder?: (order: LogisticsOrder) => void;
 };
 
 const STATUS_BADGES: Record<string, string> = {
@@ -49,6 +50,7 @@ export const LinkedLogisticsOrdersSection: React.FC<LinkedLogisticsOrdersSection
   onRetry,
   onCreateOrder,
   disableCreate = false,
+  onEditOrder,
 }) => {
   const navigate = useNavigate();
 
@@ -192,14 +194,26 @@ export const LinkedLogisticsOrdersSection: React.FC<LinkedLogisticsOrdersSection
                     <i className="fa-solid fa-clock mr-2" />
                     Actualizada {formatDateTime(order.updatedAt)}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => navigate(`/dashboard/logistica/orden/${order.id}`)}
-                    className="text-primary text-sm font-medium hover:text-blue-700"
-                  >
-                    Ver detalle
-                    <i className="fa-solid fa-arrow-right ml-2" />
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    {order.status === 'BORRADOR' && onEditOrder && (
+                      <button
+                        type="button"
+                        onClick={() => onEditOrder(order)}
+                        className="text-sm font-semibold text-gray-600 hover:text-text-primary"
+                      >
+                        <i className="fa-solid fa-pen-to-square mr-2" />
+                        Editar borrador
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/dashboard/logistica/orden/${order.id}`)}
+                      className="text-primary text-sm font-medium hover:text-blue-700"
+                    >
+                      Ver detalle
+                      <i className="fa-solid fa-arrow-right ml-2" />
+                    </button>
+                  </div>
                 </div>
               </div>
             ))}

@@ -8,7 +8,7 @@ import { Alert } from '../../ui/Alert';
 import { useTransactionDraft, useLogisticsOrdersByOperation } from '../../../hooks/dashboard';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { formatCurrency, formatDateTime } from './transfer/utils';
-import { TransactionAccountingEntry } from '../../../types';
+import { LogisticsOrder, TransactionAccountingEntry } from '../../../types';
 import { LinkedLogisticsOrdersSection } from './logistics/LinkedLogisticsOrdersSection';
 import { LogisticsOrderWizard } from '../logistica/order-wizard/LogisticsOrderWizard';
 
@@ -49,6 +49,7 @@ export const OperationDetailPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [isWizardOpen, setWizardOpen] = useState(false);
   const [toast, setToast] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
+  const [editingOrder, setEditingOrder] = useState<LogisticsOrder | null>(null);
 
   const { draft, loading, error, fetchDraft } = useTransactionDraft(operationId);
   const {
@@ -63,12 +64,22 @@ export const OperationDetailPage: React.FC = () => {
   const statusTone = STATUS_TONES[draft?.status ?? 'draft'] ?? STATUS_TONES.draft;
   const typeTone = TYPE_TONES[draft?.type ?? 'buy'] ?? TYPE_TONES.buy;
 
-  const incomingLabel = draft
-    ? `${draft.incomingAsset.label} (${draft.incomingAsset.code})`
-    : '—';
-  const outgoingLabel = draft
-    ? `${draft.outgoingAsset.label} (${draft.outgoingAsset.code})`
-    : '—';
+  const formatAssetLabel = (asset?: { label?: string; code?: string } | null) => {
+    if (!asset) {
+      return '—';
+    }
+    const code = asset.code?.toUpperCase();
+    const baseLabel = asset.label || code || '—';
+    if (!code) {
+      return baseLabel;
+    }
+    const token = `(${code})`;
+    const alreadyHasCode = baseLabel.toUpperCase().includes(token);
+    return alreadyHasCode ? baseLabel : `${baseLabel} (${code})`;
+  };
+
+  const incomingLabel = formatAssetLabel(draft?.incomingAsset);
+  const outgoingLabel = formatAssetLabel(draft?.outgoingAsset);
 
   const operationRate = useMemo(() => {
     if (!draft || !draft.incomingAmount || !draft.outgoingAmount) {
@@ -93,6 +104,11 @@ export const OperationDetailPage: React.FC = () => {
   const handleRefresh = () => {
     fetchDraft().catch(() => {});
     refreshLogistics().catch(() => {});
+  };
+
+  const handleOpenWizard = (order?: LogisticsOrder) => {
+    setEditingOrder(order ?? null);
+    setWizardOpen(true);
   };
 
   useEffect(() => {
@@ -413,7 +429,8 @@ export const OperationDetailPage: React.FC = () => {
                 orders={logisticsOrders}
                 balances={logisticsBalances}
                 onRetry={refreshLogistics}
-                onCreateOrder={() => setWizardOpen(true)}
+                onCreateOrder={() => handleOpenWizard()}
+                onEditOrder={(order) => handleOpenWizard(order)}
                 disableCreate={!logisticsContext}
               />
             </div>
@@ -425,9 +442,13 @@ export const OperationDetailPage: React.FC = () => {
 
       <LogisticsOrderWizard
         isOpen={isWizardOpen}
-        onClose={() => setWizardOpen(false)}
+        onClose={() => {
+          setWizardOpen(false);
+          setEditingOrder(null);
+        }}
         operation={logisticsContext}
         balances={logisticsBalances}
+        editingOrder={editingOrder}
         onCompleted={(newOrder, status) => {
           setToast({
             type: status === 'PROGRAMADA' ? 'success' : 'info',
@@ -437,6 +458,7 @@ export const OperationDetailPage: React.FC = () => {
                 : `Borrador ${newOrder.orderNumber} guardado.`,
           });
           refreshLogistics();
+          setEditingOrder(null);
         }}
       />
     </div>

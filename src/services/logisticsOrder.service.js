@@ -714,9 +714,7 @@ const preparePayload = (payload, user) => {
     throw new AppError('Indicá el contacto responsable (nombre y teléfono).', 422);
   }
 
-  const { start: windowStart, end: windowEnd } = validateWindow(payload.windowStart, payload.windowEnd, {
-    requireFuture: payload.status !== 'BORRADOR',
-  });
+  const { start: windowStart, end: windowEnd } = validateWindow(payload.windowStart, payload.windowEnd);
 
   const items = normalizeItems(payload.items || []);
   const status = payload.status === 'PROGRAMADA' ? 'PROGRAMADA' : 'BORRADOR';
@@ -777,6 +775,7 @@ const createFromOperation = async (operationId, payload, context = {}) => {
     updatedBy: userId,
     createdByName: context.userName || context.user?.fullName || null,
     updatedByName: context.userName || context.user?.fullName || null,
+    assignedTo: context.userId || null,
   });
 
   return formatOrder(order);

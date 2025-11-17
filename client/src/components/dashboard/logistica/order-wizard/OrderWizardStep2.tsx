@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import {
   LogisticsOrderBalance,
   LogisticsOrderItemMetadata,
@@ -50,13 +50,75 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
   onRemoveItem,
   getAvailableAmount,
 }) => {
-  const totalPending = balances.reduce((acc, entry) => acc + (entry.pendingAmount || 0), 0);
+  const allocationsByAsset = useMemo(() => {
+    const map = new Map<string, number>();
+    items.forEach((item) => {
+      if (!item.assetCode) {
+        return;
+      }
+      const amount = Number(item.expectedAmount) || 0;
+      if (!Number.isFinite(amount) || amount <= 0) {
+        return;
+      }
+      map.set(item.assetCode, (map.get(item.assetCode) || 0) + amount);
+    });
+    return map;
+  }, [items]);
+
+  const remainingByAsset = useMemo(() => {
+    const map = new Map<string, number>();
+    balances.forEach((balance) => {
+      const allocated = allocationsByAsset.get(balance.assetCode) || 0;
+      const pending = Number(balance.pendingAmount) || 0;
+      map.set(balance.assetCode, Math.max(0, pending - allocated));
+    });
+    return map;
+  }, [balances, allocationsByAsset]);
+
+  const selectedAssetCode = items[0]?.assetCode || balances[0]?.assetCode || 'ARS';
+  const bannerBalance = balances.find((entry) => entry.assetCode === selectedAssetCode);
+  const totalPending = remainingByAsset.get(selectedAssetCode) ?? bannerBalance?.pendingAmount ?? 0;
+  const assetOptions = useMemo(() => {
+    const map = new Map<
+      string,
+      { assetCode: string; assetLabel: string; roles: Set<LogisticsOrderBalance['role']> }
+    >();
+    balances.forEach((balance) => {
+      const entry = map.get(balance.assetCode);
+      if (entry) {
+        entry.roles.add(balance.role);
+      } else {
+        map.set(balance.assetCode, {
+          assetCode: balance.assetCode,
+          assetLabel: balance.assetLabel,
+          roles: new Set([balance.role]),
+        });
+      }
+    });
+    return Array.from(map.values()).map((entry) => {
+      const rolesLabel = entry.roles.size > 1
+        ? 'Ingreso/Egreso'
+        : entry.roles.has('incoming')
+          ? 'Ingreso'
+          : 'Egreso';
+      const code = entry.assetCode;
+      const baseLabel = entry.assetLabel || code;
+      const normalized = baseLabel.toUpperCase();
+      const codeToken = `(${code.toUpperCase()})`;
+      const hasCode = normalized.includes(codeToken);
+      const uniqueLabel = hasCode ? baseLabel : `${baseLabel} (${code})`;
+      return {
+        assetCode: entry.assetCode,
+        label: `${uniqueLabel} · ${rolesLabel}`,
+      };
+    });
+  }, [balances]);
 
   return (
     <div className="space-y-4">
       <div className="rounded-lg border border-indigo-100 bg-indigo-50 p-4">
         <p className="text-sm text-indigo-800">
-          Disponés de {formatCurrency(totalPending, balances[0]?.assetCode || 'ARS')} para asignar en órdenes logísticas. Los montos no pueden superar el saldo pendiente por activo.
+          Disponés de {formatCurrency(totalPending, selectedAssetCode)} para asignar en órdenes logísticas. Los montos no pueden superar el saldo pendiente por activo.
         </p>
       </div>
 
@@ -64,6 +126,7 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
         {items.map((item, index) => {
           const itemError = errors[item.id] || {};
           const available = getAvailableAmount(item.assetCode, item.id);
+          const remaining = remainingByAsset.get(item.assetCode) ?? available;
           return (
             <div key={item.id} className="border border-gray-200 rounded-lg p-4">
               <div className="flex items-center justify-between mb-3">
@@ -101,9 +164,9 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
                     value={item.assetCode}
                     onChange={(event) => onItemChange(item.id, 'assetCode', event.target.value)}
                   >
-                    {balances.map((balance) => (
-                      <option key={`${balance.assetCode}-${balance.role}`} value={balance.assetCode}>
-                        {balance.assetLabel} ({balance.assetCode})
+                    {assetOptions.map((option) => (
+                      <option key={option.assetCode} value={option.assetCode}>
+                        {option.label}
                       </option>
                     ))}
                   </select>
@@ -120,7 +183,7 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
                     onChange={(event) => onItemChange(item.id, 'expectedAmount', event.target.value === '' ? '' : Number(event.target.value))}
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Disponible: {formatCurrency(Math.max(0, available), item.assetCode)}
+                    Disponible: {formatCurrency(Math.max(0, remaining), item.assetCode)}
                   </p>
                   {itemError.expectedAmount && <p className="text-xs text-red-600">{itemError.expectedAmount}</p>}
                 </div>

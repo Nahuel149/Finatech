@@ -111,15 +111,14 @@ const mapOperationToDto = (operation) => ({
   updatedAt: operation.updatedAt,
 });
 
-const computeSummaryMetrics = async () => {
-  const baseFilter = { archived: { $ne: true } };
+const computeSummaryMetrics = async (baseQuery = {}) => {
   const [active, pendingDeliveries, internalTransfers, completedToday] = await Promise.all([
-    LogisticsOperation.countDocuments({ ...baseFilter, state: 'en-curso' }),
-    LogisticsOperation.countDocuments({ ...baseFilter, state: 'pendiente', type: 'Entrega' }),
-    LogisticsOperation.countDocuments({ ...baseFilter, type: 'Transferencia' }),
+    LogisticsOperation.countDocuments({ ...baseQuery, state: 'en-curso' }),
+    LogisticsOperation.countDocuments({ ...baseQuery, state: 'pendiente', type: 'Entrega' }),
+    LogisticsOperation.countDocuments({ ...baseQuery, type: 'Transferencia' }),
     (() => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return LogisticsOperation.countDocuments({ ...baseFilter, state: 'completado', scheduledAt: { $gte: since } });
+      return LogisticsOperation.countDocuments({ ...baseQuery, state: 'completado', scheduledAt: { $gte: since } });
     })(),
   ]);
 
@@ -148,7 +147,7 @@ const listOperations = async ({ filters = {}, page = 1, limit = 20 } = {}) => {
       .sort({ scheduledAt: -1 })
       .skip((numericPage - 1) * numericLimit)
       .limit(numericLimit),
-    computeSummaryMetrics(),
+    computeSummaryMetrics(query),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / numericLimit));

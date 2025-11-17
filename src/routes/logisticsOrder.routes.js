@@ -25,25 +25,25 @@ router.use(requireAuth);
 
 router.get(
   '/operations/:operationId/logistics-orders',
-  requirePermission('access-treasury'),
+  requirePermission(['access-treasury', 'access-operations']),
   getOperationLogisticsOrders
 );
 
 router.post(
   '/operations/:operationId/logistics-orders',
-  requirePermission('access-treasury'),
+  requirePermission(['access-treasury', 'access-operations']),
   createOperationLogisticsOrder
 );
 
 router.get(
   '/logistics-orders/:orderId',
-  requirePermission('access-treasury'),
+  requirePermission(['access-treasury', 'access-operations']),
   getLogisticsOrder
 );
 
 router.put(
   '/logistics-orders/:orderId',
-  requirePermission('access-treasury'),
+  requirePermission(['access-treasury', 'access-operations']),
   updateLogisticsOrder
 );
 

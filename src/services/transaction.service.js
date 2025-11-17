@@ -409,16 +409,21 @@ const createTransactionDraft = async (payload, context = {}) => {
   return formatTransaction(transaction);
 };
 
-const getTransactionDraft = async (id, userId) => {
+const getTransactionDraft = async (id, userId, { bypassOwnership = false } = {}) => {
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return null;
   }
 
-  if (!userId) {
+  if (!bypassOwnership && !userId) {
     throw new Error('User ID is required to fetch a draft');
   }
 
-  const transaction = await Transaction.findOne({ _id: id, user: userId }).lean();
+  const query = { _id: id };
+  if (!bypassOwnership) {
+    query.user = userId;
+  }
+
+  const transaction = await Transaction.findOne(query).lean();
   return formatTransaction(transaction);
 };
 

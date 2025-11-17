@@ -61,7 +61,15 @@ const getLogisticsOrder = async (req, res, next) => {
 const getMyLogisticsOrders = async (req, res, next) => {
   try {
     const context = buildContext(req);
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('[LOGISTICS] getMyOrders query', req.query);
+    }
     const payload = await listAssignedOrders(context.userId, req.query || {});
+    if (process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('[LOGISTICS] listAssignedOrders', context.userId, 'count', payload.orders?.length || 0);
+    }
     res.json(payload);
   } catch (error) {
     next(error);
