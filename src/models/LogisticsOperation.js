@@ -137,6 +137,11 @@ const logisticsOperationSchema = new mongoose.Schema(
       of: String,
       default: undefined,
     },
+    archived: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
   },
   {
     timestamps: true,

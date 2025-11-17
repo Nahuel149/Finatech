@@ -1,11 +1,27 @@
 const mongoose = require('mongoose');
 const LogisticsOperation = require('../models/LogisticsOperation');
 
+const OPERATION_TYPE_MAP = {
+  entrega: 'Entrega',
+  transferencia: 'Transferencia',
+  retiro: 'Retiro',
+  custodia: 'Custodia',
+};
+
+const normalizeOperationType = (type) => {
+  if (!type) {
+    return null;
+  }
+  const normalized = String(type).toLowerCase();
+  return OPERATION_TYPE_MAP[normalized] || null;
+};
+
 const buildQueryFromFilters = (filters = {}) => {
   const query = {};
 
   if (filters.search) {
-    const pattern = new RegExp(filters.search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    const normalizedSearch = String(filters.search).replace(/#/g, '');
+    const pattern = new RegExp(normalizedSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
     query.$or = [
       { operationCode: pattern },
       { contactName: pattern },
@@ -17,7 +33,10 @@ const buildQueryFromFilters = (filters = {}) => {
   }
 
   if (filters.type) {
-    query.type = filters.type;
+    const normalizedType = normalizeOperationType(filters.type);
+    if (normalizedType) {
+      query.type = normalizedType;
+    }
   }
 
   if (filters.state) {
@@ -42,6 +61,14 @@ const buildQueryFromFilters = (filters = {}) => {
       toDate.setHours(23, 59, 59, 999);
       query.scheduledAt.$lte = toDate;
     }
+  }
+
+  if (filters.archived === 'all') {
+    // no archived filter
+  } else if (filters.archived === 'archived') {
+    query.archived = true;
+  } else {
+    query.archived = false;
   }
 
   return query;
@@ -79,18 +106,20 @@ const mapOperationToDto = (operation) => ({
   responsible: operation.responsibleName,
   attachments: operation.attachments ?? [],
   timeline: operation.timeline ?? [],
+  archived: Boolean(operation.archived),
   createdAt: operation.createdAt,
   updatedAt: operation.updatedAt,
 });
 
 const computeSummaryMetrics = async () => {
+  const baseFilter = { archived: false };
   const [active, pendingDeliveries, internalTransfers, completedToday] = await Promise.all([
-    LogisticsOperation.countDocuments({ state: 'en-curso' }),
-    LogisticsOperation.countDocuments({ state: 'pendiente', type: 'Entrega' }),
-    LogisticsOperation.countDocuments({ type: 'Transferencia' }),
+    LogisticsOperation.countDocuments({ ...baseFilter, state: 'en-curso' }),
+    LogisticsOperation.countDocuments({ ...baseFilter, state: 'pendiente', type: 'Entrega' }),
+    LogisticsOperation.countDocuments({ ...baseFilter, type: 'Transferencia' }),
     (() => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return LogisticsOperation.countDocuments({ state: 'completado', scheduledAt: { $gte: since } });
+      return LogisticsOperation.countDocuments({ ...baseFilter, state: 'completado', scheduledAt: { $gte: since } });
     })(),
   ]);
 
@@ -215,9 +244,104 @@ const updateOperationState = async (id, { state }) => {
   return mapOperationToDto(operation);
 };
 
+const updateOperationDetails = async (id, payload = {}) => {
+  const operation = await LogisticsOperation.findById(id);
+  if (!operation) {
+    const error = new Error('Operación no encontrada');
+    error.status = 404;
+    throw error;
+  }
+
+  if (payload.contact !== undefined) {
+    operation.contactName = payload.contact ? String(payload.contact).trim() : '';
+  }
+
+  if (payload.responsible !== undefined) {
+    operation.responsibleName = payload.responsible ? String(payload.responsible).trim() : '';
+  }
+
+  if (payload.origin !== undefined) {
+    operation.origin = payload.origin ? String(payload.origin).trim() : '';
+  }
+
+  if (payload.destination !== undefined) {
+    operation.destination = payload.destination ? String(payload.destination).trim() : '';
+  }
+
+  if (payload.route !== undefined) {
+    operation.routeDescription = payload.route ? String(payload.route).trim() : '';
+  }
+
+  if (payload.notes !== undefined) {
+    if (!operation.metadata) {
+      operation.metadata = new Map();
+    }
+    operation.metadata.set('note', String(payload.notes || ''));
+  }
+
+  if (payload.amount) {
+    const rawValue =
+      payload.amount.value === null || typeof payload.amount.value === 'number'
+        ? payload.amount.value
+        : Number(payload.amount.value);
+    const parsedValue = Number.isFinite(rawValue) ? Number(rawValue) : null;
+    operation.amount = {
+      value: parsedValue,
+      currency: (payload.amount.currency || operation.amount?.currency || 'ARS').toUpperCase(),
+    };
+  }
+
+  if (payload.date) {
+    const nextDate = new Date(payload.date);
+    if (!Number.isNaN(nextDate.getTime())) {
+      operation.scheduledAt = nextDate;
+    }
+  }
+
+  if (payload.type) {
+    const normalizedType = normalizeOperationType(payload.type);
+    if (!normalizedType) {
+      const error = new Error('Tipo de operación inválido');
+      error.status = 400;
+      throw error;
+    }
+    operation.type = normalizedType;
+  }
+
+  await operation.save();
+  return mapOperationToDto(operation);
+};
+
+const updateArchiveState = async (ids = [], archivedValue = true) => {
+  if (!Array.isArray(ids) || !ids.length) {
+    return { modifiedCount: 0 };
+  }
+
+  const validIds = ids
+    .map((id) => (mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null))
+    .filter(Boolean);
+
+  if (!validIds.length) {
+    return { modifiedCount: 0 };
+  }
+
+  const result = await LogisticsOperation.updateMany(
+    { _id: { $in: validIds } },
+    { $set: { archived: archivedValue } }
+  );
+
+  return { modifiedCount: result.modifiedCount || 0 };
+};
+
+const archiveOperations = (ids = []) => updateArchiveState(ids, true);
+const restoreOperations = (ids = []) => updateArchiveState(ids, false);
+
 module.exports = {
   listOperations,
   getOperationById,
   createOperation,
   updateOperationState,
+  updateOperationDetails,
+  archiveOperations,
+  restoreOperations,
 };

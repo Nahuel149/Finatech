@@ -102,10 +102,11 @@ const mapRecordToOperation = (record: LogisticsOperationRecord): LogisticsOperat
     notes: (note && note.length > 0 ? note : fallbackNote) || fallbackNote,
     timeline,
     attachments,
+    archived: Boolean(record.archived),
   };
 };
 
-const buildQueryParams = (filters: LogisticsFilters, pagination: PaginationState) => ({
+const buildQueryParams = (filters: LogisticsFilters, pagination: Pick<PaginationState, 'page' | 'limit'>) => ({
   search: filters.search,
   type: filters.operationType,
   state: filters.status,
@@ -113,6 +114,7 @@ const buildQueryParams = (filters: LogisticsFilters, pagination: PaginationState
   responsible: filters.responsible,
   dateFrom: filters.dateFrom,
   dateTo: filters.dateTo,
+  archived: filters.showArchived ? 'archived' : '',
   page: pagination.page,
   limit: pagination.limit,
 });
@@ -130,11 +132,13 @@ export const useLogisticsOperations = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
+  const { page, limit } = pagination;
+
   const fetchOperations = useCallback(async () => {
     setLoading(true);
     try {
       const response = (await api.getLogisticsOperations(
-        buildQueryParams(filters, pagination)
+        buildQueryParams(filters, { page, limit })
       )) as LogisticsOperationsResponse;
 
       setOperations(response.data.map(mapRecordToOperation));
@@ -151,7 +155,7 @@ export const useLogisticsOperations = () => {
     } finally {
       setLoading(false);
     }
-  }, [filters, pagination]);
+  }, [filters, page, limit]);
 
   useEffect(() => {
     fetchOperations();

@@ -9,15 +9,18 @@ import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
 import NewMovementModal from './NewMovementModal';
-import { LogisticsFilters, LogisticsOperation } from '../../../types/logistics';
+import { LogisticsFilters, LogisticsOperation, LogisticsOperationUpdatePayload } from '../../../types/logistics';
 import { useDashboardBalances, useLogisticsOperations } from '../../../hooks';
-import { subscribeDashboardBalanceRefresh } from '../../../utils';
+import { subscribeDashboardBalanceRefresh, api, handleApiError } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType, Button } from '../../shared/design-system';
 import { TreasuryBalance, ApiError } from '../../../types';
 import { MyLogisticsOrdersPage } from './MyLogisticsOrdersPage';
+import EditLogisticsOperationModal from './EditLogisticsOperationModal';
+import BulkEditLogisticsOperationsModal from './BulkEditLogisticsOperationsModal';
+import BulkStateChangeModal from './BulkStateChangeModal';
 
 type ToastState = {
-  type: 'success' | 'info';
+  type: 'success' | 'info' | 'error';
   message: string;
 };
 
@@ -215,6 +218,19 @@ export const LogisticaPanel: React.FC = () => {
   const [selectedOperations, setSelectedOperations] = useState<string[]>([]);
   const [selectedOperation, setSelectedOperation] = useState<LogisticsOperation | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [pendingAction, setPendingAction] = useState<'complete' | 'cancel' | 'restore' | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<ApiError | null>(null);
+  const [isBulkEditModalOpen, setIsBulkEditModalOpen] = useState(false);
+  const [bulkEditSaving, setBulkEditSaving] = useState(false);
+  const [bulkEditError, setBulkEditError] = useState<ApiError | null>(null);
+  const [bulkStateContext, setBulkStateContext] = useState<{
+    action: 'complete' | 'cancel' | 'archive' | 'restore';
+    operations: LogisticsOperation[];
+  } | null>(null);
+  const [bulkStateSaving, setBulkStateSaving] = useState(false);
+  const [bulkStateError, setBulkStateError] = useState<ApiError | null>(null);
 
   const {
     operations,
@@ -255,6 +271,11 @@ export const LogisticaPanel: React.FC = () => {
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
   const [activeView, setActiveView] = useState<'overview' | 'my-orders'>('overview');
 
+  const selectedOperationsData = useMemo(
+    () => operations.filter((operation) => selectedOperations.includes(operation.id)),
+    [operations, selectedOperations]
+  );
+
   useEffect(() => {
     if (!toast) return;
     const timeout = window.setTimeout(() => setToast(null), 3200);
@@ -271,16 +292,128 @@ export const LogisticaPanel: React.FC = () => {
     setFilterOpen((prev) => !prev);
   };
 
-  const handleBulkAction = () => {
+  const handleBulkActionRequest = (action: 'edit' | 'complete' | 'cancel' | 'archive' | 'restore') => {
     if (!selectedOperations.length) {
       setToast({ type: 'info', message: 'Seleccioná operaciones antes de ejecutar acciones masivas.' });
       return;
     }
-    setToast({ type: 'success', message: 'Acciones masivas aplicadas correctamente.' });
+
+    if (!selectedOperationsData.length) {
+      setToast({ type: 'info', message: 'No encontramos las operaciones seleccionadas. Actualizá la vista e intentá nuevamente.' });
+      return;
+    }
+
+    if (action === 'edit') {
+      setBulkEditError(null);
+      setIsBulkEditModalOpen(true);
+      return;
+    }
+
+    let eligibleOperations = selectedOperationsData;
+    if (action === 'complete') {
+      eligibleOperations = selectedOperationsData.filter(
+        (operation) => !['completado', 'anulado'].includes(operation.status)
+      );
+    } else if (action === 'cancel') {
+      eligibleOperations = selectedOperationsData.filter((operation) => operation.status !== 'anulado');
+    } else if (action === 'archive') {
+      eligibleOperations = selectedOperationsData.filter((operation) => !operation.archived);
+    } else if (action === 'restore') {
+      eligibleOperations = selectedOperationsData.filter((operation) => operation.archived);
+    }
+
+    if (!eligibleOperations.length) {
+      setToast({
+        type: 'info',
+        message:
+          action === 'complete'
+            ? 'Las operaciones seleccionadas ya están completadas o anuladas.'
+            : action === 'cancel'
+            ? 'Las operaciones seleccionadas ya fueron anuladas.'
+            : action === 'archive'
+            ? 'Las operaciones seleccionadas ya estaban archivadas.'
+            : 'Las operaciones seleccionadas ya están visibles en el panel.',
+      });
+      return;
+    }
+
+    setBulkStateError(null);
+    setBulkStateContext({ action, operations: eligibleOperations });
   };
 
   const handleSelectionChange = (ids: string[]) => {
     setSelectedOperations(ids);
+  };
+
+  const handleSubmitBulkEdit = async (payload: LogisticsOperationUpdatePayload) => {
+    if (!selectedOperationsData.length) {
+      setIsBulkEditModalOpen(false);
+      return;
+    }
+    const operationsCount = selectedOperationsData.length;
+    setBulkEditSaving(true);
+    setBulkEditError(null);
+    try {
+      await Promise.all(
+        selectedOperationsData.map((operation) => api.updateLogisticsOperation(operation.id, payload))
+      );
+      setToast({
+        type: 'success',
+        message: `Actualizamos ${operationsCount} operación${operationsCount === 1 ? '' : 'es'} correctamente.`,
+      });
+      setIsBulkEditModalOpen(false);
+      setSelectedOperations([]);
+      await refreshOperations();
+    } catch (err) {
+      setBulkEditError(handleApiError(err));
+    } finally {
+      setBulkEditSaving(false);
+    }
+  };
+
+  const handleConfirmBulkStateChange = async () => {
+    if (!bulkStateContext) {
+      return;
+    }
+    const { action, operations: targetOperations } = bulkStateContext;
+    setBulkStateSaving(true);
+    setBulkStateError(null);
+    try {
+      if (action === 'archive') {
+        await api.archiveLogisticsOperations(targetOperations.map((operation) => operation.id));
+        setToast({
+          type: 'success',
+          message: `Archivamos ${targetOperations.length} operación${targetOperations.length === 1 ? '' : 'es'} correctamente.`,
+        });
+      } else if (action === 'restore') {
+        await api.restoreLogisticsOperations(targetOperations.map((operation) => operation.id));
+        setToast({
+          type: 'success',
+          message: `Restauramos ${targetOperations.length} operación${targetOperations.length === 1 ? '' : 'es'} al panel.`,
+        });
+      } else {
+        const nextState = action === 'complete' ? 'completado' : 'anulado';
+        await Promise.all(
+          targetOperations.map((operation) =>
+            api.updateLogisticsOperationState(operation.id, { state: nextState })
+          )
+        );
+        setToast({
+          type: 'success',
+          message:
+            action === 'complete'
+              ? `Marcamos ${targetOperations.length} operación${targetOperations.length === 1 ? '' : 'es'} como completadas.`
+              : `Anulamos ${targetOperations.length} movimiento${targetOperations.length === 1 ? '' : 's'}.`,
+        });
+      }
+      setBulkStateContext(null);
+      setSelectedOperations([]);
+      await refreshOperations();
+    } catch (err) {
+      setBulkStateError(handleApiError(err));
+    } finally {
+      setBulkStateSaving(false);
+    }
   };
 
   const handleViewOperation = (operation: LogisticsOperation) => {
@@ -291,6 +424,88 @@ export const LogisticaPanel: React.FC = () => {
   const handleCloseDetail = () => {
     setDetailOpen(false);
     setSelectedOperation(null);
+    setPendingAction(null);
+  };
+
+  const handleEditSelectedOperation = () => {
+    if (!selectedOperation) {
+      return;
+    }
+    setEditError(null);
+    setIsEditModalOpen(true);
+  };
+
+  const handleUpdateOperationState = async (
+    nextState: 'completado' | 'anulado',
+    action: 'complete' | 'cancel'
+  ) => {
+    if (!selectedOperation) {
+      return;
+    }
+    try {
+      setPendingAction(action);
+      await api.updateLogisticsOperationState(selectedOperation.id, { state: nextState });
+      setSelectedOperation((prev) => (prev ? { ...prev, status: nextState } : prev));
+      await refreshOperations();
+      setToast({
+        type: 'success',
+        message:
+          nextState === 'completado'
+            ? 'Operación marcada como completada.'
+            : 'Operación anulada correctamente.',
+      });
+    } catch (err) {
+      const parsedError = handleApiError(err);
+      setToast({
+        type: 'error',
+        message: parsedError.message || 'No pudimos actualizar la operación seleccionada.',
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleMarkOperationCompleted = () => handleUpdateOperationState('completado', 'complete');
+  const handleCancelOperation = () => handleUpdateOperationState('anulado', 'cancel');
+
+  const handleRestoreOperation = async () => {
+    if (!selectedOperation) {
+      return;
+    }
+    try {
+      setPendingAction('restore');
+      await api.restoreLogisticsOperations([selectedOperation.id]);
+      await refreshOperations();
+      setToast({ type: 'success', message: 'Operación restaurada correctamente.' });
+      setSelectedOperation((prev) => (prev ? { ...prev, archived: false } : prev));
+    } catch (err) {
+      setToast({ type: 'error', message: handleApiError(err).message || 'No pudimos restaurar la operación.' });
+    } finally {
+      setPendingAction(null);
+    }
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditError(null);
+  };
+
+  const handleSubmitEditOperation = async (payload: LogisticsOperationUpdatePayload) => {
+    if (!selectedOperation) {
+      return;
+    }
+    try {
+      setSavingEdit(true);
+      setEditError(null);
+      await api.updateLogisticsOperation(selectedOperation.id, payload);
+      await refreshOperations();
+      setToast({ type: 'success', message: 'Operación actualizada correctamente.' });
+      setIsEditModalOpen(false);
+    } catch (err) {
+      setEditError(handleApiError(err));
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const handleApplyFilters = (nextFilters: LogisticsFilters) => {
@@ -318,6 +533,24 @@ export const LogisticaPanel: React.FC = () => {
     );
   }, [operations]);
 
+  useEffect(() => {
+    if (isBulkEditModalOpen && !selectedOperationsData.length) {
+      setIsBulkEditModalOpen(false);
+    }
+  }, [isBulkEditModalOpen, selectedOperationsData.length]);
+
+  const selectedOperationId = selectedOperation?.id;
+
+  useEffect(() => {
+    if (!selectedOperationId) {
+      return;
+    }
+    const updatedOperation = operations.find((operation) => operation.id === selectedOperationId);
+    if (updatedOperation) {
+      setSelectedOperation(updatedOperation);
+    }
+  }, [operations, selectedOperationId]);
+
   const totalOperations = pagination.totalItems || operations.length;
 
   return (
@@ -336,7 +569,7 @@ export const LogisticaPanel: React.FC = () => {
         id="logistics-main"
         className="flex-grow pt-[420px] lg:pt-[250px] pb-8 px-4 lg:px-6"
       >
-        <div className="max-w-7xl mx-auto w-full">
+        <div className="w-full">
           <section
             id="logistics-header"
             className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between mb-8"
@@ -391,7 +624,7 @@ export const LogisticaPanel: React.FC = () => {
                 selectedOperations={selectedOperations}
                 onSelectionChange={handleSelectionChange}
                 onFilterClick={handleFilterToggle}
-                onBulkAction={handleBulkAction}
+                onBulkAction={handleBulkActionRequest}
                 onViewOperation={handleViewOperation}
                 totalOperations={totalOperations}
                 loading={operationsLoading}
@@ -417,15 +650,57 @@ export const LogisticaPanel: React.FC = () => {
         onClearFilters={handleClearFilters}
         contactOptions={contacts}
         responsibleOptions={responsibles}
+        operations={operations}
       />
+
+      <BulkEditLogisticsOperationsModal
+        isOpen={isBulkEditModalOpen}
+        operations={selectedOperationsData}
+        saving={bulkEditSaving}
+        errorMessage={bulkEditError?.message}
+        onClose={() => {
+          setIsBulkEditModalOpen(false);
+          setBulkEditError(null);
+        }}
+        onSubmit={handleSubmitBulkEdit}
+      />
+
+      {bulkStateContext && (
+        <BulkStateChangeModal
+          isOpen
+          action={bulkStateContext.action}
+          operations={bulkStateContext.operations}
+          loading={bulkStateSaving}
+          errorMessage={bulkStateError?.message}
+          onClose={() => {
+            setBulkStateContext(null);
+            setBulkStateError(null);
+          }}
+          onConfirm={handleConfirmBulkStateChange}
+        />
+      )}
 
       <OperationDetailPanel
         isOpen={detailOpen}
         onClose={handleCloseDetail}
         operation={selectedOperation}
+        onEditOperation={handleEditSelectedOperation}
+        onMarkAsCompleted={handleMarkOperationCompleted}
+        onCancelOperation={handleCancelOperation}
+        onRestoreOperation={handleRestoreOperation}
+        pendingAction={pendingAction}
       />
 
       <NewMovementModal isOpen={isNewMovementModalOpen} onClose={handleCloseNewMovementModal} />
+
+      <EditLogisticsOperationModal
+        isOpen={isEditModalOpen}
+        operation={selectedOperation}
+        saving={savingEdit}
+        errorMessage={editError?.message}
+        onClose={handleCloseEditModal}
+        onSubmit={handleSubmitEditOperation}
+      />
 
       {toast && (
         <div className="fixed top-4 right-4 z-50 max-w-sm w-full">

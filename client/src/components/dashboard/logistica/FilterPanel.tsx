@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { XMarkIcon, MagnifyingGlassIcon } from '../../icons/HeroiconsOutline';
-import { DEFAULT_LOGISTICS_FILTERS, LogisticsFilters } from '../../../types';
+import { DEFAULT_LOGISTICS_FILTERS, LogisticsFilters, LogisticsOperation } from '../../../types';
 
 interface FilterPanelProps {
   isOpen: boolean;
@@ -10,6 +10,7 @@ interface FilterPanelProps {
   onClearFilters?: () => void;
   contactOptions?: string[];
   responsibleOptions?: string[];
+  operations?: LogisticsOperation[];
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -20,6 +21,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onClearFilters,
   contactOptions = [],
   responsibleOptions = [],
+  operations = [],
 }) => {
   const [localFilters, setLocalFilters] = useState<LogisticsFilters>(filters);
 
@@ -29,7 +31,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     }
   }, [filters, isOpen]);
 
-  const handleInputChange = (field: keyof LogisticsFilters, value: string) => {
+  const handleInputChange = (field: keyof LogisticsFilters, value: string | boolean) => {
     setLocalFilters((prev) => ({
       ...prev,
       [field]: value,
@@ -48,6 +50,93 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
       onClearFilters();
     }
   };
+
+  const prefilteredOperations = useMemo(() => {
+    if (!operations.length) {
+      return [];
+    }
+
+    const dateFrom = localFilters.dateFrom ? new Date(localFilters.dateFrom) : null;
+    const dateTo = localFilters.dateTo ? new Date(localFilters.dateTo) : null;
+    if (dateTo) {
+      dateTo.setHours(23, 59, 59, 999);
+    }
+
+    const searchTerm = localFilters.search?.trim().toLowerCase();
+
+    const matchesSearch = (operation: LogisticsOperation) => {
+      if (!searchTerm) {
+        return true;
+      }
+      const haystack = [
+        operation.operationCode,
+        operation.contact,
+        operation.responsible,
+        operation.route,
+        operation.origin,
+        operation.destination,
+      ]
+        .filter(Boolean)
+        .map((value) => String(value).toLowerCase());
+      return haystack.some((value) => value.includes(searchTerm));
+    };
+
+    return operations.filter((operation) => {
+      if (localFilters.operationType && operation.type !== localFilters.operationType) {
+        return false;
+      }
+      if (localFilters.status && operation.status !== localFilters.status) {
+        return false;
+      }
+      if (!matchesSearch(operation)) {
+        return false;
+      }
+
+      if (dateFrom || dateTo) {
+        const operationDate = operation.date ? new Date(operation.date) : null;
+        if (!operationDate || Number.isNaN(operationDate.getTime())) {
+          return false;
+        }
+        if (dateFrom && operationDate < dateFrom) {
+          return false;
+        }
+        if (dateTo && operationDate > dateTo) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [operations, localFilters]);
+
+  const derivedContactOptions = useMemo(() => {
+    if (!prefilteredOperations.length) {
+      return [];
+    }
+    const unique = new Set<string>();
+    prefilteredOperations.forEach((operation) => {
+      if (operation.contact) {
+        unique.add(operation.contact);
+      }
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [prefilteredOperations]);
+
+  const derivedResponsibleOptions = useMemo(() => {
+    if (!prefilteredOperations.length) {
+      return [];
+    }
+    const unique = new Set<string>();
+    prefilteredOperations.forEach((operation) => {
+      if (operation.responsible && operation.responsible !== 'Sin asignar') {
+        unique.add(operation.responsible);
+      }
+    });
+    return Array.from(unique).sort((a, b) => a.localeCompare(b, 'es'));
+  }, [prefilteredOperations]);
+
+  const contactOptionsToShow = derivedContactOptions.length ? derivedContactOptions : contactOptions;
+  const responsibleOptionsToShow = derivedResponsibleOptions.length ? derivedResponsibleOptions : responsibleOptions;
 
   if (!isOpen) {
     return null;
@@ -144,21 +233,18 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
 
               <div>
                 <label className="block text-sm font-medium text-text-primary mb-2">Contacto</label>
-                <input
-                  list="logistics-contacts"
-                  type="text"
+                <select
                   value={localFilters.contact}
                   onChange={(event) => handleInputChange('contact', event.target.value)}
-                  placeholder="Cliente o proveedor"
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
-                />
-                {contactOptions.length > 0 && (
-                  <datalist id="logistics-contacts">
-                    {contactOptions.map((contact) => (
-                      <option key={contact} value={contact} />
-                    ))}
-                  </datalist>
-                )}
+                >
+                  <option value="">Todos los contactos</option>
+                  {contactOptionsToShow.map((contact) => (
+                    <option key={contact} value={contact}>
+                      {contact}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -169,12 +255,28 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:ring-2 focus:ring-primary focus:border-transparent"
                 >
                   <option value="">Todos los responsables</option>
-                  {responsibleOptions.map((option) => (
+                  {responsibleOptionsToShow.map((option) => (
                     <option key={option} value={option}>
                       {option}
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div className="flex items-start gap-3 rounded-lg border border-dashed border-gray-200 bg-gray-50 px-4 py-3">
+                <input
+                  id="logistics-show-archived"
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                  checked={localFilters.showArchived}
+                  onChange={(event) => handleInputChange('showArchived', event.target.checked)}
+                />
+                <label htmlFor="logistics-show-archived" className="text-sm text-text-primary">
+                  <span className="font-medium block">Mostrar operaciones archivadas</span>
+                  <span className="text-xs text-gray-500">
+                    Activá esta opción para revisar movimientos archivados y restaurarlos si es necesario.
+                  </span>
+                </label>
               </div>
             </div>
           </div>

@@ -5,6 +5,11 @@ interface OperationDetailPanelProps {
   isOpen: boolean;
   onClose: () => void;
   operation: LogisticsOperation | null;
+  onEditOperation: () => void;
+  onMarkAsCompleted: () => void;
+  onCancelOperation: () => void;
+  onRestoreOperation?: () => void;
+  pendingAction?: 'complete' | 'cancel' | 'restore' | null;
 }
 
 const formatAmount = (amount: number | null, currency: string) => {
@@ -41,10 +46,22 @@ export const OperationDetailPanel: React.FC<OperationDetailPanelProps> = ({
   isOpen,
   onClose,
   operation,
+  onEditOperation,
+  onMarkAsCompleted,
+  onCancelOperation,
+  onRestoreOperation,
+  pendingAction = null,
 }) => {
   if (!isOpen || !operation) {
     return null;
   }
+
+  const isArchived = Boolean(operation.archived);
+  const canComplete = !isArchived && !['completado', 'anulado'].includes(operation.status);
+  const canCancel = !isArchived && operation.status !== 'anulado';
+  const isCompleting = pendingAction === 'complete';
+  const isCancelling = pendingAction === 'cancel';
+  const isRestoring = pendingAction === 'restore';
 
   const statusBadge = (() => {
     switch (operation.status) {
@@ -86,6 +103,11 @@ export const OperationDetailPanel: React.FC<OperationDetailPanelProps> = ({
               <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadge}`}>
                 {operation.status === 'en-curso' ? 'En curso' : operation.status === 'completado' ? 'Completado' : 'Pendiente'}
               </span>
+              {isArchived && (
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                  Archivada
+                </span>
+              )}
             </div>
           </div>
           <button
@@ -192,26 +214,57 @@ export const OperationDetailPanel: React.FC<OperationDetailPanelProps> = ({
           )}
         </div>
 
+        {isArchived && (
+          <div className="px-6 py-4 border-t border-gray-200 bg-yellow-50 text-sm text-yellow-900">
+            Esta operación está archivada. Restaurala para volver a gestionarla desde el panel.
+          </div>
+        )}
+
         <div className="px-6 py-5 border-t border-gray-200 flex flex-col gap-3 sm:flex-row">
           <button
             type="button"
+            onClick={onEditOperation}
+            disabled={isArchived}
             className="flex-1 py-2 px-4 border border-gray-300 text-text-primary rounded-lg hover:bg-gray-50 transition-colors"
           >
-            Editar operación
+            {isArchived ? 'Editar no disponible' : 'Editar operación'}
           </button>
           <button
             type="button"
-            className="flex-1 py-2 px-4 bg-success text-white rounded-lg hover:bg-green-600 transition-colors"
+            onClick={onMarkAsCompleted}
+            disabled={!canComplete || isCompleting || isCancelling}
+            className={`flex-1 py-2 px-4 rounded-lg text-white transition-colors ${
+              !canComplete || isCompleting || isCancelling
+                ? 'bg-green-200 cursor-not-allowed'
+                : 'bg-success hover:bg-green-600'
+            }`}
           >
-            Marcar completada
+            {isCompleting ? 'Procesando…' : 'Marcar completada'}
           </button>
           <button
             type="button"
-            className="py-2 px-4 bg-danger text-white rounded-lg hover:bg-red-600 transition-colors"
+            onClick={onCancelOperation}
+            disabled={!canCancel || isCancelling}
+            className={`flex-1 py-2 px-4 rounded-lg text-white transition-colors ${
+              !canCancel || isCancelling ? 'bg-red-200 cursor-not-allowed' : 'bg-danger hover:bg-red-600'
+            }`}
           >
-            <i className="fa-solid fa-times" />
+            {isCancelling ? 'Anulando…' : 'Anular movimiento'}
           </button>
         </div>
+
+        {isArchived && onRestoreOperation && (
+          <div className="px-6 pb-6">
+            <button
+              type="button"
+              onClick={onRestoreOperation}
+              disabled={isRestoring}
+              className="w-full rounded-lg bg-primary px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+            >
+              {isRestoring ? 'Restaurando…' : 'Restaurar operación'}
+            </button>
+          </div>
+        )}
       </aside>
     </>
   );

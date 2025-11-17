@@ -6,7 +6,7 @@ interface LogisticsOperationsSectionProps {
   selectedOperations: string[];
   onSelectionChange: (operationIds: string[]) => void;
   onFilterClick: () => void;
-  onBulkAction: () => void;
+  onBulkAction: (action: 'edit' | 'complete' | 'cancel' | 'archive' | 'restore') => void;
   onViewOperation: (operation: LogisticsOperation) => void;
   totalOperations: number;
   loading: boolean;
@@ -76,6 +76,7 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
   const allSelected = operations.length > 0 && selectedOperations.length === operations.length;
   const startCount = operations.length > 0 ? 1 : 0;
   const endCount = operations.length;
+  const [bulkMenuOpen, setBulkMenuOpen] = React.useState(false);
 
   const handleSelectAll = () => {
     if (allSelected) {
@@ -93,6 +94,41 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
     onSelectionChange([...selectedOperations, operationId]);
   };
 
+  const handleBulkMenuToggle = () => {
+    if (!selectedOperations.length) {
+      return;
+    }
+    setBulkMenuOpen((prev) => !prev);
+  };
+
+  const handleBulkMenuAction = (action: 'edit' | 'complete' | 'cancel' | 'archive' | 'restore') => {
+    setBulkMenuOpen(false);
+    onBulkAction(action);
+  };
+
+  React.useEffect(() => {
+    if (!bulkMenuOpen) {
+      return;
+    }
+    const handleClickAway = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('#logistics-bulk-action-menu-button') || target.closest('#logistics-bulk-action-menu')) {
+        return;
+      }
+      setBulkMenuOpen(false);
+    };
+    document.addEventListener('click', handleClickAway);
+    return () => {
+      document.removeEventListener('click', handleClickAway);
+    };
+  }, [bulkMenuOpen]);
+
+  React.useEffect(() => {
+    if (!selectedOperations.length) {
+      setBulkMenuOpen(false);
+    }
+  }, [selectedOperations.length]);
+
   return (
     <section id="logistics-operations-section" className="mb-10">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-4">
@@ -106,17 +142,71 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
             <i className="fa-solid fa-filter mr-2" />
             Filtros
           </button>
-          <button
-            type="button"
-            onClick={onBulkAction}
-            className={`flex items-center px-3 py-2 border border-gray-300 rounded-lg transition-colors text-sm ${
-              selectedOperations.length ? 'hover:bg-gray-50' : 'opacity-60 cursor-not-allowed'
-            }`}
-            disabled={selectedOperations.length === 0}
-          >
-            <i className="fa-solid fa-tasks mr-2" />
-            Acciones masivas
-          </button>
+          <div className="relative">
+            <button
+              id="logistics-bulk-action-menu-button"
+              type="button"
+              onClick={handleBulkMenuToggle}
+              className={`flex items-center px-3 py-2 border border-gray-300 rounded-lg transition-colors text-sm ${
+                selectedOperations.length ? 'hover:bg-gray-50' : 'opacity-60 cursor-not-allowed'
+              }`}
+              disabled={selectedOperations.length === 0}
+            >
+              <i className="fa-solid fa-tasks mr-2" />
+              Acciones masivas
+              <i className="fa-solid fa-chevron-down text-xs ml-2" />
+            </button>
+            {bulkMenuOpen && (
+              <div
+                id="logistics-bulk-action-menu"
+                className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 bg-white shadow-lg z-10"
+              >
+                <p className="px-4 py-2 text-xs text-gray-500 border-b border-gray-100">
+                  Seleccioná una acción para {selectedOperations.length} operaciones
+                </p>
+                <button
+                  type="button"
+                  className="flex w-full items-center px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  onClick={() => handleBulkMenuAction('edit')}
+                >
+                  <i className="fa-solid fa-pen-to-square text-primary mr-2" />
+                  Editar operaciones
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  onClick={() => handleBulkMenuAction('complete')}
+                >
+                  <i className="fa-solid fa-circle-check text-green-600 mr-2" />
+                  Marcar como completadas
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center px-4 py-2 text-sm text-left hover:bg-gray-50 text-danger"
+                  onClick={() => handleBulkMenuAction('cancel')}
+                >
+                  <i className="fa-solid fa-ban mr-2" />
+                  Anular movimientos
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  onClick={() => handleBulkMenuAction('archive')}
+                >
+                  <i className="fa-solid fa-box-archive text-gray-600 mr-2" />
+                  Archivar operaciones
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center px-4 py-2 text-sm text-left hover:bg-gray-50"
+                  onClick={() => handleBulkMenuAction('restore')}
+                >
+                  <i className="fa-solid fa-rotate-left text-indigo-600 mr-2" />
+                  Restaurar operaciones
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -152,7 +242,9 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
               return (
                 <div
                   key={operation.id}
-                  className="bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
+                  className={`bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer ${
+                    operation.archived ? 'opacity-80' : ''
+                  }`}
                   onClick={() => onViewOperation(operation)}
                 >
                   <div className="flex items-start justify-between mb-3">
@@ -161,6 +253,7 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
                         type="checkbox"
                         className="rounded border-gray-300 text-primary focus:ring-primary mr-3"
                         checked={selectedOperations.includes(operation.id)}
+                        onClick={(event) => event.stopPropagation()}
                         onChange={(event) => {
                           event.stopPropagation();
                           handleToggleSelection(operation.id);
@@ -193,6 +286,11 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMeta.tone}`}>
                         {statusMeta.label}
                       </span>
+                      {operation.archived && (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-200 text-gray-700">
+                          Archivada
+                        </span>
+                      )}
                     </div>
                     
                     <div className="text-sm text-text-primary">
@@ -298,7 +396,7 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
                   return (
                     <tr
                       key={operation.id}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className={`hover:bg-gray-50 cursor-pointer ${operation.archived ? 'opacity-80' : ''}`}
                       onClick={() => onViewOperation(operation)}
                     >
                       <td className="px-4 xl:px-6 py-4">
@@ -306,6 +404,7 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
                           type="checkbox"
                           className="rounded border-gray-300 text-primary focus:ring-primary"
                           checked={selectedOperations.includes(operation.id)}
+                          onClick={(event) => event.stopPropagation()}
                           onChange={(event) => {
                             event.stopPropagation();
                             handleToggleSelection(operation.id);
@@ -326,6 +425,11 @@ export const LogisticsOperationsSection: React.FC<LogisticsOperationsSectionProp
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusMeta.tone}`}>
                           {statusMeta.label}
                         </span>
+                        {operation.archived && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-gray-200 text-gray-700">
+                            Archivada
+                          </span>
+                        )}
                       </td>
                       <td className="px-4 xl:px-6 py-4 text-sm text-text-primary">
                         {formatAmount(operation.amount, operation.currency)}

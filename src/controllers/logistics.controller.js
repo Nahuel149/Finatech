@@ -3,6 +3,9 @@ const {
   getOperationById,
   createOperation,
   updateOperationState,
+  updateOperationDetails,
+  archiveOperations,
+  restoreOperations,
 } = require('../services/logistics.service');
 
 const parseFiltersFromQuery = (query) => ({
@@ -13,6 +16,7 @@ const parseFiltersFromQuery = (query) => ({
   responsible: query.responsible || '',
   dateFrom: query.dateFrom || query.from || '',
   dateTo: query.dateTo || query.to || '',
+  archived: query.archived || '',
 });
 
 const parsePaginationFromQuery = (query) => ({
@@ -61,9 +65,47 @@ const patchLogisticsOperationState = async (req, res, next) => {
   }
 };
 
+const patchLogisticsOperation = async (req, res, next) => {
+  try {
+    const operation = await updateOperationDetails(req.params.id, req.body || {});
+    res.json(operation);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const archiveLogisticsOperations = async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id) => typeof id === 'string' && id.trim()) : [];
+    if (!ids.length) {
+      return res.status(400).json({ message: 'Seleccioná operaciones para archivar.' });
+    }
+    const result = await archiveOperations(ids);
+    res.json({ archived: result.modifiedCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const unarchiveLogisticsOperations = async (req, res, next) => {
+  try {
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.filter((id) => typeof id === 'string' && id.trim()) : [];
+    if (!ids.length) {
+      return res.status(400).json({ message: 'Seleccioná operaciones para restaurar.' });
+    }
+    const result = await restoreOperations(ids);
+    res.json({ restored: result.modifiedCount });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getLogisticsOperations,
   getLogisticsOperationById,
   createLogisticsOperation,
   patchLogisticsOperationState,
+  patchLogisticsOperation,
+  archiveLogisticsOperations,
+  unarchiveLogisticsOperations,
 };

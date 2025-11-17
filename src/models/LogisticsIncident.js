@@ -106,6 +106,4 @@ const logisticsIncidentSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-logisticsIncidentSchema.index({ incidentCode: 1 }, { unique: true });
-
 module.exports = mongoose.model('LogisticsIncident', logisticsIncidentSchema);

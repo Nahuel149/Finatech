@@ -2,6 +2,7 @@ import {
   ApiError,
   LogisticsDiscrepancyPayload,
   LogisticsItemsHandoverPayload,
+  LogisticsOperationUpdatePayload,
   LogisticsOrderPayload,
   LogisticsPartialCompletionPayload,
   RequestConfig,
@@ -194,6 +195,8 @@ export const apiRequest = async <T = any>(
         }
       }
       requestConfig.body = config.body as FormData;
+    } else if (typeof config.body === 'string') {
+      requestConfig.body = config.body;
     } else {
       requestConfig.body = JSON.stringify(config.body);
     }
@@ -355,10 +358,28 @@ export const api = {
     apiRequest(`/api/logistics/operations${buildQueryString(params)}`),
   getLogisticsOperationById: (operationId: string) =>
     apiRequest(`/api/logistics/operations/${encodeURIComponent(operationId)}`),
+  updateLogisticsOperation: (
+    operationId: string,
+    payload: LogisticsOperationUpdatePayload
+  ) =>
+    apiRequest(`/api/logistics/operations/${encodeURIComponent(operationId)}`, {
+      method: 'PATCH',
+      body: payload,
+    }),
   updateLogisticsOperationState: (operationId: string, payload: { state: string }) =>
     apiRequest(`/api/logistics/operations/${encodeURIComponent(operationId)}/state`, {
       method: 'PATCH',
-      body: JSON.stringify(payload),
+      body: payload,
+    }),
+  archiveLogisticsOperations: (operationIds: string[]) =>
+    apiRequest('/api/logistics/operations/archive', {
+      method: 'POST',
+      body: { ids: operationIds },
+    }),
+  restoreLogisticsOperations: (operationIds: string[]) =>
+    apiRequest('/api/logistics/operations/unarchive', {
+      method: 'POST',
+      body: { ids: operationIds },
     }),
   getLogisticsIncidents: (params?: Record<string, unknown>) =>
     apiRequest(`/api/logistics/incidents${buildQueryString(params)}`),
@@ -367,7 +388,7 @@ export const api = {
   updateLogisticsIncidentStatus: (incidentId: string, payload: { status: string }) =>
     apiRequest(`/api/logistics/incidents/${encodeURIComponent(incidentId)}/status`, {
       method: 'PATCH',
-      body: JSON.stringify(payload),
+      body: payload,
     }),
 
   getOperationLogisticsOrders: (operationId: string) =>

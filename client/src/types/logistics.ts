@@ -43,6 +43,7 @@ export interface LogisticsOperationRecord {
   metadata?: Record<string, string | null | undefined> | null;
   createdAt?: string;
   updatedAt?: string;
+  archived?: boolean;
 }
 
 export interface LogisticsMetrics {
@@ -173,6 +174,22 @@ export interface LogisticsOperation {
   notes: string;
   timeline: LogisticsTimelineEntry[];
   attachments: LogisticsAttachment[];
+  archived?: boolean;
+}
+
+export interface LogisticsOperationUpdatePayload {
+  contact?: string;
+  responsible?: string;
+  origin?: string;
+  destination?: string;
+  route?: string;
+  date?: string;
+  type?: OperationType;
+  amount?: {
+    value: number | null;
+    currency: string;
+  };
+  notes?: string;
 }
 
 export interface LogisticsFilters {
@@ -183,6 +200,7 @@ export interface LogisticsFilters {
   dateTo: string;
   contact: string;
   responsible: string;
+  showArchived: boolean;
 }
 
 export const DEFAULT_LOGISTICS_FILTERS: LogisticsFilters = {
@@ -193,6 +211,7 @@ export const DEFAULT_LOGISTICS_FILTERS: LogisticsFilters = {
   dateTo: '',
   contact: '',
   responsible: '',
+  showArchived: false,
 };
 
 export type LogisticsOrderType = 'RETIRO' | 'ENTREGA';
