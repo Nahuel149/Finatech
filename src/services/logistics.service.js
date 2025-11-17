@@ -68,7 +68,7 @@ const buildQueryFromFilters = (filters = {}) => {
   } else if (filters.archived === 'archived') {
     query.archived = true;
   } else {
-    query.archived = false;
+    query.archived = { $ne: true };
   }
 
   return query;
@@ -112,7 +112,7 @@ const mapOperationToDto = (operation) => ({
 });
 
 const computeSummaryMetrics = async () => {
-  const baseFilter = { archived: false };
+  const baseFilter = { archived: { $ne: true } };
   const [active, pendingDeliveries, internalTransfers, completedToday] = await Promise.all([
     LogisticsOperation.countDocuments({ ...baseFilter, state: 'en-curso' }),
     LogisticsOperation.countDocuments({ ...baseFilter, state: 'pendiente', type: 'Entrega' }),
