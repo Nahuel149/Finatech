@@ -1746,8 +1746,11 @@ const computeReceptionTotals = (order) => {
   const map = new Map();
   (order.items || []).forEach((item) => {
     const currency = String(item?.assetCode || 'ARS').toUpperCase();
+    const isDelivery = String(order?.type || '').toUpperCase() === 'ENTREGA';
+    const primaryAmount = isDelivery ? item?.pendingAmount : item?.receivedAmount;
+    const fallbackAmount = isDelivery ? item?.expectedAmount : item?.pendingAmount;
     const amount = roundAmount(
-      Number(item?.receivedAmount ?? item?.expectedAmount ?? item?.pendingAmount ?? 0)
+      Number(primaryAmount ?? fallbackAmount ?? item?.expectedAmount ?? 0)
     );
     if (!amount) {
       return;
@@ -1763,6 +1766,39 @@ const computeReceptionTotals = (order) => {
   );
   return { totalsByCurrency, totalAmount };
 };
+
+const adjustCourierTransitBalance = async (order, totalsInput, context = {}, deltaSign = 1) => {
+  const totals = totalsInput || computeReceptionTotals(order);
+  const entries = Array.isArray(totals.totalsByCurrency) ? totals.totalsByCurrency : [];
+
+  for (const entry of entries) {
+    const amount = roundAmount(entry?.amount || 0);
+    if (!amount) {
+      continue;
+    }
+    const currency = String(entry?.currency || 'ARS').toUpperCase();
+    const delta = deltaSign * amount;
+    await adjustTreasuryBalanceForMovement('courier_in_transit', currency, delta, {
+      userId: context.userId,
+    });
+    emitBalanceDelta({
+      key: 'courier_in_transit',
+      currency,
+      delta,
+      orderId: order?._id || order?.id || null,
+      status: order?.treasuryReceptionStatus || null,
+      userId: context.userId || null,
+    });
+  }
+
+  return totals;
+};
+
+const reserveCourierTransitBalance = async (order, totals, context = {}) =>
+  adjustCourierTransitBalance(order, totals, context, 1);
+
+const releaseCourierTransitBalance = async (order, totals, context = {}) =>
+  adjustCourierTransitBalance(order, totals, context, -1);
 
 const formatReceptionEvents = (events = []) =>
   events
@@ -2126,6 +2162,7 @@ const omitTreasuryReception = async (receptionId, payload = {}, context = {}) =>
   }
 
   const totals = computeReceptionTotals(order);
+  await releaseCourierTransitBalance(order, totals, { userId });
 
   order.treasuryReceptionStatus = 'omitted';
   order.treasuryReception = order.treasuryReception || {};
@@ -2159,6 +2196,8 @@ const revertTreasuryReception = async (receptionId, payload = {}, context = {}) 
   const totals = computeReceptionTotals(order);
   if (order.treasuryReceptionStatus === 'confirmed' && totals.totalAmount) {
     await applyReceptionBalances(order, totals, { userId }, { reverse: true });
+  } else if (order.treasuryReceptionStatus === 'omitted') {
+    await reserveCourierTransitBalance(order, totals, { userId });
   }
 
   order.treasuryReceptionStatus = 'pending';
@@ -3347,3 +3386,4 @@ exports.listTreasuryReceptions = listTreasuryReceptions;
 exports.confirmTreasuryReception = confirmTreasuryReception;
 exports.omitTreasuryReception = omitTreasuryReception;
 exports.revertTreasuryReception = revertTreasuryReception;
+exports.reserveCourierTransitBalance = reserveCourierTransitBalance;

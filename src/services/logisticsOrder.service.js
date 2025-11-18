@@ -6,6 +6,7 @@ const Transaction = require('../models/Transaction');
 const SequenceCounter = require('../models/SequenceCounter');
 const Client = require('../models/Client');
 const { storeEvidenceFiles } = require('../utils/evidenceStorage');
+const { reserveCourierTransitBalance } = require('./treasury.service');
 
 const ORDER_PREFIX = 'OL';
 const PROGRAM_ORDER_PERMISSIONS = ['manage-treasury', 'manage-operations', 'manage-logistics'];
@@ -49,7 +50,7 @@ const shouldCreateTreasuryReception = (order) => {
   return false;
 };
 
-const ensureTreasuryReceptionPending = (order, context = {}) => {
+const ensureTreasuryReceptionPending = async (order, context = {}) => {
   if (!shouldCreateTreasuryReception(order) || order.treasuryReceptionStatus) {
     return;
   }
@@ -65,6 +66,8 @@ const ensureTreasuryReceptionPending = (order, context = {}) => {
     userName: context?.userName || context?.user?.fullName || context?.user?.email || null,
     createdAt: new Date(),
   });
+
+  await reserveCourierTransitBalance(order, null, { userId: context?.userId || null });
 };
 
 const hasPermission = (user, permission) => {
@@ -1157,7 +1160,7 @@ const completeTotal = async (orderId, context = {}) => {
   order.updatedBy = toObjectId(userId);
   order.updatedByName = context.userName || context.user?.fullName || null;
 
-  ensureTreasuryReceptionPending(order, context);
+  await ensureTreasuryReceptionPending(order, context);
 
   await order.save();
   await recordTimelineEvent(
@@ -1247,7 +1250,7 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
   order.updatedBy = toObjectId(userId);
   order.updatedByName = context.userName || context.user?.fullName || null;
 
-  ensureTreasuryReceptionPending(order, context);
+  await ensureTreasuryReceptionPending(order, context);
 
   await order.save();
   await recordTimelineEvent(
