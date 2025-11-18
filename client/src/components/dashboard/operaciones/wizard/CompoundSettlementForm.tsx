@@ -4,7 +4,7 @@ export interface CompoundLine {
   id: string;
   method: string;
   allocationType: 'percentage' | 'amount';
-  value: number;
+  value: number | null;
 }
 
 export interface CompoundComputed {
@@ -102,15 +102,16 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                     type="number"
                     min="0"
                     step={line.allocationType === 'percentage' ? '0.1' : '0.01'}
-                    value={Number.isFinite(line.value) ? line.value : ''}
+                    value={line.value === null ? '' : line.value}
                     disabled={disabled || line.allocationType === 'amount'}
                     readOnly={line.allocationType === 'amount'}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const rawValue = event.target.value;
                       onLineChange(line.id, {
-                        value: Number(event.target.value),
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
+                        value: rawValue === '' ? null : Number(rawValue),
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm placeholder:text-gray-400"
                     placeholder={line.allocationType === 'percentage' ? 'Ej: 25' : 'Ej: 50000'}
                   />
                 </div>

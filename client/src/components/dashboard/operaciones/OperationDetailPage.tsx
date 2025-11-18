@@ -393,8 +393,8 @@ export const OperationDetailPage: React.FC = () => {
                                 <span>{line.method}</span>
                                 <span>
                                   {line.allocationType === 'percentage'
-                                    ? `${line.value}%`
-                                    : formatCurrency(line.value, 'ARS')}
+                                    ? `${Number(line.value || 0).toFixed(1)}%`
+                                    : formatCurrency(Number(line.value) || 0, 'ARS')}
                                 </span>
                               </li>
                             ))}

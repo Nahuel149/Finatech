@@ -630,7 +630,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
     );
     if (!confirmed) return;
     reset();
-    navigate('/dashboard/operaciones');
+    navigate('/dashboard');
   };
 
   const handleSaveDraft = async () => {

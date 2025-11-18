@@ -279,6 +279,10 @@ const registerTransferOperation = async (payload, context = {}) => {
     },
   };
 
+  if (normalizedLines.length === 1) {
+    treasuryPayload.contactId = normalizedLines[0].contact.toString();
+  }
+
   const treasuryContext = {
     userId: context.userId,
     skipBalanceAdjustments: true,

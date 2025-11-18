@@ -165,8 +165,8 @@ const SettlementCompound: React.FC<{
               <div className="md:col-span-4 font-medium text-text-primary">{line.method}</div>
               <div className="md:col-span-3">
                 {line.allocationType === 'percentage'
-                  ? `${line.value.toFixed(1)}%`
-                  : `${formatCurrency(line.value, line.currency)}`}
+                  ? `${(Number(line.value) || 0).toFixed(1)}%`
+                  : `${formatCurrency(Number(line.value) || 0, line.currency)}`}
               </div>
               <div className="md:col-span-3 font-semibold text-text-primary">
                 {formatCurrency(line.computedAmount, line.currency)}

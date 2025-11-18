@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { BalanceStripe } from '../operaciones/BalanceStripe';
@@ -115,6 +115,7 @@ export const LogisticsOrderDetailPage: React.FC = () => {
   const [evidenceError, setEvidenceError] = useState<string | null>(null);
   const [discrepancyModalOpen, setDiscrepancyModalOpen] = useState(false);
   const [syncingOffline, setSyncingOffline] = useState(false);
+  const [selectedAction, setSelectedAction] = useState('');
 
   const { order, loading, error, refresh } = useLogisticsOrderDetail(orderId);
   const {
@@ -143,18 +144,18 @@ export const LogisticsOrderDetailPage: React.FC = () => {
 
   const timeline = order?.timeline ?? [];
 
-  const handleStartRoute = async () => {
+  const handleStartRoute = useCallback(async () => {
     if (!orderId) return;
     await startRoute(orderId);
     await refresh();
-  };
+  }, [orderId, refresh, startRoute]);
 
-  const handleArrive = async () => {
+  const handleArrive = useCallback(async () => {
     if (!orderId) return;
     const coords = await requestLocation();
     await arriveOnSite(orderId, coords);
     await refresh();
-  };
+  }, [arriveOnSite, orderId, refresh]);
 
   const handleSaveItems = async (payload: LogisticsItemsHandoverPayload) => {
     if (!orderId) return;
@@ -214,50 +215,69 @@ export const LogisticsOrderDetailPage: React.FC = () => {
     }
   };
 
-  const actionButtons = () => {
-    if (!order) return null;
-    const base =
-      'inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-60';
-    if (order.status === 'BORRADOR') {
-      return (
-        <button
-          type="button"
-          className={`${base} border border-gray-300 text-gray-700 hover:bg-gray-50`}
-          onClick={() => navigate(`/dashboard/operaciones/detalle/${order.operationId}`)}
-        >
-          <i className="fa-solid fa-pen-to-square" aria-hidden="true" />
-          Completar desde operación
-        </button>
-      );
+  const orderActions = useMemo(() => {
+    if (!order) {
+      return [];
     }
+    const actions: Array<{
+      value: string;
+      label: string;
+      disabled?: boolean;
+      run: () => Promise<void> | void;
+    }> = [];
+
+    if (order.status === 'BORRADOR' && order.operationModel === 'Transaction' && order.operationId) {
+      actions.push({
+        value: 'edit-operation',
+        label: 'Completar desde operación',
+        disabled: false,
+        run: () => {
+          navigate(`/dashboard/operaciones/detalle/${order.operationId}`);
+        },
+      });
+    }
+
     if (order.status === 'PROGRAMADA' || order.status === 'ASIGNADA') {
-      return (
-        <button
-          type="button"
-          className={`${base} bg-primary text-white hover:bg-blue-700`}
-          onClick={handleStartRoute}
-          disabled={runningAction === 'start-route'}
-        >
-          <i className="fa-solid fa-route" aria-hidden="true" />
-          En camino
-        </button>
-      );
+      actions.push({
+        value: 'start-route',
+        label: 'Marcar en camino',
+        disabled: runningAction === 'start-route',
+        run: () => handleStartRoute(),
+      });
     }
+
     if (order.status === 'EN_CAMINO') {
-      return (
-        <button
-          type="button"
-          className={`${base} bg-amber-500 text-white hover:bg-amber-600`}
-          onClick={handleArrive}
-          disabled={runningAction === 'arrive'}
-        >
-          <i className="fa-solid fa-location-crosshairs" aria-hidden="true" />
-          En sitio
-        </button>
-      );
+      actions.push({
+        value: 'arrive',
+        label: 'Marcar en sitio',
+        disabled: runningAction === 'arrive',
+        run: () => handleArrive(),
+      });
     }
-    return null;
-  };
+
+    return actions;
+  }, [handleArrive, handleStartRoute, navigate, order, runningAction]);
+
+  const handleActionSelect = useCallback(
+    async (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = event.target.value;
+      if (!value) {
+        return;
+      }
+      setSelectedAction(value);
+      const selected = orderActions.find((action) => action.value === value);
+      if (!selected || selected.disabled) {
+        setSelectedAction('');
+        return;
+      }
+      try {
+        await Promise.resolve(selected.run());
+      } finally {
+        setSelectedAction('');
+      }
+    },
+    [orderActions]
+  );
 
   const canShowHandover = order?.status === 'EN_SITIO';
   const wizardSavingActions = ['update-items', 'complete-total', 'complete-partial'];
@@ -269,7 +289,7 @@ export const LogisticsOrderDetailPage: React.FC = () => {
       <BalanceStripe />
 
       <main className="flex-1 px-4 lg:px-6 pb-10">
-        <div className="max-w-6xl mx-auto pt-[360px] lg:pt-[220px] space-y-6">
+        <div className="max-w-6xl mx-auto pt-[400px] lg:pt-[260px] space-y-6">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <p className="text-xs uppercase text-gray-500 tracking-wide">Orden logística</p>
@@ -392,7 +412,32 @@ export const LogisticsOrderDetailPage: React.FC = () => {
                     <p>{order.assignedTo ? 'Logístico asignado' : 'Sin asignar'}</p>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    {actionButtons()}
+                    {orderActions.length > 0 && (
+                      <div className="flex flex-col gap-1 min-w-[220px]">
+                        <label className="text-xs font-semibold text-gray-500" htmlFor="order-action-select">
+                          Acciones rápidas
+                        </label>
+                        <div className="relative">
+                          <select
+                            id="order-action-select"
+                            className="w-full appearance-none rounded-lg border border-gray-300 bg-white px-3 py-2 pr-8 text-sm text-gray-700 focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                            value={selectedAction}
+                            onChange={handleActionSelect}
+                            disabled={Boolean(runningAction) || orderActions.every((action) => action.disabled)}
+                          >
+                            <option value="">Seleccioná una acción</option>
+                            {orderActions.map((action) => (
+                              <option key={action.value} value={action.value} disabled={action.disabled}>
+                                {action.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-gray-400">
+                            <i className="fa-solid fa-chevron-down" aria-hidden="true" />
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               </section>

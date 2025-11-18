@@ -38,7 +38,7 @@ const createCompoundLine = (method: string = ''): CompoundLine => ({
   id: `line-${Math.random().toString(36).slice(2, 9)}`,
   method,
   allocationType: 'percentage',
-  value: 0,
+  value: null,
 });
 
 const formatCurrency = (value: number, currency?: string) => {
@@ -133,12 +133,15 @@ export const OperationWizardStep2Page: React.FC = () => {
       }
 
       if (draft.settlement?.mode === 'compound' && draft.settlement.lines.length > 0) {
-        const newCompoundLines = draft.settlement.lines.map((line, index) => ({
-          id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
-          method: line.method,
-          allocationType: line.allocationType,
-          value: line.value,
-        }));
+        const newCompoundLines = draft.settlement.lines.map((line, index) => {
+          const numericValue = Number(line.value);
+          return {
+            id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
+            method: line.method,
+            allocationType: line.allocationType,
+            value: Number.isFinite(numericValue) ? numericValue : null,
+          };
+        });
         
         // Only update if the structure has changed (simplified comparison)
         if (compoundLines.length !== newCompoundLines.length || 
@@ -199,12 +202,13 @@ export const OperationWizardStep2Page: React.FC = () => {
     const safeBase = baseAmount > 0 ? baseAmount : 1;
 
     compoundLines.forEach((line) => {
+      const rawValue = typeof line.value === 'number' ? line.value : Number(line.value) || 0;
       const percentage = line.allocationType === 'percentage'
-        ? line.value
-        : (line.value / safeBase) * 100;
+        ? rawValue
+        : (rawValue / safeBase) * 100;
       const amount = line.allocationType === 'percentage'
-        ? (line.value / 100) * safeBase
-        : line.value;
+        ? (rawValue / 100) * safeBase
+        : rawValue;
 
       result[line.id] = {
         percentage: Number.isFinite(percentage) ? percentage : 0,
@@ -222,6 +226,15 @@ export const OperationWizardStep2Page: React.FC = () => {
     }, 0);
   }, [compoundLines, computedLines]);
 
+  const totalAmountAllocated = useMemo(() => {
+    return compoundLines.reduce((acc, line) => {
+      const info = computedLines[line.id];
+      return acc + (info ? info.amount : 0);
+    }, 0);
+  }, [compoundLines, computedLines]);
+
+  const remainingAmount = Math.max(baseAmount - totalAmountAllocated, 0);
+
   const isCompoundComplete = Math.abs(totalPercentage - 100) <= 0.1;
   const hasCompoundLines = compoundLines.length > 0;
 
@@ -233,14 +246,6 @@ export const OperationWizardStep2Page: React.FC = () => {
     ? 'error'
     : 'neutral';
 
-  const progressMessage = !hasCompoundLines
-    ? 'Ingresá los métodos de liquidación para completar el 100%'
-    : isCompoundComplete
-    ? '¡Perfecto! La liquidación alcanza el 100%.'
-    : totalPercentage > 100
-    ? `Te excediste en ${(totalPercentage - 100).toFixed(1)}%. Ajustá los valores.`
-    : `Restan ${(100 - totalPercentage).toFixed(1)}% para completar el 100%.`;
-
   const operationLabel = useMemo(() => {
     if (operationType === 'buy') {
       return `Compra ${draft?.outgoingAsset?.code ?? ''}`.trim();
@@ -249,6 +254,14 @@ export const OperationWizardStep2Page: React.FC = () => {
   }, [draft?.incomingAsset?.code, draft?.outgoingAsset?.code, operationType]);
 
   const totalLabel = formatAmount(baseAmount);
+
+  const progressMessage = !hasCompoundLines
+    ? 'Ingresá los métodos de liquidación para completar el 100%'
+    : isCompoundComplete
+    ? '¡Perfecto! La liquidación alcanza el 100%.'
+    : totalPercentage > 100
+    ? `Te excediste en ${(totalPercentage - 100).toFixed(1)}%. Ajustá los valores.`
+    : `Restan ${formatAmount(remainingAmount)} para completar ${totalLabel}.`;
 
   const clientName = useMemo(() => {
     if (draft?.client?.fullName) {
@@ -303,7 +316,8 @@ export const OperationWizardStep2Page: React.FC = () => {
         setFormError('Completá el método en cada fila.');
         return false;
       }
-      if (!Number.isFinite(line.value) || line.value <= 0) {
+      const numericValue = Number(line.value);
+      if (!Number.isFinite(numericValue) || numericValue <= 0) {
         setFormError('Los valores deben ser mayores a cero.');
         return false;
       }
@@ -398,9 +412,10 @@ export const OperationWizardStep2Page: React.FC = () => {
   const busy = draftLoading || saving;
   const isReady = Boolean(draft);
 
-  const hasValidCompoundValues = compoundLines.every(
-    (line) => line.method && Number.isFinite(line.value) && line.value > 0,
-  );
+  const hasValidCompoundValues = compoundLines.every((line) => {
+    const numericValue = Number(line.value);
+    return line.method && Number.isFinite(numericValue) && numericValue > 0;
+  });
 
   const canContinue = settlementMode === 'simple'
     ? Boolean(simpleMethod)

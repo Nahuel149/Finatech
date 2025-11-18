@@ -490,11 +490,12 @@ export const OperationWizardStep3Page: React.FC = () => {
         totalSettlementAmount && Number.isFinite(totalSettlementAmount)
           ? totalSettlementAmount
           : 0;
+      const rawValue = Number(line.value) || 0;
       const fallbackPercentage =
         line.allocationType === 'percentage'
-          ? line.value
+          ? rawValue
           : baseAmount > 0
-          ? (line.value / baseAmount) * 100
+          ? (rawValue / baseAmount) * 100
           : 0;
       const computedPercentage = Number.isFinite(line.computedPercentage)
         ? line.computedPercentage
@@ -502,11 +503,11 @@ export const OperationWizardStep3Page: React.FC = () => {
       const computedAmount =
         line.allocationType === 'percentage'
           ? (computedPercentage / 100) * baseAmount
-          : line.value;
+          : rawValue;
       return {
         method: line.method,
         allocationType: line.allocationType,
-        value: line.value,
+        value: rawValue,
         computedPercentage,
         computedAmount,
         currency: (settlementBaseCurrency || incomingCurrency || outgoingCurrency || 'ARS').toUpperCase(),
