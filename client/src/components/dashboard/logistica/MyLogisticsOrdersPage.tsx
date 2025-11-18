@@ -70,17 +70,21 @@ const requestLocation = (): Promise<{ gpsLat?: number; gpsLng?: number }> =>
 
 export const MyLogisticsOrdersPage: React.FC = () => {
   const navigate = useNavigate();
+  const defaultStatuses = useMemo(
+    () => Object.keys(STATUS_LABELS) as LogisticsOrderStatus[],
+    []
+  );
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | LogisticsOrderType>('ALL');
-  const [statusFilter, setStatusFilter] = useState<LogisticsOrderStatus[]>(() =>
-    Object.keys(STATUS_LABELS) as LogisticsOrderStatus[]
-  );
+  const [statusFilter, setStatusFilter] = useState<LogisticsOrderStatus[]>(defaultStatuses);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [actionMessage, setActionMessage] = useState<ApiError | null>(null);
   const [syncingOffline, setSyncingOffline] = useState(false);
 
-  const { orders, loading, error, setFilters, refresh } = useMyLogisticsOrders({});
+  const { orders, loading, error, setFilters, refresh } = useMyLogisticsOrders({
+    status: defaultStatuses,
+  });
 
   const {
     startRoute,
