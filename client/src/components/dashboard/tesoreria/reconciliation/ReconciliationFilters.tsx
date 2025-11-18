@@ -20,7 +20,7 @@ export const ReconciliationFilters: React.FC<Props> = ({ filters, onUpdate, onCl
       Filtro y búsqueda de coincidencias
     </h3>
 
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
       <div className="filter-card border-2 border-gray-200 rounded-lg p-3">
         <div className="text-sm font-medium text-text-primary">Tipo de operación</div>
         <select
@@ -59,7 +59,7 @@ export const ReconciliationFilters: React.FC<Props> = ({ filters, onUpdate, onCl
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-2 filter-card border-2 border-gray-200 rounded-lg p-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 filter-card border-2 border-gray-200 rounded-lg p-3">
         <div>
           <div className="text-xs text-gray-500">Desde</div>
           <input
@@ -81,13 +81,13 @@ export const ReconciliationFilters: React.FC<Props> = ({ filters, onUpdate, onCl
       </div>
     </div>
 
-    <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="text-sm text-gray-500">
         Ajustá los filtros para mejorar las coincidencias sugeridas.
       </div>
       <button
         type="button"
-        className="text-sm text-primary hover:text-blue-700 font-medium"
+        className="text-sm text-primary hover:text-blue-700 font-medium self-start sm:self-auto"
         onClick={onClear}
       >
         Limpiar filtros

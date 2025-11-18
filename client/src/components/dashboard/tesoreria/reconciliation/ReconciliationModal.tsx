@@ -217,6 +217,20 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
       .slice(0, 3) as TreasuryBalance[];
   }, [balances]);
 
+  const primaryBalanceCard = useMemo(() => {
+    if (!balanceCards.length) {
+      return null;
+    }
+    return balanceCards.find((card) => card.id === 'usd') || balanceCards[0];
+  }, [balanceCards]);
+
+  const secondaryBalanceCards = useMemo(() => {
+    if (!balanceCards.length || !primaryBalanceCard) {
+      return [];
+    }
+    return balanceCards.filter((card) => card.id !== primaryBalanceCard.id);
+  }, [balanceCards, primaryBalanceCard]);
+
   if (!open) {
     return null;
   }
@@ -224,94 +238,140 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto">
       <div className="min-h-full flex items-start justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col border border-gray-200 overflow-visible">
-        <div className="bg-white border-b border-gray-200 p-6">
-          <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
-            <span className="text-primary font-medium">Tesorería</span>
-            <i className="fa-solid fa-chevron-right text-xs" />
-            <span>Conciliación</span>
-          </nav>
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-2">Conciliar operaciones pendientes</h1>
-              <p className="text-gray-600">
-                Vinculá movimientos con operaciones abiertas para compensar sus saldos
-              </p>
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl lg:max-h-[95vh] flex flex-col border border-gray-200 overflow-visible">
+          <div className="bg-white border-b border-gray-200 p-6">
+            <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
+              <span className="text-primary font-medium">Tesorería</span>
+              <i className="fa-solid fa-chevron-right text-xs" />
+              <span>Conciliación</span>
+            </nav>
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1">
+                <h1 className="text-2xl font-bold text-text-primary mb-2">Conciliar operaciones pendientes</h1>
+                <p className="text-gray-600">
+                  Vinculá movimientos con operaciones abiertas para compensar sus saldos
+                </p>
+              </div>
+              <button
+                type="button"
+                className="text-gray-400 hover:text-gray-600 text-xl"
+                onClick={onClose}
+              >
+                <i className="fa-solid fa-times" />
+              </button>
             </div>
-            <button
-              type="button"
-              className="text-gray-400 hover:text-gray-600 text-xl"
-              onClick={onClose}
-            >
-              <i className="fa-solid fa-times" />
-            </button>
           </div>
-        </div>
 
-      <div className="px-6 py-4 border-b border-gray-200 bg-white overflow-x-auto">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[280px]">
-          {balanceCards.map((card) => (
-            <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-lg px-4 py-3">
-              <div className="text-sm font-medium text-text-primary">{card.label}</div>
-                <div className="text-2xl font-bold text-text-primary">
-                  {formatCurrency(card.amount, card.currency)}
+          {primaryBalanceCard && (
+            <div className="px-6 py-4 border-b border-gray-200 bg-white lg:hidden">
+              <div className="bg-gray-50 rounded-2xl px-5 py-4 shadow-sm">
+                <div className="text-sm font-medium text-text-primary uppercase tracking-wide mb-1">
+                  {primaryBalanceCard.label}
+                </div>
+                <div className="text-3xl font-bold text-text-primary mb-1">
+                  {formatCurrency(primaryBalanceCard.amount, primaryBalanceCard.currency)}
                 </div>
                 <div className="text-xs text-gray-500">
-                  Actualizado {new Date(card.updatedAt).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit' })}
+                  Actualizado{' '}
+                  {new Date(primaryBalanceCard.updatedAt).toLocaleTimeString('es-AR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
                 </div>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
 
-        <div className="flex-1 flex min-h-0 lg:pb-6">
-          <div className="flex-1 flex flex-col min-h-0">
-            <ReconciliationFilters
-              filters={filters}
-              onUpdate={(next) => setFilters((prev) => ({ ...prev, ...next }))}
-              onClear={() => setFilters(DEFAULT_FILTERS)}
-            />
-
-            <div className="flex-1 flex flex-col lg:flex-row min-h-0 gap-4">
-              <div className="flex-1 min-h-0 order-2 lg:order-1">
-                <ReconciliationOperationsTable
-                  operations={filteredOperations}
-                  selectedIds={selectedOperationIds}
-                  onToggle={canManageTreasury ? handleToggleOperation : () => {}}
-                  loading={suggestionsLoading}
-                  error={suggestionsError ? suggestionsError.message : null}
-                />
+          {!!secondaryBalanceCards.length && (
+            <div className="px-6 pb-4 border-b border-gray-200 bg-white lg:hidden">
+              <div className="flex flex-col gap-3">
+                {secondaryBalanceCards.map((card) => (
+                  <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-2xl px-4 py-3 shadow-sm">
+                    <div className="text-sm font-medium text-text-primary">{card.label}</div>
+                    <div className="text-2xl font-bold text-text-primary">
+                      {formatCurrency(card.amount, card.currency)}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      Actualizado{' '}
+                      {new Date(card.updatedAt).toLocaleTimeString('es-AR', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
+            </div>
+          )}
 
-              <div className="w-full lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
-                <ReconciliationMovementsPanel
-                  movements={pendingMovements}
-                  selectedMovementId={activeMovement?.id || null}
-                  onSelect={handleSelectMovement}
-                  filter={movementFilter}
-                  onFilterChange={(value) => setMovementFilter(value)}
-                />
+          <div className="hidden lg:block px-6 py-4 border-b border-gray-200 bg-white overflow-x-auto">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[280px]">
+              {balanceCards.map((card) => (
+                <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-lg px-4 py-3">
+                  <div className="text-sm font-medium text-text-primary">{card.label}</div>
+                  <div className="text-2xl font-bold text-text-primary">
+                    {formatCurrency(card.amount, card.currency)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Actualizado{' '}
+                    {new Date(card.updatedAt).toLocaleTimeString('es-AR', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex-1 flex min-h-0">
+            <div className="flex-1 flex flex-col min-h-0">
+              <ReconciliationFilters
+                filters={filters}
+                onUpdate={(next) => setFilters((prev) => ({ ...prev, ...next }))}
+                onClear={() => setFilters(DEFAULT_FILTERS)}
+              />
+
+              <div className="flex-1 flex flex-col gap-6 px-4 pb-6 lg:flex-row lg:gap-4 lg:px-6 lg:pb-0">
+                <div className="flex-1 min-h-0 order-2 lg:order-1">
+                  <ReconciliationOperationsTable
+                    operations={filteredOperations}
+                    selectedIds={selectedOperationIds}
+                    onToggle={canManageTreasury ? handleToggleOperation : () => {}}
+                    loading={suggestionsLoading}
+                    error={suggestionsError ? suggestionsError.message : null}
+                  />
+                </div>
+
+                <div className="w-full lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
+                  <ReconciliationMovementsPanel
+                    movements={pendingMovements}
+                    selectedMovementId={activeMovement?.id || null}
+                    onSelect={handleSelectMovement}
+                    filter={movementFilter}
+                    onFilterChange={(value) => setMovementFilter(value)}
+                  />
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <ReconciliationSummary
-          operationsCount={selectedOperationIds.length}
-          movementsCount={activeMovement ? 1 : 0}
-          operationsTotalLabel={formattedOperationsTotal}
-          movementTotalLabel={formattedMovementTotal}
-          differenceLabel={formattedDifference}
-          isBalanced={isBalanced}
-          warning={summaryWarning}
-          disableConfirm={!canManageTreasury || !isBalanced || compensating || permissionsLoading}
-          confirming={compensating}
-          onCancel={onClose}
-          onSaveDraft={handleSaveDraft}
-          onConfirm={handleConfirm}
-        />
+          <ReconciliationSummary
+            operationsCount={selectedOperationIds.length}
+            movementsCount={activeMovement ? 1 : 0}
+            operationsTotalLabel={formattedOperationsTotal}
+            movementTotalLabel={formattedMovementTotal}
+            differenceLabel={formattedDifference}
+            isBalanced={isBalanced}
+            warning={summaryWarning}
+            disableConfirm={!canManageTreasury || !isBalanced || compensating || permissionsLoading}
+            confirming={compensating}
+            onCancel={onClose}
+            onSaveDraft={handleSaveDraft}
+            onConfirm={handleConfirm}
+          />
+        </div>
       </div>
     </div>
-  </div>
   );
 };
