@@ -21,6 +21,10 @@ const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => ({
 export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
   const navigate = useNavigate();
   const { balances, loading, error, refresh } = useDashboardBalances({ pollInterval: 60000 });
+  const visibleBalances = useMemo(
+    () => balances.filter((balance) => balance.id !== 'courier_in_transit'),
+    [balances]
+  );
   const [showTooltip, setShowTooltip] = useState(false);
 
   useEffect(() => {
@@ -43,7 +47,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
   };
 
   const lastUpdatedLabel = useMemo(() => {
-    const timestamps = balances
+    const timestamps = visibleBalances
       .map((balance) => (balance.updatedAt ? new Date(balance.updatedAt).getTime() : null))
       .filter((value): value is number => Number.isFinite(value ?? NaN));
 
@@ -63,7 +67,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
       hour: '2-digit',
       minute: '2-digit',
     });
-  }, [balances]);
+  }, [visibleBalances]);
 
   const handleShowTooltip = () => {
     setShowTooltip(true);
@@ -123,7 +127,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
           )}
 
           {!loading && !error &&
-            balances.map((balance: TreasuryBalance) => (
+            visibleBalances.map((balance: TreasuryBalance) => (
               <BalanceCard
                 key={balance.id}
                 data={mapBalanceToCardData(balance)}
@@ -164,7 +168,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
             )}
 
             {!loading && !error &&
-              balances.map((balance: TreasuryBalance) => (
+              visibleBalances.map((balance: TreasuryBalance) => (
                 <BalanceCard
                   key={balance.id}
                   data={mapBalanceToCardData(balance)}
