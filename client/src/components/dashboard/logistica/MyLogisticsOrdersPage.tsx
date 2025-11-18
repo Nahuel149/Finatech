@@ -12,8 +12,6 @@ import { useLogisticsOrderActions, useMyLogisticsOrders } from '../../../hooks/d
 import { formatDateTime } from '../operaciones/transfer/utils';
 import { OfflineSyncBanner } from './OfflineSyncBanner';
 
-const ACTIVE_STATUSES: LogisticsOrderStatus[] = ['PROGRAMADA', 'ASIGNADA', 'EN_CAMINO', 'EN_SITIO'];
-
 const STATUS_LABELS: Record<LogisticsOrderStatus, string> = {
   BORRADOR: 'Borrador',
   PROGRAMADA: 'Programada',

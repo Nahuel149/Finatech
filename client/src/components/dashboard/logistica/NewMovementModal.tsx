@@ -7,8 +7,6 @@ import AttachmentsForm from './AttachmentsForm';
 import CompletionConfirmationModal from './CompletionConfirmationModal';
 import { devLog } from '../../../utils/devLogger';
 
-const IS_DEV = process.env.NODE_ENV !== 'production';
-
 interface NewMovementModalProps {
   isOpen: boolean;
   onClose: () => void;

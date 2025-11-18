@@ -51,8 +51,13 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
 
   const [showTooltip, setShowTooltip] = useState(false);
 
+  const visibleBalances = useMemo(
+    () => balances.filter((balance) => balance.id !== 'courier_in_transit'),
+    [balances]
+  );
+
   const lastUpdatedLabel = useMemo(() => {
-    const timestamps = balances
+    const timestamps = visibleBalances
       .map((balance) => (balance.updatedAt ? new Date(balance.updatedAt).getTime() : null))
       .filter((value): value is number => Number.isFinite(value ?? NaN));
 
@@ -72,7 +77,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
       hour: '2-digit',
       minute: '2-digit',
     });
-  }, [balances]);
+  }, [visibleBalances]);
 
   const handleShowTooltip = () => {
     setShowTooltip(true);
@@ -132,7 +137,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
           )}
 
           {!loading && !error &&
-            balances.filter((balance) => balance.id !== 'courier_in_transit').map((balance: TreasuryBalance) => (
+            visibleBalances.map((balance: TreasuryBalance) => (
               <BalanceCard
                 key={balance.id}
                 data={mapBalanceToCardData(balance)}
