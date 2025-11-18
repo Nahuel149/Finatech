@@ -33,6 +33,7 @@ const BALANCE_METADATA = {
 };
 
 const TREASURY_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd', 'courier_in_transit']);
+const SUMMARY_EXCLUDED_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd']);
 
 const LINKED_BALANCE_CONFIG = {
   usd: {
@@ -864,7 +865,7 @@ const getGlobalBalancesOverview = async (query = {}) => {
   const summaryCards = Array.from(summaryByAccount.values())
     .filter((entry) => {
       const key = (entry.accountKey || '').toLowerCase();
-      return key && !TREASURY_ACCOUNT_KEYS.has(key);
+      return key && !SUMMARY_EXCLUDED_ACCOUNT_KEYS.has(key);
     })
     .map((entry) => {
       const variationPercentage = computeVariationPercentage(
@@ -891,9 +892,11 @@ const getGlobalBalancesOverview = async (query = {}) => {
       'usd::usd',
       'transfers::usd',
       'accounts_receivable::usd',
+      'courier_in_transit::usd',
       'cash::ars',
       'transfers::ars',
       'accounts_receivable::ars',
+      'courier_in_transit::ars',
     ];
     const indexA = order.indexOf(a.id);
     const indexB = order.indexOf(b.id);

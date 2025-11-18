@@ -132,7 +132,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
           )}
 
           {!loading && !error &&
-            balances.map((balance: TreasuryBalance) => (
+            balances.filter((balance) => balance.id !== 'courier_in_transit').map((balance: TreasuryBalance) => (
               <BalanceCard
                 key={balance.id}
                 data={mapBalanceToCardData(balance)}
@@ -175,7 +175,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
             )}
 
             {!loading && !error &&
-              balances.map((balance: TreasuryBalance) => (
+              balances.filter((balance) => balance.id !== 'courier_in_transit').map((balance: TreasuryBalance) => (
                 <BalanceCard
                   key={balance.id}
                   data={mapBalanceToCardData(balance)}
