@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../shared/design-system';
 import { useUserPermissions } from '../../../hooks';
@@ -14,7 +14,10 @@ export const TreasuryHeader: React.FC<Props> = ({
   onOpenConciliation,
   onOpenSettings,
 }) => {
-  const { permissions, loading } = useUserPermissions();
+  const { permissions, loading, refresh } = useUserPermissions();
+  useEffect(() => {
+    refresh().catch(() => {});
+  }, [refresh]);
   const canManageTreasury = permissions.includes('manage-treasury');
   const canViewReceptions = permissions.includes('treasury:receptions');
 

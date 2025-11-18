@@ -29,9 +29,12 @@ export const ReconciliationSummary: React.FC<Props> = ({
   onSaveDraft,
   onConfirm,
 }) => (
-  <div id="reconciliation-summary" className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-6 z-40">
+  <div
+    id="reconciliation-summary"
+    className="w-full bg-white border-t border-gray-200 p-4 sm:p-6 z-40 relative mt-4 lg:mt-0 lg:sticky lg:bottom-0"
+  >
     <div className="bg-gray-50 rounded-lg p-4">
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
         <div className="text-center">
           <div className="text-sm text-gray-500">Operaciones seleccionadas</div>
           <div className="text-xl font-bold text-text-primary">{operationsCount}</div>
@@ -59,35 +62,35 @@ export const ReconciliationSummary: React.FC<Props> = ({
         </div>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {warning ? (
           <div id="reconciliation-warning" className="flex items-center text-warning">
             <i className="fa-solid fa-exclamation-triangle mr-2" />
             <span className="text-sm">{warning}</span>
           </div>
         ) : (
-          <div />
+          <div className="text-sm text-gray-500">&nbsp;</div>
         )}
 
-        <div className="flex items-center space-x-4 ml-auto">
+        <div className="flex flex-col w-full gap-2 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
             onClick={onCancel}
-            className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+            className="w-full sm:w-auto px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
           >
             Cancelar
           </button>
           <button
             type="button"
             onClick={onSaveDraft}
-            className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+            className="w-full sm:w-auto px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
           >
             Guardar borrador
           </button>
           <button
             type="button"
             onClick={onConfirm}
-            className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+            className="w-full sm:w-auto px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             disabled={disableConfirm}
           >
             <span>{confirming ? 'Compensando…' : 'Confirmar compensación'}</span>

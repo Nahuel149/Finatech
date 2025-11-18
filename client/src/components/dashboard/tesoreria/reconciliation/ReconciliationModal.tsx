@@ -6,7 +6,7 @@ import {
   useCompensateTreasuryMovement,
   useUserPermissions,
 } from '../../../../hooks';
-import { ApiError, TreasuryMovement, OperationSuggestion } from '../../../../types';
+import { ApiError, TreasuryMovement, OperationSuggestion, TreasuryBalance } from '../../../../types';
 import { ReconciliationFilters, ReconciliationFiltersState } from './ReconciliationFilters';
 import { ReconciliationOperationsTable } from './ReconciliationOperationsTable';
 import { ReconciliationMovementsPanel } from './ReconciliationMovementsPanel';
@@ -209,7 +209,12 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
     if (!balances || !balances.length) {
       return [];
     }
-    return balances.slice(0, 3);
+    const priority = ['cash', 'transfers', 'usd'];
+    const byId = new Map(balances.map((balance) => [balance.id, balance]));
+    return priority
+      .map((key) => byId.get(key))
+      .filter(Boolean)
+      .slice(0, 3) as TreasuryBalance[];
   }, [balances]);
 
   if (!open) {
@@ -217,8 +222,9 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
   }
 
   return (
-    <div className="fixed inset-0 z-50 modal-overlay flex items-center justify-center p-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] overflow-hidden fade-in flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm overflow-y-auto">
+      <div className="min-h-full flex items-start justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-7xl max-h-[95vh] flex flex-col border border-gray-200 overflow-visible">
         <div className="bg-white border-b border-gray-200 p-6">
           <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-4">
             <span className="text-primary font-medium">Tesorería</span>
@@ -242,11 +248,11 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
           </div>
         </div>
 
-        <div className="px-6 py-4 border-b border-gray-200 bg-white">
-          <div className="flex flex-col lg:flex-row lg:space-x-6 space-y-4 lg:space-y-0">
-            {balanceCards.map((card) => (
-              <div key={`${card.id}-${card.currency}`} className="flex-1 bg-gray-50 rounded-lg px-4 py-3">
-                <div className="text-sm font-medium text-text-primary">{card.label}</div>
+      <div className="px-6 py-4 border-b border-gray-200 bg-white overflow-x-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[280px]">
+          {balanceCards.map((card) => (
+            <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-lg px-4 py-3">
+              <div className="text-sm font-medium text-text-primary">{card.label}</div>
                 <div className="text-2xl font-bold text-text-primary">
                   {formatCurrency(card.amount, card.currency)}
                 </div>
@@ -258,30 +264,34 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
           </div>
         </div>
 
-        <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 flex flex-col overflow-hidden">
+        <div className="flex-1 flex min-h-0 lg:pb-6">
+          <div className="flex-1 flex flex-col min-h-0">
             <ReconciliationFilters
               filters={filters}
               onUpdate={(next) => setFilters((prev) => ({ ...prev, ...next }))}
               onClear={() => setFilters(DEFAULT_FILTERS)}
             />
 
-            <div className="flex-1 flex">
-              <ReconciliationOperationsTable
-                operations={filteredOperations}
-                selectedIds={selectedOperationIds}
-                onToggle={canManageTreasury ? handleToggleOperation : () => {}}
-                loading={suggestionsLoading}
-                error={suggestionsError ? suggestionsError.message : null}
-              />
+            <div className="flex-1 flex flex-col lg:flex-row min-h-0 gap-4">
+              <div className="flex-1 min-h-0 order-2 lg:order-1">
+                <ReconciliationOperationsTable
+                  operations={filteredOperations}
+                  selectedIds={selectedOperationIds}
+                  onToggle={canManageTreasury ? handleToggleOperation : () => {}}
+                  loading={suggestionsLoading}
+                  error={suggestionsError ? suggestionsError.message : null}
+                />
+              </div>
 
-              <ReconciliationMovementsPanel
-                movements={pendingMovements}
-                selectedMovementId={activeMovement?.id || null}
-                onSelect={handleSelectMovement}
-                filter={movementFilter}
-                onFilterChange={(value) => setMovementFilter(value)}
-              />
+              <div className="w-full lg:w-[420px] flex-shrink-0 order-1 lg:order-2">
+                <ReconciliationMovementsPanel
+                  movements={pendingMovements}
+                  selectedMovementId={activeMovement?.id || null}
+                  onSelect={handleSelectMovement}
+                  filter={movementFilter}
+                  onFilterChange={(value) => setMovementFilter(value)}
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -302,5 +312,6 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
         />
       </div>
     </div>
+  </div>
   );
 };

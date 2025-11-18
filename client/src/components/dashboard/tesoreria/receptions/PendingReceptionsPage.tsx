@@ -231,7 +231,7 @@ export const PendingReceptionsPage: React.FC = () => {
       <TreasuryNavbar search={globalSearch} onSearchChange={handleGlobalSearchChange} />
       <TreasuryBalanceStripe />
 
-      <main className="pt-[220px] px-6 pb-24 flex-1">
+      <main className="pt-[260px] px-6 pb-24 flex-1">
         <div className="max-w-7xl mx-auto space-y-8">
           <div className="space-y-4">
             <TreasurySectionNav active="recepciones" />
