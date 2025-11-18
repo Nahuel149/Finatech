@@ -48,6 +48,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (!order?.items?.length) {
@@ -74,6 +75,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         discrepancyReason: item.discrepancyReason || '',
       }))
     );
+    setHasUnsavedChanges(false);
   }, [order]);
 
   const totals = useMemo(() => {
@@ -89,6 +91,24 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     );
   }, [drafts]);
 
+  const hasRecordedValues = useMemo(() => {
+    if (!order?.items?.length) {
+      return false;
+    }
+    return order.items.every((item) => {
+      const hasReceived = item.receivedAmount !== null && item.receivedAmount !== undefined;
+      const hasPending = item.pendingAmount !== null && item.pendingAmount !== undefined;
+      return hasReceived || hasPending || Boolean(item.discrepancyFlag);
+    });
+  }, [order.items]);
+
+  const completionDisabled = saving || hasUnsavedChanges || !hasRecordedValues;
+  const disableReason = hasUnsavedChanges
+    ? 'Guardá el conteo para habilitar las acciones.'
+    : !hasRecordedValues
+    ? 'Registrá y guardá los montos recibidos antes de finalizar.'
+    : '';
+
   const setDraftValue = (itemId: string, field: keyof ItemDraft, value: string | boolean) => {
     setDrafts((current) =>
       current.map((draft) => {
@@ -101,6 +121,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         };
       })
     );
+    setHasUnsavedChanges(true);
   };
 
   const setMetadataValue = (itemId: string, field: keyof LogisticsOrderItem['metadata'], value: string) => {
@@ -118,6 +139,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         };
       })
     );
+    setHasUnsavedChanges(true);
   };
 
   const handleSave = async () => {
@@ -147,8 +169,16 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     }
 
     setLocalMessage(null);
-    await onSaveItems(payload);
-    setLocalMessage({ type: 'success', text: 'Conteo actualizado correctamente.' });
+    try {
+      await onSaveItems(payload);
+      setLocalMessage({ type: 'success', text: 'Conteo actualizado correctamente.' });
+      setHasUnsavedChanges(false);
+    } catch (error) {
+      setLocalMessage({
+        type: 'error',
+        text: error instanceof Error ? error.message : 'No pudimos guardar el conteo.',
+      });
+    }
   };
 
   const handlePartialCompletion = async () => {
@@ -417,8 +447,8 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
           type="button"
           onClick={onCompleteTotal}
           className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-70"
-          disabled={saving}
-        >
+          disabled={completionDisabled}
+          >
           <i className="fa-solid fa-check-double" aria-hidden="true" />
           Completar total
         </button>
@@ -427,13 +457,19 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
           type="button"
           onClick={handlePartialCompletion}
           className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-70"
-          disabled={saving}
+          disabled={completionDisabled}
         >
           <i className="fa-solid fa-scale-balanced" aria-hidden="true" />
           Completar parcial
         </button>
+
+        {(disableReason || hasUnsavedChanges) && (
+          <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
+            <i className="fa-solid fa-info-circle" aria-hidden="true" />
+            {disableReason || 'Guardá el conteo para habilitar las acciones.'}
+          </span>
+        )}
       </div>
     </section>
   );
 };
-
