@@ -5,6 +5,7 @@ import {
   EyeIcon 
 } from '../../icons/HeroiconsOutline';
 import { LogisticsIncidentDocument } from '../../../types';
+import { devLog } from '../../../utils/devLogger';
 
 interface IncidentDocumentsSectionProps {
   documents: LogisticsIncidentDocument[];
@@ -37,7 +38,7 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
       onDownload(document);
     } else {
       // Default download behavior
-      console.log('Downloading document:', document.name);
+      devLog('Downloading document:', document.name);
     }
   };
 
@@ -46,7 +47,7 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
       onView(document);
     } else {
       // Default view behavior
-      console.log('Viewing document:', document.name);
+      devLog('Viewing document:', document.name);
     }
   };
 

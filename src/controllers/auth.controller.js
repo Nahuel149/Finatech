@@ -210,6 +210,13 @@ const profile = async (req, res) => {
   res.json({ profile: buildProfile(req.user) });
 };
 
+const keepAlive = async (req, res) => {
+  res.json({
+    ok: true,
+    sessionExpiresAt: req.session?.expiresAt ?? null,
+  });
+};
+
 const logout = async (req, res, next) => {
   try {
     const sessionToken = req.cookies?.[COOKIE_NAME];
@@ -270,6 +277,7 @@ module.exports = {
   resendTwoFactor,
   resendVerification,
   profile,
+  keepAlive,
   logout,
   recoverPassword,
   validateResetToken,

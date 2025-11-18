@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { IncidentGeneralInfoForm } from './IncidentGeneralInfoForm';
 import { IncidentAssociationsForm } from './IncidentAssociationsForm';
 import type { IncidentFormData } from './incidentFormTypes';
+import { devLog } from '../../../utils/devLogger';
 
 interface IncidentRegistrationModalProps {
   isOpen: boolean;
@@ -46,14 +47,14 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
 
   const handleSaveDraft = async () => {
     // TODO: Implement save draft functionality
-    console.log('Saving draft:', formData);
+    devLog('Saving draft:', formData);
   };
 
   const handleRegisterIncident = async () => {
     setIsSubmitting(true);
     try {
       // TODO: Implement incident registration API call
-      console.log('Registering incident:', formData);
+      devLog('Registering incident:', formData);
       
       // Simulate API call
       await new Promise(resolve => setTimeout(resolve, 1000));

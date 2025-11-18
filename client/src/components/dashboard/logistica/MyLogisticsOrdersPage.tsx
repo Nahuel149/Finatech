@@ -202,15 +202,7 @@ export const MyLogisticsOrdersPage: React.FC = () => {
       );
     }
 
-    return (
-      <button
-        type="button"
-        className={`${baseBtn} border border-gray-200 text-gray-600 hover:bg-gray-50`}
-        onClick={() => navigate(`/dashboard/logistica/orden/${order.id}`)}
-      >
-        Ver detalle
-      </button>
-    );
+    return null;
   };
 
   return (
@@ -333,11 +325,13 @@ export const MyLogisticsOrdersPage: React.FC = () => {
             </div>
           )}
 
-          {filteredOrders.map((order) => (
-            <article
-              key={order.id}
-              className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
-            >
+          {filteredOrders.map((order) => {
+            const primaryAction = renderOrderActions(order);
+            return (
+              <article
+                key={order.id}
+                className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md"
+              >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-text-primary">{order.orderNumber}</h3>
@@ -396,7 +390,7 @@ export const MyLogisticsOrdersPage: React.FC = () => {
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-2">
-                {renderOrderActions(order)}
+                {primaryAction}
                 <button
                   type="button"
                   className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-gray-600 hover:bg-gray-50"
@@ -407,7 +401,8 @@ export const MyLogisticsOrdersPage: React.FC = () => {
                 </button>
               </div>
             </article>
-          ))}
+            );
+          })}
         </div>
       )}
     </section>

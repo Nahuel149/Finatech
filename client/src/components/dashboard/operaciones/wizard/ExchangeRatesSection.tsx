@@ -51,6 +51,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
             className="h-4 w-4 text-primary border-gray-300 rounded focus:ring-primary"
             checked={useCustomMarketRate}
             onChange={(event) => onToggleMarketRateMode?.(event.target.checked)}
+            autoComplete="off"
           />
         </label>
       </div>
@@ -70,6 +71,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
           onChange={(event) => onArsRateChange(parseFloat(event.target.value) || 0)}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
           disabled={disabled}
+          autoComplete="off"
         />
       </div>
       <div>
@@ -88,6 +90,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
               : 'border-gray-300 bg-gray-50 cursor-not-allowed'
           }`}
           disabled={disabled || (!canEditMarketRate && !useCustomMarketRate)}
+          autoComplete="off"
         />
       </div>
     </div>
@@ -110,6 +113,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
             onChange={(event) => onAssetRateChange(parseFloat(event.target.value) || 0)}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={disabled}
+            autoComplete="off"
           />
         </div>
         <div>
@@ -128,6 +132,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
             value={numberToInputValue(assetMarketRate)}
             readOnly
             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"
+            autoComplete="off"
           />
         </div>
       </div>

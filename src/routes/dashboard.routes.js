@@ -164,7 +164,7 @@ router.get(
 // Tight read limiter to mitigate rapid refresh loops on notifications
 const notificationsLimiter = rateLimit({
   windowMs: 5 * 1000,
-  max: 2,
+  max: 50,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {

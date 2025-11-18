@@ -360,6 +360,12 @@ export const api = {
       method: 'POST',
     }),
 
+  keepAlive: (config: Partial<RequestConfig> = {}) =>
+    apiRequest('/api/auth/keep-alive', {
+      method: 'GET',
+      ...config,
+    }),
+
   // Password recovery endpoints
   requestPasswordReset: (email: string) =>
     apiRequest('/api/auth/recover', {

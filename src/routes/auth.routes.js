@@ -13,6 +13,7 @@ const {
   resetPassword,
   profile,
   logout,
+  keepAlive,
 } = require('../controllers/auth.controller');
 const { validateRequest } = require('../middleware/validateRequest');
 const { authLimiter } = require('../middleware/rateLimiter');
@@ -168,6 +169,8 @@ router.post(
 );
 
 router.get('/me', requireAuth, profile);
+
+router.get('/keep-alive', requireAuth, keepAlive);
 
 router.post('/logout', requireAuth, logout);
 

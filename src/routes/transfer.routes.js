@@ -46,7 +46,7 @@ router.post(
 
 const transfersReadLimiter = rateLimit({
   windowMs: 3000,
-  max: 3,
+  max: 75,
   standardHeaders: true,
   legacyHeaders: false,
   keyGenerator: (req) => {

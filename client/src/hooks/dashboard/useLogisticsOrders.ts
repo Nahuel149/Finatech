@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, handleApiError } from '../../utils/api';
+import { devLog } from '../../utils/devLogger';
 import {
   ApiError,
   LogisticsAssignedOrdersResponse,
@@ -148,8 +149,7 @@ export const useMyLogisticsOrders = (initialFilters: Record<string, unknown> = {
         })) as LogisticsAssignedOrdersResponse;
         const list = response.orders || [];
         if (typeof window !== 'undefined') {
-          // eslint-disable-next-line no-console
-          console.log('[useMyLogisticsOrders] fetched', list.length, 'orders with filters', filters);
+          devLog('[useMyLogisticsOrders] fetched', list.length, 'orders with filters', filters);
         }
         setOrders(list);
         return list;

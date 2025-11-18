@@ -2,6 +2,14 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { performanceMonitor } from './performanceMonitor';
 
+const IS_DEV = process.env.NODE_ENV !== 'production';
+const devLog = (...args: any[]) => {
+  if (IS_DEV) {
+    // eslint-disable-next-line no-console
+    console.log(...args);
+  }
+};
+
 interface TestResult {
   testName: string;
   passed: boolean;
@@ -25,7 +33,7 @@ export const createInfiniteLoopTestSuite = (): InfiniteLoopTestSuite => {
 
   const addTestResult = (result: TestResult) => {
     testHistory.push(result);
-    console.log(`🧪 Test: ${result.testName} - ${result.passed ? '✅ PASSED' : '❌ FAILED'}: ${result.message}`);
+    devLog(`🧪 Test: ${result.testName} - ${result.passed ? '✅ PASSED' : '❌ FAILED'}: ${result.message}`);
   };
 
   const testUseEffectStability = async (): Promise<TestResult> => {
@@ -216,7 +224,7 @@ export const createInfiniteLoopTestSuite = (): InfiniteLoopTestSuite => {
   };
 
   const runAllTests = async (): Promise<TestResult[]> => {
-    console.log('🧪 Starting Infinite Loop Prevention Test Suite...');
+    devLog('🧪 Starting Infinite Loop Prevention Test Suite...');
     
     const tests = [
       testUseEffectStability,
@@ -248,10 +256,10 @@ export const createInfiniteLoopTestSuite = (): InfiniteLoopTestSuite => {
     const passedTests = results.filter(r => r.passed).length;
     const totalTests = results.length;
     
-    console.log(`🧪 Test Suite Complete: ${passedTests}/${totalTests} tests passed`);
+    devLog(`🧪 Test Suite Complete: ${passedTests}/${totalTests} tests passed`);
     
     if (passedTests === totalTests) {
-      console.log('🎉 All tests passed! Your application is protected against infinite loops.');
+      devLog('🎉 All tests passed! Your application is protected against infinite loops.');
     } else {
       console.warn('⚠️ Some tests failed. Please review the results and fix any issues.');
     }
@@ -392,5 +400,5 @@ export const addTestControls = () => {
     `).join('');
   };
   
-  console.log('🧪 Infinite loop test controls added to the page. Look for the controls in the top-right corner.');
+  devLog('🧪 Infinite loop test controls added to the page. Look for the controls in the top-right corner.');
 };

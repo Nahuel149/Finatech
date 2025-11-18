@@ -39,6 +39,7 @@ export const AmountSection: React.FC<Props> = ({
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={disabled}
             placeholder="0"
+            autoComplete="off"
           />
         </div>
         <div>
@@ -50,6 +51,7 @@ export const AmountSection: React.FC<Props> = ({
             readOnly
             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"
             placeholder="0"
+            autoComplete="off"
           />
         </div>
       </div>

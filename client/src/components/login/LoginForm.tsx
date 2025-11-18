@@ -77,6 +77,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               required
               className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
               placeholder="tu@email.com"
+              autoComplete="email"
             />
           </div>
 
@@ -95,6 +96,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
               className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
               placeholder="Tu contraseña"
               required
+              autoComplete="current-password"
             />
             <button 
               type="button" 

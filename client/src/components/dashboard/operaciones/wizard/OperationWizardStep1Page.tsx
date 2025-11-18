@@ -28,6 +28,7 @@ import { WizardActions } from './WizardActions';
 import { NewClientModal } from '../../../clients/NewClientModal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
+import { devLog } from '../../../../utils/devLogger';
 
 const VALIDATION_ITEMS = [
   'TC dentro de límites establecidos',
@@ -226,7 +227,7 @@ export const OperationWizardStep1Page: React.FC = () => {
       return;
     }
 
-    console.log('Hydrating form with draft data - draft.clientId:', draft.clientId, 'current clientId:', clientId);
+    devLog('Hydrating form with draft data - draft.clientId:', draft.clientId, 'current clientId:', clientId);
     
     // Only set state if the draft value is different from the current state
     if (draft.clientId && draft.clientId !== clientId) {
@@ -524,7 +525,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, []);
   
   const validateForm = useCallback(() => {
-    console.log('validateForm - clientId:', clientId, 'type:', typeof clientId);
+    devLog('validateForm - clientId:', clientId, 'type:', typeof clientId);
     if (!clientId) {
       setFormError('Seleccioná un cliente antes de continuar.');
       return false;

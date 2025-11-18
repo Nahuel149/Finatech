@@ -2,6 +2,7 @@ import { useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useInactivityLogout } from '../hooks/useInactivityLogout';
+import { useSessionKeepAlive } from '../hooks/useSessionKeepAlive';
 
 const PUBLIC_PATH_PREFIXES = ['/', '/login', '/register', '/recover', '/verify-email'];
 
@@ -29,7 +30,9 @@ const SessionTimeoutManager = () => {
     }
   }, [logout, navigate]);
 
-  useInactivityLogout(handleTimeout, { enabled: !isPublicRoute });
+  const keepAliveEnabled = !isPublicRoute;
+  useInactivityLogout(handleTimeout, { enabled: keepAliveEnabled });
+  useSessionKeepAlive({ enabled: keepAliveEnabled });
 
   return null;
 };

@@ -5,6 +5,9 @@ import AssociationsDocumentsForm from './AssociationsDocumentsForm';
 import ItemsBulkForm from './ItemsBulkForm';
 import AttachmentsForm from './AttachmentsForm';
 import CompletionConfirmationModal from './CompletionConfirmationModal';
+import { devLog } from '../../../utils/devLogger';
+
+const IS_DEV = process.env.NODE_ENV !== 'production';
 
 interface NewMovementModalProps {
   isOpen: boolean;
@@ -36,7 +39,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
 
   const handleSaveDraft = () => {
     // TODO: Implement save draft functionality
-    console.log('Saving draft...');
+    devLog('Saving draft...');
   };
 
   const handleRegisterMovement = () => {
@@ -45,7 +48,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
 
   const handleConfirmRegistration = () => {
     // TODO: Implement movement registration
-    console.log('Registering movement...');
+    devLog('Registering movement...');
     setShowConfirmation(false);
     onClose();
   };

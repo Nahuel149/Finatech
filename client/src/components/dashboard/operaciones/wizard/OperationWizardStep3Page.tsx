@@ -20,6 +20,7 @@ import { WizardHeader } from './WizardHeader';
 import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
+import { devLog } from '../../../../utils/devLogger';
 // import { apiRequest, handleApiError } from '../../../../utils/api';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
@@ -291,7 +292,7 @@ export const OperationWizardStep3Page: React.FC = () => {
   const handleSaveDraft = useCallback(async () => {
     // Aquí iría la lógica para guardar el borrador sin finalizar
     // (usando un hook o API call)
-    console.log('Guardando borrador...');
+    devLog('Guardando borrador...');
     setFormError(null);
     setSuccessMessage('Borrador guardado correctamente.');
     setShowToast(true); // Reutilizamos el toast
@@ -464,7 +465,7 @@ export const OperationWizardStep3Page: React.FC = () => {
   }, []);
 
   const handleDuplicate = useCallback(() => {
-    console.log(`Duplicando operación ${draft?.id}`);
+    devLog(`Duplicando operación ${draft?.id}`);
     navigate(`/dashboard/operaciones/nueva?duplicarDe=${draft?.id ?? ''}`);
   }, [draft?.id, navigate]);
   // --- Fin Handlers de ÉXITO ---
