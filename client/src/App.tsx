@@ -31,6 +31,7 @@ import { IncidentDetailPage } from './components/dashboard/logistica/IncidentDet
 import { ResolvedIncidentDetailPage } from './components/dashboard/logistica/ResolvedIncidentDetailPage';
 import { LogisticsOrderDetailPage } from './components/dashboard/logistica/LogisticsOrderDetailPage';
 import ErrorBoundary from './components/ErrorBoundary';
+import SessionTimeoutManager from './components/SessionTimeoutManager';
 import { devPerformanceUtils } from './utils/performanceMonitor';
 
 const App: React.FC = () => {
@@ -61,6 +62,7 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <Router>
+        <SessionTimeoutManager />
         <div className="App">
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />

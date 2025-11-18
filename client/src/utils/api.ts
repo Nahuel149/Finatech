@@ -47,8 +47,8 @@ const getCSRFToken = (): string | null => {
   return null;
 };
 
-let csrfEnsured = false;
 let csrfTokenCache: string | null = null;
+let csrfFetchPromise: Promise<void> | null = null;
 
 const hasCsrfTokenAvailable = () => {
   if (typeof document === 'undefined') {
@@ -61,24 +61,12 @@ const hasCsrfTokenAvailable = () => {
     return true;
   }
 
-  return Boolean(csrfTokenCache);
+  // If the cookie expired we should not trust any cached value anymore
+  csrfTokenCache = null;
+  return false;
 };
 
-const ensureCsrfCookie = async () => {
-  if (typeof window === 'undefined') {
-    return;
-  }
-
-  if (hasCsrfTokenAvailable()) {
-    csrfEnsured = true;
-    return;
-  }
-
-  if (csrfEnsured) {
-    return;
-  }
-
-  csrfEnsured = true;
+const requestCsrfToken = async () => {
   try {
     const response = await fetch(buildApiUrl('/api/csrf-token'), {
       method: 'GET',
@@ -92,13 +80,33 @@ const ensureCsrfCookie = async () => {
     if (data?.csrfToken) {
       csrfTokenCache = data.csrfToken;
     }
-
-    csrfEnsured = true;
   } catch (error) {
-    csrfEnsured = false;
     // eslint-disable-next-line no-console
     console.warn('No se pudo obtener la cookie CSRF:', error);
   }
+};
+
+const ensureCsrfCookie = async ({ force = false }: { force?: boolean } = {}) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  if (!force && hasCsrfTokenAvailable()) {
+    return;
+  }
+
+  if (!csrfFetchPromise) {
+    csrfFetchPromise = requestCsrfToken().finally(() => {
+      csrfFetchPromise = null;
+    });
+  }
+
+  await csrfFetchPromise;
+};
+
+const forceRefreshCsrfCookie = async () => {
+  csrfTokenCache = null;
+  await ensureCsrfCookie({ force: true });
 };
 
 // Default headers for API requests
@@ -165,6 +173,19 @@ const createApiError = (payload: ApiError & { status?: number; details?: any }) 
   return error;
 };
 
+const isCsrfErrorResponse = (status: number, payload: any) => {
+  if (status !== 403 || !payload) {
+    return false;
+  }
+
+  const source = typeof payload === 'string' ? payload : payload.message || payload.error || payload.code;
+  if (!source) {
+    return false;
+  }
+
+  return String(source).toLowerCase().includes('csrf');
+};
+
 // Main API request function
 export const apiRequest = async <T = any>(
   endpoint: string,
@@ -175,42 +196,51 @@ export const apiRequest = async <T = any>(
   }
 
   const url = buildApiUrl(endpoint);
+  const method = config.method || 'GET';
+  const credentials = config.credentials || 'include';
+  const isFormData = typeof FormData !== 'undefined' && config.body instanceof FormData;
+  let preparedBody: BodyInit | null | undefined;
 
-  const requestConfig: RequestInit = {
-    method: config.method || 'GET',
-    headers: {
-      ...getDefaultHeaders(),
-      ...config.headers,
-    },
-    credentials: config.credentials || 'include',
-  };
-  
-  if (config.body && (requestConfig.method || 'GET') !== 'GET') {
-    const isFormData = typeof FormData !== 'undefined' && config.body instanceof FormData;
+  if (config.body && method !== 'GET') {
     if (isFormData) {
-      if (requestConfig.headers) {
-        const headersRecord = requestConfig.headers as Record<string, string>;
-        if (headersRecord['Content-Type']) {
-          delete headersRecord['Content-Type'];
-        }
-      }
-      requestConfig.body = config.body as FormData;
+      preparedBody = config.body as FormData;
     } else if (typeof config.body === 'string') {
-      requestConfig.body = config.body;
+      preparedBody = config.body;
     } else {
-      requestConfig.body = JSON.stringify(config.body);
+      preparedBody = JSON.stringify(config.body);
     }
   }
 
-  if (config.signal) {
-    requestConfig.signal = config.signal;
-  }
-  
-  try {
+  const executeRequest = async (retry = false): Promise<T> => {
+    const headers: Record<string, string> = {
+      ...getDefaultHeaders(),
+      ...(config.headers || {}),
+    };
+
+    if (isFormData && headers['Content-Type']) {
+      delete headers['Content-Type'];
+    }
+
+    const requestConfig: RequestInit = {
+      method,
+      headers,
+      credentials,
+      body: preparedBody,
+    };
+
+    if (config.signal) {
+      requestConfig.signal = config.signal;
+    }
+
     const response = await fetch(url, requestConfig);
-    
     const data = await response.json().catch(() => null);
+
     if (!response.ok) {
+      if (!retry && isCsrfErrorResponse(response.status, data)) {
+        await forceRefreshCsrfCookie();
+        return executeRequest(true);
+      }
+
       const errorPayload = {
         message:
           (data && (data.message || data.error)) ||
@@ -222,8 +252,12 @@ export const apiRequest = async <T = any>(
       };
       throw createApiError(errorPayload);
     }
-    
+
     return (data ?? ({} as T)) as T;
+  };
+
+  try {
+    return await executeRequest();
   } catch (error) {
     if (error instanceof Error) {
       throw error;

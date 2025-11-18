@@ -10,8 +10,19 @@ const {
   validatePasswordResetToken,
   resetPassword,
 } = require('../services/auth.service');
-const { deleteSessionByToken } = require('../services/session.service');
+const { deleteSessionByToken, getSessionDurationMs } = require('../services/session.service');
 const { attachAuthCookie, clearAuthCookie, COOKIE_NAME } = require('../utils/authCookie');
+
+const setSessionCookie = (res, session) => {
+  if (!session?.sessionToken) {
+    return;
+  }
+
+  attachAuthCookie(res, session.sessionToken, {
+    remember: session.rememberMe,
+    maxAgeMs: getSessionDurationMs(session.rememberMe),
+  });
+};
 
 const buildProfile = (user) => {
   if (!user) {
@@ -39,9 +50,7 @@ const register = async (req, res, next) => {
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
     const result = await registerLocal({ fullName, email, password }, context);
     const { user, session, ...rest } = result;
-    if (session?.sessionToken) {
-      attachAuthCookie(res, session.sessionToken, { remember: session.rememberMe });
-    }
+    setSessionCookie(res, session);
 
     const status = result.type === 'pending_verification' ? 201 : 200;
     res.status(status).json({
@@ -104,9 +113,7 @@ const googleAuth = async (req, res, next) => {
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
     const result = await registerWithGoogle({ idToken: token }, context);
     const { user, session, ...rest } = result;
-    if (session?.sessionToken) {
-      attachAuthCookie(res, session.sessionToken, { remember: session.rememberMe });
-    }
+    setSessionCookie(res, session);
 
     res.json({
       success: true,
@@ -138,9 +145,7 @@ const login = async (req, res, next) => {
     }
 
     const { user, session, ...rest } = result;
-    if (session?.sessionToken) {
-      attachAuthCookie(res, session.sessionToken, { remember: session.rememberMe });
-    }
+    setSessionCookie(res, session);
 
     res.json({
       success: true,
@@ -163,9 +168,7 @@ const verifyTwoFactor = async (req, res, next) => {
     const result = await verifyTwoFactorChallenge({ challengeToken: normalizedChallenge, code }, context);
     const { user, session, ...rest } = result;
 
-    if (session?.sessionToken) {
-      attachAuthCookie(res, session.sessionToken, { remember: session.rememberMe });
-    }
+    setSessionCookie(res, session);
 
     res.json({
       success: true,

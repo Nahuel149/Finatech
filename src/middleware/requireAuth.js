@@ -1,8 +1,13 @@
-const { findSessionByToken, deleteSessionByToken } = require('../services/session.service');
+const {
+  findSessionByToken,
+  deleteSessionByToken,
+  refreshSessionExpiry,
+  getSessionDurationMs,
+} = require('../services/session.service');
 const AppError = require('../utils/AppError');
-const { COOKIE_NAME } = require('../utils/authCookie');
+const { COOKIE_NAME, attachAuthCookie } = require('../utils/authCookie');
 
-const requireAuth = async (req, _res, next) => {
+const requireAuth = async (req, res, next) => {
   try {
     const sessionToken = req.cookies?.[COOKIE_NAME];
     if (!sessionToken) {
@@ -17,6 +22,12 @@ const requireAuth = async (req, _res, next) => {
       }
       throw new AppError('Authentication required', 401);
     }
+
+    await refreshSessionExpiry(session);
+    attachAuthCookie(res, sessionToken, {
+      remember: session.rememberMe,
+      maxAgeMs: getSessionDurationMs(session.rememberMe),
+    });
 
     req.session = session;
     req.user = session.user;

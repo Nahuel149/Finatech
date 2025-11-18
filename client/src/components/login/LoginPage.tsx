@@ -31,6 +31,17 @@ export const LoginPage: React.FC = () => {
   const [unverifiedBannerTitle, setUnverifiedBannerTitle] = useState('');
   const [unverifiedBannerText, setUnverifiedBannerText] = useState('');
 
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (sessionStorage.getItem('finatech_idle_logout') === '1') {
+      setLoginError('Sesión expirada por inactividad. Volvé a iniciar sesión.');
+      sessionStorage.removeItem('finatech_idle_logout');
+    }
+  }, []);
+
   const handleGoogleResponse = useCallback(
     async (response: any) => {
       setIsGoogleLoading(true);
