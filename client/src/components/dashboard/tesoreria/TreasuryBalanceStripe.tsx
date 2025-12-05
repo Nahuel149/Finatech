@@ -9,14 +9,25 @@ interface Props {
   onSelectBalance?: (balanceId: string) => void;
 }
 
-const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => ({
-  id: balance.id,
-  label: balance.label,
-  amount: balance.amount,
-  currency: balance.currency,
-  status: balance.status as StatusType,
-  updatedAt: balance.updatedAt,
-});
+const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
+  let label = balance.label;
+  if (balance.id === 'transfers') {
+    label = 'Transferencias (ARS)';
+  } else if (balance.id === 'cash') {
+    label = 'Efectivo (ARS)';
+  } else if (balance.id === 'usd') {
+    label = 'Caja (USD)';
+  }
+
+  return {
+    id: balance.id,
+    label,
+    amount: balance.amount,
+    currency: balance.currency,
+    status: balance.status as StatusType,
+    updatedAt: balance.updatedAt,
+  };
+};
 
 export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
   const navigate = useNavigate();

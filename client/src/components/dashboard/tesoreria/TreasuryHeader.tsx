@@ -39,15 +39,15 @@ export const TreasuryHeader: React.FC<Props> = ({
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:space-x-3 sm:gap-0">
+        <div className="flex flex-col md:flex-row md:items-center md:space-x-3 gap-3 md:gap-0">
           <Link
             to="/dashboard/tesoreria/recepciones"
-            className="w-full sm:w-auto"
+            className="w-full md:w-auto"
           >
             <Button
               variant="ghost"
               size="md"
-              className="w-full sm:w-auto text-sm sm:text-base"
+              className="w-full md:w-auto font-medium"
               icon="fa-solid fa-inbox"
               disabled={loading || !canViewReceptions}
               title={!canViewReceptions ? 'Necesitás permiso de Tesorería para ver recepciones.' : undefined}
@@ -60,7 +60,7 @@ export const TreasuryHeader: React.FC<Props> = ({
             size="md"
             onClick={onOpenSettings}
             icon="fa-solid fa-cog"
-            className="hidden sm:inline-flex"
+            className="hidden md:inline-flex font-medium"
           >
             Configuración
           </Button>
@@ -69,7 +69,7 @@ export const TreasuryHeader: React.FC<Props> = ({
             size="md"
             onClick={onOpenConciliation}
             icon="fa-solid fa-balance-scale"
-            className="w-full sm:w-auto text-sm sm:text-base"
+            className="w-full md:w-auto font-medium"
             disabled={loading || !canManageTreasury}
             title={
               !canManageTreasury
@@ -84,7 +84,7 @@ export const TreasuryHeader: React.FC<Props> = ({
             size="md"
             onClick={onRegisterMovement}
             icon="fa-solid fa-plus"
-            className="w-full sm:w-auto text-sm sm:text-base font-medium"
+            className="w-full md:w-auto font-medium"
             disabled={loading || !canManageTreasury}
             title={
               !canManageTreasury

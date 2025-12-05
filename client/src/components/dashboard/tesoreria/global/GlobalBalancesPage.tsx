@@ -92,6 +92,15 @@ const contactTypeLabel = (type: string) => {
   return type;
 };
 
+const accountLabel = (key?: string, optionLabel?: string) => {
+  if (optionLabel) return optionLabel;
+  const normalized = (key || '').toLowerCase();
+  if (normalized === 'cash') return 'Efectivo';
+  if (normalized === 'transfers') return 'Transferencias';
+  if (normalized === 'usd' || normalized === 'cash_usd') return 'Caja (USD)';
+  return key || '';
+};
+
 const formatDate = (iso?: string | null) => {
   if (!iso) return '';
   const date = new Date(iso);
@@ -305,7 +314,7 @@ export const GlobalBalancesPage: React.FC = () => {
       );
       chips.push({
         key: 'accountKey',
-        label: `Cuenta: ${option?.label || filters.accountKey}`,
+        label: `Cuenta: ${accountLabel(filters.accountKey, option?.label)}`,
       });
     }
 

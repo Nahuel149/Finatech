@@ -48,7 +48,7 @@ export const WizardHeader: React.FC<Props> = ({
         </button>
         <div className="hidden sm:block h-6 w-px bg-gray-300 mr-4" />
         <div className="flex items-center flex-wrap gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operaci��n</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operación</h1>
           {uniqueCurrencies.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               {uniqueCurrencies.map((currency) => (

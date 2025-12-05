@@ -152,7 +152,7 @@ export const ClientSelection: React.FC<Props> = ({
   return (
   <div id="client-selection" className="mb-0">
     <label className="block text-sm font-medium text-text-primary mb-2">Cliente</label>
-    <div className="flex flex-col gap-3 sm:flex-row sm:space-x-3 sm:gap-0">
+    <div className="flex flex-row flex-wrap items-stretch gap-2 sm:gap-3">
       <div className="flex-1">
         <div className="relative">
           <input
@@ -223,7 +223,7 @@ export const ClientSelection: React.FC<Props> = ({
           )}
         </div>
       </div>
-      <div className="flex items-center gap-2 sm:flex-col sm:gap-2 sm:justify-start">
+      <div className="flex items-center gap-2 sm:flex-row sm:gap-2 sm:justify-start">
         <button
           type="button"
           onClick={onNewClient}

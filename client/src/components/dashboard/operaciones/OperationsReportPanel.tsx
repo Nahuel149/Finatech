@@ -1,4 +1,6 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import { Button } from '../../shared/design-system';
 import { useDashboardOperations } from '../../../hooks';
 import { DashboardOperationRow } from '../../../types';
@@ -48,6 +50,9 @@ const buildCounts = (items: DashboardOperationRow[], selector: (item: DashboardO
 
 export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ open, onClose }) => {
   const { items, loading, error, refresh } = useDashboardOperations({ limit: 50 });
+  const reportRef = useRef<HTMLDivElement | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -103,33 +108,43 @@ export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ op
   const topClients = summary.clientBreakdown.slice(0, 4);
   const recentActivity = items.slice(0, 6);
 
-  const handleExport = () => {
-    const payload = {
-      generatedAt: new Date().toISOString(),
-      sampleSize: summary.total,
-      averageMargin: summary.averageMargin,
-      marginRange: summary.marginRange,
-      typeBreakdown: summary.typeBreakdown,
-      statusBreakdown: summary.statusBreakdown,
-      topClients,
-      recentActivity: recentActivity.map((op) => ({
-        id: op.id,
-        clientName: op.clientName,
-        typeLabel: op.typeLabel,
-        statusLabel: op.statusLabel,
-        createdAt: op.createdAt,
-        receivesText: op.receivesText,
-        paysText: op.paysText,
-      })),
-    };
+  const handleExportPdf = async () => {
+    if (exporting) return;
+    setExportError(null);
+    if (!reportRef.current) {
+      setExportError('No pudimos preparar el contenido del reporte.');
+      return;
+    }
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'reporte-operaciones.json';
-    link.click();
-    URL.revokeObjectURL(url);
+    try {
+      setExporting(true);
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 24;
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - margin * 2;
+      const scale = Math.min(availableWidth / canvas.width, availableHeight / canvas.height, 1);
+      const imgWidth = canvas.width * scale;
+      const imgHeight = canvas.height * scale;
+      const offsetX = (pageWidth - imgWidth) / 2;
+      const offsetY = margin;
+
+      pdf.addImage(imgData, 'PNG', offsetX, offsetY, imgWidth, imgHeight);
+      pdf.save(`reporte-operaciones-${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error(err);
+      setExportError('No pudimos exportar el PDF. Intentalo de nuevo.');
+    } finally {
+      setExporting(false);
+    }
   };
 
   const renderBreakdown = (entries: SummaryEntry[], emptyLabel: string) => {
@@ -169,7 +184,10 @@ export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ op
         }
       }}
     >
-      <div className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-gray-200">
+      <div
+        ref={reportRef}
+        className="relative w-full max-w-6xl bg-white rounded-2xl shadow-2xl border border-gray-200"
+      >
         <div className="flex flex-col gap-4 border-b border-gray-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-xs uppercase tracking-wide text-primary font-semibold">Reportes / Informacion operativa</p>
@@ -178,7 +196,7 @@ export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ op
               Ultimas {summary.total} operaciones analizadas para ofrecer una vista ejecutiva.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -192,10 +210,20 @@ export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ op
             >
               Actualizar
             </Button>
-            <Button variant="primary" size="sm" icon="fa-solid fa-file-arrow-down" onClick={handleExport}>
-              Exportar
+            <Button
+              variant="primary"
+              size="sm"
+              icon="fa-solid fa-file-arrow-down"
+              onClick={handleExportPdf}
+              loading={exporting}
+              disabled={exporting}
+            >
+              Exportar PDF
             </Button>
             <Button variant="ghost" size="sm" icon="fa-solid fa-xmark" onClick={onClose} aria-label="Cerrar reporte" />
+            {exportError && (
+              <p className="text-xs text-red-600 font-semibold lg:ml-2">{exportError}</p>
+            )}
           </div>
         </div>
 
