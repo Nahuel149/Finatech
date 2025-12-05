@@ -1,3 +1,5 @@
+const { geocodeAddress } = require('./locationiq.service');
+
 const STATIC_ADDRESSES = [
   {
     description: 'Av. Corrientes 1234, Buenos Aires, Argentina',
@@ -44,14 +46,31 @@ const getFallbackPredictions = (input) => {
     }));
 };
 
+const callLocationIqApi = async (input) => {
+  const apiKey = process.env.LOCATIONIQ_API_KEY;
+  if (!apiKey) return null;
+
+  const results = await geocodeAddress(input, {
+    countrycodes: process.env.LOCATIONIQ_COUNTRY_CODES || 'ar',
+    limit: 5,
+  });
+
+  return {
+    predictions: results.map((item) => ({
+      description: item.displayName,
+      placeId: item.address?.place_id || item.placeId || `${item.lat},${item.lon}`,
+      structuredFormatting: null,
+      terms: null,
+    })),
+    source: 'locationiq',
+    isFallback: false,
+  };
+};
+
 const callPlacesApi = async (input) => {
   const apiKey = process.env.GOOGLE_MAPS_API_KEY;
   if (!apiKey) {
-    return {
-      predictions: getFallbackPredictions(input),
-      source: 'static',
-      isFallback: true,
-    };
+    return null;
   }
 
   if (typeof fetch !== 'function') {
@@ -109,7 +128,27 @@ const getAddressPredictions = async (input) => {
     return { predictions: [], source: 'static', isFallback: true };
   }
 
-  return callPlacesApi(input.trim());
+  // Prefer LocationIQ when available, then Google, finally static list
+  try {
+    const locationIqResult = await callLocationIqApi(input.trim());
+    if (locationIqResult) {
+      return locationIqResult;
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('LocationIQ autocomplete failed, falling back to Google/static', error.message);
+  }
+
+  const googleResult = await callPlacesApi(input.trim());
+  if (googleResult) {
+    return googleResult;
+  }
+
+  return {
+    predictions: getFallbackPredictions(input),
+    source: 'static',
+    isFallback: true,
+  };
 };
 
 module.exports = {

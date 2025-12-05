@@ -176,6 +176,36 @@ const getClientById = async (id) => {
   return formatClient(client);
 };
 
+const updateClient = async (id, payload) => {
+  const client = await Client.findById(id);
+  if (!client) {
+    const error = new Error('Cliente no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  const normalizedContactType = payload.contactType === 'provider' ? 'provider' : 'client';
+
+  client.firstName = toTitleCase(payload.firstName || client.firstName);
+  client.lastName = toTitleCase(payload.lastName || client.lastName);
+  client.internalOwner = toTitleCase(payload.internalOwner || client.internalOwner);
+  client.contactType = normalizedContactType;
+
+  client.primaryAddress = normalizeAddressInput(payload.primaryAddress) || client.primaryAddress;
+  client.secondaryAddress = normalizeAddressInput(payload.secondaryAddress) || client.secondaryAddress;
+
+  client.cuit = payload.cuit && String(payload.cuit).trim() ? String(payload.cuit).trim() : client.cuit;
+  client.email =
+    payload.email && String(payload.email).trim() ? String(payload.email).trim() : client.email;
+  client.phone =
+    payload.phone && String(payload.phone).trim() ? String(payload.phone).trim() : client.phone;
+
+  await client.validate();
+  await client.save();
+
+  return formatClient(client.toObject());
+};
+
 const createClient = async (payload) => {
   const normalizedContactType = payload.contactType === 'provider' ? 'provider' : 'client';
 
@@ -220,4 +250,5 @@ module.exports = {
   searchClients,
   getClientById,
   createClient,
+  updateClient,
 };

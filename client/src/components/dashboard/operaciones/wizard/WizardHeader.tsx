@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 
 interface WizardStep {
   label: string;
@@ -12,21 +12,18 @@ interface Props {
   currencies?: string[];
 }
 
-const CURRENCY_FLAGS: Record<string, string> = {
-  ARS: '🇦🇷',
-  BRL: '🇧🇷',
-  EUR: '🇪🇺',
-  USD: '🇺🇸',
+const getCurrencyFlagUrl = (code: string) => {
+  const map: Record<string, string> = {
+    ARS: "ar",
+    BRL: "br",
+    EUR: "eu",
+    USD: "us",
+  };
+  const country = map[code.toUpperCase()] || code.slice(0, 2).toLowerCase();
+  return `https://flagcdn.com/w40/${country}.png`;
 };
 
-const getCurrencyFlag = (code: string) => CURRENCY_FLAGS[code] || '🏳️';
-
-export const WizardHeader: React.FC<Props> = ({
-  steps,
-  currentStep,
-  onBack,
-  currencies = [],
-}) => {
+export const WizardHeader: React.FC<Props> = ({ steps, currentStep, onBack, currencies = [] }) => {
   const uniqueCurrencies = Array.from(
     new Set(
       currencies
@@ -48,7 +45,7 @@ export const WizardHeader: React.FC<Props> = ({
         </button>
         <div className="hidden sm:block h-6 w-px bg-gray-300 mr-4" />
         <div className="flex items-center flex-wrap gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operación</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operaci�n</h1>
           {uniqueCurrencies.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               {uniqueCurrencies.map((currency) => (
@@ -56,7 +53,11 @@ export const WizardHeader: React.FC<Props> = ({
                   key={currency}
                   className="inline-flex items-center px-2 py-1 rounded-full bg-white border border-gray-200 text-sm text-text-primary shadow-sm"
                 >
-                  <span className="text-lg mr-1">{getCurrencyFlag(currency)}</span>
+                  <img
+                    src={getCurrencyFlagUrl(currency)}
+                    alt={currency}
+                    className="w-5 h-5 rounded-sm object-cover mr-1"
+                  />
                   <span className="font-semibold">{currency}</span>
                 </span>
               ))}
@@ -71,13 +72,13 @@ export const WizardHeader: React.FC<Props> = ({
             const isCompleted = index < currentStep;
             const isActive = index === currentStep;
             const stepClasses = isCompleted
-              ? 'bg-success text-white'
+              ? "bg-success text-white"
               : isActive
-              ? 'bg-primary text-white'
-              : 'bg-gray-200 text-gray-500';
-            const labelClasses = isCompleted || isActive ? 'text-text-primary' : 'text-gray-400';
-            const descriptionClasses = isCompleted || isActive ? 'text-xs sm:text-sm text-gray-500' : 'text-xs sm:text-sm text-gray-400';
-            const connectorClasses = index < currentStep ? 'bg-primary' : 'bg-gray-300';
+              ? "bg-primary text-white"
+              : "bg-gray-200 text-gray-500";
+            const labelClasses = isCompleted || isActive ? "text-text-primary" : "text-gray-400";
+            const descriptionClasses = isCompleted || isActive ? "text-xs sm:text-sm text-gray-500" : "text-xs sm:text-sm text-gray-400";
+            const connectorClasses = index < currentStep ? "bg-primary" : "bg-gray-300";
 
             return (
               <React.Fragment key={step.label}>
@@ -95,7 +96,7 @@ export const WizardHeader: React.FC<Props> = ({
                 {index < steps.length - 1 && (
                   <div
                     className={`h-px ${connectorClasses} mx-2 sm:mx-4 lg:mx-8 flex-1`}
-                    style={{ minWidth: '1.5rem', maxWidth: '180px' }}
+                    style={{ minWidth: "1.5rem", maxWidth: "180px" }}
                   />
                 )}
               </React.Fragment>

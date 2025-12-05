@@ -11,7 +11,7 @@ import {
   useTransactionDraft,
   useLatestMarketRate,
 } from '../../../../hooks/dashboard';
-import { useUserPermissions } from '../../../../hooks';
+import { useUserPermissions, useClientDetail } from '../../../../hooks';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';
@@ -30,24 +30,24 @@ import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { devLog } from '../../../../utils/devLogger';
 
 const VALIDATION_ITEMS = [
-  'TC dentro de límites establecidos',
-  'Monto dentro de límites diarios',
-  'Cliente con documentación vigente',
+  'TC dentro de l?mites establecidos',
+  'Monto dentro de l?mites diarios',
+  'Cliente con documentaci?n vigente',
 ];
 
 const WIZARD_STEPS = [
-  { label: 'Datos', description: 'Información' },
-  { label: 'Liquidación', description: 'Pago' },
+  { label: 'Datos', description: 'Informaci?n' },
+  { label: 'Liquidaci?n', description: 'Pago' },
   { label: 'Resumen', description: 'Confirmar' },
 ];
 
-const OWNER_OPTIONS = ['Operaciones', 'Tesorería', 'Comercial', 'Backoffice'];
+const OWNER_OPTIONS = ['Operaciones', 'Tesorer?a', 'Comercial', 'Backoffice'];
 
 const ASSET_CATALOG: AssetOption[] = [
-  { code: 'ARS', label: 'Pesos Argentinos (ARS)' },
-  { code: 'USD', label: 'Dólares (USD)' },
-  { code: 'EUR', label: 'Euros (EUR)' },
-  { code: 'BRL', label: 'Reales (BRL)' },
+  { code: 'ARS', label: 'ARS - Pesos Argentinos' },
+  { code: 'USD', label: 'USD - Dolares' },
+  { code: 'EUR', label: 'EUR - Euros' },
+  { code: 'BRL', label: 'BRL - Reales' },
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
@@ -113,7 +113,7 @@ const ratesAreEqual = (first?: number | null, second?: number | null) => {
   return Math.abs(first - second) < RATES_EPSILON;
 };
 
-// Genera labels contextuales según las reglas de negocio
+// Genera labels contextuales seg?n las reglas de negocio
 const getAmountLabels = (_operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => ({
   enterLabel: `Bien que entra (${incomingAsset})`,
   exitLabel: `Bien que sale (${outgoingAsset})`,
@@ -147,6 +147,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
+  const [editClientId, setEditClientId] = useState<string | null>(null);
 
   const {
     clients,
@@ -155,6 +156,11 @@ export const OperationWizardStep1Page: React.FC = () => {
     setClients,
     search: searchClients,
   } = useClientsList(50);
+  const {
+    client: clientToEdit,
+    loading: loadingClientToEdit,
+    error: clientToEditError,
+  } = useClientDetail(editClientId);
 
   const {
     draft,
@@ -177,7 +183,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   const canEditMarketRate = useMemo(
     () =>
       normalizedPermissions.some((permission) =>
-        ['admin', 'tesoreria', 'tesorería', 'tesoreria-admin', 'manage-market-rates'].includes(
+        ['admin', 'tesoreria', 'tesorer?a', 'tesoreria-admin', 'manage-market-rates'].includes(
           permission
         )
       ),
@@ -394,7 +400,7 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
-      // Double exchange: ARS ↔ USD ↔ bien2
+      // Double exchange: ARS ? USD ? bien2
       // Effective ARS/bien2 market rate = (ARS/USD) / (bien2/USD)
       return marketApr / secondaryMarketRate;
     }
@@ -409,7 +415,7 @@ export const OperationWizardStep1Page: React.FC = () => {
       return 0;
     }
 
-    // Calcular t_operacion como ARS/bien2 según las reglas
+    // Calcular t_operacion como ARS/bien2 seg?n las reglas
     let operationRate: number;
     
     if (operationType === 'buy') {
@@ -422,7 +428,7 @@ export const OperationWizardStep1Page: React.FC = () => {
       operationRate = incomingAmount / outgoingAmount;
     }
 
-    // Aplicar la fórmula: margen = (t_mercado - t_operacion) / t_mercado
+    // Aplicar la f?rmula: margen = (t_mercado - t_operacion) / t_mercado
     return ((effectiveMarketRate - operationRate) / effectiveMarketRate) * 100;
   }, [incomingAmount, effectiveMarketRate, operationType, outgoingAmount]);
 
@@ -523,27 +529,40 @@ export const OperationWizardStep1Page: React.FC = () => {
   );
 
   const handleNewClientCreated = useCallback(
-     (client: ClientSummary) => {
-       setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
-       setClientId(client.id);
-       setIsNewClientModalOpen(false);
-     },
-     // eslint-disable-next-line react-hooks/exhaustive-deps
-     [],
-   );
+    (client: ClientSummary) => {
+      setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
+      setClientId(client.id);
+      setEditClientId(null);
+      setIsNewClientModalOpen(false);
+    },
+    [setClients],
+  );
   
   const handleOpenNewClientModal = useCallback(() => {
+    setEditClientId(null);
     setIsNewClientModalOpen(true);
   }, []);
   
   const handleCloseNewClientModal = useCallback(() => {
+    setEditClientId(null);
     setIsNewClientModalOpen(false);
   }, []);
 
   const handleEditClient = useCallback(() => {
     if (!clientId) return;
-    navigate(`/dashboard/clientes/${clientId}`);
-  }, [clientId, navigate]);
+    setEditClientId(clientId);
+    setIsNewClientModalOpen(true);
+  }, [clientId]);
+
+  const handleClientUpdated = useCallback(
+    (client: ClientSummary) => {
+      setClients((prev) => [client, ...prev.filter((item) => item.id !== client.id)]);
+      setClientId(client.id);
+      setEditClientId(null);
+      setIsNewClientModalOpen(false);
+    },
+    [setClients],
+  );
   
   const validateForm = useCallback(() => {
     devLog('validateForm - clientId:', clientId, 'type:', typeof clientId);
@@ -597,7 +616,7 @@ export const OperationWizardStep1Page: React.FC = () => {
         }
       } catch (error) {
         const apiError = error as ApiError;
-        setFormError(apiError.message || 'Ocurrió un error al guardar la operación.');
+        setFormError(apiError.message || 'Ocurri? un error al guardar la operaci?n.');
       }
     },
     [
@@ -667,7 +686,7 @@ export const OperationWizardStep1Page: React.FC = () => {
               formError ||
               draftError?.message ||
               clientsError?.message ||
-              'Ocurrió un error desconocido.'
+              'Ocurri? un error desconocido.'
             }
             className="mb-4"
             onClose={() => setFormError(null)}
@@ -690,7 +709,7 @@ export const OperationWizardStep1Page: React.FC = () => {
           {busy && (
             <div className="absolute inset-0 bg-white bg-opacity-75 z-10 flex flex-col items-center justify-center rounded-lg">
               <LoadingSpinner size="lg" />
-              <span className="text-sm text-gray-600 mt-3">Guardando cambios…</span>
+              <span className="text-sm text-gray-600 mt-3">Guardando cambios?</span>
             </div>
           )}
 
@@ -782,6 +801,10 @@ export const OperationWizardStep1Page: React.FC = () => {
         open={isNewClientModalOpen}
         onClose={handleCloseNewClientModal}
         onCreated={handleNewClientCreated}
+        onUpdated={handleClientUpdated}
+        clientToEdit={clientToEdit}
+        loadingClient={loadingClientToEdit}
+        clientError={clientToEditError?.message || null}
         defaultType="client"
         ownerOptions={OWNER_OPTIONS}
         defaultOwner="Operaciones"
@@ -789,3 +812,4 @@ export const OperationWizardStep1Page: React.FC = () => {
     </div>
   );
 };
+

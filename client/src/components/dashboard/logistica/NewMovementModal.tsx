@@ -18,6 +18,8 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
     type: '',
     reference: ''
   });
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
   // Mantener el orden de Hooks y evitar llamadas condicionales
@@ -36,8 +38,24 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
   };
 
   const handleSaveDraft = () => {
-    // TODO: Implement save draft functionality
-    devLog('Saving draft...');
+    try {
+      const payload = {
+        ...movementData,
+        savedAt: new Date().toISOString()
+      };
+      localStorage.setItem('logisticsMovementDraft', JSON.stringify(payload));
+      setSaveError(null);
+      setSaveMessage('Borrador guardado localmente');
+    } catch (err) {
+      setSaveMessage(null);
+      setSaveError('No pudimos guardar el borrador. Intenta nuevamente.');
+      devLog('Save draft failed', err);
+    } finally {
+      window.setTimeout(() => {
+        setSaveMessage(null);
+        setSaveError(null);
+      }, 3200);
+    }
   };
 
   const handleRegisterMovement = () => {
@@ -130,6 +148,11 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
                   Registrar movimiento
                 </button>
               </div>
+              {(saveMessage || saveError) && (
+                <p className={`mt-3 text-sm ${saveError ? 'text-danger' : 'text-emerald-600'}`}>
+                  {saveMessage || saveError}
+                </p>
+              )}
             </footer>
           </div>
         </div>

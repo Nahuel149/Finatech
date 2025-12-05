@@ -28,12 +28,16 @@ export interface NewClientModalProps {
   open: boolean;
   onClose: () => void;
   onCreated: (client: ClientSummary) => void;
+  onUpdated?: (client: ClientSummary) => void;
   defaultType?: ClientType;
   ownerOptions?: string[];
   defaultOwner?: string;
   addressSuggestions?: AddressSuggestion[];
   onSearchAddress?: (term: string) => void;
   onSelectAddress?: (suggestion: AddressSuggestion) => Promise<AddressDetails>;
+  clientToEdit?: ClientSummary | null;
+  loadingClient?: boolean;
+  clientError?: string | null;
 }
 
 interface FieldErrors {
@@ -61,12 +65,16 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
   open,
   onClose,
   onCreated,
+  onUpdated,
   defaultType = 'client',
   ownerOptions = DEFAULT_OWNER_OPTIONS,
   defaultOwner,
   addressSuggestions,
   onSearchAddress,
   onSelectAddress,
+  clientToEdit = null,
+  loadingClient = false,
+  clientError = null,
 }) => {
   const normalizedOwnerOptions = useMemo(() => {
     if (Array.isArray(ownerOptions) && ownerOptions.length > 0) {
@@ -86,6 +94,8 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     }
     return normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
   }, [defaultOwner, normalizedOwnerOptions]);
+
+  const isEditMode = Boolean(clientToEdit || loadingClient || clientError);
 
   const [form, setForm] = useState(() => ({
     ...initialFormState,
@@ -113,18 +123,14 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     if (!open) {
       const resetOwner = normalizedOwnerOptions[0] ?? INTERNAL_OWNER_FALLBACK;
       setForm((prev) => {
-        // Only reset if the form has actually changed
         const newForm = {
           ...initialFormState,
           contactType: defaultType,
           internalOwner: resetOwner,
         };
-        
-        // Check if form actually needs to be reset
         if (JSON.stringify(prev) === JSON.stringify(newForm)) {
           return prev;
         }
-        
         return newForm;
       });
       setAddressDetails(null);
@@ -135,8 +141,45 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       setSuggestions((prev) => (prev.length > 0 ? [] : prev));
       setShowSuggestions(false);
       setActiveAddressField('primary');
+      return;
     }
-  }, [open, defaultType, normalizedOwnerOptions]);
+
+    if (clientToEdit) {
+      setForm((prev) => ({
+        ...prev,
+        firstName: clientToEdit.firstName || '',
+        lastName: clientToEdit.lastName || '',
+        contactType: (clientToEdit.contactType as ClientType) || defaultType,
+        internalOwner: clientToEdit.internalOwner || defaultOwnerValue,
+        addressSearch: clientToEdit.primaryAddress?.formatted || clientToEdit.primaryAddress?.description || '',
+        secondaryAddressSearch: clientToEdit.secondaryAddress?.formatted || clientToEdit.secondaryAddress?.description || '',
+      }));
+      setAddressDetails(
+        clientToEdit.primaryAddress
+          ? {
+              formatted: clientToEdit.primaryAddress.formatted || clientToEdit.primaryAddress.description || '',
+              description: clientToEdit.primaryAddress.description || clientToEdit.primaryAddress.formatted || '',
+              placeId: clientToEdit.primaryAddress.placeId || undefined,
+              latitude: clientToEdit.primaryAddress.latitude || undefined,
+              longitude: clientToEdit.primaryAddress.longitude || undefined,
+            }
+          : null,
+      );
+      setSecondaryAddressDetails(
+        clientToEdit.secondaryAddress
+          ? {
+              formatted: clientToEdit.secondaryAddress.formatted || clientToEdit.secondaryAddress.description || '',
+              description: clientToEdit.secondaryAddress.description || clientToEdit.secondaryAddress.formatted || '',
+              placeId: clientToEdit.secondaryAddress.placeId || undefined,
+              latitude: clientToEdit.secondaryAddress.latitude || undefined,
+              longitude: clientToEdit.secondaryAddress.longitude || undefined,
+            }
+          : null,
+      );
+      setError(null);
+      setFieldErrors({});
+    }
+  }, [open, defaultType, normalizedOwnerOptions, clientToEdit, defaultOwnerValue]);
 
   // Update form when defaultOwner changes (only when modal is open)
   useEffect(() => {
@@ -311,11 +354,17 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     };
 
     try {
-      const response = await apiRequest<ClientSummary>('/api/clients', {
-        method: 'POST',
+      const isEditMode = Boolean(clientToEdit?.id);
+      const endpoint = isEditMode ? `/api/clients/${clientToEdit?.id}` : '/api/clients';
+      const response = await apiRequest<ClientSummary>(endpoint, {
+        method: isEditMode ? 'PUT' : 'POST',
         body: payload,
       });
-      onCreated(response);
+      if (isEditMode && onUpdated) {
+        onUpdated(response);
+      } else {
+        onCreated(response);
+      }
       onClose();
     } catch (err) {
       const apiError = handleApiError(err);
@@ -342,9 +391,27 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
       >
         <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
           <div>
-            <h2 className="text-xl font-semibold text-text-primary">Nuevo contacto</h2>
-            <p className="text-sm text-gray-500">Registrá rápidamente un cliente o proveedor.</p>
+            <h2 className="text-xl font-semibold text-text-primary">
+              {isEditMode ? 'Editar contacto' : 'Nuevo contacto'}
+            </h2>
+            <p className="text-sm text-gray-500">
+              {isEditMode ? "Actualiza los datos del cliente o proveedor seleccionado." : "Registra rapidamente un cliente o proveedor."}
+            </p>
+            {loadingClient && (
+              <p className="text-xs text-gray-500 mt-1 flex items-center">
+                <i className="fa-solid fa-circle-notch animate-spin mr-1" />
+                Cargando datos del contacto...
+              </p>
+            )}
+            {clientError && (
+              <p className="text-xs text-danger mt-1 flex items-center">
+                <i className="fa-solid fa-circle-exclamation mr-1" />
+                {clientError}
+              </p>
+            )}
           </div>
+
+
           <button
             type="button"
             onClick={onClose}
@@ -579,3 +646,5 @@ export const NewClientModal: React.FC<NewClientModalProps> = ({
     </div>
   );
 };
+
+

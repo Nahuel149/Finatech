@@ -190,7 +190,7 @@ export const OperationsReportPanel: React.FC<OperationsReportPanelProps> = ({ op
       >
         <div className="flex flex-col gap-4 border-b border-gray-200 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <p className="text-xs uppercase tracking-wide text-primary font-semibold">Reportes / Informacion operativa</p>
+            <p className="text-xs uppercase tracking-wide text-primary font-semibold">Reportes / Información operativa</p>
             <h2 className="text-2xl font-bold text-text-primary leading-tight">Resumen de operaciones</h2>
             <p className="text-sm text-gray-600">
               Ultimas {summary.total} operaciones analizadas para ofrecer una vista ejecutiva.
