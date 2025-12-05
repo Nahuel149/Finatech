@@ -30,8 +30,10 @@ import { MovementDetailPage } from './components/dashboard/logistica/MovementDet
 import { IncidentDetailPage } from './components/dashboard/logistica/IncidentDetailPage';
 import { ResolvedIncidentDetailPage } from './components/dashboard/logistica/ResolvedIncidentDetailPage';
 import { LogisticsOrderDetailPage } from './components/dashboard/logistica/LogisticsOrderDetailPage';
+import { LocationSearchPage } from './components/location/LocationSearchPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import SessionTimeoutManager from './components/SessionTimeoutManager';
+import { prefetchCsrfToken } from './utils/api';
 import { devPerformanceUtils } from './utils/performanceMonitor';
 
 const App: React.FC = () => {
@@ -59,9 +61,14 @@ const App: React.FC = () => {
     }
   }, []);
 
+  // Ensure CSRF cookie is available before any API POST/PUT/DELETE
+  useEffect(() => {
+    prefetchCsrfToken();
+  }, []);
+
   return (
     <ErrorBoundary>
-      <Router>
+      <Router future={{ v7_relativeSplatPath: true, v7_startTransition: true }}>
         <SessionTimeoutManager />
         <div className="App">
           <Routes>
@@ -78,6 +85,7 @@ const App: React.FC = () => {
             <Route path="/dashboard/logistica/incidencia/:incidentId" element={<ErrorBoundary><IncidentDetailPage /></ErrorBoundary>} />
             <Route path="/dashboard/logistica/incidencia-resuelta/:incidentId" element={<ErrorBoundary><ResolvedIncidentDetailPage /></ErrorBoundary>} />
             <Route path="/dashboard/logistica/orden/:orderId" element={<ErrorBoundary><LogisticsOrderDetailPage /></ErrorBoundary>} />
+            <Route path="/dashboard/ubicaciones" element={<ErrorBoundary><LocationSearchPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria" element={<ErrorBoundary><TreasuryMovementsPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria/saldos" element={<ErrorBoundary><GlobalBalancesPage /></ErrorBoundary>} />
             <Route path="/dashboard/tesoreria/saldos/vinculados" element={<ErrorBoundary><LinkedBalancesPage /></ErrorBoundary>} />

@@ -65,6 +65,20 @@ export const RecentOperationsTable: React.FC<Props> = ({
   const showHistoryButton = variant === 'full';
   const showActionsColumn = variant === 'full';
   const containerClassName = variant === 'compact' ? 'mb-6' : 'mb-8';
+  const avatarPalette = [
+    'bg-blue-100 text-blue-700',
+    'bg-emerald-100 text-emerald-700',
+    'bg-amber-100 text-amber-700',
+    'bg-purple-100 text-purple-700',
+    'bg-pink-100 text-pink-700',
+    'bg-teal-100 text-teal-700',
+  ];
+
+  const getAvatarClass = (name: string) => {
+    if (!name) return avatarPalette[0];
+    const code = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    return avatarPalette[code % avatarPalette.length];
+  };
 
   const handleViewDetail = (row: DashboardOperationRow) => {
     if (!row.detailPath) {
@@ -88,29 +102,29 @@ export const RecentOperationsTable: React.FC<Props> = ({
     <section id="recent-operations" className={containerClassName}>
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         <div className="p-4 lg:p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-lg lg:text-xl font-semibold text-text-primary mb-1">Últimas operaciones</h2>
-              <p className="text-gray-600 text-sm lg:text-base">Registro de operaciones más recientes</p>
+              <h2 className="text-lg lg:text-xl font-semibold text-text-primary leading-tight">Últimas operaciones</h2>
+              <p className="text-gray-600 text-sm lg:text-base leading-snug">Registro de operaciones más recientes</p>
             </div>
             {showHistoryButton && (
               <button
                 type="button"
-                className="text-primary hover:underline font-medium"
+                className="text-primary hover:underline text-sm font-medium leading-tight text-right"
                 onClick={handleViewHistory}
               >
-                Ver historial completo
+                Ver historial<br />completo
               </button>
             )}
           </div>
 
           {showFilters && (
-            <div id="quick-filters" className="grid grid-cols-1 gap-3 lg:flex lg:flex-wrap lg:gap-4">
+            <div id="quick-filters" className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:flex lg:flex-wrap lg:gap-4">
               <div className="relative">
                 <select
                   value={clientFilter}
                   onChange={(event) => setClientFilter(event.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 lg:px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm lg:text-base w-full lg:w-auto"
+                  className="appearance-none bg-white border border-gray-300 rounded-lg h-10 px-3 pr-9 text-sm font-medium text-text-primary focus:ring-2 focus:ring-primary focus:border-primary w-full lg:w-auto shadow-sm"
                 >
                   <option value="all">Todos los clientes</option>
                   {clientOptions.map((client) => (
@@ -128,7 +142,7 @@ export const RecentOperationsTable: React.FC<Props> = ({
                 <select
                   value={typeFilter}
                   onChange={(event) => setTypeFilter(event.target.value)}
-                  className="appearance-none bg-white border border-gray-300 rounded-lg px-3 lg:px-4 py-2 pr-8 focus:ring-2 focus:ring-primary focus:border-transparent text-sm lg:text-base w-full lg:w-auto"
+                  className="appearance-none bg-white border border-gray-300 rounded-lg h-10 px-3 pr-9 text-sm font-medium text-text-primary focus:ring-2 focus:ring-primary focus:border-primary w-full lg:w-auto shadow-sm"
                 >
                   <option value="all">Todos los tipos</option>
                   <option value="Compra">Compra</option>
@@ -353,35 +367,51 @@ export const RecentOperationsTable: React.FC<Props> = ({
           {!loading &&
             !error &&
             filteredRows.map((row) => (
-              <div key={row.id ?? row.createdAt} className="border border-gray-200 rounded-lg p-4 m-4 shadow-sm">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <div className="text-sm font-semibold text-text-primary">{row.clientName}</div>
-                    <div className="text-xs text-gray-500">{row.clientIdentifier}</div>
+              <div
+                key={row.id ?? row.createdAt}
+                className="border border-gray-200 rounded-xl p-4 mx-4 mb-4 shadow-sm bg-white"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${getAvatarClass(
+                        row.clientName
+                      )}`}
+                    >
+                      {row.clientInitials}
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-text-primary">{row.clientName}</div>
+                      <div className="text-xs text-gray-500">{row.dateLabel}</div>
+                    </div>
                   </div>
-                  <span className={row.typeClassName}>{row.typeLabel}</span>
+                  <span className={`${row.typeClassName} text-xs px-2 py-1 rounded-full leading-tight`}>
+                    {row.typeLabel}
+                  </span>
                 </div>
 
-                <div className="space-y-1 text-sm text-text-primary mb-3">
-                  <div className="text-gray-500">{row.dateLabel}</div>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-text-primary mb-3">
                   <div>
-                    <span className="text-gray-500 mr-1">Entra:</span>
-                    {row.receivesText}
+                    <div className="text-xs text-gray-500">Entra</div>
+                    <div className="font-medium">{row.receivesText}</div>
                   </div>
                   <div>
-                    <span className="text-gray-500 mr-1">Sale:</span>
-                    {row.paysText}
+                    <div className="text-xs text-gray-500">Sale</div>
+                    <div className="font-medium">{row.paysText}</div>
                   </div>
                   <div>
-                    <span className="text-gray-500 mr-1">TC:</span>
-                    {row.rateLabel}
+                    <div className="text-xs text-gray-500">TC Efectivo</div>
+                    <div className="font-medium">{row.rateLabel}</div>
                   </div>
-                  <div className={row.marginClassName}>Margen: {row.marginLabel}</div>
+                  <div>
+                    <div className="text-xs text-gray-500">Margen</div>
+                    <div className={`font-medium ${row.marginClassName}`}>{row.marginLabel}</div>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between">
-                  <span className={row.statusClassName}>{row.statusLabel}</span>
-                  <div className="flex items-center space-x-3 text-sm">
+                  <span className={`${row.statusClassName} px-2 py-1 rounded-full text-xs`}>{row.statusLabel}</span>
+                  <div className="flex items-center space-x-4 text-sm">
                     <button
                       type="button"
                       className="text-primary hover:underline"

@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 
 let resolveSettlementSlices;
 let mapSettlementMethodToMovementType;
+let validateAssetDirection;
 
 try {
   const {
@@ -10,6 +11,7 @@ try {
   } = require('../../../src/services/transaction.service');
   resolveSettlementSlices = __testHelpers.resolveSettlementSlices;
   mapSettlementMethodToMovementType = __testHelpers.mapSettlementMethodToMovementType;
+  validateAssetDirection = __testHelpers.validateAssetDirection;
 } catch (error) {
   console.error('Failed to load transaction.service helpers:', error);
   throw error;
@@ -19,7 +21,7 @@ test('resolveSettlementSlices returns single slice for simple settlement', () =>
   const transaction = {
     settlement: {
       mode: 'simple',
-      simpleMethod: 'Transferencia Banco Nación',
+      simpleMethod: 'Transferencia Banco Naci��n',
     },
   };
 
@@ -27,7 +29,7 @@ test('resolveSettlementSlices returns single slice for simple settlement', () =>
 
   assert.deepEqual(slices, [
     {
-      method: 'Transferencia Banco Nación',
+      method: 'Transferencia Banco Naci��n',
       movementType: 'transfer',
       amount: 1000,
     },
@@ -81,7 +83,7 @@ test('resolveSettlementSlices balances percentage allocations with rounding', ()
           computedPercentage: 33.3333,
         },
         {
-          method: 'Depósito Banco Galicia',
+          method: 'Dep��sito Banco Galicia',
           allocationType: 'percentage',
           value: 66.6667,
           computedPercentage: 66.6667,
@@ -126,5 +128,47 @@ test('resolveSettlementSlices throws when allocations do not match total', () =>
 test('mapSettlementMethodToMovementType detects keywords', () => {
   assert.equal(mapSettlementMethodToMovementType('Caja USD Central'), 'usd');
   assert.equal(mapSettlementMethodToMovementType('Efectivo sucursal'), 'cash');
-  assert.equal(mapSettlementMethodToMovementType('Depósito en banco'), 'transfer');
+  assert.equal(mapSettlementMethodToMovementType('Dep��sito en banco'), 'transfer');
+});
+
+test('validateAssetDirection allows buy with non-ARS incoming and ARS outgoing', () => {
+  assert.doesNotThrow(() =>
+    validateAssetDirection(
+      'buy',
+      { code: 'USD', label: 'D��lar' },
+      { code: 'ARS', label: 'Peso argentino' }
+    )
+  );
+
+  assert.doesNotThrow(() =>
+    validateAssetDirection(
+      'buy',
+      { code: 'eur', label: 'Euro' },
+      { code: 'ars', label: 'Peso argentino' }
+    )
+  );
+});
+
+test('validateAssetDirection rejects buy when incoming is ARS', () => {
+  assert.throws(
+    () =>
+      validateAssetDirection(
+        'buy',
+        { code: 'ARS', label: 'Peso argentino' },
+        { code: 'USD', label: 'D��lar' }
+      ),
+    /activo distinto de ARS/
+  );
+});
+
+test('validateAssetDirection rejects buy when outgoing is not ARS', () => {
+  assert.throws(
+    () =>
+      validateAssetDirection(
+        'buy',
+        { code: 'USD', label: 'D��lar' },
+        { code: 'USD', label: 'D��lar' }
+      ),
+    /pagar en ARS/
+  );
 });

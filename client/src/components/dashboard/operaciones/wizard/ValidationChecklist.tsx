@@ -6,7 +6,7 @@ interface Props {
 }
 
 export const ValidationChecklist: React.FC<Props> = ({ items, loading = false }) => (
-  <div id="validation-messages" className="mb-6">
+  <div id="validation-messages" className="mb-4">
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
       <div className="flex items-start">
         <i className="fa-solid fa-circle-info text-blue-600 mr-2 mt-1" />
@@ -19,9 +19,12 @@ export const ValidationChecklist: React.FC<Props> = ({ items, loading = false })
               <li className="h-3 bg-blue-100 rounded w-1/2" />
             </ul>
           ) : (
-            <ul className="text-sm text-blue-700 mt-1 space-y-1">
+            <ul className="text-sm text-blue-700 mt-2 space-y-1">
               {items.map((item) => (
-                <li key={item}>✓ {item}</li>
+                <li key={item} className="flex items-center gap-2">
+                  <i className="fa-solid fa-check text-blue-600 text-xs" />
+                  <span>{item}</span>
+                </li>
               ))}
             </ul>
           )}

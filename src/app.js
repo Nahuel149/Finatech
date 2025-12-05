@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
@@ -8,6 +9,7 @@ const transactionRoutes = require('./routes/transaction.routes');
 const transferRoutes = require('./routes/transfer.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const geocodingRoutes = require('./routes/geocoding.routes');
+const locationRoutes = require('./routes/location.routes');
 const logisticsRoutes = require('./routes/logistics.routes');
 const currentAccountRoutes = require('./routes/currentAccount.routes');
 const logisticsOrderRoutes = require('./routes/logisticsOrder.routes');
@@ -19,6 +21,8 @@ const { errorHandler } = require('./middleware/errorHandler');
 const { ensureCsrfCookie, csrfProtect } = require('./middleware/csrf');
 
 const app = express();
+const clientBuildPath = path.join(process.cwd(), 'client', 'build');
+const clientIndexPath = path.join(clientBuildPath, 'index.html');
 
 app.set('trust proxy', 1);
 
@@ -39,6 +43,12 @@ app.get('/api/config', (_req, res) => {
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     googleMapsEnabled: Boolean(process.env.GOOGLE_MAPS_API_KEY),
+    locationIqEnabled: Boolean(process.env.LOCATIONIQ_API_KEY),
+    locationIqTilesKey: process.env.LOCATIONIQ_TILE_API_KEY || null,
+    locationIqCountryCodes: process.env.LOCATIONIQ_COUNTRY_CODES || 'ar',
+    locationIqBaseTilesUrl:
+      process.env.LOCATIONIQ_BASE_TILES_URL ||
+      'https://{s}.locationiq.com/v3/streets/r/{z}/{x}/{y}.png',
   });
 });
 
@@ -60,6 +70,7 @@ app.use('/api/transactions', transactionRoutes);
 app.use('/api/transfers', transferRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/geocoding', geocodingRoutes);
+app.use('/api/location', locationRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api', logisticsOrderRoutes);
 app.use('/api', logisticsIncidentRoutes);
@@ -71,6 +82,22 @@ app.use('/api/rates', ratesRoutes);
 app.get('/', (_req, res) => {
   res.json({ status: 'ok', message: 'API running' });
 });
+
+// Return JSON 404 for unknown API routes
+app.use('/api', (_req, res) => {
+  res.status(404).json({ message: 'Endpoint not found' });
+});
+
+// Serve React build for non-API routes
+if (fs.existsSync(clientIndexPath)) {
+  app.use(express.static(clientBuildPath));
+  // Serve the React SPA for any non-API route
+  app.get(/^\/(?!api).*/, (_req, res) => {
+    res.sendFile(clientIndexPath);
+  });
+} else {
+  console.warn('[APP] client build not found - SPA routes will return 404');
+}
 
 app.use(errorHandler);
 

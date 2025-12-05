@@ -21,6 +21,8 @@ interface BalanceCardProps {
   onRetry?: () => void;
   className?: string;
   showRetryButton?: boolean;
+  compact?: boolean;
+  highlightBySign?: boolean;
 }
 
 const formatAmount = (amount: number, currency: string): string => {
@@ -53,6 +55,8 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   onRetry,
   className = '',
   showRetryButton = true,
+  compact = false,
+  highlightBySign = false,
 }) => {
   if (loading) {
     return <BalanceCardSkeleton className={className} />;
@@ -61,9 +65,19 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
   const icon = getIconForBalance(data.label, data.currency, data.icon);
   const isClickable = Boolean(onClick);
   const isError = error || data.status === 'error';
+  const isPositive = data.amount > 0;
+  const isNegative = data.amount < 0;
+
+  const amountTone = highlightBySign && !isError
+    ? isPositive
+      ? 'text-green-600'
+      : isNegative
+      ? 'text-red-600'
+      : 'text-gray-700'
+    : 'text-text-primary';
 
   const cardClasses = `
-    bg-white rounded-lg border border-gray-200 p-4 shadow-sm
+    bg-white rounded-lg border border-gray-200 ${compact ? 'p-3' : 'p-4'} shadow-sm
     ${isClickable ? 'cursor-pointer hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-primary' : ''}
     ${className}
   `.trim();
@@ -98,7 +112,7 @@ export const BalanceCard: React.FC<BalanceCardProps> = ({
         <StatusIndicator status={data.status} />
       </div>
       
-      <div className="text-2xl font-bold text-text-primary mb-1">
+      <div className={`${compact ? 'text-xl' : 'text-2xl'} font-bold ${amountTone} mb-1`}>
         {isError ? '—' : formatAmount(data.amount, data.currency)}
       </div>
       

@@ -34,6 +34,13 @@ interface Props {
   operationRate: number;
 }
 
+const formatRate = (value?: number | null) => {
+  if (!Number.isFinite(Number(value))) {
+    return '—';
+  }
+  return Number(value).toFixed(2);
+};
+
 export const CompletionSuccessState: React.FC<Props> = ({
   operationCode,
   onViewDetails,
@@ -148,13 +155,9 @@ export const CompletionSuccessState: React.FC<Props> = ({
             <div className="text-text-primary font-medium">
               {clientPays.amount}
             </div>
-            {operationRate !== undefined && operationRate !== null ? (
-              <div className="text-sm text-gray-500">
-                TC: ${operationRate.toFixed(2)}
-              </div>
-            ) : (
-              <div className="text-sm text-gray-500">TC: —</div>
-            )}
+            <div className="text-sm text-gray-500">
+              TC: ${formatRate(operationRate)}
+            </div>
           </SummaryItem>
         </div>
       </div>

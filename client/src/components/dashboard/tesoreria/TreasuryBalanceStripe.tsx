@@ -82,7 +82,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
       id="treasury-balance-stripe"
       className="fixed top-[55px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
-      <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8 relative">
+      <div className="px-4 py-3 lg:px-6 lg:py-4 xl:px-8 xl:py-5 relative">
         <div
           className="absolute right-4 top-4 lg:right-8 lg:top-6 xl:right-12 xl:top-8"
           onMouseEnter={handleShowTooltip}
@@ -117,7 +117,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
           )}
         </div>
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-3 lg:gap-4 xl:gap-6">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -133,6 +133,8 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
                 data={mapBalanceToCardData(balance)}
                 onClick={() => handleCardClick(balance.id)}
                 onRetry={refresh}
+                compact
+                highlightBySign
               />
             ))}
 
@@ -158,7 +160,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
 
         {/* Mobile Layout */}
         <div className="lg:hidden">
-          <div className="flex flex-col gap-3 md:gap-4">
+          <div className="flex flex-col gap-2 md:gap-3">
             {loading && (
               <>
                 {[0, 1, 2].map((i) => (
@@ -174,6 +176,8 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
                   data={mapBalanceToCardData(balance)}
                   onClick={() => handleCardClick(balance.id)}
                   onRetry={refresh}
+                  compact
+                  highlightBySign
                 />
               ))}
 

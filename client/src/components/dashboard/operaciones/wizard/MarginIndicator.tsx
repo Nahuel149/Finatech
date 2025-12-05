@@ -16,9 +16,16 @@ const formatPercent = (value: number) => {
   return `${prefix}${formatted}%`;
 };
 
+const formatRate = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return '—';
+  }
+  return Number(value).toFixed(2);
+};
+
 export const MarginIndicator: React.FC<Props> = ({ marginPercent, marketRate, operationType, loading = false }) => {
   const isPositive = marginPercent >= 0;
-  // Colores según las reglas: verde si margen ≥ 0; rojo si < 0
+  // Colores según las reglas: verde si margen >= 0; rojo si < 0
   const containerClasses = isPositive
     ? 'bg-green-50 border border-green-200'
     : 'bg-red-50 border border-red-200';
@@ -49,7 +56,7 @@ export const MarginIndicator: React.FC<Props> = ({ marginPercent, marketRate, op
             <span className={`text-xl font-bold ${textClasses}`}>{formatPercent(marginPercent)}</span>
           </div>
           <div className={`text-sm mt-1 ${textClasses}`}>
-            (vs mercado: TC ${marketRate.toFixed(2)})
+            (vs mercado: TC ${formatRate(marketRate)})
           </div>
         </div>
       )}

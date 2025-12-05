@@ -13,3 +13,4 @@ export * from './useUserPermissions';
 export * from './useCurrentUser';
 export * from './useInactivityLogout';
 export * from './useSessionKeepAlive';
+export * from './useGeolocation';

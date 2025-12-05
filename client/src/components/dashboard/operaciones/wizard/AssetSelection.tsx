@@ -28,7 +28,7 @@ export const AssetSelection: React.FC<Props> = ({
   exitLabel = 'Cliente paga',
   disabled = false,
 }) => (
-  <div id="asset-selection" className="mb-6">
+  <div id="asset-selection" className="mb-0">
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">{enterLabel}</label>

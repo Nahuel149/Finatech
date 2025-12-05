@@ -29,9 +29,9 @@ import { emitDashboardBalanceRefresh } from '../../../../utils';
 import { WizardCompleteSummary } from './WizardCompleteSummary';
 
 const WIZARD_STEPS = [
-  { label: 'Datos', description: 'Información de la operación' },
-  { label: 'Liquidación', description: 'Método de pago' },
-  { label: 'Resumen', description: 'Confirmación final' },
+  { label: 'Datos', description: 'Información' },
+  { label: 'Liquidación', description: 'Pago' },
+  { label: 'Resumen', description: 'Confirmar' },
 ];
 
 // Función helper para formatear moneda
@@ -153,10 +153,29 @@ export const OperationWizardStep3Page: React.FC = () => {
   const isVoided = draft?.status === 'voided';
   const voidSuccess = draft?.status === 'voided';
 
+  const totalSettlementAmount =
+    draft?.type === 'buy' ? draft?.outgoingAmount : draft?.incomingAmount;
+
   const marginValue = draft?.marginPercentage ?? 0;
-  const settlementPercentage =
-    draft?.settlement?.totalPercentage ??
-    (draft?.settlement?.mode === 'simple' ? 100 : 0);
+  const settlementLines = draft?.settlement?.lines ?? [];
+  const settlementBaseAmount =
+    totalSettlementAmount && Number.isFinite(totalSettlementAmount)
+      ? totalSettlementAmount
+      : 0;
+  const settlementAmountAllocated = settlementLines.reduce((acc, line) => {
+    const numericValue = Number(line.value) || 0;
+    if (line.allocationType === 'percentage' && settlementBaseAmount > 0) {
+      return acc + (numericValue / 100) * settlementBaseAmount;
+    }
+    return acc + numericValue;
+  }, 0);
+  const settlementCompletionTolerance =
+    settlementBaseAmount > 0 ? Math.max(settlementBaseAmount * 0.0001, 0.01) : 0;
+  const settlementIsComplete =
+    draft?.settlement?.mode === 'simple'
+      ? Boolean(draft?.settlement?.simpleMethod)
+      : settlementBaseAmount > 0 &&
+        Math.abs(settlementAmountAllocated - settlementBaseAmount) <= settlementCompletionTolerance;
 
   const summaryClient = clientSummary ?? draft?.client ?? null;
 
@@ -164,7 +183,7 @@ export const OperationWizardStep3Page: React.FC = () => {
   const validationItems = useMemo(
     () => [
       {
-        label: 'Cliente válido y con documentación vigente',
+        label: 'Cliente valido y con documentacion vigente',
         passed: Boolean(clientSummary?.id),
       },
       {
@@ -177,7 +196,7 @@ export const OperationWizardStep3Page: React.FC = () => {
         passed: (draft?.apr ?? 0) > 0,
       },
       {
-        label: 'TC dentro de umbrales vs. mercado (±10%)',
+        label: 'TC dentro de umbrales vs. mercado (+/-10%)',
         // Asumimos un umbral del 10% para el ejemplo
         passed:
           typeof marginValue === 'number' &&
@@ -185,11 +204,8 @@ export const OperationWizardStep3Page: React.FC = () => {
           Math.abs(marginValue) <= 10,
       },
       {
-        label: 'Liquidación completa (100%)',
-        passed:
-          draft?.settlement?.mode === 'simple'
-            ? Boolean(draft?.settlement?.simpleMethod)
-            : Math.abs(settlementPercentage - 100) <= 0.1,
+        label: 'Liquidacion completa',
+        passed: settlementIsComplete,
       },
     ],
     [
@@ -197,13 +213,10 @@ export const OperationWizardStep3Page: React.FC = () => {
       draft?.incomingAmount,
       draft?.outgoingAmount,
       draft?.apr,
-      draft?.settlement?.mode,
-      draft?.settlement?.simpleMethod,
       marginValue,
-      settlementPercentage,
+      settlementIsComplete,
     ],
   );
-
   const canConfirm =
     validationItems.every((item) => item.passed) &&
     Boolean(draft?.id) &&
@@ -473,10 +486,6 @@ export const OperationWizardStep3Page: React.FC = () => {
   const busy = draftLoading || saving;
   const isReady = Boolean(draft);
 
-  // Calcula el monto total para la liquidación
-  const totalSettlementAmount =
-    draft?.type === 'buy' ? draft?.outgoingAmount : draft?.incomingAmount;
-
   const summarySettlementMode = draft?.settlement?.mode ?? 'simple';
   const summarySimpleMethod = draft?.settlement?.simpleMethod ?? null;
   const settlementBaseCurrency =
@@ -491,23 +500,19 @@ export const OperationWizardStep3Page: React.FC = () => {
           ? totalSettlementAmount
           : 0;
       const rawValue = Number(line.value) || 0;
-      const fallbackPercentage =
-        line.allocationType === 'percentage'
-          ? rawValue
-          : baseAmount > 0
-          ? (rawValue / baseAmount) * 100
-          : 0;
-      const computedPercentage = Number.isFinite(line.computedPercentage)
-        ? line.computedPercentage
-        : fallbackPercentage;
-      const computedAmount =
-        line.allocationType === 'percentage'
-          ? (computedPercentage / 100) * baseAmount
+      const baseFromPercent =
+        line.allocationType === 'percentage' && baseAmount > 0
+          ? (rawValue / 100) * baseAmount
           : rawValue;
+      const computedAmount = baseFromPercent;
+      const computedPercentage =
+        baseAmount > 0 && Number.isFinite(computedAmount)
+          ? (computedAmount / baseAmount) * 100
+          : 0;
       return {
         method: line.method,
-        allocationType: line.allocationType,
-        value: rawValue,
+        allocationType: 'amount' as const,
+        value: computedAmount,
         computedPercentage,
         computedAmount,
         currency: (settlementBaseCurrency || incomingCurrency || outgoingCurrency || 'ARS').toUpperCase(),
@@ -564,6 +569,7 @@ export const OperationWizardStep3Page: React.FC = () => {
                   steps={WIZARD_STEPS}
                   currentStep={2} // Step 3 es índice 2
                   onBack={() => navigate('/dashboard')}
+                  currencies={[incomingCurrency, outgoingCurrency]}
                 />
               </div>
             </section>

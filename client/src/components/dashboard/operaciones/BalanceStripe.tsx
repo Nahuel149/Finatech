@@ -5,14 +5,25 @@ import { TreasuryBalance } from '../../../types';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
 
-const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => ({
-  id: balance.id,
-  label: balance.label,
-  amount: balance.amount,
-  currency: balance.currency,
-  status: balance.status as StatusType,
-  updatedAt: balance.updatedAt,
-});
+const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
+  let label = balance.label;
+  if (balance.id === 'transfers') {
+    label = 'Transferencias (ARS)';
+  } else if (balance.id === 'cash') {
+    label = 'Efectivo (ARS)';
+  } else if (balance.id === 'usd') {
+    label = 'Caja (USD)';
+  }
+
+  return {
+    id: balance.id,
+    label,
+    amount: balance.amount,
+    currency: balance.currency,
+    status: balance.status as StatusType,
+    updatedAt: balance.updatedAt,
+  };
+};
 
 export const BalanceStripe: React.FC = () => {
   const navigate = useNavigate();
@@ -22,6 +33,14 @@ export const BalanceStripe: React.FC = () => {
     [balances]
   );
   const [showTooltip, setShowTooltip] = useState(false);
+  const mobileBalances = useMemo(() => {
+    const priority = ['transfers', 'cash', 'usd'];
+    const prioritized = priority
+      .map((id) => visibleBalances.find((balance) => balance.id === id))
+      .filter((balance): balance is TreasuryBalance => Boolean(balance));
+    const remaining = visibleBalances.filter((balance) => !priority.includes(balance.id));
+    return [...prioritized, ...remaining];
+  }, [visibleBalances]);
 
   useEffect(() => {
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
@@ -70,7 +89,7 @@ export const BalanceStripe: React.FC = () => {
       id="balance-stripe"
       className="fixed top-[55px] lg:top-[73px] left-0 right-0 bg-white border-b border-gray-200 z-40"
     >
-      <div className="px-4 py-4 lg:px-8 lg:py-6 xl:px-12 xl:py-8 relative">
+      <div className="px-4 py-3 lg:px-6 lg:py-4 xl:px-8 xl:py-5 relative">
         <div
           className="absolute right-4 top-4 lg:right-8 lg:top-6 xl:right-12 xl:top-8"
           onMouseEnter={handleShowTooltip}
@@ -105,7 +124,7 @@ export const BalanceStripe: React.FC = () => {
           )}
         </div>
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-3 lg:gap-4 xl:gap-6">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -121,6 +140,8 @@ export const BalanceStripe: React.FC = () => {
                 data={mapBalanceToCardData(balance)}
                 onClick={handleBalanceClick}
                 onRetry={refresh}
+                compact
+                highlightBySign
               />
             ))}
 
@@ -146,7 +167,7 @@ export const BalanceStripe: React.FC = () => {
 
         {/* Mobile Layout */}
         <div className="lg:hidden">
-          <div className="flex flex-col gap-3 md:gap-4">
+          <div className="flex flex-col gap-2 md:gap-3">
             {loading && (
               <>
                 {[0, 1, 2].map((i) => (
@@ -156,12 +177,14 @@ export const BalanceStripe: React.FC = () => {
             )}
 
             {!loading && !error &&
-              visibleBalances.map((balance: TreasuryBalance) => (
+              mobileBalances.map((balance: TreasuryBalance) => (
                 <BalanceCard
                   key={balance.id}
                   data={mapBalanceToCardData(balance)}
                   onClick={handleBalanceClick}
                   onRetry={refresh}
+                  compact
+                  highlightBySign
                 />
               ))}
 

@@ -256,6 +256,7 @@ export const Register: React.FC = () => {
                     type="text" 
                     id="fullName" 
                     name="fullName"
+                    autoComplete="name"
                     value={formData.fullName}
                     onChange={handleInputChange}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
@@ -273,12 +274,13 @@ export const Register: React.FC = () => {
                 {/* Email Field */}
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-text-primary mb-2 md:text-sm md:mb-2">
-                    Correo electrónico
+                    Email
                   </label>
                   <input 
                     type="email" 
                     id="email" 
                     name="email"
+                    autoComplete="email"
                     value={formData.email}
                     onChange={handleInputChange}
                     className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:text-sm"
@@ -303,6 +305,7 @@ export const Register: React.FC = () => {
                       type={showPassword ? "text" : "password"}
                       id="password" 
                       name="password"
+                      autoComplete="new-password"
                       value={formData.password}
                       onChange={handleInputChange}
                       className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly md:px-3 md:py-3 md:pr-10 md:text-sm"
@@ -357,6 +360,7 @@ export const Register: React.FC = () => {
                       type={showConfirmPassword ? "text" : "password"}
                       id="confirmPassword" 
                       name="confirmPassword"
+                      autoComplete="new-password"
                       value={formData.confirmPassword}
                       onChange={handleInputChange}
                       className="w-full px-3 py-3 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm mobile-input touch-friendly"

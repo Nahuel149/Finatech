@@ -119,6 +119,13 @@ const marginToneClasses = (value: number) => {
   return 'text-gray-600';
 };
 
+const formatRate = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return '—';
+  }
+  return Number(value).toFixed(2);
+};
+
 const SettlementSimple: React.FC<{ method?: string | null; amountLabel: string }> = ({
   method,
   amountLabel,
@@ -149,10 +156,8 @@ const SettlementCompound: React.FC<{
     <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
       <div className="px-4 py-3 bg-gray-50 border-b border-gray-200 text-sm font-medium text-gray-500 hidden md:block">
         <div className="grid grid-cols-12 gap-4">
-          <div className="col-span-4">Método</div>
-          <div className="col-span-3">Asignación</div>
-          <div className="col-span-3">Valor</div>
-          <div className="col-span-2">Equivalente</div>
+          <div className="col-span-6">Metodo</div>
+          <div className="col-span-6">Monto</div>
         </div>
       </div>
       <div className="divide-y divide-gray-200">
@@ -162,17 +167,9 @@ const SettlementCompound: React.FC<{
             className="px-4 py-3"
           >
             <div className="grid grid-cols-1 md:grid-cols-12 gap-4 text-sm text-gray-700">
-              <div className="md:col-span-4 font-medium text-text-primary">{line.method}</div>
-              <div className="md:col-span-3">
-                {line.allocationType === 'percentage'
-                  ? `${(Number(line.value) || 0).toFixed(1)}%`
-                  : `${formatCurrency(Number(line.value) || 0, line.currency)}`}
-              </div>
-              <div className="md:col-span-3 font-semibold text-text-primary">
+              <div className="md:col-span-6 font-medium text-text-primary">{line.method}</div>
+              <div className="md:col-span-6 font-semibold text-text-primary">
                 {formatCurrency(line.computedAmount, line.currency)}
-              </div>
-              <div className="md:col-span-2 font-semibold text-text-primary">
-                {line.computedPercentage.toFixed(1)}%
               </div>
             </div>
           </div>
@@ -182,13 +179,12 @@ const SettlementCompound: React.FC<{
     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
       <div className="flex items-center">
         <i className="fa-solid fa-info-circle mr-2" />
-        <span>La liquidación alcanza el 100% del monto acordado.</span>
+        <span>La liquidacion cubre el total del monto acordado.</span>
       </div>
       <div className="font-semibold text-blue-900">{amountLabel}</div>
     </div>
   </div>
 );
-
 export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
   clientName,
   clientDocument,
@@ -247,7 +243,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
           />
           <InlineItem
             label="TC Operación / Mercado"
-            value={`${apr.toFixed(2)} / ${marketApr.toFixed(2)}`}
+            value={`${formatRate(apr)} / ${formatRate(marketApr)}`}
           />
           <InlineItem
             label="Margen"
@@ -317,7 +313,7 @@ export const WizardCompleteSummary: React.FC<OperationSummaryProps> = ({
           </li>
           <li className="flex items-start">
             <i className="fa-solid fa-circle-check text-success mr-2 mt-1" />
-            <span>Liquidación totaliza el 100% del monto de la operación.</span>
+            <span>Liquidacion cubre el total del monto de la operacion.</span>
           </li>
           <li className="flex items-start">
             <i className="fa-solid fa-circle-check text-success mr-2 mt-1" />

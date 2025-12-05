@@ -129,7 +129,12 @@ export interface PasswordResetResponse {
 }
 
 export interface ConfigResponse {
-  googleClientId: string;
+  googleClientId: string | null;
+  googleMapsEnabled?: boolean;
+  locationIqEnabled?: boolean;
+  locationIqTilesKey?: string | null;
+  locationIqBaseTilesUrl?: string | null;
+  locationIqCountryCodes?: string | null;
 }
 
 export interface ApiError {

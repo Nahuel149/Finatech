@@ -32,7 +32,6 @@ const BALANCE_METADATA = {
   },
 };
 
-const TREASURY_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd', 'courier_in_transit']);
 const SUMMARY_EXCLUDED_ACCOUNT_KEYS = new Set(['cash', 'transfers', 'usd']);
 
 const LINKED_BALANCE_CONFIG = {

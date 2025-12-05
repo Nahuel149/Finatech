@@ -12,7 +12,6 @@ import {
   useLatestMarketRate,
 } from '../../../../hooks/dashboard';
 import { useUserPermissions } from '../../../../hooks';
-import { apiRequest, handleApiError } from '../../../../utils/api';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';
@@ -37,9 +36,9 @@ const VALIDATION_ITEMS = [
 ];
 
 const WIZARD_STEPS = [
-  { label: 'Datos', description: 'Información de la operación' },
-  { label: 'Liquidación', description: 'Método de pago' },
-  { label: 'Resumen', description: 'Confirmación final' },
+  { label: 'Datos', description: 'Información' },
+  { label: 'Liquidación', description: 'Pago' },
+  { label: 'Resumen', description: 'Confirmar' },
 ];
 
 const OWNER_OPTIONS = ['Operaciones', 'Tesorería', 'Comercial', 'Backoffice'];
@@ -184,23 +183,12 @@ export const OperationWizardStep1Page: React.FC = () => {
       ),
     [normalizedPermissions]
   );
-  const [useCustomMarketRate, setUseCustomMarketRate] = useState(false);
   const [autoMarketRate, setAutoMarketRate] = useState<number>(marketApr);
-  const { data: latestMarketRate, refresh: refreshMarketRate } = useLatestMarketRate({
+  const { data: latestMarketRate } = useLatestMarketRate({
     baseAsset: 'USD',
     quoteAsset: 'ARS',
-    enabled: canEditMarketRate && !useCustomMarketRate,
+    enabled: canEditMarketRate,
   });
-
-  useEffect(() => {
-    if (!canEditMarketRate && useCustomMarketRate) {
-      setUseCustomMarketRate(false);
-
-      if (Number.isFinite(autoMarketRate) && !ratesAreEqual(marketApr, autoMarketRate)) {
-        setMarketApr(autoMarketRate);
-      }
-    }
-  }, [autoMarketRate, canEditMarketRate, marketApr, useCustomMarketRate]);
 
   useEffect(() => {
     if (!latestMarketRate) {
@@ -216,10 +204,10 @@ export const OperationWizardStep1Page: React.FC = () => {
       setAutoMarketRate(normalizedRate);
     }
 
-    if (!useCustomMarketRate && !ratesAreEqual(marketApr, normalizedRate)) {
+    if (canEditMarketRate && !ratesAreEqual(marketApr, normalizedRate)) {
       setMarketApr(normalizedRate);
     }
-  }, [autoMarketRate, latestMarketRate, marketApr, useCustomMarketRate]);
+  }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate]);
 
   // Hydrate form with draft data when available
   useEffect(() => {
@@ -329,26 +317,34 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
 
   useEffect(() => {
-    const needsBuyCorrection =
-      operationType === 'buy' && incomingAssetCode === 'ARS' && outgoingAssetCode !== 'ARS';
-    const needsSellCorrection =
-      operationType === 'sell' && outgoingAssetCode === 'ARS' && incomingAssetCode !== 'ARS';
-
-    if (!needsBuyCorrection && !needsSellCorrection) {
-      return;
-    }
-
     const previousIncomingAmount = incomingAmount;
     const previousOutgoingAmount = outgoingAmount;
 
-    if (needsBuyCorrection) {
-      // Swap so the asset that entra is the foreign currency and the one that sale is ARS
-      setIncomingAssetCode(outgoingAssetCode);
-      setOutgoingAssetCode('ARS');
-      setIncomingAmount(previousOutgoingAmount);
-      setOutgoingAmount(previousIncomingAmount);
+    if (operationType === 'buy') {
+      const incomingIsArs = incomingAssetCode === 'ARS';
+      const outgoingIsArs = outgoingAssetCode === 'ARS';
+
+      if (incomingIsArs && !outgoingIsArs) {
+        setIncomingAssetCode(outgoingAssetCode);
+        setOutgoingAssetCode('ARS');
+        setIncomingAmount(previousOutgoingAmount);
+        setOutgoingAmount(previousIncomingAmount);
+        return;
+      }
+
+      if (incomingIsArs && outgoingIsArs) {
+        setIncomingAssetCode(ASSET_DEFAULTS.buy.incoming);
+        return;
+      }
+
+      if (!outgoingIsArs) {
+        setOutgoingAssetCode('ARS');
+      }
       return;
     }
+
+    const needsSellCorrection =
+      operationType === 'sell' && outgoingAssetCode === 'ARS' && incomingAssetCode !== 'ARS';
 
     if (needsSellCorrection) {
       // Swap so the asset that entra is ARS and the one that sale is the foreign currency
@@ -374,12 +370,27 @@ export const OperationWizardStep1Page: React.FC = () => {
     [],
   );
 
+  const assetOptions = useMemo(() => {
+    if (operationType === 'buy') {
+      return {
+        enter: ASSET_CATALOG.filter((option) => option.code !== 'ARS'),
+        exit: ASSET_CATALOG.filter((option) => option.code === 'ARS'),
+      };
+    }
+
+    return {
+      enter: ASSET_CATALOG,
+      exit: ASSET_CATALOG,
+    };
+  }, [operationType]);
+
   const amountLabels = useMemo(
     () => getAmountLabels(operationType, incomingAssetCode, outgoingAssetCode),
     [operationType, incomingAssetCode, outgoingAssetCode],
   );
 
-  const showSecondaryRates = outgoingAssetCode !== 'USD';
+  // Solo mostramos segunda tasa cuando la moneda de salida no es USD ni ARS
+  const showSecondaryRates = outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS';
 
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
@@ -489,21 +500,26 @@ export const OperationWizardStep1Page: React.FC = () => {
     setClientId(newClientId ?? '');
   }, []);
 
-  const handleToggleMarketRateMode = useCallback(
-    (enabled: boolean) => {
-      setUseCustomMarketRate(enabled);
-      if (!enabled) {
-        const fallbackRate = Number.isFinite(autoMarketRate)
-          ? autoMarketRate
-          : marketApr;
-
-        if (!ratesAreEqual(marketApr, fallbackRate)) {
-          setMarketApr(fallbackRate);
-        }
-        refreshMarketRate().catch(() => {});
+  const handleIncomingAssetChange = useCallback(
+    (code: string) => {
+      if (operationType === 'buy' && code === 'ARS') {
+        setIncomingAssetCode(ASSET_DEFAULTS.buy.incoming);
+        return;
       }
+      setIncomingAssetCode(code);
     },
-    [autoMarketRate, marketApr, refreshMarketRate],
+    [operationType],
+  );
+
+  const handleOutgoingAssetChange = useCallback(
+    (code: string) => {
+      if (operationType === 'buy') {
+        setOutgoingAssetCode('ARS');
+        return;
+      }
+      setOutgoingAssetCode(code);
+    },
+    [operationType],
   );
 
   const handleNewClientCreated = useCallback(
@@ -523,11 +539,16 @@ export const OperationWizardStep1Page: React.FC = () => {
   const handleCloseNewClientModal = useCallback(() => {
     setIsNewClientModalOpen(false);
   }, []);
+
+  const handleEditClient = useCallback(() => {
+    if (!clientId) return;
+    navigate(`/dashboard/clientes/${clientId}`);
+  }, [clientId, navigate]);
   
   const validateForm = useCallback(() => {
     devLog('validateForm - clientId:', clientId, 'type:', typeof clientId);
     if (!clientId) {
-      setFormError('Seleccioná un cliente antes de continuar.');
+      setFormError('Seleccion? un cliente antes de continuar.');
       return false;
     }
     if (!Number.isFinite(apr) || apr <= 0) {
@@ -542,34 +563,23 @@ export const OperationWizardStep1Page: React.FC = () => {
       setFormError('El monto de entrada debe ser mayor a 0.');
       return false;
     }
+    if (operationType === 'buy' && incomingAssetCode === 'ARS') {
+      setFormError('En compras, el activo de entrada debe ser distinto de ARS.');
+      return false;
+    }
+    if (operationType === 'buy' && outgoingAssetCode !== 'ARS') {
+      setFormError('En compras, el activo de salida debe ser ARS.');
+      return false;
+    }
     setFormError(null);
     return true;
-  }, [apr, clientId, incomingAmount, marketApr]);
+  }, [apr, clientId, incomingAmount, incomingAssetCode, marketApr, operationType, outgoingAssetCode]);
 
   const executeSave = useCallback(
     async (navigateToNext: boolean) => {
       try {
         const payload = buildPayload();
         const savedDraft = await saveDraft(payload);
-
-        if (useCustomMarketRate && canEditMarketRate) {
-          try {
-            await apiRequest('/api/rates/market', {
-              method: 'PUT',
-              body: {
-                baseAsset: 'USD',
-                quoteAsset: 'ARS',
-                rate: Number(marketApr),
-                validFrom: new Date().toISOString(),
-                source: 'MANUAL',
-              },
-            });
-          } catch (err) {
-            const apiError = handleApiError(err);
-            setFormError(apiError.message || 'No pudimos registrar la tasa personalizada.');
-            return;
-          }
-        }
 
         if (navigateToNext) {
           setSuccessMessage('Datos guardados. Continuando al siguiente paso...');
@@ -593,9 +603,6 @@ export const OperationWizardStep1Page: React.FC = () => {
     [
       buildPayload,
       saveDraft,
-      useCustomMarketRate,
-      canEditMarketRate,
-      marketApr,
       setFormError,
       setSuccessMessage,
       navigate,
@@ -650,6 +657,7 @@ export const OperationWizardStep1Page: React.FC = () => {
           steps={WIZARD_STEPS}
           currentStep={0}
           onBack={() => navigate('/dashboard')}
+          currencies={[incomingAssetCode, outgoingAssetCode]}
         />
 
         {(formError || draftError || clientsError) && (
@@ -677,7 +685,7 @@ export const OperationWizardStep1Page: React.FC = () => {
 
         <section
           id="step-1-data"
-          className="relative bg-white rounded-lg border border-gray-200 shadow-sm p-4 sm:p-6 lg:p-8"
+          className="relative p-0 lg:p-8 bg-transparent lg:bg-white lg:rounded-lg lg:border lg:border-gray-200 lg:shadow-sm"
         >
           {busy && (
             <div className="absolute inset-0 bg-white bg-opacity-75 z-10 flex flex-col items-center justify-center rounded-lg">
@@ -687,35 +695,42 @@ export const OperationWizardStep1Page: React.FC = () => {
           )}
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-            <div>
-              <ClientSelection
-                value={clientId}
-                onChange={handleClientChange}
-                clients={clients}
-                onNewClient={handleOpenNewClientModal}
-                onSearch={searchClients}
-                marginInfo={marginInfo}
-                loading={clientsLoading}
-                error={clientsError?.message || null}
-              />
+            <div className="space-y-4">
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4 sm:p-5 lg:p-0 lg:border-0 lg:shadow-none lg:bg-transparent">
+                <ClientSelection
+                  value={clientId}
+                  onChange={handleClientChange}
+                  clients={clients}
+                  onNewClient={handleOpenNewClientModal}
+                  onEditClient={handleEditClient}
+                  onSearch={searchClients}
+                  marginInfo={marginInfo}
+                  loading={clientsLoading}
+                  error={clientsError?.message || null}
+                />
+              </div>
 
-              <OperationTypeSelector
-                value={operationType}
-                onChange={handleOperationTypeChange}
-                disabled={busy}
-              />
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4 sm:p-5 lg:p-0 lg:border-0 lg:shadow-none lg:bg-transparent">
+                <OperationTypeSelector
+                  value={operationType}
+                  onChange={handleOperationTypeChange}
+                  disabled={busy}
+                />
+              </div>
 
-              <AssetSelection
-                enterValue={incomingAssetCode}
-                exitValue={outgoingAssetCode}
-                enterOptions={ASSET_CATALOG}
-                exitOptions={ASSET_CATALOG}
-                onEnterChange={setIncomingAssetCode}
-                onExitChange={setOutgoingAssetCode}
-                enterLabel={assetLabels.enter}
-                exitLabel={assetLabels.exit}
-                disabled={busy}
-              />
+              <div className="rounded-lg border border-gray-200 bg-white shadow-sm p-4 sm:p-5 lg:p-0 lg:border-0 lg:shadow-none lg:bg-transparent">
+                <AssetSelection
+                  enterValue={incomingAssetCode}
+                  exitValue={outgoingAssetCode}
+                  enterOptions={assetOptions.enter}
+                  exitOptions={assetOptions.exit}
+                  onEnterChange={handleIncomingAssetChange}
+                  onExitChange={handleOutgoingAssetChange}
+                  enterLabel={assetLabels.enter}
+                  exitLabel={assetLabels.exit}
+                  disabled={busy}
+                />
+              </div>
 
             </div>
 
@@ -730,10 +745,7 @@ export const OperationWizardStep1Page: React.FC = () => {
                 assetMarketRate={secondaryMarketRate}
                 assetLabel={secondaryAssetLabel}
                 showSecondaryRates={showSecondaryRates}
-                canEditMarketRate={canEditMarketRate}
-                useCustomMarketRate={useCustomMarketRate}
-                onToggleMarketRateMode={handleToggleMarketRateMode}
-                disabled={busy}
+                disabled={busy || !canEditMarketRate}
               />
               <AmountSection
                 enterAmount={incomingAmount}

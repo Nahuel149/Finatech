@@ -48,6 +48,28 @@ const normalizeAsset = ({ code, label }) => {
   };
 };
 
+const validateAssetDirection = (type, incomingAsset, outgoingAsset) => {
+  const normalizedType = String(type || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
+  const incomingCode = String(incomingAsset?.code || '').trim().toUpperCase();
+  const outgoingCode = String(outgoingAsset?.code || '').trim().toUpperCase();
+
+  if (normalizedType !== 'buy') {
+    return;
+  }
+
+  if (!incomingCode || !outgoingCode) {
+    throw new Error('Asset codes are required');
+  }
+
+  if (incomingCode === 'ARS') {
+    throw new Error('Una operaci��n de compra debe recibir un activo distinto de ARS.');
+  }
+
+  if (outgoingCode !== 'ARS') {
+    throw new Error('Una operaci��n de compra debe pagar en ARS.');
+  }
+};
+
 const stripDiacritics = (value = '') =>
   String(value)
     .normalize('NFD')
@@ -363,6 +385,7 @@ const createTransactionDraft = async (payload, context = {}) => {
   if (!Number.isFinite(numericApr) || !Number.isFinite(numericMarketApr)) {
     throw new Error('APR values are required');
   }
+  validateAssetDirection(type, incoming, outgoing);
   if (
     !Number.isFinite(numericIncoming) ||
     numericIncoming <= 0 ||
@@ -481,6 +504,7 @@ const updateTransactionDraft = async (id, payload = {}, context = {}) => {
   if (!Number.isFinite(numericApr) || !Number.isFinite(numericMarketApr)) {
     throw new Error('APR values are required');
   }
+  validateAssetDirection(type, incoming, outgoing);
   if (!Number.isFinite(numericIncoming) || numericIncoming <= 0) {
     throw new Error('Incoming amount must be greater than 0');
   }
@@ -744,6 +768,7 @@ const finalizeTransaction = async (id, context = {}) => {
         return;
       }
 
+      validateAssetDirection(transaction.type, transaction.incomingAsset, transaction.outgoingAsset);
       validateTransactionForFinalization(transaction);
 
       transaction.status = 'registered';
@@ -893,6 +918,7 @@ module.exports = {
     stripDiacritics,
     mapSettlementMethodToMovementType,
     resolveSettlementSlices,
+    validateAssetDirection,
   },
   voidTransaction,
 };

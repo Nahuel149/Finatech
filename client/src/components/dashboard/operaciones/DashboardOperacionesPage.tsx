@@ -7,9 +7,11 @@ import { RecentValidations } from './RecentValidations';
 import { RecentOperationsTable } from './RecentOperationsTable';
 import { DashboardFooter } from './Footer';
 import { TransferPesosModal } from './TransferPesosModal';
+import { OperationsReportPanel } from './OperationsReportPanel';
 export const DashboardOperacionesPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [transferOpen, setTransferOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -22,7 +24,10 @@ export const DashboardOperacionesPage: React.FC = () => {
         className="flex-grow pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-8"
       >
         {/* Header */}
-        <OperationsHeader onTransferPesos={() => setTransferOpen(true)} />
+        <OperationsHeader
+          onTransferPesos={() => setTransferOpen(true)}
+          onOpenReport={() => setReportOpen(true)}
+        />
 
         {/* Shortcut cards */}
         <FlowShortcuts />
@@ -47,6 +52,7 @@ export const DashboardOperacionesPage: React.FC = () => {
 
       {/* Transfer pesos modal */}
       <TransferPesosModal open={transferOpen} onClose={() => setTransferOpen(false)} />
+      <OperationsReportPanel open={reportOpen} onClose={() => setReportOpen(false)} />
     </div>
   );
 };

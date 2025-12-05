@@ -86,7 +86,7 @@ const requestCsrfToken = async () => {
   }
 };
 
-const ensureCsrfCookie = async ({ force = false }: { force?: boolean } = {}) => {
+export const ensureCsrfCookie = async ({ force = false }: { force?: boolean } = {}) => {
   if (typeof window === 'undefined') {
     return;
   }
@@ -104,9 +104,19 @@ const ensureCsrfCookie = async ({ force = false }: { force?: boolean } = {}) => 
   await csrfFetchPromise;
 };
 
-const forceRefreshCsrfCookie = async () => {
+export const forceRefreshCsrfCookie = async () => {
   csrfTokenCache = null;
   await ensureCsrfCookie({ force: true });
+};
+
+// Allow callers to proactively fetch the CSRF cookie on app start
+export const prefetchCsrfToken = async () => {
+  try {
+    await ensureCsrfCookie();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.warn('No se pudo prefetchear la cookie CSRF:', error);
+  }
 };
 
 // Default headers for API requests
@@ -388,6 +398,8 @@ export const api = {
   // Configuration
   getConfig: () =>
     apiRequest('/api/config'),
+  geocodeAddress: (query: string) =>
+    apiRequest('/api/location/geocode' + buildQueryString({ query })),
     
   // User profile
   getProfile: () =>

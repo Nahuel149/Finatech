@@ -25,11 +25,12 @@ import { SettlementProgress } from './SettlementProgress';
 import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
+import { ArsPositionAside } from './ArsPositionAside';
 
 const WIZARD_STEPS = [
-  { label: 'Datos', description: 'Información de la operación' },
-  { label: 'Liquidación', description: 'Método de pago' },
-  { label: 'Resumen', description: 'Confirmación final' },
+  { label: 'Datos', description: 'Información' },
+  { label: 'Liquidación', description: 'Pago' },
+  { label: 'Resumen', description: 'Confirmar' },
 ];
 
 const SETTLEMENT_METHODS = ['Efectivo', 'Transferencia', 'Depósito en banco'];
@@ -37,7 +38,7 @@ const DEFAULT_SIMPLE_METHOD = SETTLEMENT_METHODS[0];
 const createCompoundLine = (method: string = ''): CompoundLine => ({
   id: `line-${Math.random().toString(36).slice(2, 9)}`,
   method,
-  allocationType: 'percentage',
+  allocationType: 'amount',
   value: null,
 });
 
@@ -132,14 +133,24 @@ export const OperationWizardStep2Page: React.FC = () => {
         setSimpleMethod(newMethod);
       }
 
+      const draftBaseAmount =
+        draft.type === 'buy'
+          ? Number(draft.outgoingAmount)
+          : Number(draft.incomingAmount);
+
       if (draft.settlement?.mode === 'compound' && draft.settlement.lines.length > 0) {
-        const newCompoundLines = draft.settlement.lines.map((line, index) => {
+        const newCompoundLines: CompoundLine[] = draft.settlement.lines.map((line, index) => {
           const numericValue = Number(line.value);
+          const isPercent = line.allocationType === 'percentage';
+          const normalizedAmount =
+            isPercent && Number.isFinite(draftBaseAmount) && draftBaseAmount > 0
+              ? (numericValue / 100) * draftBaseAmount
+              : numericValue;
           return {
             id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
             method: line.method,
-            allocationType: line.allocationType,
-            value: Number.isFinite(numericValue) ? numericValue : null,
+            allocationType: 'amount' as const,
+            value: Number.isFinite(normalizedAmount) ? normalizedAmount : null,
           };
         });
         
@@ -148,7 +159,6 @@ export const OperationWizardStep2Page: React.FC = () => {
             compoundLines.some((line, index) => 
               !newCompoundLines[index] || 
               line.method !== newCompoundLines[index].method ||
-              line.allocationType !== newCompoundLines[index].allocationType ||
               line.value !== newCompoundLines[index].value
             )) {
           setCompoundLines(newCompoundLines);
@@ -199,16 +209,12 @@ export const OperationWizardStep2Page: React.FC = () => {
 
   const computedLines = useMemo(() => {
     const result: Record<string, CompoundComputed> = {};
-    const safeBase = baseAmount > 0 ? baseAmount : 1;
+    const safeBase = baseAmount > 0 ? baseAmount : 0;
 
     compoundLines.forEach((line) => {
-      const rawValue = typeof line.value === 'number' ? line.value : Number(line.value) || 0;
-      const percentage = line.allocationType === 'percentage'
-        ? rawValue
-        : (rawValue / safeBase) * 100;
-      const amount = line.allocationType === 'percentage'
-        ? (rawValue / 100) * safeBase
-        : rawValue;
+      const rawValue = typeof line.value === 'number' ? line.value : Number(line.value);
+      const amount = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : 0;
+      const percentage = safeBase > 0 ? (amount / safeBase) * 100 : 0;
 
       result[line.id] = {
         percentage: Number.isFinite(percentage) ? percentage : 0,
@@ -219,13 +225,6 @@ export const OperationWizardStep2Page: React.FC = () => {
     return result;
   }, [baseAmount, compoundLines]);
 
-  const totalPercentage = useMemo(() => {
-    return compoundLines.reduce((acc, line) => {
-      const info = computedLines[line.id];
-      return acc + (info ? info.percentage : 0);
-    }, 0);
-  }, [compoundLines, computedLines]);
-
   const totalAmountAllocated = useMemo(() => {
     return compoundLines.reduce((acc, line) => {
       const info = computedLines[line.id];
@@ -234,16 +233,18 @@ export const OperationWizardStep2Page: React.FC = () => {
   }, [compoundLines, computedLines]);
 
   const remainingAmount = Math.max(baseAmount - totalAmountAllocated, 0);
-
-  const isCompoundComplete = Math.abs(totalPercentage - 100) <= 0.1;
+  const excessAmount = Math.max(totalAmountAllocated - baseAmount, 0);
+  const completionTolerance = baseAmount > 0 ? Math.max(baseAmount * 0.0001, 0.01) : 0;
+  const isCompoundComplete =
+    baseAmount > 0 && Math.abs(totalAmountAllocated - baseAmount) <= completionTolerance;
   const hasCompoundLines = compoundLines.length > 0;
 
   const progressTone = !hasCompoundLines
     ? 'neutral'
+    : excessAmount > 0
+    ? 'error'
     : isCompoundComplete
     ? 'success'
-    : totalPercentage > 100
-    ? 'error'
     : 'neutral';
 
   const operationLabel = useMemo(() => {
@@ -256,11 +257,11 @@ export const OperationWizardStep2Page: React.FC = () => {
   const totalLabel = formatAmount(baseAmount);
 
   const progressMessage = !hasCompoundLines
-    ? 'Ingresá los métodos de liquidación para completar el 100%'
+    ? 'Ingresa los metodos de liquidacion con sus montos.'
     : isCompoundComplete
-    ? '¡Perfecto! La liquidación alcanza el 100%.'
-    : totalPercentage > 100
-    ? `Te excediste en ${(totalPercentage - 100).toFixed(1)}%. Ajustá los valores.`
+    ? 'Listo, la liquidacion cubre el total acordado.'
+    : excessAmount > 0
+    ? `Te excediste en ${formatAmount(excessAmount)}. Ajusta los montos.`
     : `Restan ${formatAmount(remainingAmount)} para completar ${totalLabel}.`;
 
   const clientName = useMemo(() => {
@@ -324,7 +325,7 @@ export const OperationWizardStep2Page: React.FC = () => {
     }
 
     if (!isCompoundComplete) {
-      setFormError('Necesitás asignar exactamente el 100% de la operación.');
+      setFormError('Necesitas asignar el total del monto de la operacion.');
       return false;
     }
 
@@ -360,7 +361,7 @@ export const OperationWizardStep2Page: React.FC = () => {
               mode: 'compound',
               lines: compoundLines.map((line) => ({
                 method: line.method,
-                allocationType: line.allocationType,
+                allocationType: 'amount',
                 value: Number(line.value),
               })),
             };
@@ -431,6 +432,7 @@ export const OperationWizardStep2Page: React.FC = () => {
           steps={WIZARD_STEPS}
           currentStep={1}
           onBack={() => navigate('/dashboard')}
+          currencies={[incomingCurrency, outgoingCurrency]}
         />
 
         {draftError && (
@@ -469,47 +471,61 @@ export const OperationWizardStep2Page: React.FC = () => {
               </div>
             )}
 
-            <OperationSummary
-              clientName={clientName}
-              operationLabel={operationLabel}
-              amountLabel={totalLabel}
-              onEdit={handleBack}
-            />
+            <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6">
+              <div className="flex-1 space-y-6">
+                <OperationSummary
+                  clientName={clientName}
+                  operationLabel={operationLabel}
+                  amountLabel={totalLabel}
+                  onEdit={handleBack}
+                />
 
-            <SettlementModeSelector
-              mode={settlementMode}
-              onChange={handleModeChange}
-              disabled={busy}
-            />
-
-            {settlementMode === 'simple' ? (
-              <SimpleSettlementForm
-                methods={SETTLEMENT_METHODS}
-                selectedMethod={simpleMethod}
-                onMethodChange={handleSimpleMethodChange}
-                totalLabel={totalLabel}
-                disabled={busy}
-              />
-            ) : (
-              <>
-                <CompoundSettlementForm
-                  lines={compoundLines}
-                  computed={computedLines}
-                  methods={SETTLEMENT_METHODS}
-                  onLineChange={handleLineChange}
-                  onRemoveLine={handleRemoveLine}
-                  onAddLine={handleAddLine}
-                  baseCurrencyLabel={totalLabel}
+                <SettlementModeSelector
+                  mode={settlementMode}
+                  onChange={handleModeChange}
                   disabled={busy}
-                  formatAmount={(amount) => `${formatCurrency(amount, baseCurrency)} ${baseCurrency}`}
                 />
-                <SettlementProgress
-                  percentage={hasCompoundLines ? totalPercentage : 0}
-                  message={progressMessage}
-                  tone={progressTone}
-                />
-              </>
-            )}
+
+                {settlementMode === 'simple' ? (
+                  <SimpleSettlementForm
+                    methods={SETTLEMENT_METHODS}
+                    selectedMethod={simpleMethod}
+                    onMethodChange={handleSimpleMethodChange}
+                    totalLabel={totalLabel}
+                    disabled={busy}
+                  />
+                ) : (
+                  <>
+                    <CompoundSettlementForm
+                      lines={compoundLines}
+                      computed={computedLines}
+                      methods={SETTLEMENT_METHODS}
+                      onLineChange={handleLineChange}
+                      onRemoveLine={handleRemoveLine}
+                      onAddLine={handleAddLine}
+                      baseCurrencyLabel={totalLabel}
+                      disabled={busy}
+                      formatAmount={(amount) => `${formatCurrency(amount, baseCurrency)} ${baseCurrency}`}
+                    />
+                    <SettlementProgress
+                      allocatedAmount={totalAmountAllocated}
+                      targetAmount={baseAmount}
+                      message={progressMessage}
+                      tone={progressTone}
+                      formatAmount={formatAmount}
+                    />
+                  </>
+                )}
+              </div>
+
+              <ArsPositionAside
+                incomingAmount={incomingAmount}
+                outgoingAmount={outgoingAmount}
+                incomingCurrency={incomingCurrency}
+                outgoingCurrency={outgoingCurrency}
+                apr={draft?.apr ?? null}
+              />
+            </div>
 
             <WizardActions
               onBack={handleBack}

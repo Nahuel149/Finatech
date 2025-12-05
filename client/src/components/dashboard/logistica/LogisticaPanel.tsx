@@ -127,7 +127,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
           )}
         </div>
         {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-4 lg:gap-6 xl:gap-8">
+        <div className="hidden lg:grid lg:grid-cols-3 gap-3 lg:gap-4 xl:gap-6">
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -143,6 +143,8 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
                 data={mapBalanceToCardData(balance)}
                 onClick={onBalanceClick}
                 onRetry={refresh}
+                compact
+                highlightBySign
               />
             ))}
 
@@ -170,7 +172,7 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
 
         {/* Mobile Layout */}
         <div className="lg:hidden">
-          <div className="flex flex-col gap-3 md:gap-4">
+          <div className="flex flex-col gap-2 md:gap-3">
             {loading && (
               <>
                 {[0, 1, 2].map((i) => (
@@ -186,6 +188,8 @@ const LogisticsBalanceStripe: React.FC<LogisticsBalanceStripeProps> = ({
                   data={mapBalanceToCardData(balance)}
                   onClick={onBalanceClick}
                   onRetry={refresh}
+                  compact
+                  highlightBySign
                 />
               ))}
 
