@@ -63,46 +63,50 @@ export const ExchangeRatesSection: React.FC<Props> = ({
     {showSecondaryRates && (
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="break-words leading-tight">TC operacion {assetLabel} a USD</span>
+          <label className="block text-sm font-medium text-text-primary mb-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="leading-tight">TC operacion {assetLabel} a USD</span>
               <i
-                className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help"
+                className="fa-solid fa-info-circle text-gray-400 cursor-help shrink-0"
                 title={`Doble cambio via USD - Como ${assetLabel} no es USD, se requiere puente USD. Se muestran las tasas: ${assetLabel} a USD y USD a ARS mercado.`}
               />
             </div>
-        </label>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={assetRate}
-          onChange={(event) => onAssetRateChange(event.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled}
-          autoComplete="off"
-          placeholder="0,00"
-        />
+          </label>
+          <div className="flex items-start gap-2 mb-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={assetRate}
+              onChange={(event) => onAssetRateChange(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={disabled}
+              autoComplete="off"
+              placeholder="0,00"
+            />
+          </div>
         </div>
         <div>
-          <label className="block text-sm font-medium text-text-primary mb-2">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="break-words leading-tight">TC mercado {assetLabel} a USD</span>
+          <label className="block text-sm font-medium text-text-primary mb-1">
+            <div className="flex items-center gap-1 flex-wrap">
+              <span className="leading-tight">TC mercado {assetLabel} a USD</span>
               <i
-                className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help"
+                className="fa-solid fa-info-circle text-gray-400 cursor-help shrink-0"
                 title={`Doble cambio via USD - Como ${assetLabel} no es USD, se requiere puente USD. Se muestran las tasas: ${assetLabel} a USD y USD a ARS mercado.`}
               />
             </div>
-        </label>
-        <input
-          type="text"
-          inputMode="decimal"
-          value={assetMarketRate}
-          onChange={(event) => onAssetMarketRateChange(event.target.value)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled}
-          autoComplete="off"
-          placeholder="0,00"
-        />
+          </label>
+          <div className="flex items-start gap-2 mb-2">
+            <input
+              type="text"
+              inputMode="decimal"
+              value={assetMarketRate}
+              onChange={(event) => onAssetMarketRateChange(event.target.value)}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              disabled={disabled}
+              autoComplete="off"
+              placeholder="0,00"
+            />
+          </div>
         </div>
       </div>
     )}

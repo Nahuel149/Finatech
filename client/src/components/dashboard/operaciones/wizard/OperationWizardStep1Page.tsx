@@ -124,7 +124,7 @@ const normalizeRateInput = (value: string) => {
   if (!trimmed) return '';
 
   const cleaned = trimmed.replace(/[^\d.,]/g, '');
-  const firstSeparatorMatch = cleaned.match(/[,\.]/);
+  const firstSeparatorMatch = cleaned.match(/[,.]/);
   if (!firstSeparatorMatch) {
     return cleaned;
   }
@@ -192,6 +192,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
   const [secondaryRate, setSecondaryRate] = useState<number>(1);
   const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(1);
+  const secondaryRateEditedRef = useRef(false);
   const [aprInput, setAprInput] = useState<string>(formatRateInput(apr));
   const [marketAprInput, setMarketAprInput] = useState<string>(formatRateInput(marketApr));
   const [secondaryRateInput, setSecondaryRateInput] = useState<string>(formatRateInput(secondaryRate));
@@ -214,6 +215,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     setMarketApr(parseRateInput(normalized));
   }, []);
   const handleSecondaryRateInputChange = useCallback((value: string) => {
+    secondaryRateEditedRef.current = true;
     const normalized = normalizeRateInput(value);
     setSecondaryRateInput(normalized);
     setSecondaryRate(parseRateInput(normalized));
@@ -500,6 +502,11 @@ const canEditMarketRate = useMemo(
   }, [incomingAssetCode, outgoingAssetCode]);
 
   const showSecondaryRates = Boolean(secondaryAssetCode);
+  const { data: latestSecondaryMarketRate } = useLatestMarketRate({
+    baseAsset: secondaryAssetCode || 'USD',
+    quoteAsset: 'USD',
+    enabled: showSecondaryRates && Boolean(secondaryAssetCode),
+  });
 
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
@@ -547,24 +554,57 @@ const canEditMarketRate = useMemo(
   );
 
   useEffect(() => {
-    if (!showSecondaryRates) {
+    if (!showSecondaryRates || !secondaryAssetCode) {
       return;
     }
-    if (secondaryAssetCode) {
-      const cached = lastSecondaryRates.current.get(secondaryAssetCode);
-      if (cached) {
-        setSecondaryRate(cached.rate);
-        setSecondaryMarketRate(cached.marketRate);
-        setSecondaryRateInput(formatRateInput(cached.rate));
-        setSecondaryMarketRateInput(formatRateInput(cached.marketRate));
-      } else {
-        setSecondaryRate(1);
-        setSecondaryMarketRate(1);
-        setSecondaryRateInput(formatRateInput(1));
-        setSecondaryMarketRateInput(formatRateInput(1));
-      }
+
+    secondaryRateEditedRef.current = false;
+
+    const cached = lastSecondaryRates.current.get(secondaryAssetCode);
+    const liveMarket = Number(latestSecondaryMarketRate?.rate);
+    const hasLiveMarket = Number.isFinite(liveMarket);
+
+    const nextMarket = hasLiveMarket
+      ? liveMarket
+      : cached?.marketRate ?? 1;
+    const nextOperationRate = hasLiveMarket
+      ? liveMarket
+      : cached?.rate ?? nextMarket;
+
+    setSecondaryMarketRate(nextMarket);
+    setSecondaryMarketRateInput(formatRateInput(nextMarket));
+    setSecondaryRate(nextOperationRate);
+    setSecondaryRateInput(formatRateInput(nextOperationRate));
+
+    lastSecondaryRates.current.set(secondaryAssetCode, {
+      rate: nextOperationRate,
+      marketRate: nextMarket,
+    });
+  }, [secondaryAssetCode, showSecondaryRates, latestSecondaryMarketRate]);
+
+  useEffect(() => {
+    if (!showSecondaryRates || !secondaryAssetCode) {
+      return;
     }
-  }, [secondaryAssetCode, showSecondaryRates]);
+
+    const liveMarket = Number(latestSecondaryMarketRate?.rate);
+    if (!Number.isFinite(liveMarket)) {
+      return;
+    }
+
+    setSecondaryMarketRate(liveMarket);
+    setSecondaryMarketRateInput(formatRateInput(liveMarket));
+
+    if (!secondaryRateEditedRef.current) {
+      setSecondaryRate(liveMarket);
+      setSecondaryRateInput(formatRateInput(liveMarket));
+    }
+
+    lastSecondaryRates.current.set(secondaryAssetCode, {
+      rate: secondaryRateEditedRef.current ? secondaryRate : liveMarket,
+      marketRate: liveMarket,
+    });
+  }, [latestSecondaryMarketRate, secondaryAssetCode, showSecondaryRates, secondaryRate]);
 
   useEffect(() => {
     if (showSecondaryRates && secondaryAssetCode) {
