@@ -1,95 +1,16 @@
 const Client = require('../models/Client');
+const Transaction = require('../models/Transaction');
 const { ensureContactBalance } = require('./currentAccount.service');
 
-const SAMPLE_CLIENTS = [
-  {
-    firstName: 'Cliente',
-    lastName: 'Alpha',
-    internalOwner: 'Ana Fernández',
-    contactType: 'client',
-    fullName: 'Cliente Alpha',
-    shortName: 'Cliente Alpha',
-    cuit: '20-12345678-9',
-    email: 'alpha@example.com',
-    phone: '+54 11 4567-1234',
-    lastMarginPercentage: 2.5,
-    primaryAddress: {
-      formatted: 'Av. Corrientes 1234, CABA, Argentina',
-      description: 'Av. Corrientes 1234, CABA, Argentina',
-    },
-  },
-  {
-    firstName: 'Cliente',
-    lastName: 'Beta',
-    internalOwner: 'Carlos Gómez',
-    contactType: 'client',
-    fullName: 'Cliente Beta',
-    shortName: 'Cliente Beta',
-    cuit: '20-98765432-1',
-    email: 'beta@example.com',
-    phone: '+54 11 4567-5678',
-    lastMarginPercentage: 1.8,
-    primaryAddress: {
-      formatted: 'Av. Santa Fe 4321, CABA, Argentina',
-      description: 'Av. Santa Fe 4321, CABA, Argentina',
-    },
-  },
-  {
-    firstName: 'Cliente',
-    lastName: 'Gamma',
-    internalOwner: 'Lucía Martínez',
-    contactType: 'client',
-    fullName: 'Cliente Gamma',
-    shortName: 'Cliente Gamma',
-    cuit: '20-11223344-5',
-    email: 'gamma@example.com',
-    phone: '+54 11 5555-1234',
-    lastMarginPercentage: 3.2,
-  },
-  {
-    firstName: 'Proveedor',
-    lastName: 'Delta',
-    internalOwner: 'Pedro López',
-    contactType: 'provider',
-    fullName: 'Proveedor Delta',
-    shortName: 'Proveedor Delta',
-    cuit: '20-55667788-9',
-    email: 'delta@example.com',
-    phone: '+54 11 5555-5678',
-    lastMarginPercentage: -0.5,
-  },
-  {
-    firstName: 'Proveedor',
-    lastName: 'Epsilon',
-    internalOwner: 'María Núñez',
-    contactType: 'provider',
-    fullName: 'Proveedor Epsilon',
-    shortName: 'Proveedor Epsilon',
-    cuit: '20-99887766-4',
-    email: 'epsilon@example.com',
-    phone: '+54 11 4444-1357',
-    lastMarginPercentage: 2.1,
-  },
+const MOCK_SAMPLE_CUITS = [
+  '20-12345678-9',
+  '20-98765432-1',
+  '20-11223344-5',
+  '20-55667788-9',
+  '20-99887766-4',
 ];
 
 const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
-const ensureSampleClients = async () => {
-  const total = await Client.estimatedDocumentCount();
-  if (total > 0) {
-    return;
-  }
-
-  const operations = SAMPLE_CLIENTS.map((client) => ({
-    updateOne: {
-      filter: { cuit: client.cuit },
-      update: { $setOnInsert: client },
-      upsert: true,
-    },
-  }));
-
-  await Client.bulkWrite(operations, { ordered: false });
-};
 
 const toTitleCase = (value) =>
   value
@@ -152,9 +73,10 @@ const formatClient = (client) => {
 };
 
 const searchClients = async ({ query, limit = 10 } = {}) => {
-  await ensureSampleClients();
-
-  const filter = { status: 'active' };
+  const filter = {
+    status: 'active',
+    cuit: { $nin: MOCK_SAMPLE_CUITS },
+  };
 
   if (query) {
     const pattern = new RegExp(escapeRegex(query), 'i');
@@ -168,12 +90,74 @@ const searchClients = async ({ query, limit = 10 } = {}) => {
   }
 
   const clients = await Client.find(filter).sort({ fullName: 1 }).limit(limit).lean();
-  return clients.map(formatClient);
+
+  const missingMarginIds = clients
+    .filter((client) => !Number.isFinite(Number(client.lastMarginPercentage)))
+    .map((client) => client._id);
+
+  let latestMarginsByClient = {};
+  if (missingMarginIds.length > 0) {
+    const latestMargins = await Transaction.aggregate([
+      {
+        $match: {
+          client: { $in: missingMarginIds },
+          status: 'registered',
+          marginPercentage: { $ne: null },
+        },
+      },
+      {
+        $sort: { completedAt: -1, updatedAt: -1, createdAt: -1 },
+      },
+      {
+        $group: {
+          _id: '$client',
+          lastMarginPercentage: { $first: '$marginPercentage' },
+        },
+      },
+    ]);
+
+    latestMarginsByClient = latestMargins.reduce((acc, item) => {
+      acc[item._id.toString()] = item.lastMarginPercentage;
+      return acc;
+    }, {});
+  }
+
+  return clients.map((client) => {
+    const formatted = formatClient(client);
+    if (!Number.isFinite(Number(formatted.lastMarginPercentage))) {
+      const fallbackMargin = latestMarginsByClient[client._id.toString()];
+      if (Number.isFinite(Number(fallbackMargin))) {
+        formatted.lastMarginPercentage = Number(fallbackMargin);
+      }
+    }
+    return formatted;
+  });
 };
 
 const getClientById = async (id) => {
   const client = await Client.findById(id).lean();
-  return formatClient(client);
+  if (!client) {
+    return null;
+  }
+
+  let lastMargin = client.lastMarginPercentage;
+  if (!Number.isFinite(Number(lastMargin))) {
+    const lastTransaction = await Transaction.findOne({
+      client: client._id,
+      status: 'registered',
+      marginPercentage: { $ne: null },
+    })
+      .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 })
+      .lean();
+
+    if (lastTransaction && Number.isFinite(Number(lastTransaction.marginPercentage))) {
+      lastMargin = Number(lastTransaction.marginPercentage);
+    }
+  }
+
+  const formatted = formatClient(client);
+  formatted.lastMarginPercentage = Number.isFinite(Number(lastMargin)) ? Number(lastMargin) : null;
+  return formatted;
 };
 
 const updateClient = async (id, payload) => {
@@ -246,7 +230,6 @@ const createClient = async (payload) => {
 };
 
 module.exports = {
-  ensureSampleClients,
   searchClients,
   getClientById,
   createClient,

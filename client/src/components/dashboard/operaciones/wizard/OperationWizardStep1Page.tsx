@@ -102,6 +102,52 @@ const findAssetLabel = (code: string) =>
 const sanitizeNumber = (value: number) =>
   Number.isFinite(value) ? Number(value) : 0;
 
+const clampToTwoDecimals = (value: number) =>
+  Number.isFinite(value) ? Math.round(value * 100) / 100 : Number.NaN;
+
+const formatRateInput = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return '';
+  }
+  const fixed = clampToTwoDecimals(value).toFixed(2); // enforce max 2 decimals and display consistently
+  return fixed.replace('.', ',');
+};
+
+const parseRateInput = (value: string) => {
+  const normalized = value.replace(',', '.').trim();
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+};
+
+const normalizeRateInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const cleaned = trimmed.replace(/[^\d.,]/g, '');
+  const firstSeparatorMatch = cleaned.match(/[,\.]/);
+  if (!firstSeparatorMatch) {
+    return cleaned;
+  }
+
+  const firstSeparatorIndex = cleaned.indexOf(firstSeparatorMatch[0]);
+  const integerPart = cleaned
+    .slice(0, firstSeparatorIndex)
+    .replace(/[.,]/g, '');
+  const decimalsRaw = cleaned.slice(firstSeparatorIndex + 1).replace(/[.,]/g, '');
+  const decimals = decimalsRaw.slice(0, 2);
+  const hasTrailingSeparator = firstSeparatorIndex === cleaned.length - 1;
+
+  if (hasTrailingSeparator) {
+    return `${integerPart}${firstSeparatorMatch[0]}`;
+  }
+
+  if (decimals) {
+    return `${integerPart}${firstSeparatorMatch[0]}${decimals}`;
+  }
+
+  return integerPart;
+};
+
 const RATES_EPSILON = 1e-6;
 const ratesAreEqual = (first?: number | null, second?: number | null) => {
   if (first === null || first === undefined) {
@@ -146,28 +192,36 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
   const [secondaryRate, setSecondaryRate] = useState<number>(1);
   const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(1);
+  const [aprInput, setAprInput] = useState<string>(formatRateInput(apr));
+  const [marketAprInput, setMarketAprInput] = useState<string>(formatRateInput(marketApr));
+  const [secondaryRateInput, setSecondaryRateInput] = useState<string>(formatRateInput(secondaryRate));
+  const [secondaryMarketRateInput, setSecondaryMarketRateInput] = useState<string>(formatRateInput(secondaryMarketRate));
   const lastSecondaryRates = useRef<Map<string, { rate: number; marketRate: number }>>(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [selectedClientSnapshot, setSelectedClientSnapshot] = useState<ClientSummary | null>(null);
-  const handleArsRateChange = useCallback((value: number) => {
-    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    setApr(rounded);
+  const handleArsRateInputChange = useCallback((value: string) => {
+    const normalized = normalizeRateInput(value);
+    setAprInput(normalized);
+    setApr(parseRateInput(normalized));
   }, []);
 
-  const handleArsMarketRateChange = useCallback((value: number) => {
-    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    setMarketApr(rounded);
+  const handleArsMarketRateInputChange = useCallback((value: string) => {
+    const normalized = normalizeRateInput(value);
+    setMarketAprInput(normalized);
+    setMarketApr(parseRateInput(normalized));
   }, []);
-  const handleSecondaryRateChange = useCallback((value: number) => {
-    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    setSecondaryRate(rounded);
+  const handleSecondaryRateInputChange = useCallback((value: string) => {
+    const normalized = normalizeRateInput(value);
+    setSecondaryRateInput(normalized);
+    setSecondaryRate(parseRateInput(normalized));
   }, []);
-  const handleSecondaryMarketRateChange = useCallback((value: number) => {
-    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
-    setSecondaryMarketRate(rounded);
+  const handleSecondaryMarketRateInputChange = useCallback((value: string) => {
+    const normalized = normalizeRateInput(value);
+    setSecondaryMarketRateInput(normalized);
+    setSecondaryMarketRate(parseRateInput(normalized));
   }, []);
 
   const {
@@ -231,6 +285,7 @@ const canEditMarketRate = useMemo(
 
     if (canEditMarketRate && !ratesAreEqual(marketApr, normalizedRate)) {
       setMarketApr(normalizedRate);
+      setMarketAprInput(formatRateInput(normalizedRate));
     }
   }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate]);
 
@@ -269,9 +324,11 @@ const canEditMarketRate = useMemo(
     
     if (draftApr !== apr) {
       setApr(draftApr);
+      setAprInput(formatRateInput(draftApr));
     }
     if (!ratesAreEqual(draftMarketApr, marketApr)) {
       setMarketApr(draftMarketApr);
+      setMarketAprInput(formatRateInput(draftMarketApr));
     }
     if (!ratesAreEqual(draftMarketApr, autoMarketRate)) {
       setAutoMarketRate(draftMarketApr);
@@ -286,9 +343,11 @@ const canEditMarketRate = useMemo(
       
       if (draftSecondaryRate !== secondaryRate) {
         setSecondaryRate(draftSecondaryRate);
+        setSecondaryRateInput(formatRateInput(draftSecondaryRate));
       }
       if (draftSecondaryMarketRate !== secondaryMarketRate) {
         setSecondaryMarketRate(draftSecondaryMarketRate);
+        setSecondaryMarketRateInput(formatRateInput(draftSecondaryMarketRate));
       }
     }
 
@@ -496,9 +555,13 @@ const canEditMarketRate = useMemo(
       if (cached) {
         setSecondaryRate(cached.rate);
         setSecondaryMarketRate(cached.marketRate);
+        setSecondaryRateInput(formatRateInput(cached.rate));
+        setSecondaryMarketRateInput(formatRateInput(cached.marketRate));
       } else {
         setSecondaryRate(1);
         setSecondaryMarketRate(1);
+        setSecondaryRateInput(formatRateInput(1));
+        setSecondaryMarketRateInput(formatRateInput(1));
       }
     }
   }, [secondaryAssetCode, showSecondaryRates]);
@@ -829,14 +892,14 @@ const canEditMarketRate = useMemo(
 
             <div>
               <ExchangeRatesSection
-                arsRate={apr}
-                onArsRateChange={handleArsRateChange}
-                arsMarketRate={marketApr}
-                onArsMarketRateChange={handleArsMarketRateChange}
-                assetRate={secondaryRate}
-                onAssetRateChange={handleSecondaryRateChange}
-                assetMarketRate={secondaryMarketRate}
-                onAssetMarketRateChange={handleSecondaryMarketRateChange}
+                arsRate={aprInput}
+                onArsRateChange={handleArsRateInputChange}
+                arsMarketRate={marketAprInput}
+                onArsMarketRateChange={handleArsMarketRateInputChange}
+                assetRate={secondaryRateInput}
+                onAssetRateChange={handleSecondaryRateInputChange}
+                assetMarketRate={secondaryMarketRateInput}
+                onAssetMarketRateChange={handleSecondaryMarketRateInputChange}
                 assetLabel={secondaryAssetLabel}
                 showSecondaryRates={showSecondaryRates}
                 disabled={busy || !canEditMarketRate}

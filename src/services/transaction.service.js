@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
+const Client = require('../models/Client');
 const { getClientById } = require('./client.service');
 const {
   applyTransactionRegistration,
@@ -784,6 +785,15 @@ const finalizeTransaction = async (id, context = {}) => {
       });
 
       await transaction.save({ session });
+
+      // Persist last margin on the client for future wizard defaults
+      if (transaction.client && Number.isFinite(Number(transaction.marginPercentage))) {
+        await Client.updateOne(
+          { _id: transaction.client },
+          { $set: { lastMarginPercentage: Number(transaction.marginPercentage) } },
+          { session }
+        );
+      }
 
       plannedTreasuryMovements = buildPlannedTreasuryMovements(transaction);
 
