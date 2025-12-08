@@ -12,6 +12,7 @@ const {
 } = require('../services/auth.service');
 const { deleteSessionByToken, getSessionDurationMs } = require('../services/session.service');
 const { attachAuthCookie, clearAuthCookie, COOKIE_NAME } = require('../utils/authCookie');
+const { dedupePermissions } = require('../utils/permissions');
 
 const setSessionCookie = (res, session) => {
   if (!session?.sessionToken) {
@@ -32,7 +33,7 @@ const buildProfile = (user) => {
     id: user._id.toString(),
     fullName: user.fullName,
     email: user.email,
-    permissions: Array.isArray(user.permissions) ? user.permissions : [],
+    permissions: Array.isArray(user.permissions) ? dedupePermissions(user.permissions) : [],
     providers: Array.isArray(user.providers)
       ? user.providers.map((provider) => ({
           provider: provider.provider,

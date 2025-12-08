@@ -1,5 +1,6 @@
 // Export all types
 export * from './auth';
+export * from './admin';
 export type {
   ApiResponse,
   PaginatedResponse,

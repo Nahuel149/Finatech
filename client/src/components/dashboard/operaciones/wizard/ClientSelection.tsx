@@ -5,6 +5,7 @@ import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 interface Props {
   value: string;
   onChange: (value: string) => void;
+  selectedClient?: ClientSummary | null;
   clients: ClientSummary[];
   onNewClient: () => void;
   onEditClient?: (clientId: string) => void;
@@ -29,17 +30,46 @@ export const ClientSelection: React.FC<Props> = ({
   loading = false,
   error = null,
   onSearch,
+  selectedClient: selectedClientProp = null,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const listRef = useRef<HTMLDivElement | null>(null);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
+  const [lastMarginDisplay, setLastMarginDisplay] = useState<string | null>(null);
+  const [persistedSelection, setPersistedSelection] = useState<ClientSummary | null>(null);
 
-  const selectedClient = useMemo(
-    () => clients.find((client) => client.id === value),
-    [clients, value],
-  );
+  const selectedClient = useMemo(() => {
+    const fromList = clients.find((client) => client.id === value);
+    if (fromList) {
+      return fromList;
+    }
+    if (selectedClientProp && selectedClientProp.id === value) {
+      return selectedClientProp;
+    }
+    if (persistedSelection && persistedSelection.id === value) {
+      return persistedSelection;
+    }
+    return null;
+  }, [clients, value, selectedClientProp, persistedSelection]);
+
+  const displayedClients = useMemo(() => {
+    if (selectedClient && !clients.some((client) => client.id === selectedClient.id)) {
+      return [selectedClient, ...clients];
+    }
+    return clients;
+  }, [clients, selectedClient]);
+
+  useEffect(() => {
+    if (!value) {
+      setPersistedSelection(null);
+      return;
+    }
+    if (selectedClient) {
+      setPersistedSelection(selectedClient);
+    }
+  }, [selectedClient, value]);
 
   useEffect(() => {
     if (!value) {
@@ -77,10 +107,10 @@ export const ClientSelection: React.FC<Props> = ({
       setActiveIndex(-1);
       return;
     }
-    if (activeIndex >= clients.length) {
-      setActiveIndex(clients.length > 0 ? 0 : -1);
+    if (activeIndex >= displayedClients.length) {
+      setActiveIndex(displayedClients.length > 0 ? 0 : -1);
     }
-  }, [dropdownOpen, clients.length, activeIndex]);
+  }, [dropdownOpen, displayedClients.length, activeIndex]);
 
   useEffect(() => {
     if (!dropdownOpen || activeIndex < 0 || !listRef.current) {
@@ -97,7 +127,7 @@ export const ClientSelection: React.FC<Props> = ({
         parent.scrollTop = offsetTop + offsetHeight - clientHeight;
       }
     }
-  }, [activeIndex, dropdownOpen]);
+  }, [activeIndex, dropdownOpen, displayedClients.length]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -116,6 +146,15 @@ export const ClientSelection: React.FC<Props> = ({
   const handleBlur = () => {
     window.setTimeout(() => setDropdownOpen(false), 150);
   };
+
+  useEffect(() => {
+    if (selectedClient && marginInfo) {
+      setLastMarginDisplay(marginInfo);
+    }
+    if (!selectedClient) {
+      setLastMarginDisplay(null);
+    }
+  }, [selectedClient, marginInfo]);
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
     if (event.key === 'ArrowDown') {
@@ -138,9 +177,9 @@ export const ClientSelection: React.FC<Props> = ({
       return;
     }
 
-    if (event.key === 'Enter' && dropdownOpen && activeIndex >= 0 && activeIndex < clients.length) {
+    if (event.key === 'Enter' && dropdownOpen && activeIndex >= 0 && activeIndex < displayedClients.length) {
       event.preventDefault();
-      handleSelectClient(clients[activeIndex]);
+      handleSelectClient(displayedClients[activeIndex]);
       return;
     }
 
@@ -162,8 +201,8 @@ export const ClientSelection: React.FC<Props> = ({
             onFocus={() => setDropdownOpen(true)}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors"
-            placeholder="Buscar por nombre o CUIT…"
+            className="w-full px-4 pr-16 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors truncate"
+            placeholder="Buscar por nombre o CUIT"
             autoComplete="off"
           />
           {loading && (
@@ -179,7 +218,8 @@ export const ClientSelection: React.FC<Props> = ({
                 onChange('');
                 setDropdownOpen(true);
               }}
-              className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+              className="absolute inset-y-0 right-2 flex items-center text-gray-400 hover:text-gray-600 px-2 bg-white rounded-md"
+              aria-label="Limpiar cliente seleccionado"
             >
               <i className="fa-solid fa-times" />
             </button>
@@ -195,13 +235,13 @@ export const ClientSelection: React.FC<Props> = ({
                   Buscando clientes…
                 </div>
               )}
-              {!loading && clients.length === 0 && (
+              {!loading && displayedClients.length === 0 && (
                 <div className="px-4 py-3 text-sm text-gray-500">
                   No encontramos clientes con ese criterio.
                 </div>
               )}
               {!loading &&
-                clients.map((client, index) => (
+                displayedClients.map((client, index) => (
                   <button
                     key={client.id}
                     type="button"
@@ -251,15 +291,10 @@ export const ClientSelection: React.FC<Props> = ({
         {error}
       </div>
     )}
-    {marginInfo && !error && (
-      <div className="mt-2 text-sm text-gray-600 flex items-center">
-        <i className="fa-solid fa-circle-info mr-1" />
-        Último margen con este cliente: {marginInfo}
-      </div>
-    )}
-    {selectedClient && (
-      <div className="mt-2 text-xs text-gray-500">
-        Seleccionado: {renderOptionLabel(selectedClient)}
+    {marginInfo && lastMarginDisplay && !error && selectedClient && (
+      <div className="mt-2 inline-flex items-center gap-2 rounded-full bg-blue-50 text-blue-800 text-xs font-medium px-3 py-1 border border-blue-100">
+        <i className="fa-solid fa-chart-line text-[11px]" />
+        <span>Último margen con este cliente: {lastMarginDisplay}</span>
       </div>
     )}
   </div>

@@ -8,12 +8,14 @@ interface Props {
   assetRate: number;
   onAssetRateChange: (value: number) => void;
   assetMarketRate: number;
+  onAssetMarketRateChange: (value: number) => void;
   assetLabel: string;
   showSecondaryRates?: boolean;
   disabled?: boolean;
 }
 
-const numberToInputValue = (value: number) => (Number.isNaN(value) ? '' : value);
+const twoDecimals = (value: number) =>
+  Number.isFinite(value) ? Number(value).toFixed(2) : '';
 
 export const ExchangeRatesSection: React.FC<Props> = ({
   arsRate,
@@ -23,6 +25,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
   assetRate,
   onAssetRateChange,
   assetMarketRate,
+  onAssetMarketRateChange,
   assetLabel,
   showSecondaryRates = true,
   disabled = false,
@@ -31,29 +34,35 @@ export const ExchangeRatesSection: React.FC<Props> = ({
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">
-          TC operacion USD a ARS
+          <span className="break-words leading-tight block">TC operacion USD a ARS</span>
         </label>
-        <input
-          type="number"
-          step="0.01"
-          value={numberToInputValue(arsRate)}
-          onChange={(event) => onArsRateChange(parseFloat(event.target.value) || 0)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled}
+          <input
+            type="number"
+            step="0.01"
+            value={twoDecimals(arsRate)}
+            onChange={(event) => {
+              const parsed = parseFloat(event.target.value.replace(',', '.'));
+              onArsRateChange(Number.isFinite(parsed) ? parsed : 0);
+            }}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
           autoComplete="off"
         />
       </div>
       <div>
         <label className="block text-sm font-medium text-text-primary mb-2">
-          TC mercado USD a ARS
+          <span className="break-words leading-tight block">TC mercado USD a ARS</span>
         </label>
-        <input
-          type="number"
-          step="0.01"
-          value={numberToInputValue(arsMarketRate)}
-          onChange={(event) => onArsMarketRateChange(parseFloat(event.target.value) || 0)}
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled}
+          <input
+            type="number"
+            step="0.01"
+            value={twoDecimals(arsMarketRate)}
+            onChange={(event) => {
+              const parsed = parseFloat(event.target.value.replace(',', '.'));
+              onArsMarketRateChange(Number.isFinite(parsed) ? parsed : 0);
+            }}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
           autoComplete="off"
         />
       </div>
@@ -62,8 +71,8 @@ export const ExchangeRatesSection: React.FC<Props> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            <div className="flex items-center">
-              TC operacion {assetLabel} a USD
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="break-words leading-tight">TC operacion {assetLabel} a USD</span>
               <i
                 className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help"
                 title={`Doble cambio via USD - Como ${assetLabel} no es USD, se requiere puente USD. Se muestran las tasas: ${assetLabel} a USD y USD a ARS mercado.`}
@@ -72,9 +81,12 @@ export const ExchangeRatesSection: React.FC<Props> = ({
           </label>
           <input
             type="number"
-            step="0.00000001"
-            value={numberToInputValue(assetRate)}
-            onChange={(event) => onAssetRateChange(parseFloat(event.target.value) || 0)}
+            step="0.01"
+            value={twoDecimals(assetRate)}
+            onChange={(event) => {
+              const parsed = parseFloat(event.target.value.replace(',', '.'));
+              onAssetRateChange(Number.isFinite(parsed) ? parsed : 0);
+            }}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={disabled}
             autoComplete="off"
@@ -82,8 +94,8 @@ export const ExchangeRatesSection: React.FC<Props> = ({
         </div>
         <div>
           <label className="block text-sm font-medium text-text-primary mb-2">
-            <div className="flex items-center">
-              TC mercado {assetLabel} a USD
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="break-words leading-tight">TC mercado {assetLabel} a USD</span>
               <i
                 className="fa-solid fa-info-circle ml-2 text-gray-400 cursor-help"
                 title={`Doble cambio via USD - Como ${assetLabel} no es USD, se requiere puente USD. Se muestran las tasas: ${assetLabel} a USD y USD a ARS mercado.`}
@@ -92,10 +104,14 @@ export const ExchangeRatesSection: React.FC<Props> = ({
           </label>
           <input
             type="number"
-            step="0.00000001"
-            value={numberToInputValue(assetMarketRate)}
-            readOnly
-            className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"
+            step="0.01"
+            value={twoDecimals(assetMarketRate)}
+            onChange={(event) => {
+              const parsed = parseFloat(event.target.value.replace(',', '.'));
+              onAssetMarketRateChange(Number.isFinite(parsed) ? parsed : 0);
+            }}
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+            disabled={disabled}
             autoComplete="off"
           />
         </div>

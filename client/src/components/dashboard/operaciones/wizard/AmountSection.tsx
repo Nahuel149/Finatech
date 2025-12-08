@@ -9,7 +9,7 @@ interface Props {
   disabled?: boolean;
 }
 
-const numberToInputValue = (value: number) => (Number.isNaN(value) || value === 0 ? '' : value);
+const numberToInputValue = (value: number) => (Number.isNaN(value) ? '' : value);
 
 export const AmountSection: React.FC<Props> = ({
   enterAmount,
@@ -31,10 +31,14 @@ export const AmountSection: React.FC<Props> = ({
         <div>
           <label className="block text-xs text-gray-500 mb-1">{enterLabel}</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={numberToInputValue(enterAmount)}
-            onChange={(event) => onEnterAmountChange(parseFloat(event.target.value) || 0)}
+            onChange={(event) => {
+              const next = event.target.value.replace(',', '.');
+              const parsed = parseFloat(next);
+              onEnterAmountChange(Number.isFinite(parsed) ? parseFloat(parsed.toFixed(2)) : NaN);
+            }}
             onFocus={handleFocus}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={disabled}
@@ -45,8 +49,8 @@ export const AmountSection: React.FC<Props> = ({
         <div>
           <label className="block text-xs text-gray-500 mb-1">{exitLabel}</label>
           <input
-            type="number"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
             value={numberToInputValue(exitAmount)}
             readOnly
             className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none cursor-not-allowed"

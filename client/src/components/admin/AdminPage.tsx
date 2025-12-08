@@ -1,0 +1,417 @@
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { AdminPermissionDefinition, AdminUser } from '../../types';
+import { api } from '../../utils';
+import { useCurrentUser } from '../../hooks/useCurrentUser';
+import { useAuth } from '../../hooks/useAuth';
+import { Alert } from '../ui/Alert';
+import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { Button } from '../ui/Button';
+
+const PERMISSION_ORDER = [
+  'view-balances',
+  'access-treasury',
+  'access-transfers',
+  'manage-treasury',
+  'manage-notifications',
+  'access-logistics',
+  'manage-logistics',
+  'treasury:receptions',
+  'treasury:receptions:revert',
+];
+
+const PERMISSION_LABELS: Record<string, AdminPermissionDefinition> = {
+  'view-balances': {
+    key: 'view-balances',
+    label: 'Ver balances',
+    description: 'Lectura de saldos generales y widget de balances.',
+  },
+  'access-treasury': {
+    key: 'access-treasury',
+    label: 'Acceso a Tesoreria',
+    description: 'Permite entrar a las pantallas de tesoreria.',
+  },
+  'access-transfers': {
+    key: 'access-transfers',
+    label: 'Acceso a transferencias',
+    description: 'Habilita el flujo de transferencias y sus detalles.',
+  },
+  'manage-treasury': {
+    key: 'manage-treasury',
+    label: 'Gestionar tesoreria',
+    description: 'Crear, aprobar y editar movimientos de tesoreria.',
+  },
+  'manage-notifications': {
+    key: 'manage-notifications',
+    label: 'Gestionar notificaciones',
+    description: 'Crear, editar o borrar avisos para el equipo.',
+  },
+  'access-logistics': {
+    key: 'access-logistics',
+    label: 'Acceso a logistica',
+    description: 'Lectura de ordenes y operaciones de logistica.',
+  },
+  'manage-logistics': {
+    key: 'manage-logistics',
+    label: 'Gestionar logistica',
+    description: 'Modificar estados, adjuntar evidencias y resolver incidencias.',
+  },
+  'treasury:receptions': {
+    key: 'treasury:receptions',
+    label: 'Recepciones de tesoreria',
+    description: 'Puede procesar recepciones de fondos.',
+  },
+  'treasury:receptions:revert': {
+    key: 'treasury:receptions:revert',
+    label: 'Revertir recepciones',
+    description: 'Puede revertir una recepcion cargada.',
+  },
+};
+
+const normalizePermission = (permission?: string) =>
+  (permission || '').trim().toLowerCase();
+
+const buildPermissionCatalog = (keys: string[]): AdminPermissionDefinition[] =>
+  keys.map((key) => ({
+    key,
+    label: PERMISSION_LABELS[key]?.label || key,
+    description: PERMISSION_LABELS[key]?.description,
+  }));
+
+export const AdminPage: React.FC = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { user, loading: userLoading, refresh } = useCurrentUser();
+
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [managedPermissions, setManagedPermissions] = useState<string[]>(PERMISSION_ORDER);
+  const [draftPermissions, setDraftPermissions] = useState<Record<string, Set<string>>>({});
+  const [loading, setLoading] = useState<boolean>(true);
+  const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+  const [search, setSearch] = useState<string>('');
+  const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
+
+  const currentUserPermissions = useMemo(() => {
+    const list = user?.permissions;
+    if (Array.isArray(list)) {
+      return list.map(normalizePermission);
+    }
+    return [];
+  }, [user]);
+
+  const hasAdminAccess = useMemo(
+    () => currentUserPermissions.includes('admin:manage-permissions'),
+    [currentUserPermissions],
+  );
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [permissionResponse, usersResponse] = await Promise.all([
+        api.getAdminPermissions().catch(() => null),
+        api.getAdminUsers(),
+      ]);
+
+      const permissionKeys = permissionResponse?.permissions?.length
+        ? permissionResponse.permissions.map(normalizePermission)
+        : PERMISSION_ORDER;
+
+      setManagedPermissions(permissionKeys);
+
+      const fetchedUsers: AdminUser[] = usersResponse?.users ?? [];
+      setUsers(fetchedUsers);
+
+      const nextDrafts: Record<string, Set<string>> = {};
+      fetchedUsers.forEach((item: AdminUser) => {
+        const normalizedPermissions = (item.permissions || [])
+          .map((permission: string) => normalizePermission(permission))
+          .filter(Boolean);
+
+        nextDrafts[item.id] = new Set(normalizedPermissions);
+      });
+      setDraftPermissions(nextDrafts);
+    } catch (err: any) {
+      setError(err.message || 'No pudimos cargar la lista de usuarios.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!userLoading && !user) {
+      navigate('/login/admin');
+    }
+  }, [userLoading, user, navigate]);
+
+  useEffect(() => {
+    if (!userLoading && user && hasAdminAccess) {
+      loadData();
+    }
+  }, [userLoading, user, hasAdminAccess, loadData]);
+
+  const filteredUsers = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return users.filter((entry) => {
+      if (filterVerified === 'verified' && !entry.isVerified) return false;
+      if (filterVerified === 'unverified' && entry.isVerified) return false;
+      if (!term) return true;
+      return (
+        entry.fullName.toLowerCase().includes(term) ||
+        entry.email.toLowerCase().includes(term)
+      );
+    });
+  }, [users, search, filterVerified]);
+
+  const togglePermission = (userId: string, permission: string) => {
+    const normalized = normalizePermission(permission);
+    setSuccess(null);
+    setDraftPermissions((prev) => {
+      const next = { ...prev };
+      const current = new Set(next[userId] ? Array.from(next[userId]) : []);
+      if (current.has(normalized)) {
+        current.delete(normalized);
+      } else {
+        current.add(normalized);
+      }
+      next[userId] = current;
+      return next;
+    });
+  };
+
+  const resetDraftForUser = (userId: string) => {
+    const sourceUser = users.find((entry) => entry.id === userId);
+    const nextDraft = new Set(
+      (sourceUser?.permissions || []).map((permission) => normalizePermission(permission)).filter(Boolean),
+    );
+    setDraftPermissions((prev) => ({ ...prev, [userId]: nextDraft }));
+    setSuccess(null);
+  };
+
+  const saveUserPermissions = async (userId: string) => {
+    setSavingUserId(userId);
+    setError(null);
+    setSuccess(null);
+
+    const permissions = Array.from(draftPermissions[userId] || []);
+
+    try {
+      const response = await api.updateUserPermissions(userId, permissions);
+      const updatedUser = response?.user || users.find((entry) => entry.id === userId);
+      const normalizedPermissions = (updatedUser?.permissions || permissions).map(normalizePermission);
+
+      setUsers((prev) =>
+        prev.map((entry) =>
+          entry.id === userId
+            ? {
+                ...entry,
+                ...updatedUser,
+                permissions: normalizedPermissions,
+              }
+            : entry,
+        ),
+      );
+
+      setDraftPermissions((prev) => ({
+        ...prev,
+        [userId]: new Set(normalizedPermissions),
+      }));
+
+      if (user?.id === userId) {
+        await refresh();
+      }
+
+      setSuccess('Permisos actualizados.');
+    } catch (err: any) {
+      setError(err.message || 'No pudimos guardar los permisos.');
+    } finally {
+      setSavingUserId(null);
+    }
+  };
+
+  const permissionCatalog = useMemo(
+    () => buildPermissionCatalog(managedPermissions),
+    [managedPermissions],
+  );
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login/admin');
+    } catch {
+      navigate('/login/admin');
+    }
+  };
+
+  if (!hasAdminAccess && !userLoading) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
+        <div className="max-w-md w-full space-y-4 text-center">
+          <Alert
+            type="error"
+            title="Acceso denegado"
+            message="Necesitas el permiso admin:manage-permissions para usar este panel."
+          />
+          <Button onClick={() => navigate('/login/admin')} variant="primary" fullWidth>
+            Ir al login de admin
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          <div>
+            <p className="text-xs uppercase tracking-wide text-slate-500 font-semibold">Seguridad</p>
+            <h1 className="text-2xl font-bold text-slate-900">Administrar permisos</h1>
+            <p className="text-sm text-slate-600">
+              Ajusta que puede ver y operar cada usuario.
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => navigate('/dashboard')} size="sm">
+              Ir al dashboard
+            </Button>
+            <Button variant="secondary" onClick={handleLogout} size="sm">
+              Cerrar sesion
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-6xl mx-auto px-4 py-6 space-y-4">
+        {error && (
+          <Alert
+            type="error"
+            message={error}
+            onClose={() => setError(null)}
+          />
+        )}
+
+        {success && (
+          <Alert
+            type="success"
+            message={success}
+            onClose={() => setSuccess(null)}
+          />
+        )}
+
+        <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-900">Permisos disponibles</p>
+            <p className="text-xs text-slate-600">
+              Esta lista esta sincronizada con el backend /api/admin/permissions.
+            </p>
+          </div>
+          <div className="flex flex-col gap-2 md:flex-row md:items-center">
+            <input
+              type="text"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar por nombre o email"
+              className="w-full md:w-64 px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+            />
+            <select
+              value={filterVerified}
+              onChange={(event) =>
+                setFilterVerified(event.target.value as 'all' | 'verified' | 'unverified')
+              }
+              className="w-full md:w-48 px-3 py-2 border border-slate-300 rounded-md text-sm focus:ring-2 focus:ring-primary focus:border-primary"
+            >
+              <option value="all">Todos los usuarios</option>
+              <option value="verified">Solo verificados</option>
+              <option value="unverified">Solo sin verificar</option>
+            </select>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-8 flex justify-center">
+            <LoadingSpinner />
+          </div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="bg-white border border-slate-200 rounded-lg shadow-sm p-6 text-center text-slate-600">
+            No encontramos usuarios con ese filtro.
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredUsers.map((entry) => {
+              const currentDraft = draftPermissions[entry.id] || new Set<string>();
+              return (
+                <div
+                  key={entry.id}
+                  className="bg-white border border-slate-200 rounded-lg shadow-sm p-5"
+                >
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <div>
+                      <p className="text-base font-semibold text-slate-900">{entry.fullName}</p>
+                      <p className="text-sm text-slate-600">{entry.email}</p>
+                      <div className="flex gap-2 mt-2">
+                        <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">
+                          {entry.permissions?.length ?? 0} permisos
+                        </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                            entry.isVerified
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : 'bg-amber-100 text-amber-700'
+                          }`}
+                        >
+                          {entry.isVerified ? 'Verificado' : 'No verificado'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => resetDraftForUser(entry.id)}
+                      >
+                        Deshacer cambios
+                      </Button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={() => saveUserPermissions(entry.id)}
+                        loading={savingUserId === entry.id}
+                      >
+                        Guardar
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {permissionCatalog.map((permission) => (
+                      <label
+                        key={`${entry.id}-${permission.key}`}
+                        className="flex items-start gap-3 p-3 border border-slate-200 rounded-md hover:border-primary/60 transition-colors cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-1 h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+                          checked={currentDraft.has(permission.key)}
+                          onChange={() => togglePermission(entry.id, permission.key)}
+                        />
+                        <div>
+                          <p className="text-sm font-medium text-slate-900">{permission.label}</p>
+                          {permission.description && (
+                            <p className="text-xs text-slate-600">{permission.description}</p>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </main>
+    </div>
+  );
+};

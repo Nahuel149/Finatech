@@ -7,6 +7,10 @@ const { sendEmail } = require('../utils/email');
 const { generateRandomToken, hashToken } = require('../utils/token');
 const { logSecurityEvent } = require('./securityLog.service');
 const { createSession, deleteSessionsByUser } = require('./session.service');
+const {
+  ADMIN_PERMISSION,
+  dedupePermissions,
+} = require('../utils/permissions');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
 const googleClient = GOOGLE_CLIENT_ID ? new OAuth2Client(GOOGLE_CLIENT_ID) : null;
@@ -22,6 +26,11 @@ const LOGIN_WINDOW_MS = LOGIN_LOCK_MINUTES * 60 * 1000;
 const PASSWORD_RESET_WINDOW_MINUTES = Number(process.env.PASSWORD_RESET_WINDOW_MINUTES) || 30;
 const SKIP_EMAIL_VERIFICATION = process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== 'true';
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
+  .split(',')
+  .map((email) => email.trim().toLowerCase())
+  .filter(Boolean);
+
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
 
 const ensureBaselinePermissions = (user) => {
@@ -29,19 +38,22 @@ const ensureBaselinePermissions = (user) => {
     return false;
   }
 
-  if (!Array.isArray(user.permissions)) {
-    user.permissions = [];
+  const normalizedPermissions = dedupePermissions(user.permissions || []);
+  const originalLength = Array.isArray(user.permissions) ? user.permissions.length : 0;
+  let changed = !Array.isArray(user.permissions) || normalizedPermissions.length !== originalLength;
+
+  const isAdminEmail =
+    typeof user.email === 'string' &&
+    ADMIN_EMAILS.includes(user.email.trim().toLowerCase());
+
+  if (isAdminEmail && !normalizedPermissions.includes(ADMIN_PERMISSION)) {
+    normalizedPermissions.push(ADMIN_PERMISSION);
+    changed = true;
   }
 
-  const requiredPermissions = ['manage-notifications'];
-  let changed = false;
-
-  requiredPermissions.forEach((permission) => {
-    if (!user.permissions.includes(permission)) {
-      user.permissions.push(permission);
-      changed = true;
-    }
-  });
+  if (changed) {
+    user.permissions = normalizedPermissions;
+  }
 
   return changed;
 };

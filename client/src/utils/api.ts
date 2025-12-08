@@ -404,6 +404,16 @@ export const api = {
   // User profile
   getProfile: () =>
     apiRequest('/api/auth/me'),
+  // Admin
+  getAdminPermissions: () =>
+    apiRequest('/api/admin/permissions'),
+  getAdminUsers: () =>
+    apiRequest('/api/admin/users'),
+  updateUserPermissions: (userId: string, permissions: string[]) =>
+    apiRequest(`/api/admin/users/${encodeURIComponent(userId)}/permissions`, {
+      method: 'PUT',
+      body: { permissions },
+    }),
 
   // Logistics
   getLogisticsOperations: (params?: Record<string, unknown>) =>

@@ -2,9 +2,15 @@ import React from 'react';
 
 interface MinimalHeaderProps {
   onCreateAccountClick: () => void;
+  ctaLabel?: string;
+  hideCta?: boolean;
 }
 
-export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ onCreateAccountClick }) => (
+export const MinimalHeader: React.FC<MinimalHeaderProps> = ({
+  onCreateAccountClick,
+  ctaLabel = 'Crear cuenta',
+  hideCta = false,
+}) => (
   <header id="header" className="bg-white shadow-sm border-b border-gray-200">
     <div className="px-4 py-3 md:px-4 md:py-3">
       <div className="grid grid-cols-3 items-center">
@@ -18,13 +24,15 @@ export const MinimalHeader: React.FC<MinimalHeaderProps> = ({ onCreateAccountCli
         </div>
 
         <div className="flex justify-end">
-          <button 
-            onClick={onCreateAccountClick}
-            className="text-primary hover:underline font-medium text-sm touch-friendly md:text-sm"
-          >
-            <span className="hidden sm:inline">Crear cuenta</span>
-            <span className="sm:hidden">Crear</span>
-          </button>
+          {!hideCta && (
+            <button 
+              onClick={onCreateAccountClick}
+              className="text-primary hover:underline font-medium text-sm touch-friendly md:text-sm"
+            >
+              <span className="hidden sm:inline">{ctaLabel}</span>
+              <span className="sm:hidden">{ctaLabel}</span>
+            </button>
+          )}
         </div>
       </div>
     </div>

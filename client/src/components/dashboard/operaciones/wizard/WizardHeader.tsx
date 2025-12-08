@@ -12,15 +12,43 @@ interface Props {
   currencies?: string[];
 }
 
-const getCurrencyFlagUrl = (code: string) => {
+const renderCurrencyBadge = (currency: string) => {
   const map: Record<string, string> = {
-    ARS: "ar",
-    BRL: "br",
-    EUR: "eu",
-    USD: "us",
+    ARS: 'ar',
+    BRL: 'br',
+    EUR: 'eu',
+    USD: 'us',
   };
-  const country = map[code.toUpperCase()] || code.slice(0, 2).toLowerCase();
-  return `https://flagcdn.com/w40/${country}.png`;
+  const normalized = currency.toUpperCase();
+  if (normalized === 'XAU') {
+    return <span className="w-5 h-5 rounded-sm bg-amber-300 border border-amber-400 mr-1" />;
+  }
+  if (normalized === 'XME') {
+    return <span className="w-5 h-5 rounded-sm bg-gray-300 border border-gray-400 mr-1" />;
+  }
+  const country = map[normalized] || normalized.slice(0, 2).toLowerCase();
+  const url = `https://flagcdn.com/w40/${country}.png`;
+  return (
+    <img
+      src={url}
+      alt={currency}
+      className="w-5 h-5 rounded-sm object-cover mr-1 border border-gray-200"
+      onError={(event) => {
+        const target = event.target as HTMLImageElement;
+        target.replaceWith(
+          normalized === 'XAU'
+            ? document.createElement('span')
+            : normalized === 'XME'
+            ? document.createElement('span')
+            : (() => {
+                const placeholder = document.createElement('span');
+                placeholder.className = 'w-5 h-5 rounded-sm bg-gray-100 border border-gray-200 mr-1';
+                return placeholder;
+              })()
+        );
+      }}
+    />
+  );
 };
 
 export const WizardHeader: React.FC<Props> = ({ steps, currentStep, onBack, currencies = [] }) => {
@@ -45,7 +73,7 @@ export const WizardHeader: React.FC<Props> = ({ steps, currentStep, onBack, curr
         </button>
         <div className="hidden sm:block h-6 w-px bg-gray-300 mr-4" />
         <div className="flex items-center flex-wrap gap-2">
-          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operaci�n</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-text-primary">Nueva Operacion</h1>
           {uniqueCurrencies.length > 0 && (
             <div className="flex flex-wrap items-center gap-2">
               {uniqueCurrencies.map((currency) => (
@@ -53,11 +81,7 @@ export const WizardHeader: React.FC<Props> = ({ steps, currentStep, onBack, curr
                   key={currency}
                   className="inline-flex items-center px-2 py-1 rounded-full bg-white border border-gray-200 text-sm text-text-primary shadow-sm"
                 >
-                  <img
-                    src={getCurrencyFlagUrl(currency)}
-                    alt={currency}
-                    className="w-5 h-5 rounded-sm object-cover mr-1"
-                  />
+                  {renderCurrencyBadge(currency)}
                   <span className="font-semibold">{currency}</span>
                 </span>
               ))}

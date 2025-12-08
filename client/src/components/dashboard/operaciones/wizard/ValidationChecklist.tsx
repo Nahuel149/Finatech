@@ -11,7 +11,7 @@ export const ValidationChecklist: React.FC<Props> = ({ items, loading = false })
       <div className="flex items-start">
         <i className="fa-solid fa-circle-info text-blue-600 mr-2 mt-1" />
         <div className="flex-1">
-          <div className="font-medium text-blue-800">Validaciones automáticas</div>
+          <div className="font-medium text-blue-800">Validaciones automaticas</div>
           {loading ? (
             <ul className="text-sm text-blue-700 mt-2 space-y-2 animate-pulse">
               <li className="h-3 bg-blue-100 rounded w-3/4" />

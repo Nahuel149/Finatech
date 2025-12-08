@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Register } from './components';
 import { LoginPage } from './components/login/LoginPage';
 import { VerifyEmailPage } from './components/login/VerifyEmailPage';
+import { AdminLoginPage } from './components/admin/AdminLoginPage';
+import { AdminPage } from './components/admin/AdminPage';
 import { RecoveryPage } from './components/recover';
 import { DashboardOperacionesPage } from './components/dashboard/operaciones/DashboardOperacionesPage';
 import { NotificationsPage } from './components/dashboard/operaciones/NotificationsPage';
@@ -74,9 +76,11 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Navigate to="/login" replace />} />
             <Route path="/login" element={<ErrorBoundary><LoginPage /></ErrorBoundary>} />
+            <Route path="/login/admin" element={<ErrorBoundary><AdminLoginPage /></ErrorBoundary>} />
             <Route path="/verify-email" element={<ErrorBoundary><VerifyEmailPage /></ErrorBoundary>} />
             <Route path="/register" element={<ErrorBoundary><Register /></ErrorBoundary>} />
             <Route path="/recover" element={<ErrorBoundary><RecoveryPage /></ErrorBoundary>} />
+            <Route path="/admin" element={<ErrorBoundary><AdminPage /></ErrorBoundary>} />
             <Route path="/dashboard" element={<ErrorBoundary><DashboardOperacionesPage /></ErrorBoundary>} />
             <Route path="/dashboard/notificaciones" element={<ErrorBoundary><NotificationsPage /></ErrorBoundary>} />
             <Route path="/dashboard/logistica" element={<ErrorBoundary><LogisticaPage /></ErrorBoundary>} />

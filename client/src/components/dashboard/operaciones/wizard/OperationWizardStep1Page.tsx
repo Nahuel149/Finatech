@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ApiError,
@@ -48,8 +48,8 @@ const ASSET_CATALOG: AssetOption[] = [
   { code: 'USD', label: 'USD - Dolares' },
   { code: 'EUR', label: 'EUR - Euros' },
   { code: 'BRL', label: 'BRL - Reales' },
-  { code: 'XAU', label: 'Oro - XAU' },
-  { code: 'XME', label: 'Metales - XME' },
+  { code: 'XAU', label: 'XAU - Oro' },
+  { code: 'XME', label: 'XME - Metales' },
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
@@ -146,10 +146,29 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
   const [secondaryRate, setSecondaryRate] = useState<number>(1);
   const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(1);
+  const lastSecondaryRates = useRef<Map<string, { rate: number; marketRate: number }>>(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
+  const [selectedClientSnapshot, setSelectedClientSnapshot] = useState<ClientSummary | null>(null);
+  const handleArsRateChange = useCallback((value: number) => {
+    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    setApr(rounded);
+  }, []);
+
+  const handleArsMarketRateChange = useCallback((value: number) => {
+    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    setMarketApr(rounded);
+  }, []);
+  const handleSecondaryRateChange = useCallback((value: number) => {
+    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    setSecondaryRate(rounded);
+  }, []);
+  const handleSecondaryMarketRateChange = useCallback((value: number) => {
+    const rounded = Number.isFinite(value) ? Number(value.toFixed(2)) : 0;
+    setSecondaryMarketRate(rounded);
+  }, []);
 
   const {
     clients,
@@ -342,21 +361,44 @@ const canEditMarketRate = useMemo(
       return;
     }
 
-    const needsSellCorrection =
-      operationType === 'sell' && outgoingAssetCode === 'ARS' && incomingAssetCode !== 'ARS';
-
-    if (needsSellCorrection) {
-      setIncomingAssetCode('ARS');
-      setOutgoingAssetCode(incomingAssetCode);
-      setIncomingAmount(outgoingAmount);
-      setOutgoingAmount(incomingAmount);
+    if (operationType === 'sell') {
+      if (incomingAssetCode !== 'ARS') {
+        setIncomingAssetCode('ARS');
+      }
+      if (outgoingAssetCode === 'ARS') {
+        setOutgoingAssetCode('USD');
+      }
     }
-  }, [operationType, incomingAssetCode, outgoingAssetCode, incomingAmount, outgoingAmount]);
+  }, [operationType, incomingAssetCode, outgoingAssetCode]);
 
   const activeClient = useMemo(
-    () => findClientLabel(clients, clientId) ?? draft?.client ?? null,
-    [clients, clientId, draft],
+    () => {
+      if (!clientId) {
+        return null;
+      }
+      return (
+        findClientLabel(clients, clientId) ??
+        (selectedClientSnapshot && selectedClientSnapshot.id === clientId ? selectedClientSnapshot : null) ??
+        (draft?.client && (draft.client as ClientSummary).id === clientId ? (draft.client as ClientSummary) : null)
+      );
+    },
+    [clients, clientId, draft, selectedClientSnapshot],
   );
+
+  useEffect(() => {
+    if (!clientId) {
+      setSelectedClientSnapshot(null);
+      return;
+    }
+    const match = findClientLabel(clients, clientId);
+    if (match) {
+      setSelectedClientSnapshot(match);
+      return;
+    }
+    if (draft?.client && (draft.client as ClientSummary).id === clientId) {
+      setSelectedClientSnapshot(draft.client as ClientSummary);
+    }
+  }, [clientId, clients, draft]);
 
   const marginInfo = useMemo(
     () => formatMargin(activeClient?.lastMarginPercentage ?? null),
@@ -376,9 +418,10 @@ const canEditMarketRate = useMemo(
       };
     }
 
+    // Venta: forzamos que entre ARS y salga cualquier no-ARS
     return {
-      enter: ASSET_CATALOG,
-      exit: ASSET_CATALOG,
+      enter: ASSET_CATALOG.filter((option) => option.code === 'ARS'),
+      exit: ASSET_CATALOG.filter((option) => option.code !== 'ARS'),
     };
   }, [operationType]);
 
@@ -406,15 +449,23 @@ const canEditMarketRate = useMemo(
     return marketApr;
   }, [marketApr, showSecondaryRates, secondaryMarketRate]);
 
+  const marginInputsValid = useMemo(
+    () =>
+      Number.isFinite(effectiveMarketRate) &&
+      effectiveMarketRate > 0 &&
+      Number.isFinite(incomingAmount) &&
+      incomingAmount > 0 &&
+      Number.isFinite(outgoingAmount) &&
+      outgoingAmount > 0,
+    [effectiveMarketRate, incomingAmount, outgoingAmount],
+  );
+
   const marginPercent = useMemo(() => {
-    if (!effectiveMarketRate || effectiveMarketRate === 0) {
-      return 0;
-    }
-    if (!incomingAmount || !outgoingAmount) {
+    if (!marginInputsValid) {
       return 0;
     }
 
-    // Calcular t_operacion como ARS/bien2 seg?n las reglas
+    // Calcular t_operacion como ARS/bien2 seg�n las reglas
     let operationRate: number;
     
     if (operationType === 'buy') {
@@ -429,7 +480,7 @@ const canEditMarketRate = useMemo(
 
     // Aplicar la f?rmula: margen = (t_mercado - t_operacion) / t_mercado
     return ((effectiveMarketRate - operationRate) / effectiveMarketRate) * 100;
-  }, [incomingAmount, effectiveMarketRate, operationType, outgoingAmount]);
+  }, [incomingAmount, effectiveMarketRate, marginInputsValid, operationType, outgoingAmount]);
 
   const secondaryAssetLabel = useMemo(
     () => (secondaryAssetCode ? findAssetLabel(secondaryAssetCode) : ''),
@@ -438,17 +489,28 @@ const canEditMarketRate = useMemo(
 
   useEffect(() => {
     if (!showSecondaryRates) {
-      setSecondaryRate(1);
-      setSecondaryMarketRate(1);
+      return;
     }
-  }, [showSecondaryRates]);
-
-  useEffect(() => {
-    if (showSecondaryRates) {
-      setSecondaryRate(1);
-      setSecondaryMarketRate(1);
+    if (secondaryAssetCode) {
+      const cached = lastSecondaryRates.current.get(secondaryAssetCode);
+      if (cached) {
+        setSecondaryRate(cached.rate);
+        setSecondaryMarketRate(cached.marketRate);
+      } else {
+        setSecondaryRate(1);
+        setSecondaryMarketRate(1);
+      }
     }
   }, [secondaryAssetCode, showSecondaryRates]);
+
+  useEffect(() => {
+    if (showSecondaryRates && secondaryAssetCode) {
+      lastSecondaryRates.current.set(secondaryAssetCode, {
+        rate: secondaryRate,
+        marketRate: secondaryMarketRate,
+      });
+    }
+  }, [secondaryRate, secondaryMarketRate, secondaryAssetCode, showSecondaryRates]);
 
   // Build payload function for auto-save
   const buildPayload = useCallback((): TransactionDraftPayload => {
@@ -578,7 +640,7 @@ const canEditMarketRate = useMemo(
   const validateForm = useCallback(() => {
     devLog('validateForm - clientId:', clientId, 'type:', typeof clientId);
     if (!clientId) {
-      setFormError('Seleccion? un cliente antes de continuar.');
+      setFormError('Selecciona un cliente antes de continuar.');
       return false;
     }
     if (!Number.isFinite(apr) || apr <= 0) {
@@ -730,6 +792,7 @@ const canEditMarketRate = useMemo(
                 <ClientSelection
                   value={clientId}
                   onChange={handleClientChange}
+                  selectedClient={activeClient}
                   clients={clients}
                   onNewClient={handleOpenNewClientModal}
                   onEditClient={handleEditClient}
@@ -767,12 +830,13 @@ const canEditMarketRate = useMemo(
             <div>
               <ExchangeRatesSection
                 arsRate={apr}
-                onArsRateChange={setApr}
+                onArsRateChange={handleArsRateChange}
                 arsMarketRate={marketApr}
-                onArsMarketRateChange={setMarketApr}
+                onArsMarketRateChange={handleArsMarketRateChange}
                 assetRate={secondaryRate}
-                onAssetRateChange={setSecondaryRate}
+                onAssetRateChange={handleSecondaryRateChange}
                 assetMarketRate={secondaryMarketRate}
+                onAssetMarketRateChange={handleSecondaryMarketRateChange}
                 assetLabel={secondaryAssetLabel}
                 showSecondaryRates={showSecondaryRates}
                 disabled={busy || !canEditMarketRate}
@@ -789,6 +853,7 @@ const canEditMarketRate = useMemo(
                 marginPercent={marginPercent}
                 marketRate={effectiveMarketRate}
                 operationType={operationType}
+                isValid={marginInputsValid}
                 loading={busy}
               />
               <ValidationChecklist items={VALIDATION_ITEMS} loading={busy} />

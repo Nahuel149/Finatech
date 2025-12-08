@@ -16,6 +16,7 @@ const logisticsOrderRoutes = require('./routes/logisticsOrder.routes');
 const logisticsIncidentRoutes = require('./routes/logisticsIncident.routes');
 const treasuryRoutes = require('./routes/treasury.routes');
 const ratesRoutes = require('./routes/rates.routes');
+const adminRoutes = require('./routes/admin.routes');
 const { requestLogger } = require('./middleware/requestLogger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { ensureCsrfCookie, csrfProtect } = require('./middleware/csrf');
@@ -77,6 +78,7 @@ app.use('/api', logisticsIncidentRoutes);
 app.use('/api/current-accounts', currentAccountRoutes);
 app.use('/api/treasury', treasuryRoutes);
 app.use('/api/rates', ratesRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Simple health-check endpoint for Render
 app.get('/', (_req, res) => {
