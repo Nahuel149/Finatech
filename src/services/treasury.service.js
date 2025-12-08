@@ -3117,8 +3117,6 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
   const session = await mongoose.startSession();
   let updatedDocument;
   let contactForResponse = null;
-  let balanceSnapshot = null;
-  let cancellationReason = null;
 
   try {
     await session.withTransaction(async () => {
@@ -3309,6 +3307,8 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
   const session = await mongoose.startSession();
   let updatedDocument;
   let contactForResponse = null;
+  let balanceSnapshot = null;
+  let cancellationReason = null;
 
   try {
     await session.withTransaction(async () => {
