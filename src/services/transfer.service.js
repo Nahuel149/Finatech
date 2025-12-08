@@ -7,6 +7,7 @@ const {
   normalizeBalanceKey,
   registerTreasuryMovement,
 } = require('./treasury.service');
+const { emitNotification } = require('./notifications.service');
 const { createTransferOperationEvents } = require('./treasuryEvent.service');
 const {
   applyTreasurySettlement,
@@ -300,6 +301,33 @@ const registerTransferOperation = async (payload, context = {}) => {
     currency: 'ARS',
     delta: direction === 'incoming' ? totalAmount : -totalAmount,
     emittedBy: context.userId || null,
+  });
+
+  emitNotification({
+    title: 'Transferencia registrada',
+    message: `La transferencia ${
+      formattedOperation.operationCode || formattedOperation.id
+    } se registro por ${roundAmount(formattedOperation.totalAmount)} ${
+      formattedOperation.currency
+    } (${direction === 'incoming' ? 'ingreso' : 'egreso'}).`,
+    severity: 'success',
+    actionLabel: 'Ver transferencia',
+    actionUrl: `/dashboard/operaciones/transfer-pesos/detalle/${formattedOperation.id}`,
+    metadata: {
+      operationId: formattedOperation.id,
+      operationCode: formattedOperation.operationCode || null,
+      totalAmount: roundAmount(formattedOperation.totalAmount),
+      currency: formattedOperation.currency,
+      direction: formattedOperation.direction,
+      movementType: formattedOperation.movementType,
+      distributionLines: formattedOperation.distributionLines,
+    },
+    recipients: context.userId ? [{ user: context.userId }] : [],
+    context: {
+      type: 'transfer_operation',
+      id: formattedOperation.id,
+      path: `/dashboard/operaciones/transfer-pesos/detalle/${formattedOperation.id}`,
+    },
   });
 
   return {

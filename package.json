@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "nodemon --config nodemon.json src/server.js",
     "start": "node src/server.js",
+    "dev:all": "concurrently -n api,client -c yellow,cyan \"npm run dev\" \"cd client && npm start\"",
     "build": "cd client && npm install && npm run build",
     "lint": "npm run lint:server && npm run lint:client",
     "lint:server": "eslint src --ext .js",
@@ -35,6 +36,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@types/axios": "^0.9.36",
+    "concurrently": "^9.0.1",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "eslint-plugin-n": "^17.23.1",

@@ -375,9 +375,18 @@ const mapTransferOperation = (operation, clientMap, marketRate) => {
   };
 };
 
-const listRecentOperations = async ({ limit } = {}) => {
+const listRecentOperations = async ({ limit, page } = {}) => {
   const numericLimit = Math.min(Math.max(Number(limit) || 10, 1), 50);
-  const fetchLimit = numericLimit * 2;
+  const pageNumber = Math.max(Number(page) || 1, 1);
+  const offset = (pageNumber - 1) * numericLimit;
+  const fetchLimit = offset + numericLimit;
+
+  const [transactionsCount, transfersCount] = await Promise.all([
+    Transaction.countDocuments({ status: { $nin: ['draft'] } }),
+    TransferOperation.countDocuments({}),
+  ]);
+
+  const totalItems = (Number(transactionsCount) || 0) + (Number(transfersCount) || 0);
 
   const [transactions, transfers, latestRate] = await Promise.all([
     Transaction.find({ status: { $nin: ['draft'] } })
@@ -452,13 +461,21 @@ const listRecentOperations = async ({ limit } = {}) => {
       const dateA = a?.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b?.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
-    })
-    .slice(0, numericLimit);
+    });
 
-  return merged;
+  const paginated = merged.slice(offset, offset + numericLimit);
+
+  return {
+    items: paginated,
+    pagination: {
+      page: pageNumber,
+      limit: numericLimit,
+      total: totalItems,
+      totalPages: totalItems ? Math.max(1, Math.ceil(totalItems / numericLimit)) : 1,
+    },
+  };
 };
 
 module.exports = {
   listRecentOperations,
 };
-

@@ -13,6 +13,28 @@ const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const router = Router();
 
+const PLACEHOLDER_NOTIFICATION_SIGNATURES = new Set([
+  'Operación completada|La operación #OP-2041 se registró exitosamente.',
+  'Liquidación pendiente|Liquidación LQ-9033 requiere tu revisión.',
+  'Alerta de liquidez|La cuenta USD Nación se acerca al mínimo operativo.',
+  'Nueva documentación|Cliente Gamma adjuntó documentación para validación.',
+]);
+
+const buildRecipientFilter = (userId) => {
+  if (!userId) {
+    return {};
+  }
+
+  return {
+    $or: [
+      { recipients: { $exists: false } },
+      { recipients: { $size: 0 } },
+      { recipients: null },
+      { 'recipients.user': userId },
+    ],
+  };
+};
+
 const formatNotification = (notification, readSet = new Set()) => {
   const id = notification._id.toString();
   return {
@@ -27,49 +49,6 @@ const formatNotification = (notification, readSet = new Set()) => {
     createdAt: notification.createdAt,
     read: readSet.has(id),
   };
-};
-
-const seedDefaultNotificationsIfEmpty = async () => {
-  const count = await Notification.estimatedDocumentCount();
-  if (count > 0) {
-    return;
-  }
-
-  const now = new Date();
-  const minutesAgo = (minutes) => new Date(now.getTime() - minutes * 60 * 1000);
-
-  const defaults = [
-    {
-      title: 'Operación completada',
-      message: 'La operación #OP-2041 se registró exitosamente.',
-      severity: 'success',
-      createdAt: minutesAgo(5),
-      updatedAt: minutesAgo(5),
-    },
-    {
-      title: 'Liquidación pendiente',
-      message: 'Liquidación LQ-9033 requiere tu revisión.',
-      severity: 'warning',
-      createdAt: minutesAgo(18),
-      updatedAt: minutesAgo(18),
-    },
-    {
-      title: 'Alerta de liquidez',
-      message: 'La cuenta USD Nación se acerca al mínimo operativo.',
-      severity: 'warning',
-      createdAt: minutesAgo(42),
-      updatedAt: minutesAgo(42),
-    },
-    {
-      title: 'Nueva documentación',
-      message: 'Cliente Gamma adjuntó documentación para validación.',
-      severity: 'info',
-      createdAt: minutesAgo(120),
-      updatedAt: minutesAgo(120),
-    },
-  ];
-
-  await Notification.insertMany(defaults);
 };
 
 router.get(
@@ -153,8 +132,9 @@ router.get(
   async (req, res, next) => {
     try {
       const limit = Number(req.query.limit);
-      const items = await listRecentOperations({ limit });
-      res.json({ items });
+      const page = Number(req.query.page);
+      const result = await listRecentOperations({ limit, page });
+      res.json(result);
     } catch (error) {
       next(error);
     }
@@ -217,13 +197,12 @@ const notificationBaseValidators = [
 
 router.get('/notifications', requireAuth, notificationsLimiter, async (req, res, next) => {
   try {
-    await seedDefaultNotificationsIfEmpty();
-
     const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 100);
     const includeRead = req.query.includeRead !== 'false';
     const since = req.query.since ? new Date(req.query.since) : null;
+    const recipientFilter = buildRecipientFilter(req.user?._id);
 
-    const match = {};
+    const match = { ...recipientFilter };
     if (since && !Number.isNaN(since.getTime())) {
       match.createdAt = { $gt: since };
     }
@@ -234,7 +213,14 @@ router.get('/notifications', requireAuth, notificationsLimiter, async (req, res,
       .lean()
       .exec();
 
-    const ids = notifications.map((notification) => notification._id.toString());
+    const sanitizedNotifications = notifications.filter(
+      (notification) =>
+        !PLACEHOLDER_NOTIFICATION_SIGNATURES.has(
+          `${notification.title}|${notification.message}`
+        )
+    );
+
+    const ids = sanitizedNotifications.map((notification) => notification._id.toString());
     let readSet = new Set();
     if (ids.length > 0) {
       const readStates = await NotificationState.find({
@@ -246,7 +232,7 @@ router.get('/notifications', requireAuth, notificationsLimiter, async (req, res,
       readSet = new Set(readStates.map((state) => state.notificationId));
     }
 
-    let payload = notifications.map((notification) => formatNotification(notification, readSet));
+    let payload = sanitizedNotifications.map((notification) => formatNotification(notification, readSet));
     if (!includeRead) {
       payload = payload.filter((notification) => !notification.read);
     }
@@ -267,8 +253,9 @@ router.post('/notifications/:id/read', requireAuth, async (req, res, next) => {
       return res.status(400).json({ message: 'Identificador inválido.' });
     }
 
-    const exists = await Notification.exists({ _id: id });
-    if (!exists) {
+    const recipientFilter = buildRecipientFilter(req.user?._id);
+    const notification = await Notification.findOne({ _id: id, ...recipientFilter }).lean();
+    if (!notification) {
       return res.status(404).json({ message: 'Notificación no encontrada.' });
     }
 
@@ -286,8 +273,9 @@ router.post('/notifications/:id/read', requireAuth, async (req, res, next) => {
 
 router.post('/notifications/read-all', requireAuth, async (req, res, next) => {
   try {
-    const notifications = await Notification.find({}, { _id: 1 }).lean().exec();
-    if (!notifications.length) {
+    const recipientFilter = buildRecipientFilter(req.user?._id);
+    const notifications = await Notification.find(recipientFilter, { _id: 1 }).lean().exec();
+    if (!notifications || !notifications.length) {
       return res.json({ success: true });
     }
 

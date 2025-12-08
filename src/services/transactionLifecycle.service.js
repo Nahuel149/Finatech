@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
+const { emitNotification } = require('./notifications.service');
 
 const ensureAuditTrail = (transaction) => {
   if (!Array.isArray(transaction.accountingAudit)) {
@@ -179,6 +180,34 @@ const recordTransactionSettlement = async (
   }
 
   await transaction.save({ session });
+
+  const operationId = transaction._id.toString();
+  const operationCode = transaction.operationCode || operationId;
+  const amountLabel = auditMetadata.amount
+    ? `${auditMetadata.amount} ${auditMetadata.currency || ''}`.trim()
+    : 'la operación';
+
+  emitNotification({
+    title: 'Operación liquidada',
+    message: `Se liquidó ${amountLabel} para ${operationCode}.`,
+    severity: 'success',
+    actionLabel: 'Ver operación',
+    actionUrl: `/dashboard/operaciones/detalle/${operationId}`,
+    metadata: {
+      operationId,
+      operationCode,
+      amount: auditMetadata.amount || null,
+      currency: auditMetadata.currency || null,
+      movementId: normalizedMovementId,
+    },
+    recipients: transaction.user ? [{ user: transaction.user.toString() }] : [],
+    context: {
+      type: 'operation',
+      id: operationId,
+      path: `/dashboard/operaciones/detalle/${operationId}`,
+    },
+  });
+
   return transaction;
 };
 

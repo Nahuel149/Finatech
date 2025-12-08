@@ -8,6 +8,7 @@ const {
 } = require('./currentAccount.service');
 const { registerTreasuryMovement } = require('./treasury.service');
 const { emitBalanceUpdated } = require('../utils/eventBus');
+const { emitNotification } = require('./notifications.service');
 
 const calculateMarginPercentage = ({ type, incomingAmount, outgoingAmount, marketRate }) => {
   const numericIncoming = Number(incomingAmount);
@@ -824,6 +825,29 @@ const finalizeTransaction = async (id, context = {}) => {
     });
   }
 
+  if (formatted) {
+    emitNotification({
+      title: 'Operación confirmada',
+      message: `La operación ${formatted.operationCode || formatted.id} fue confirmada correctamente.`,
+      severity: 'success',
+      actionLabel: 'Ver operación',
+      actionUrl: `/dashboard/operaciones/detalle/${formatted.id}`,
+      metadata: {
+        operationId: formatted.id,
+        operationCode: formatted.operationCode || null,
+        type: formatted.type,
+        incomingAmount: formatted.incomingAmount,
+        outgoingAmount: formatted.outgoingAmount,
+      },
+      recipients: formatted.userId ? [{ user: formatted.userId }] : [],
+      context: {
+        type: 'operation',
+        id: formatted.id,
+        path: `/dashboard/operaciones/detalle/${formatted.id}`,
+      },
+    });
+  }
+
   return formatted;
 };
 
@@ -899,6 +923,28 @@ const voidTransaction = async (id, reason = '', context = {}) => {
       operationCode: formatted.operationCode,
       currency: reversalResult.currency,
       delta: reversalResult.delta,
+    });
+  }
+
+  if (formatted) {
+    const reasonSuffix = formatted.voidReason ? ` (${formatted.voidReason})` : '';
+    emitNotification({
+      title: 'Operación anulada',
+      message: `La operación ${formatted.operationCode || formatted.id} fue anulada${reasonSuffix}.`,
+      severity: 'warning',
+      actionLabel: 'Ver operación',
+      actionUrl: `/dashboard/operaciones/detalle/${formatted.id}`,
+      metadata: {
+        operationId: formatted.id,
+        operationCode: formatted.operationCode || null,
+        reason: formatted.voidReason || null,
+      },
+      recipients: formatted.userId ? [{ user: formatted.userId }] : [],
+      context: {
+        type: 'operation',
+        id: formatted.id,
+        path: `/dashboard/operaciones/detalle/${formatted.id}`,
+      },
     });
   }
 

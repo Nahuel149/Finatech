@@ -54,6 +54,14 @@ export interface DashboardOperationRow {
   isEditable: boolean;
 }
 
+export interface PaginationMeta {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface DashboardRecentOperationsResponse {
   items: DashboardOperationRow[];
+  pagination?: PaginationMeta;
 }

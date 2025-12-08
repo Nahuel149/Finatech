@@ -12,6 +12,7 @@ const {
   revertTransactionSettlement,
 } = require('./transactionLifecycle.service');
 const { emitBalanceUpdated } = require('../utils/eventBus');
+const { emitNotification } = require('./notifications.service');
 
 const BALANCE_METADATA = {
   transfers: {
@@ -1730,6 +1731,213 @@ const formatBalance = (balance) => {
   };
 };
 
+const formatCurrencyAmount = (amount, currency) => {
+  const numeric = roundAmount(amount);
+  const suffix = currency ? ` ${String(currency).toUpperCase()}` : '';
+  return `${numeric}${suffix}`.trim();
+};
+
+const parseThresholdValue = (value) => {
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const BALANCE_ALERT_THRESHOLDS = {
+  transfers: {
+    min: parseThresholdValue(process.env.TREASURY_THRESHOLD_TRANSFERS_MIN),
+    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_TRANSFERS_MAX),
+  },
+  cash: {
+    min: parseThresholdValue(process.env.TREASURY_THRESHOLD_CASH_MIN),
+    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_CASH_MAX),
+  },
+  usd: {
+    min: parseThresholdValue(process.env.TREASURY_THRESHOLD_USD_MIN),
+    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_USD_MAX),
+  },
+  courier_in_transit: {
+    min: parseThresholdValue(process.env.TREASURY_THRESHOLD_COURIER_MIN),
+    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_COURIER_MAX),
+  },
+};
+
+const balanceAlertState = new Map();
+
+const buildBalanceAlertKey = (balanceKey, currency) =>
+  `${String(balanceKey || '').toLowerCase()}:${String(currency || 'ARS').toUpperCase()}`;
+
+const resolveBalanceThresholdConfig = (balanceKey, currency) => {
+  const normalizedKey = String(balanceKey || '').toLowerCase();
+  const normalizedCurrency = String(currency || 'ARS').toUpperCase();
+  const directKey = `${normalizedKey}:${normalizedCurrency}`;
+  const config =
+    BALANCE_ALERT_THRESHOLDS[directKey] || BALANCE_ALERT_THRESHOLDS[normalizedKey] || null;
+
+  if (!config) {
+    return null;
+  }
+
+  const min = parseThresholdValue(config.min);
+  const max = parseThresholdValue(config.max);
+
+  if (min == null && max == null) {
+    return null;
+  }
+
+  return { min, max };
+};
+
+const buildBalancesActionUrl = (balanceKey) =>
+  `/dashboard/tesoreria/saldos?account=${encodeURIComponent(String(balanceKey || 'general'))}`;
+
+const evaluateBalanceAlerts = (balance, { performedBy } = {}) => {
+  if (!balance) {
+    return;
+  }
+
+  const balanceKey = balance.key || balance.id || balance.balanceKey;
+  const config = resolveBalanceThresholdConfig(balanceKey, balance.currency);
+  if (!config) {
+    balanceAlertState.delete(buildBalanceAlertKey(balanceKey, balance.currency));
+    return;
+  }
+
+  const amount = Number(balance.amount) || 0;
+  const alertKey = buildBalanceAlertKey(balanceKey, balance.currency);
+  const previous = balanceAlertState.get(alertKey) || { low: false, high: false };
+  const low = config.min != null && amount <= config.min;
+  const high = config.max != null && amount >= config.max;
+
+  balanceAlertState.set(alertKey, { low, high });
+
+  const accountLabel = resolveAccountLabel(balanceKey, balance.currency);
+  const alerts = [];
+
+  if (low && !previous.low) {
+    alerts.push({
+      title: 'Alerta de saldo bajo',
+      threshold: config.min,
+      direction: 'low',
+    });
+  }
+
+  if (high && !previous.high) {
+    alerts.push({
+      title: 'Alerta de saldo alto',
+      threshold: config.max,
+      direction: 'high',
+    });
+  }
+
+  if (!alerts.length) {
+    return;
+  }
+
+  alerts.forEach((alert) => {
+    const thresholdLabel =
+      alert.threshold == null
+        ? 'sin umbral definido'
+        : formatCurrencyAmount(alert.threshold, balance.currency);
+
+    emitNotification({
+      title: alert.title,
+      message: `${accountLabel} quedo en ${formatCurrencyAmount(
+        amount,
+        balance.currency
+      )} (umbral ${thresholdLabel}).`,
+      severity: 'warning',
+      actionLabel: 'Ver saldos',
+      actionUrl: buildBalancesActionUrl(balanceKey),
+      metadata: {
+        balanceKey,
+        currency: balance.currency,
+        amount: roundAmount(amount),
+        threshold: alert.threshold,
+        direction: alert.direction,
+        performedBy: performedBy || null,
+      },
+      context: {
+        type: 'treasury_balance',
+        id: alertKey,
+        path: buildBalancesActionUrl(balanceKey),
+      },
+    });
+  });
+};
+
+const buildMovementActionUrl = (movementId) =>
+  movementId ? `/dashboard/tesoreria/movimientos/${movementId}` : '/dashboard/tesoreria';
+
+const describeMovementMedium = (medium) => {
+  if (medium === 'cash') return 'efectivo';
+  if (medium === 'deposit') return 'deposito';
+  return 'transferencia';
+};
+
+const emitTreasuryMovementNotification = (
+  movement,
+  { event, balanceSnapshot = null, userId = null, reason = null } = {}
+) => {
+  if (!movement || !event) {
+    return;
+  }
+
+  const code = movement.movementCode || movement.id;
+  const directionLabel = movement.type === 'incoming' ? 'ingreso' : 'egreso';
+  const mediumLabel = describeMovementMedium(movement.medium);
+  const accountLabel = resolveAccountLabel(movement.balanceKey, movement.currency);
+  const amountLabel = formatCurrencyAmount(movement.amount, movement.currency);
+
+  let title = null;
+  let message = null;
+  let severity = 'info';
+
+  if (event === 'registered') {
+    title = 'Movimiento de tesoreria registrado';
+    message = `Se registro ${directionLabel} de ${amountLabel} (${mediumLabel}) en ${accountLabel} (${code}).`;
+  } else if (event === 'compensated') {
+    title = 'Movimiento compensado';
+    message = `El movimiento ${code} fue compensado por ${amountLabel} en ${accountLabel}.`;
+    severity = 'success';
+  } else if (event === 'cancelled') {
+    title = 'Movimiento anulado';
+    const reasonSuffix = reason ? ` (${reason})` : '';
+    message = `El movimiento ${code} fue anulado${reasonSuffix}.`;
+    severity = 'warning';
+  }
+
+  if (!title || !message) {
+    return;
+  }
+
+  emitNotification({
+    title,
+    message,
+    severity,
+    actionLabel: 'Ver movimiento',
+    actionUrl: buildMovementActionUrl(movement.id),
+    metadata: {
+      movementId: movement.id,
+      movementCode: movement.movementCode || null,
+      amount: roundAmount(movement.amount),
+      currency: movement.currency,
+      balanceKey: movement.balanceKey,
+      status: movement.status,
+      contactId: movement.contact?.id || null,
+      contactName: movement.contact?.fullName || movement.contact?.shortName || null,
+      performedBy: userId || null,
+      reason: reason || null,
+      balanceAfter: balanceSnapshot ? formatBalance(balanceSnapshot) : null,
+    },
+    recipients: userId ? [{ user: userId }] : [],
+    context: {
+      type: 'treasury_movement',
+      id: movement.id,
+      path: buildMovementActionUrl(movement.id),
+    },
+  });
+};
+
 const toObjectId = (value) =>
   value && mongoose.Types.ObjectId.isValid(value) ? new mongoose.Types.ObjectId(value) : null;
 
@@ -2715,6 +2923,13 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
     });
   }
 
+  emitTreasuryMovementNotification(formattedMovement, {
+    event: 'registered',
+    balanceSnapshot,
+    userId: context.userId || null,
+  });
+  evaluateBalanceAlerts(balanceSnapshot, { performedBy: context.userId });
+
   return {
     movement: formattedMovement,
     balance: balanceSnapshot ? formatBalance(balanceSnapshot) : null,
@@ -2902,6 +3117,8 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
   const session = await mongoose.startSession();
   let updatedDocument;
   let contactForResponse = null;
+  let balanceSnapshot = null;
+  let cancellationReason = null;
 
   try {
     await session.withTransaction(async () => {
@@ -3071,10 +3288,17 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
     session.endSession();
   }
 
-  return formatTreasuryMovement(
+  const formattedMovement = formatTreasuryMovement(
     updatedDocument,
     contactForResponse ? [contactForResponse] : []
   );
+
+  emitTreasuryMovementNotification(formattedMovement, {
+    event: 'compensated',
+    userId: context.userId || null,
+  });
+
+  return formattedMovement;
 };
 
 const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {}) => {
@@ -3105,10 +3329,15 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
       const balanceMovementType = resolveMovementBalanceType(movement.currency, movement.medium);
       const delta = movement.type === 'incoming' ? movement.amount : -movement.amount;
 
-      await adjustTreasuryBalanceForMovement(balanceMovementType, movement.currency, -delta, {
-        session,
-        userId: context.userId,
-      });
+      balanceSnapshot = await adjustTreasuryBalanceForMovement(
+        balanceMovementType,
+        movement.currency,
+        -delta,
+        {
+          session,
+          userId: context.userId,
+        }
+      );
 
       if (movement.metadata?.settlementApplied && movement.contact) {
         const contactDoc = await Client.findById(movement.contact).session(session);
@@ -3141,8 +3370,9 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
       movement.cancelledAt = new Date();
       movement.cancelledBy =
         context.userId && mongoose.Types.ObjectId.isValid(context.userId) ? context.userId : null;
-      movement.cancellationReason =
+      cancellationReason =
         typeof reason === 'string' && reason.trim().length ? reason.trim() : null;
+      movement.cancellationReason = cancellationReason;
 
       movement.auditTrail = movement.auditTrail || [];
       movement.auditTrail.push(
@@ -3209,10 +3439,20 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
     session.endSession();
   }
 
-  return formatTreasuryMovement(
+  const formattedMovement = formatTreasuryMovement(
     updatedDocument,
     contactForResponse ? [contactForResponse] : []
   );
+
+  emitTreasuryMovementNotification(formattedMovement, {
+    event: 'cancelled',
+    balanceSnapshot,
+    userId: context.userId || null,
+    reason: cancellationReason,
+  });
+  evaluateBalanceAlerts(balanceSnapshot, { performedBy: context.userId });
+
+  return formattedMovement;
 };
 
 const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) => {

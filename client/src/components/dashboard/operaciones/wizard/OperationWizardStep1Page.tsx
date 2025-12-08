@@ -30,24 +30,26 @@ import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { devLog } from '../../../../utils/devLogger';
 
 const VALIDATION_ITEMS = [
-  'TC dentro de l?mites establecidos',
-  'Monto dentro de l?mites diarios',
-  'Cliente con documentaci?n vigente',
+  'TC dentro de limites establecidos',
+  'Monto dentro de limites diarios',
+  'Cliente con documentacion vigente',
 ];
 
 const WIZARD_STEPS = [
-  { label: 'Datos', description: 'Informaci?n' },
-  { label: 'Liquidaci?n', description: 'Pago' },
+  { label: 'Datos', description: 'Informacion' },
+  { label: 'Liquidacion', description: 'Pago' },
   { label: 'Resumen', description: 'Confirmar' },
 ];
 
-const OWNER_OPTIONS = ['Operaciones', 'Tesorer?a', 'Comercial', 'Backoffice'];
+const OWNER_OPTIONS = ['Operaciones', 'Tesoreria', 'Comercial', 'Backoffice'];
 
 const ASSET_CATALOG: AssetOption[] = [
   { code: 'ARS', label: 'ARS - Pesos Argentinos' },
   { code: 'USD', label: 'USD - Dolares' },
   { code: 'EUR', label: 'EUR - Euros' },
   { code: 'BRL', label: 'BRL - Reales' },
+  { code: 'XAU', label: 'Oro - XAU' },
+  { code: 'XME', label: 'Metales - XME' },
 ];
 
 const ASSET_DEFAULTS: Record<TransactionType, { incoming: string; outgoing: string }> = {
@@ -173,22 +175,20 @@ export const OperationWizardStep1Page: React.FC = () => {
 
   
   const { permissions } = useUserPermissions();
-  const normalizedPermissions = useMemo(
-    () =>
-      permissions.map((permission) =>
-        permission.trim().toLowerCase().replace(/\s+/g, '-')
-      ),
-    [permissions]
-  );
-  const canEditMarketRate = useMemo(
-    () =>
-      normalizedPermissions.some((permission) =>
-        ['admin', 'tesoreria', 'tesorer?a', 'tesoreria-admin', 'manage-market-rates'].includes(
-          permission
-        )
-      ),
-    [normalizedPermissions]
-  );
+const normalizedPermissions = useMemo(
+  () =>
+    permissions.map((permission) =>
+      permission.trim().toLowerCase().replace(/\s+/g, '-')
+    ),
+  [permissions]
+);
+const canEditMarketRate = useMemo(
+  () =>
+    normalizedPermissions.some((permission) =>
+      ['admin', 'tesoreria', 'tesoreria-admin', 'manage-market-rates'].includes(permission)
+    ),
+  [normalizedPermissions]
+);
   const [autoMarketRate, setAutoMarketRate] = useState<number>(marketApr);
   const { data: latestMarketRate } = useLatestMarketRate({
     baseAsset: 'USD',
@@ -323,18 +323,11 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
 
   useEffect(() => {
-    const previousIncomingAmount = incomingAmount;
-    const previousOutgoingAmount = outgoingAmount;
-
     if (operationType === 'buy') {
       const incomingIsArs = incomingAssetCode === 'ARS';
       const outgoingIsArs = outgoingAssetCode === 'ARS';
 
       if (incomingIsArs && !outgoingIsArs) {
-        setIncomingAssetCode(outgoingAssetCode);
-        setOutgoingAssetCode('ARS');
-        setIncomingAmount(previousOutgoingAmount);
-        setOutgoingAmount(previousIncomingAmount);
         return;
       }
 
@@ -343,7 +336,7 @@ export const OperationWizardStep1Page: React.FC = () => {
         return;
       }
 
-      if (!outgoingIsArs) {
+      if (outgoingAssetCode === 'USD') {
         setOutgoingAssetCode('ARS');
       }
       return;
@@ -353,11 +346,10 @@ export const OperationWizardStep1Page: React.FC = () => {
       operationType === 'sell' && outgoingAssetCode === 'ARS' && incomingAssetCode !== 'ARS';
 
     if (needsSellCorrection) {
-      // Swap so the asset that entra is ARS and the one that sale is the foreign currency
       setIncomingAssetCode('ARS');
       setOutgoingAssetCode(incomingAssetCode);
-      setIncomingAmount(previousOutgoingAmount);
-      setOutgoingAmount(previousIncomingAmount);
+      setIncomingAmount(outgoingAmount);
+      setOutgoingAmount(incomingAmount);
     }
   }, [operationType, incomingAssetCode, outgoingAssetCode, incomingAmount, outgoingAmount]);
 
@@ -380,7 +372,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     if (operationType === 'buy') {
       return {
         enter: ASSET_CATALOG.filter((option) => option.code !== 'ARS'),
-        exit: ASSET_CATALOG.filter((option) => option.code === 'ARS'),
+        exit: ASSET_CATALOG.filter((option) => option.code !== 'USD'),
       };
     }
 
@@ -395,13 +387,20 @@ export const OperationWizardStep1Page: React.FC = () => {
     [operationType, incomingAssetCode, outgoingAssetCode],
   );
 
-  // Solo mostramos segunda tasa cuando la moneda de salida no es USD ni ARS
-  const showSecondaryRates = outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS';
+  const secondaryAssetCode = useMemo(() => {
+    if (incomingAssetCode !== 'USD' && incomingAssetCode !== 'ARS') {
+      return incomingAssetCode;
+    }
+    if (outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS') {
+      return outgoingAssetCode;
+    }
+    return null;
+  }, [incomingAssetCode, outgoingAssetCode]);
+
+  const showSecondaryRates = Boolean(secondaryAssetCode);
 
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
-      // Double exchange: ARS ? USD ? bien2
-      // Effective ARS/bien2 market rate = (ARS/USD) / (bien2/USD)
       return marketApr / secondaryMarketRate;
     }
     return marketApr;
@@ -433,8 +432,8 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, [incomingAmount, effectiveMarketRate, operationType, outgoingAmount]);
 
   const secondaryAssetLabel = useMemo(
-    () => findAssetLabel(outgoingAssetCode),
-    [outgoingAssetCode]
+    () => (secondaryAssetCode ? findAssetLabel(secondaryAssetCode) : ''),
+    [secondaryAssetCode]
   );
 
   useEffect(() => {
@@ -444,9 +443,16 @@ export const OperationWizardStep1Page: React.FC = () => {
     }
   }, [showSecondaryRates]);
 
+  useEffect(() => {
+    if (showSecondaryRates) {
+      setSecondaryRate(1);
+      setSecondaryMarketRate(1);
+    }
+  }, [secondaryAssetCode, showSecondaryRates]);
+
   // Build payload function for auto-save
   const buildPayload = useCallback((): TransactionDraftPayload => {
-    const secondaryCode = outgoingAssetCode;
+    const secondaryCode = secondaryAssetCode || outgoingAssetCode;
     const notesPayload = showSecondaryRates
       ? encodeNotes(
           Number(secondaryRate),
@@ -482,6 +488,7 @@ export const OperationWizardStep1Page: React.FC = () => {
     operationType,
     outgoingAmount,
     outgoingAssetCode,
+    secondaryAssetCode,
     secondaryMarketRate,
     secondaryRate,
     showSecondaryRates,
@@ -520,7 +527,11 @@ export const OperationWizardStep1Page: React.FC = () => {
   const handleOutgoingAssetChange = useCallback(
     (code: string) => {
       if (operationType === 'buy') {
-        setOutgoingAssetCode('ARS');
+        if (code === 'USD') {
+          setOutgoingAssetCode('ARS');
+          return;
+        }
+        setOutgoingAssetCode(code);
         return;
       }
       setOutgoingAssetCode(code);
@@ -586,8 +597,8 @@ export const OperationWizardStep1Page: React.FC = () => {
       setFormError('En compras, el activo de entrada debe ser distinto de ARS.');
       return false;
     }
-    if (operationType === 'buy' && outgoingAssetCode !== 'ARS') {
-      setFormError('En compras, el activo de salida debe ser ARS.');
+    if (operationType === 'buy' && outgoingAssetCode === 'USD') {
+      setFormError('En compras, el activo de salida no puede ser USD.');
       return false;
     }
     setFormError(null);

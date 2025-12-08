@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardOperations } from '../../../hooks';
 import { DashboardOperationRow } from '../../../types';
@@ -36,14 +36,36 @@ const filterBySearch = (rows: DashboardOperationRow[], query: string) => {
 
 export const RecentOperationsTable: React.FC<Props> = ({
   search = '',
-  limit = 10,
+  limit: initialLimit = 10,
   variant = 'full',
 }) => {
   const navigate = useNavigate();
-  const { items, loading, error, refresh } = useDashboardOperations({ limit });
+  const historyPageSize = 15;
+  const [historyMode, setHistoryMode] = useState(false);
+  const [page, setPage] = useState(1);
+
+  const pageSize = historyMode ? historyPageSize : initialLimit;
+  const currentPage = historyMode ? page : 1;
+
+  const { items, loading, error, refresh, pagination } = useDashboardOperations({
+    limit: pageSize,
+    page: currentPage,
+  });
 
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
+
+  useEffect(() => {
+    if (!historyMode) {
+      setPage(1);
+    }
+  }, [historyMode]);
+
+  useEffect(() => {
+    if (historyMode) {
+      setPage(1);
+    }
+  }, [clientFilter, typeFilter, search, historyMode]);
 
   const rows = useMemo(() => filterBySearch(items, search), [items, search]);
 
@@ -60,6 +82,9 @@ export const RecentOperationsTable: React.FC<Props> = ({
       return true;
     });
   }, [rows, clientFilter, typeFilter]);
+
+  const totalPages = historyMode ? pagination?.totalPages || 1 : 1;
+  const totalItems = historyMode ? pagination?.total || filteredRows.length : filteredRows.length;
 
   const showFilters = variant === 'full';
   const showHistoryButton = variant === 'full';
@@ -95,7 +120,13 @@ export const RecentOperationsTable: React.FC<Props> = ({
   };
 
   const handleViewHistory = () => {
-    navigate('/dashboard/tesoreria/saldos');
+    setHistoryMode((prev) => !prev);
+    setPage(1);
+  };
+
+  const goToPage = (nextPage: number) => {
+    const sanitized = Math.min(Math.max(nextPage, 1), Math.max(totalPages, 1));
+    setPage(sanitized);
   };
 
   return (
@@ -113,7 +144,13 @@ export const RecentOperationsTable: React.FC<Props> = ({
                 className="text-primary hover:underline text-sm font-medium leading-tight text-right"
                 onClick={handleViewHistory}
               >
-                Ver historial<br />completo
+                {historyMode ? (
+                  'Volver a recientes'
+                ) : (
+                  <>
+                    Ver historial<br />completo
+                  </>
+                )}
               </button>
             )}
           </div>
@@ -437,6 +474,35 @@ export const RecentOperationsTable: React.FC<Props> = ({
               </div>
             ))}
         </div>
+
+        {historyMode && !loading && !error && totalItems > 0 && (
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-4 lg:px-6 py-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600">
+              Pagina {currentPage} de {totalPages} &bull; {totalItems} operaciones
+            </div>
+            <div className="flex items-center gap-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(currentPage - 1)}
+                disabled={currentPage <= 1}
+              >
+                Anterior
+              </Button>
+              <span className="text-sm text-gray-700">
+                {currentPage} / {totalPages}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => goToPage(currentPage + 1)}
+                disabled={currentPage >= totalPages}
+              >
+                Siguiente
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   );

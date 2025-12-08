@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const LogisticsIncident = require('../models/LogisticsIncident');
 const AppError = require('../utils/AppError');
+const { emitNotification } = require('./notifications.service');
 
 const toIncidentDto = (incidentDoc) => {
   if (!incidentDoc) {
@@ -110,6 +111,39 @@ const updateIncidentStatus = async (identifier, nextStatus) => {
   }
 
   await incident.save();
+
+  const actionUrl = `/dashboard/logistica/incidencia/${incident._id.toString()}`;
+  const titleMap = {
+    abierta: 'Incidencia abierta',
+    'en-proceso': 'Incidencia en proceso',
+    resuelta: 'Incidencia resuelta',
+    anulada: 'Incidencia anulada',
+  };
+  const severityMap = {
+    abierta: 'warning',
+    'en-proceso': 'info',
+    resuelta: 'success',
+    anulada: 'warning',
+  };
+  emitNotification({
+    title: titleMap[nextStatus] || 'Incidencia actualizada',
+    message: `La incidencia ${incident.incidentCode} ahora esta ${nextStatus}.`,
+    severity: severityMap[nextStatus] || 'info',
+    actionLabel: 'Ver incidencia',
+    actionUrl,
+    metadata: {
+      incidentId: incident._id.toString(),
+      incidentCode: incident.incidentCode,
+      status: incident.status,
+      severity: incident.severity,
+      logisticsOrderId: incident.logisticsOrderId ? incident.logisticsOrderId.toString() : null,
+    },
+    context: {
+      type: 'logistics_incident',
+      id: incident._id.toString(),
+      path: actionUrl,
+    },
+  });
   return toIncidentDto(incident);
 };
 

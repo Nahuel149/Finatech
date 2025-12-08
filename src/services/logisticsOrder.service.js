@@ -7,6 +7,7 @@ const SequenceCounter = require('../models/SequenceCounter');
 const Client = require('../models/Client');
 const { storeEvidenceFiles } = require('../utils/evidenceStorage');
 const { reserveCourierTransitBalance } = require('./treasury.service');
+const { emitNotification } = require('./notifications.service');
 
 const ORDER_PREFIX = 'OL';
 const PROGRAM_ORDER_PERMISSIONS = ['manage-treasury', 'manage-operations', 'manage-logistics'];
@@ -91,6 +92,47 @@ const roundAmount = (value) => {
 };
 
 const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const buildOrderRecipients = (order, fallbackUserId = null) => {
+  const target = order?.assignedTo || fallbackUserId;
+  if (!target) {
+    return [];
+  }
+  const id =
+    typeof target === 'object' && target.toString ? target.toString() : String(target || '').trim();
+  return id ? [{ user: id }] : [];
+};
+
+const orderActionUrl = (orderId) => `/dashboard/logistica/orden/${orderId}`;
+
+const notifyOrderEvent = (order, { title, message, severity = 'info', reason = null } = {}) => {
+  if (!order?._id || !title || !message) {
+    return;
+  }
+  const recipients = buildOrderRecipients(order);
+  emitNotification({
+    title,
+    message,
+    severity,
+    actionLabel: 'Ver orden',
+    actionUrl: orderActionUrl(order._id.toString()),
+    metadata: {
+      orderId: order._id.toString(),
+      orderNumber: order.orderNumber || null,
+      status: order.status || null,
+      type: order.type || null,
+      operationCode: order.operationCode || null,
+      assignedTo: order.assignedTo ? order.assignedTo.toString() : null,
+      reason: reason || null,
+    },
+    recipients,
+    context: {
+      type: 'logistics_order',
+      id: order._id.toString(),
+      path: orderActionUrl(order._id.toString()),
+    },
+  });
+};
 
 const validateWindow = (windowStart, windowEnd, { requireFuture = true } = {}) => {
   const start = new Date(windowStart);
@@ -971,6 +1013,11 @@ const startRoute = async (orderId, context = {}) => {
     },
     context
   );
+  notifyOrderEvent(order, {
+    title: 'Orden en camino',
+    message: `La orden ${order.orderNumber || order._id.toString()} esta en camino.`,
+    severity: 'info',
+  });
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order.toObject(), { timeline });
 };
@@ -1015,6 +1062,11 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
     },
     context
   );
+  notifyOrderEvent(order, {
+    title: 'Orden en sitio',
+    message: `La orden ${order.orderNumber || order._id.toString()} llego al destino.`,
+    severity: 'info',
+  });
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order.toObject(), { timeline });
 };
@@ -1177,6 +1229,12 @@ const completeTotal = async (orderId, context = {}) => {
     context
   );
 
+  notifyOrderEvent(order, {
+    title: 'Orden completada',
+    message: `La orden ${order.orderNumber || order._id.toString()} fue completada.`,
+    severity: 'success',
+  });
+
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order.toObject(), { timeline });
 };
@@ -1267,6 +1325,12 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     context
   );
 
+  notifyOrderEvent(order, {
+    title: 'Orden completada parcialmente',
+    message: `La orden ${order.orderNumber || order._id.toString()} quedo con pendientes.`,
+    severity: 'warning',
+  });
+
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order.toObject(), { timeline });
 };
@@ -1302,6 +1366,13 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
     },
     context
   );
+
+  notifyOrderEvent(order, {
+    title: 'Discrepancia en orden',
+    message: `Se reporto una discrepancia en la orden ${order.orderNumber || order._id.toString()}.`,
+    severity: 'warning',
+    reason,
+  });
 
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order.toObject(), { timeline });

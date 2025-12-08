@@ -24,7 +24,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Operaciones', path: '/dashboard', icon: 'fa-exchange-alt' },
   { label: 'Tesorería', path: '/dashboard/tesoreria', icon: 'fa-vault' },
   { label: 'Logística', path: '/dashboard/logistica', icon: 'fa-truck' },
-  { label: 'Liquidaciones', path: null, icon: 'fa-calculator' },
 ];
 
 const notificationLevelColor: Record<NotificationLevel, string> = {
@@ -181,12 +180,16 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const secondaryText = user?.email || (userLoading ? 'Sincronizando…' : 'Sin correo configurado');
 
   const activePath = useMemo(() => {
+    const normalizedPath = location.pathname.startsWith('/dashboard/tesoreria/saldos')
+      ? '/dashboard'
+      : location.pathname;
+
     const candidates = NAV_ITEMS.filter((item): item is NavItem & { path: string } => Boolean(item.path))
       .sort((a, b) => (b.path!.length - a.path!.length));
     const matched = candidates.find((item) =>
-      location.pathname.startsWith(item.path)
+      normalizedPath.startsWith(item.path)
     );
-    return matched?.path ?? location.pathname;
+    return matched?.path ?? normalizedPath;
   }, [location.pathname]);
 
   const handleNavigate = () => {
