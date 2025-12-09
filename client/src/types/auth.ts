@@ -47,6 +47,9 @@ export interface UserProfile {
   isVerified?: boolean;
   createdAt?: string | Date;
   permissions?: string[];
+  twoFactor?: {
+    isEnabled?: boolean;
+  };
 }
 
 export interface ProfileResponse {

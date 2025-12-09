@@ -140,7 +140,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     if (missing.length) {
       setLocalMessage({
         type: 'error',
-        text: 'CompletÃ¡ el monto recibido para cada Ã­tem antes de finalizar.',
+        text: 'Completá el monto recibido para cada ítem antes de finalizar.',
       });
       return false;
     }
@@ -178,7 +178,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     if (!items.length) {
       setLocalMessage({
         type: 'error',
-        text: 'IndicÃ¡ quÃ© valores quedaron pendientes antes de completar parcial.',
+        text: 'Indicá qué valores quedaron pendientes antes de completar parcial.',
       });
       return;
     }
@@ -189,7 +189,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     if (invalidPending) {
       setLocalMessage({
         type: 'error',
-        text: 'CompletÃ¡ montos pendientes y recibidos vÃ¡lidos para los Ã­tems seleccionados.',
+        text: 'Completá montos pendientes y recibidos válidos para los ítems seleccionados.',
       });
       return;
     }
@@ -214,7 +214,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
             />
           </label>
           <label className="text-xs uppercase text-gray-500">
-            NÃºmero
+            Número
             <input
               type="text"
               value={item.metadata.number || ''}
@@ -277,7 +277,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
     return (
       <label className="text-xs uppercase text-gray-500">
-        DescripciÃ³n
+        Descripción
         <input
           type="text"
           value={item.metadata.description || ''}
@@ -394,7 +394,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
       <Alert
         type="info"
-        message="RegistrÃ¡ los montos recibidos/entregados por Ã­tem y completÃ¡ los metadatos obligatorios (cheques, metales). PodÃ©s finalizar directo."
+        message="Registrá los montos recibidos/entregados por ítem y completá los metadatos obligatorios (cheques, metales). Podés finalizar directo."
       />
 
       {localMessage && (
@@ -404,7 +404,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
       <div className="space-y-4">
         {drafts.map(renderItem)}
         {!drafts.length && (
-          <p className="text-sm text-gray-500">No hay Ã­tems cargados para esta orden.</p>
+          <p className="text-sm text-gray-500">No hay ítems cargados para esta orden.</p>
         )}
       </div>
 

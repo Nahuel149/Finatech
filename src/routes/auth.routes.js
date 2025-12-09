@@ -12,6 +12,9 @@ const {
   validateResetToken,
   resetPassword,
   profile,
+  updateProfile,
+  updateTwoFactor,
+  changePassword,
   logout,
   keepAlive,
 } = require('../controllers/auth.controller');
@@ -125,6 +128,19 @@ const resetPasswordValidators = [
     .withMessage('Las contraseñas no coinciden.'),
 ];
 
+const updateProfileValidators = [
+  body('fullName').trim().notEmpty().withMessage('El nombre completo es obligatorio.'),
+];
+
+const changePasswordValidators = [
+  body('currentPassword').isString().notEmpty().withMessage('Ingres� tu contrase�a actual.'),
+  body('newPassword').isString().custom(passwordValidator),
+];
+
+const twoFactorToggleValidators = [
+  body('enabled').isBoolean().withMessage('Deb�s indicar si activ�s o desactiv�s 2FA.').toBoolean(),
+];
+
 router.post('/register', authLimiter, ...registerValidators, validateRequest, register);
 
 router.get('/verify-email', verifyEmail);
@@ -169,6 +185,9 @@ router.post(
 );
 
 router.get('/me', requireAuth, profile);
+router.patch('/profile', requireAuth, ...updateProfileValidators, validateRequest, updateProfile);
+router.post('/profile/password', requireAuth, ...changePasswordValidators, validateRequest, changePassword);
+router.post('/profile/2fa', requireAuth, ...twoFactorToggleValidators, validateRequest, updateTwoFactor);
 
 router.get('/keep-alive', requireAuth, keepAlive);
 

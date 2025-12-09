@@ -193,7 +193,8 @@ export const ContactOperationsTable: React.FC<Props> = ({
             {!loading && hasRows &&
               rows.map((row) => {
                 const datetime = formatDate(row.createdAt);
-                const amountClass = row.direction === 'incoming' ? 'incoming' : 'outgoing';
+                const amountClass =
+                  row.direction === 'incoming' ? 'text-green-600' : 'text-red-600';
                 const rowCurrency = row.currency || currency;
                 return (
                   <tr key={row.id ?? `${row.createdAt}-${row.operation.code ?? ''}`} className="table-row">

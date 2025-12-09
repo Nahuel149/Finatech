@@ -37,6 +37,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import SessionTimeoutManager from './components/SessionTimeoutManager';
 import { prefetchCsrfToken } from './utils/api';
 import { devPerformanceUtils } from './utils/performanceMonitor';
+import { AccountSettingsPage, ProfilePage } from './components/dashboard/settings';
 
 const App: React.FC = () => {
   // Initialize performance monitoring in development
@@ -102,6 +103,8 @@ const App: React.FC = () => {
               path="/dashboard/tesoreria/movimientos/:movementId"
               element={<ErrorBoundary><TreasuryMovementsPage /></ErrorBoundary>}
             />
+            <Route path="/dashboard/perfil" element={<ErrorBoundary><ProfilePage /></ErrorBoundary>} />
+            <Route path="/dashboard/configuracion" element={<ErrorBoundary><AccountSettingsPage /></ErrorBoundary>} />
             <Route path="/dashboard/operaciones/transfer-pesos" element={<ErrorBoundary><TransferPesosFlow /></ErrorBoundary>}>
               <Route index element={<ErrorBoundary><TransferPesosBuilderPage /></ErrorBoundary>} />
               <Route path="confirmacion" element={<ErrorBoundary><TransferPesosConfirmPage /></ErrorBoundary>} />

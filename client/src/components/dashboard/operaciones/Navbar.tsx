@@ -288,6 +288,22 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     }
   };
 
+  const handleOpenSettings = () => {
+    setAccountMenuOpen(false);
+    setMobileMenuOpen(false);
+    setMobileProfileOpen(false);
+    setNotificationsOpen(false);
+    navigate('/dashboard/configuracion', { replace: false });
+  };
+
+  const handleOpenProfile = () => {
+    setAccountMenuOpen(false);
+    setMobileMenuOpen(false);
+    setMobileProfileOpen(false);
+    setNotificationsOpen(false);
+    navigate('/dashboard/perfil', { replace: false });
+  };
+
   return (
     <>
       {/* Mobile header */}
@@ -387,18 +403,16 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
               <div className="mt-3 space-y-2">
                 <button
                   type="button"
-                  className="w-full flex items-center px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg cursor-not-allowed"
-                  disabled
-                  aria-disabled="true"
+                  className="w-full flex items-center px-4 py-2 text-sm text-text-primary bg-gray-50 border border-gray-200 rounded-lg hover:bg-primary/5 transition-colors"
+                  onClick={handleOpenProfile}
                 >
                   <i className="fa-solid fa-user-gear mr-2" />
-                  Perfil
+                  Perfil y seguridad
                 </button>
                 <button
                   type="button"
-                  className="w-full flex items-center px-4 py-2 text-sm text-gray-400 bg-gray-50 border border-gray-200 rounded-lg cursor-not-allowed"
-                  disabled
-                  aria-disabled="true"
+                  className="w-full flex items-center px-4 py-2 text-sm text-text-primary bg-gray-50 border border-gray-200 rounded-lg hover:bg-primary/5 transition-colors"
+                  onClick={handleOpenSettings}
                 >
                   <i className="fa-solid fa-sliders mr-2" />
                   Configuración
@@ -591,20 +605,18 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     <div className="py-1">
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                        disabled
-                        aria-disabled="true"
+                        className="flex w-full items-center px-4 py-2 text-sm text-text-primary hover:bg-primary/5 transition-colors"
+                        onClick={handleOpenProfile}
                       >
-                        <i className="fa-solid fa-user-gear mr-3 text-gray-400" />
-                        Perfil
+                        <i className="fa-solid fa-user-gear mr-3 text-text-primary" />
+                        Perfil y seguridad
                       </button>
                       <button
                         type="button"
-                        className="flex w-full items-center px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                        disabled
-                        aria-disabled="true"
+                        className="flex w-full items-center px-4 py-2 text-sm text-text-primary hover:bg-primary/5 transition-colors"
+                        onClick={handleOpenSettings}
                       >
-                        <i className="fa-solid fa-sliders mr-3 text-gray-400" />
+                        <i className="fa-solid fa-sliders mr-3 text-text-primary" />
                         Configuración
                       </button>
                     </div>

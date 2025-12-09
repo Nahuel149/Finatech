@@ -144,7 +144,7 @@ const validateWindow = (windowStart, windowEnd, { requireFuture = true } = {}) =
   const end = new Date(windowEnd);
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new AppError('La ventana horaria es invÃ¡lida.', 422);
+    throw new AppError('La ventana horaria es inválida.', 422);
   }
 
   if (start >= end) {
@@ -167,13 +167,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
     const number = normalizeString(metadata.number || metadata.checkNumber);
     const dueDate = metadata.dueDate ? new Date(metadata.dueDate) : null;
     if (!bank) {
-      throw new AppError(`IndicÃ¡ el banco del cheque #${index + 1}.`, 422);
+      throw new AppError(`Indicá el banco del cheque #${index + 1}.`, 422);
     }
     if (!number) {
-      throw new AppError(`IndicÃ¡ el nÃºmero del cheque #${index + 1}.`, 422);
+      throw new AppError(`Indicá el número del cheque #${index + 1}.`, 422);
     }
     if (!dueDate || Number.isNaN(dueDate.getTime())) {
-      throw new AppError(`IndicÃ¡ la fecha del cheque #${index + 1}.`, 422);
+      throw new AppError(`Indicá la fecha del cheque #${index + 1}.`, 422);
     }
     return {
       bank,
@@ -188,13 +188,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
     const purity = normalizeString(metadata.purity);
     const weight = Number(metadata.weight);
     if (!metalType) {
-      throw new AppError(`IndicÃ¡ el tipo de metal del Ã­tem #${index + 1}.`, 422);
+      throw new AppError(`Indicá el tipo de metal del ítem #${index + 1}.`, 422);
     }
     if (!purity) {
-      throw new AppError(`IndicÃ¡ la pureza del Ã­tem #${index + 1}.`, 422);
+      throw new AppError(`Indicá la pureza del ítem #${index + 1}.`, 422);
     }
     if (!Number.isFinite(weight) || weight <= 0) {
-      throw new AppError(`IndicÃ¡ el peso del Ã­tem #${index + 1}.`, 422);
+      throw new AppError(`Indicá el peso del ítem #${index + 1}.`, 422);
     }
     return {
       metalType,
@@ -207,7 +207,7 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
   if (assetType === 'OTHER') {
     const description = normalizeString(metadata.description);
     if (!description) {
-      throw new AppError(`AgregÃ¡ una descripciÃ³n para el Ã­tem #${index + 1}.`, 422);
+      throw new AppError(`Agregá una descripción para el ítem #${index + 1}.`, 422);
     }
     return { description };
   }
@@ -219,13 +219,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
 
 const normalizeItems = (items) => {
   if (!Array.isArray(items) || !items.length) {
-    throw new AppError('DebÃ©s cargar al menos un Ã­tem de valor.', 422);
+    throw new AppError('Debés cargar al menos un ítem de valor.', 422);
   }
 
   return items.map((item, index) => {
     const assetCode = normalizeString(item.assetCode || item.currency).toUpperCase();
     if (!assetCode) {
-      throw new AppError(`SeleccionÃ¡ la divisa o activo para el Ã­tem #${index + 1}.`, 422);
+      throw new AppError(`Seleccioná la divisa o activo para el ítem #${index + 1}.`, 422);
     }
 
     const rawType = normalizeString(item.assetType || item.kind).toUpperCase();
@@ -233,7 +233,7 @@ const normalizeItems = (items) => {
 
     const expectedAmount = Number(item.expectedAmount);
     if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
-      throw new AppError(`El monto esperado del Ã­tem #${index + 1} debe ser mayor a 0.`, 422);
+      throw new AppError(`El monto esperado del ítem #${index + 1} debe ser mayor a 0.`, 422);
     }
 
     return {
@@ -324,7 +324,7 @@ const ensureCapacity = (items, totalsMap, allocated) => {
   items.forEach((item) => {
     const entry = totalsMap.get(item.assetCode);
     if (!entry) {
-      throw new AppError('El activo seleccionado no pertenece a la operaciÃ³n original.', 422);
+      throw new AppError('El activo seleccionado no pertenece a la operación original.', 422);
     }
     const current = local.get(item.assetCode) || 0;
     local.set(item.assetCode, roundAmount(current + item.expectedAmount));
@@ -334,7 +334,7 @@ const ensureCapacity = (items, totalsMap, allocated) => {
     const total = totalsMap.get(code)?.total || 0;
     const alreadyAllocated = allocated.get(code) || 0;
     if (amount + alreadyAllocated - total > 0.01) {
-      throw new AppError('El monto esperado supera el saldo pendiente de la operaciÃ³n.', 422);
+      throw new AppError('El monto esperado supera el saldo pendiente de la operación.', 422);
     }
   });
 };
@@ -558,7 +558,7 @@ const toObjectId = (value) => {
 const ensureAuthenticated = (context) => {
   const userId = context?.userId;
   if (!userId) {
-    throw new AppError('AutenticaciÃ³n requerida.', 401);
+    throw new AppError('Autenticación requerida.', 401);
   }
   return userId;
 };
@@ -710,7 +710,7 @@ const ensureItemsWithinTolerance = (order) => {
 
   if (invalidItems.length) {
     throw new AppError(
-      'Los montos recibidos difieren de lo esperado. RevisÃ¡ los Ã­tems: ' + invalidItems.join(', '),
+      'Los montos recibidos difieren de lo esperado. Revisá los ítems: ' + invalidItems.join(', '),
       422,
       { invalidItems }
     );
@@ -814,11 +814,11 @@ const buildOperationSummary = (transaction, balances, clientSnapshot, clientAddr
 
 const loadTransaction = async (operationId) => {
   if (!mongoose.Types.ObjectId.isValid(operationId)) {
-    throw new AppError('La operaciÃ³n indicada es invÃ¡lida.', 404);
+    throw new AppError('La operación indicada es inválida.', 404);
   }
   const transaction = await Transaction.findById(operationId).lean();
   if (!transaction) {
-    throw new AppError('No encontramos la operaciÃ³n vinculada.', 404);
+    throw new AppError('No encontramos la operación vinculada.', 404);
   }
   return transaction;
 };
@@ -898,7 +898,7 @@ const preparePayload = (payload, user) => {
 const createFromOperation = async (operationId, payload, context = {}) => {
   const userId = context.userId;
   if (!userId) {
-    throw new AppError('AutenticaciÃ³n requerida.', 401);
+    throw new AppError('Autenticación requerida.', 401);
   }
   const transaction = await loadTransaction(operationId);
   const normalized = preparePayload(payload, context.user);
@@ -1015,11 +1015,11 @@ const updateOrder = async (orderId, payload, context = {}) => {
 
 const getOrderById = async (orderId) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new AppError('Orden logÃ­stica no encontrada.', 404);
+    throw new AppError('Orden logística no encontrada.', 404);
   }
   const order = await LogisticsOrder.findById(orderId).lean();
   if (!order) {
-    throw new AppError('Orden logÃ­stica no encontrada.', 404);
+    throw new AppError('Orden logística no encontrada.', 404);
   }
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order, { timeline });
@@ -1115,10 +1115,10 @@ const sortAssignedOrders = (orders) =>
 
 const listAssignedOrders = async (userId, filters = {}) => {
   if (!userId) {
-    throw new AppError('AutenticaciÃ³n requerida.', 401);
+    throw new AppError('Autenticación requerida.', 401);
   }
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new AppError('Usuario invÃ¡lido.', 403);
+    throw new AppError('Usuario inválido.', 403);
   }
   const query = buildAssignedOrdersQuery(userId, filters);
   const orders = await LogisticsOrder.find(query).lean();
@@ -1132,7 +1132,7 @@ const startRoute = async (orderId, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!ROUTE_START_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podÃ©s iniciar Ã³rdenes programadas o asignadas.', 409);
+    throw new AppError('Solo podés iniciar órdenes programadas o asignadas.', 409);
   }
 
   order.status = 'EN_CAMINO';
@@ -1146,7 +1146,7 @@ const startRoute = async (orderId, context = {}) => {
     {
       type: 'STARTED',
       title: 'Recorrido iniciado',
-      description: `${order.updatedByName || 'LogÃ­stico'} marcÃ³ la orden en camino.`,
+      description: `${order.updatedByName || 'Logístico'} marcó la orden en camino.`,
       metadata: {
         status: order.status,
         startedAt: order.startedAt,
@@ -1167,14 +1167,14 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!ROUTE_ARRIVAL_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podÃ©s marcar la llegada cuando la orden estÃ¡ en camino.', 409);
+    throw new AppError('Solo podés marcar la llegada cuando la orden está en camino.', 409);
   }
 
   const gpsLat = Number(payload.gpsLat);
   const gpsLng = Number(payload.gpsLng);
   const distanceCheck = validateGeofenceDistance(order, gpsLat, gpsLng);
   if (!distanceCheck.ok) {
-    throw new AppError('No estÃ¡s dentro de la geocerca permitida.', 422, {
+    throw new AppError('No estás dentro de la geocerca permitida.', 422, {
       distance: distanceCheck.distance,
       gpsLat,
       gpsLng,
@@ -1192,8 +1192,8 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
     order,
     {
       type: 'ARRIVED',
-      title: 'LogÃ­stico en sitio',
-      description: 'Se confirmÃ³ la llegada al destino.',
+      title: 'Logístico en sitio',
+      description: 'Se confirmó la llegada al destino.',
       metadata: {
         gpsLat,
         gpsLng,
@@ -1217,13 +1217,13 @@ const validateItemUpdate = (item, payload) => {
   const pending = payload.pendingAmount !== undefined ? Number(payload.pendingAmount) : null;
   const discrepancyFlag = Boolean(payload.discrepancyFlag);
   if (received !== null && !Number.isFinite(received)) {
-    throw new AppError('El monto recibido es invÃ¡lido.', 422);
+    throw new AppError('El monto recibido es inválido.', 422);
   }
   if (pending !== null && !Number.isFinite(pending)) {
-    throw new AppError('El monto pendiente es invÃ¡lido.', 422);
+    throw new AppError('El monto pendiente es inválido.', 422);
   }
   if (!discrepancyFlag && received !== null && received > Number(item.expectedAmount) + ITEM_AMOUNT_TOLERANCE) {
-    throw new AppError('El monto recibido supera lo esperado. MarcÃ¡ discrepancia para continuar.', 422);
+    throw new AppError('El monto recibido supera lo esperado. Marcá discrepancia para continuar.', 422);
   }
   return { received, pending, discrepancyFlag };
 };
@@ -1232,10 +1232,10 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podÃ©s registrar conteo cuando estÃ¡s en sitio.', 409);
+    throw new AppError('Solo podés registrar conteo cuando estás en sitio.', 409);
   }
   if (!Array.isArray(itemsPayload) || !itemsPayload.length) {
-    throw new AppError('DebÃ©s enviar al menos un Ã­tem para actualizar.', 422);
+    throw new AppError('Debés enviar al menos un ítem para actualizar.', 422);
   }
 
   itemsPayload.forEach((payload) => {
@@ -1244,7 +1244,7 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
     }
     const item = order.items.id(payload.id) || order.items.find((entry) => entry._id?.toString() === payload.id);
     if (!item) {
-      throw new AppError('Ãtem de valor no encontrado.', 404);
+      throw new AppError('Ítem de valor no encontrado.', 404);
     }
     const { received, pending, discrepancyFlag } = validateItemUpdate(item, payload);
     if (received !== null) {
@@ -1274,7 +1274,7 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
     {
       type: 'ITEMS_UPDATED',
       title: 'Conteo actualizado',
-      description: 'Se registraron montos y pendientes de los Ã­tems.',
+      description: 'Se registraron montos y pendientes de los ítems.',
     },
     context
   );
@@ -1287,14 +1287,14 @@ const addEvidence = async (orderId, payload = {}, files = [], context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!LOGISTICS_ACTIVE_STATUSES.includes(order.status) && !HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('No podÃ©s adjuntar evidencias en este estado.', 409);
+    throw new AppError('No podés adjuntar evidencias en este estado.', 409);
   }
   const type = String(payload.type || '').trim();
   if (!type) {
-    throw new AppError('IndicÃ¡ el tipo de evidencia.', 422);
+    throw new AppError('Indicá el tipo de evidencia.', 422);
   }
   if (!Array.isArray(files) || !files.length) {
-    throw new AppError('DebÃ©s adjuntar al menos un archivo de evidencia.', 422);
+    throw new AppError('Debés adjuntar al menos un archivo de evidencia.', 422);
   }
 
   const storedFiles = await storeEvidenceFiles(order._id.toString(), files);
@@ -1337,10 +1337,10 @@ const completeTotal = async (orderId, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (COMPLETION_BLOCKED_STATUSES.includes(order.status)) {
-    throw new AppError('No podÃ©s completar una orden con discrepancias.', 409);
+    throw new AppError('No podés completar una orden con discrepancias.', 409);
   }
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('DebÃ©s estar en sitio para completar la orden.', 409);
+    throw new AppError('Debés estar en sitio para completar la orden.', 409);
   }
   ensureRequiredEvidences(order);
   ensureItemsWithinTolerance(order);
@@ -1369,7 +1369,7 @@ const completeTotal = async (orderId, context = {}) => {
     {
       type: 'COMPLETED_TOTAL',
       title: 'Orden completada',
-      description: 'Se entregÃ³/retirÃ³ la totalidad de los valores.',
+      description: 'Se entregó/retiró la totalidad de los valores.',
       metadata: {
         receiptId: receipt.receiptId,
         receiptUrl: receipt.receiptUrl,
@@ -1392,16 +1392,16 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (COMPLETION_BLOCKED_STATUSES.includes(order.status)) {
-    throw new AppError('No podÃ©s completar una orden con discrepancias abiertas.', 409);
+    throw new AppError('No podés completar una orden con discrepancias abiertas.', 409);
   }
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('DebÃ©s estar en sitio para completar la orden.', 409);
+    throw new AppError('Debés estar en sitio para completar la orden.', 409);
   }
   ensureRequiredEvidences(order);
 
   const pendingItems = Array.isArray(pendingInfo.items) ? pendingInfo.items : [];
   if (!pendingItems.length) {
-    throw new AppError('IndicÃ¡ cuÃ¡les Ã­tems quedaron pendientes.', 422);
+    throw new AppError('Indicá cuáles ítems quedaron pendientes.', 422);
   }
   const pendingMap = new Map();
   pendingItems.forEach((entry) => {
@@ -1415,7 +1415,7 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     });
   });
   if (!pendingMap.size) {
-    throw new AppError('No se recibieron Ã­tems pendientes vÃ¡lidos.', 422);
+    throw new AppError('No se recibieron ítems pendientes válidos.', 422);
   }
 
   let hasPending = false;
@@ -1431,10 +1431,10 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     const received = Number(entry.receivedAmount ?? item.receivedAmount);
     const pending = Number(entry.pendingAmount);
     if (!Number.isFinite(pending) || pending < 0) {
-      throw new AppError('El monto pendiente es invÃ¡lido.', 422);
+      throw new AppError('El monto pendiente es inválido.', 422);
     }
     if (!Number.isFinite(received) || received < 0) {
-      throw new AppError('El monto recibido es invÃ¡lido.', 422);
+      throw new AppError('El monto recibido es inválido.', 422);
     }
     if (pending + received > expected + ITEM_AMOUNT_TOLERANCE) {
       throw new AppError('La suma recibida + pendiente excede lo esperado.', 422);
@@ -1496,12 +1496,12 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (order.status === 'CANCELADA') {
-    throw new AppError('No podÃ©s reportar discrepancias en Ã³rdenes canceladas.', 409);
+    throw new AppError('No podés reportar discrepancias en órdenes canceladas.', 409);
   }
   const reason = String(payload.reason || '').trim();
   const description = String(payload.description || '').trim();
   if (!reason) {
-    throw new AppError('IndicÃ¡ el motivo de la discrepancia.', 422);
+    throw new AppError('Indicá el motivo de la discrepancia.', 422);
   }
 
   order.status = 'DISCREPANCIA';
@@ -1515,7 +1515,7 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
     {
       type: 'DISCREPANCIA_REPORTED',
       title: 'Discrepancia reportada',
-      description: description || 'Se reportÃ³ un incidente en el handover.',
+      description: description || 'Se reportó un incidente en el handover.',
       metadata: {
         reason,
         evidenceIds: payload.evidenceIds || [],
@@ -1537,17 +1537,17 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
 
 const getOrderTimeline = async (orderId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new AppError('Orden logÃ­stica no encontrada.', 404);
+    throw new AppError('Orden logística no encontrada.', 404);
   }
   if (!userId) {
-    throw new AppError('AutenticaciÃ³n requerida.', 401);
+    throw new AppError('Autenticación requerida.', 401);
   }
   const order = await LogisticsOrder.findById(orderId).select({ assignedTo: 1 }).lean();
   if (!order) {
-    throw new AppError('Orden logÃ­stica no encontrada.', 404);
+    throw new AppError('Orden logística no encontrada.', 404);
   }
   if (order.assignedTo && order.assignedTo.toString() !== userId.toString()) {
-    throw new AppError('No tenÃ©s permisos para ver esta timeline.', 403);
+    throw new AppError('No tenés permisos para ver esta timeline.', 403);
   }
   const events = await loadOrderTimeline(orderId);
   return formatTimelineEvents(events);

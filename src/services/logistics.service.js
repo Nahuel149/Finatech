@@ -111,16 +111,78 @@ const mapOperationToDto = (operation) => ({
   updatedAt: operation.updatedAt,
 });
 
-const computeSummaryMetrics = async (baseQuery = {}) => {
-  const [active, pendingDeliveries, internalTransfers, completedToday] = await Promise.all([
-    LogisticsOperation.countDocuments({ ...baseQuery, state: 'en-curso' }),
-    LogisticsOperation.countDocuments({ ...baseQuery, state: 'pendiente', type: 'Entrega' }),
-    LogisticsOperation.countDocuments({ ...baseQuery, type: 'Transferencia' }),
-    (() => {
-      const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
-      return LogisticsOperation.countDocuments({ ...baseQuery, state: 'completado', scheduledAt: { $gte: since } });
-    })(),
+const computeSummaryMetrics = async (baseQuery = {}, filters = {}) => {
+  const resolveRange = () => {
+    const now = new Date();
+    const from = filters.dateFrom ? new Date(filters.dateFrom) : null;
+    const to = filters.dateTo ? new Date(filters.dateTo) : null;
+
+    if (to && !from) {
+      const dayBefore = new Date(to);
+      dayBefore.setDate(dayBefore.getDate() - 1);
+      return { currentFrom: dayBefore, currentTo: to };
+    }
+
+    if (from && !to) {
+      return { currentFrom: from, currentTo: now };
+    }
+
+    if (from && to) {
+      const normalizedTo = new Date(to);
+      normalizedTo.setHours(23, 59, 59, 999);
+      return { currentFrom: from, currentTo: normalizedTo };
+    }
+
+    const fallbackTo = now;
+    const fallbackFrom = new Date(fallbackTo.getTime() - 24 * 60 * 60 * 1000);
+    return { currentFrom: fallbackFrom, currentTo: fallbackTo };
+  };
+
+  const { currentFrom, currentTo } = resolveRange();
+  const durationMs = Math.max(1, currentTo.getTime() - currentFrom.getTime());
+  const previousFrom = new Date(currentFrom.getTime() - durationMs);
+  const previousTo = new Date(currentFrom.getTime());
+
+  const buildQueryWithRange = (query, from, to) => {
+    const next = { ...query };
+    delete next.scheduledAt;
+    if (from || to) {
+      next.scheduledAt = {};
+      if (from) next.scheduledAt.$gte = from;
+      if (to) next.scheduledAt.$lte = to;
+    }
+    return next;
+  };
+
+  const currentQuery = buildQueryWithRange(baseQuery, currentFrom, currentTo);
+  const previousQuery = buildQueryWithRange(baseQuery, previousFrom, previousTo);
+
+  const [
+    active,
+    activePrev,
+    pendingDeliveries,
+    pendingPrev,
+    internalTransfers,
+    internalPrev,
+    completedToday,
+    completedPrev,
+  ] = await Promise.all([
+    LogisticsOperation.countDocuments({ ...currentQuery, state: 'en-curso' }),
+    LogisticsOperation.countDocuments({ ...previousQuery, state: 'en-curso' }),
+    LogisticsOperation.countDocuments({ ...currentQuery, state: 'pendiente', type: 'Entrega' }),
+    LogisticsOperation.countDocuments({ ...previousQuery, state: 'pendiente', type: 'Entrega' }),
+    LogisticsOperation.countDocuments({ ...currentQuery, type: 'Transferencia' }),
+    LogisticsOperation.countDocuments({ ...previousQuery, type: 'Transferencia' }),
+    LogisticsOperation.countDocuments({ ...currentQuery, state: 'completado' }),
+    LogisticsOperation.countDocuments({ ...previousQuery, state: 'completado' }),
   ]);
+
+  const percentChange = (current, previous) => {
+    if (previous === 0) {
+      return current > 0 ? 100 : 0;
+    }
+    return Math.round(((current - previous) / previous) * 100);
+  };
 
   return {
     active,
@@ -128,10 +190,10 @@ const computeSummaryMetrics = async (baseQuery = {}) => {
     internalTransfers,
     completedToday,
     trends: {
-      active: 12,
-      pendingDeliveries: -3,
-      internalTransfers: 8,
-      completedToday: 25,
+      active: percentChange(active, activePrev),
+      pendingDeliveries: percentChange(pendingDeliveries, pendingPrev),
+      internalTransfers: percentChange(internalTransfers, internalPrev),
+      completedToday: percentChange(completedToday, completedPrev),
     },
   };
 };
@@ -147,7 +209,7 @@ const listOperations = async ({ filters = {}, page = 1, limit = 20 } = {}) => {
       .sort({ scheduledAt: -1 })
       .skip((numericPage - 1) * numericLimit)
       .limit(numericLimit),
-    computeSummaryMetrics(query),
+    computeSummaryMetrics(query, filters),
   ]);
 
   const totalPages = Math.max(1, Math.ceil(totalItems / numericLimit));

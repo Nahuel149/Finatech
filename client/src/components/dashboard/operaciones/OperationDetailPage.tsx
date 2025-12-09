@@ -8,9 +8,9 @@ import { Alert } from '../../ui/Alert';
 import { useTransactionDraft, useLogisticsOrdersByOperation } from '../../../hooks/dashboard';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { formatCurrency, formatDateTime } from './transfer/utils';
-import { LogisticsOrder, TransactionAccountingEntry } from '../../../types';
+import { LogisticsOrder, LogisticsOrderStatus, TransactionAccountingEntry } from '../../../types';
 import { LinkedLogisticsOrdersSection } from './logistics/LinkedLogisticsOrdersSection';
-import { LogisticsOrderWizard } from '../logistica/order-wizard/LogisticsOrderWizard';
+import { LogisticsOrderWizard } from '../logistica/order-wizard';
 
 type StatusTone = {
   label: string;
@@ -449,7 +449,7 @@ export const OperationDetailPage: React.FC = () => {
         operation={logisticsContext}
         balances={logisticsBalances}
         editingOrder={editingOrder}
-        onCompleted={(newOrder, status) => {
+        onCompleted={(newOrder: LogisticsOrder, status: LogisticsOrderStatus) => {
           setToast({
             type: status === 'PROGRAMADA' ? 'success' : 'info',
             message:

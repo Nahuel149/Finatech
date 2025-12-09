@@ -161,7 +161,7 @@ const ratesAreEqual = (first?: number | null, second?: number | null) => {
   return Math.abs(first - second) < RATES_EPSILON;
 };
 
-// Genera labels contextuales seg?n las reglas de negocio
+// Genera labels contextuales según las reglas de negocio
 const getAmountLabels = (_operationType: TransactionType, incomingAsset: string, outgoingAsset: string) => ({
   enterLabel: `Bien que entra (${incomingAsset})`,
   exitLabel: `Bien que sale (${outgoingAsset})`,
@@ -544,7 +544,7 @@ const canEditMarketRate = useMemo(
       operationRate = incomingAmount / outgoingAmount;
     }
 
-    // Aplicar la f?rmula: margen = (t_mercado - t_operacion) / t_mercado
+    // Aplicar la fórmula: margen = (t_mercado - t_operacion) / t_mercado
     return ((effectiveMarketRate - operationRate) / effectiveMarketRate) * 100;
   }, [incomingAmount, effectiveMarketRate, marginInputsValid, operationType, outgoingAmount]);
 
@@ -792,7 +792,7 @@ const canEditMarketRate = useMemo(
         }
       } catch (error) {
         const apiError = error as ApiError;
-        setFormError(apiError.message || 'Ocurri? un error al guardar la operaci?n.');
+        setFormError(apiError.message || 'Ocurrió un error al guardar la operación.');
       }
     },
     [

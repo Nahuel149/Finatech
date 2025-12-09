@@ -1,3 +1,6 @@
+const bcrypt = require('bcryptjs');
+const AppError = require('../utils/AppError');
+const User = require('../models/User');
 const {
   registerLocal,
   verifyEmailToken,
@@ -13,6 +16,8 @@ const {
 const { deleteSessionByToken, getSessionDurationMs } = require('../services/session.service');
 const { attachAuthCookie, clearAuthCookie, COOKIE_NAME } = require('../utils/authCookie');
 const { dedupePermissions } = require('../utils/permissions');
+
+const SALT_ROUNDS = Number(process.env.PASSWORD_SALT_ROUNDS || 12);
 
 const setSessionCookie = (res, session) => {
   if (!session?.sessionToken) {
@@ -34,6 +39,9 @@ const buildProfile = (user) => {
     fullName: user.fullName,
     email: user.email,
     permissions: Array.isArray(user.permissions) ? dedupePermissions(user.permissions) : [],
+    twoFactor: {
+      isEnabled: Boolean(user.twoFactor?.enabled),
+    },
     providers: Array.isArray(user.providers)
       ? user.providers.map((provider) => ({
           provider: provider.provider,
@@ -211,6 +219,61 @@ const profile = async (req, res) => {
   res.json({ profile: buildProfile(req.user) });
 };
 
+const updateProfile = async (req, res, next) => {
+  try {
+    const { fullName } = req.body;
+    if (typeof fullName !== 'string' || !fullName.trim()) {
+      throw new AppError('El nombre completo es obligatorio.', 400, { code: 'INVALID_NAME' });
+    }
+    req.user.fullName = fullName.trim();
+    await req.user.save();
+    res.json({ profile: buildProfile(req.user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateTwoFactor = async (req, res, next) => {
+  try {
+    const { enabled } = req.body;
+    if (typeof enabled !== 'boolean') {
+      throw new AppError('Debés indicar si activás o desactivás 2FA.', 400, { code: 'INVALID_2FA_STATE' });
+    }
+    req.user.twoFactor = req.user.twoFactor || {};
+    req.user.twoFactor.enabled = enabled;
+    await req.user.save();
+    res.json({ profile: buildProfile(req.user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const changePassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const user = await User.findById(req.user._id);
+    if (!user?.passwordHash) {
+      throw new AppError('Tu cuenta no tiene contraseña local configurada.', 400, { code: 'NO_LOCAL_PASSWORD' });
+    }
+
+    if (currentPassword === newPassword) {
+      throw new AppError('La nueva contraseña debe ser distinta a la actual.', 400, { code: 'PASSWORD_UNCHANGED' });
+    }
+
+    const isCurrentValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isCurrentValid) {
+      throw new AppError('La contraseña actual no es correcta.', 400, { code: 'INVALID_PASSWORD' });
+    }
+
+    user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    await user.save();
+
+    res.json({ success: true, profile: buildProfile(user) });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const keepAlive = async (req, res) => {
   res.json({
     ok: true,
@@ -278,6 +341,9 @@ module.exports = {
   resendTwoFactor,
   resendVerification,
   profile,
+  updateProfile,
+  updateTwoFactor,
+  changePassword,
   keepAlive,
   logout,
   recoverPassword,

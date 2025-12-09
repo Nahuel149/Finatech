@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   useContactBalanceDetail,
@@ -122,9 +122,13 @@ export const ContactBalanceDetailPage: React.FC = () => {
     autoFetch: Boolean(contactId),
   });
 
-  useEffect(() => {
-    // Ensure the view starts at the top when entering the detail page
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  useLayoutEffect(() => {
+    // Snap to the top when entering the detail page so the header and balances are visible
+    window.scrollTo({ top: 0, behavior: 'auto' });
+    const headerEl = document.getElementById('page-header');
+    if (headerEl) {
+      headerEl.scrollIntoView({ behavior: 'auto', block: 'start' });
+    }
   }, [contactId]);
 
   useEffect(() => {

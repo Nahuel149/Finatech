@@ -34,6 +34,8 @@ interface LogisticsOrderWizardProps {
 }
 
 const MIN_WINDOW_OFFSET_MINUTES = 30;
+const BRANCH_OPTION_ID = 'branch';
+const CUSTOM_OPTION_ID = 'custom';
 
 const buildDefaultDate = (minutesFromNow: number) => {
   const date = new Date(Date.now() + minutesFromNow * 60 * 1000);
@@ -47,6 +49,12 @@ const buildInitialForm = (
   operation: LogisticsOrderOperationContext | null,
   editingOrder?: LogisticsOrder | null
 ): LogisticsOrderFormState => {
+  const preferredAddress = operation?.clientAddresses?.[0] || null;
+  const preferredFormatted = preferredAddress?.formatted || '';
+  const preferredId = preferredAddress?.id || null;
+  const defaultAsset = operation?.balances?.[0]?.assetCode || operation?.assets?.outgoing?.code || 'ARS';
+  const defaultOrderType: LogisticsOrderFormState['type'] = operation?.type === 'sell' ? 'ENTREGA' : 'RETIRO';
+
   if (editingOrder) {
     return {
       type: editingOrder.type,
@@ -72,16 +80,13 @@ const buildInitialForm = (
       })),
     };
   }
-  const defaultAsset = operation?.balances?.[0]?.assetCode || operation?.assets?.outgoing?.code || 'ARS';
-  const isSellOperation = operation?.type === 'sell';
-  const preferredAddress = operation?.clientAddresses?.[0] || null;
-  const defaultOrderType: LogisticsOrderFormState['type'] = isSellOperation ? 'ENTREGA' : 'RETIRO';
+
   return {
     type: defaultOrderType,
-    origin: isSellOperation ? '' : preferredAddress?.formatted || '',
-    originAddressId: isSellOperation ? null : preferredAddress?.id || null,
-    destination: isSellOperation ? preferredAddress?.formatted || '' : '',
-    destinationAddressId: isSellOperation ? preferredAddress?.id || null : null,
+    origin: preferredFormatted,
+    originAddressId: preferredId,
+    destination: preferredFormatted,
+    destinationAddressId: preferredId,
     contactName: operation?.clientName || '',
     contactPhone: operation?.clientPhone || '',
     windowStart: buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 30),
@@ -106,32 +111,27 @@ const buildInitialForm = (
 const validateStep1 = (form: LogisticsOrderFormState): FormFieldErrors => {
   const errors: FormFieldErrors = {};
   if (!form.origin.trim()) {
-    errors.origin = 'IngresÃ¡ el origen.';
+    errors.origin = 'Ingresá el origen.';
   }
   if (!form.destination.trim()) {
-    errors.destination = 'IngresÃ¡ el destino.';
-  }
-  if (!errors.origin && !errors.destination && form.origin.trim() && form.destination.trim()) {
-    if (form.origin.trim().toLowerCase() === form.destination.trim().toLowerCase()) {
-      errors.destination = 'Elegi direcciones distintas para origen y destino.';
-    }
+    errors.destination = 'Ingresá el destino.';
   }
   if (!form.contactName.trim()) {
-    errors.contactName = 'IndicÃ¡ el nombre del contacto.';
+    errors.contactName = 'Indicá el nombre del contacto.';
   }
   if (!form.contactPhone.trim()) {
-    errors.contactPhone = 'IndicÃ¡ el telÃ©fono del contacto.';
+    errors.contactPhone = 'Indicá el teléfono del contacto.';
   }
   const start = new Date(form.windowStart);
   const end = new Date(form.windowEnd);
   if (Number.isNaN(start.getTime())) {
-    errors.windowStart = 'Fecha invÃ¡lida.';
+    errors.windowStart = 'Fecha inválida.';
   }
   if (Number.isNaN(end.getTime())) {
-    errors.windowEnd = 'Fecha invÃ¡lida.';
+    errors.windowEnd = 'Fecha inválida.';
   }
   if (!errors.windowStart && !errors.windowEnd && start >= end) {
-    errors.windowEnd = 'La ventana debe finalizar despuÃ©s del inicio.';
+    errors.windowEnd = 'La ventana debe finalizar después del inicio.';
   }
   const minStart = Date.now() + MIN_WINDOW_OFFSET_MINUTES * 60 * 1000;
   if (!errors.windowStart && start.getTime() < minStart) {
@@ -150,47 +150,47 @@ const validateItems = (
   form.items.forEach((item) => {
     const currentErrors: Record<string, string> = {};
     if (!item.assetCode) {
-      currentErrors.assetCode = 'ElegÃ­ la divisa/activo.';
+      currentErrors.assetCode = 'Elegí la divisa/activo.';
     } else if (!balanceMap.has(item.assetCode)) {
-      currentErrors.assetCode = 'El activo no pertenece a esta operaciÃ³n.';
+      currentErrors.assetCode = 'El activo no pertenece a esta operación.';
     }
 
     const numericAmount = Number(item.expectedAmount);
     if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      currentErrors.expectedAmount = 'IngresÃ¡ un monto mayor a 0.';
+      currentErrors.expectedAmount = 'Ingresá un monto mayor a 0.';
     } else if (item.assetCode) {
       const available = getAvailableAmount(item.assetCode, item.id);
       if (numericAmount - available > 0.01) {
-        currentErrors.expectedAmount = 'Supera el saldo pendiente de la operaciÃ³n.';
+        currentErrors.expectedAmount = 'Supera el saldo pendiente de la operación.';
       }
     }
 
     if (item.assetType === 'CHEQUE') {
       if (!item.metadata.bank?.trim()) {
-        currentErrors.bank = 'IndicÃ¡ el banco.';
+        currentErrors.bank = 'Indicá el banco.';
       }
       if (!item.metadata.number?.trim()) {
-        currentErrors.number = 'IndicÃ¡ el nÃºmero de cheque.';
+        currentErrors.number = 'Indicá el número de cheque.';
       }
       if (!item.metadata.dueDate) {
-        currentErrors.dueDate = 'IndicÃ¡ la fecha de cobro.';
+        currentErrors.dueDate = 'Indicá la fecha de cobro.';
       }
     }
 
     if (item.assetType === 'METAL') {
       if (!item.metadata.metalType?.trim()) {
-        currentErrors.metalType = 'IndicÃ¡ el metal.';
+        currentErrors.metalType = 'Indicá el metal.';
       }
       if (!item.metadata.purity?.trim()) {
-        currentErrors.purity = 'IndicÃ¡ la pureza.';
+        currentErrors.purity = 'Indicá la pureza.';
       }
       if (!item.metadata.weight || Number(item.metadata.weight) <= 0) {
-        currentErrors.weight = 'IndicÃ¡ el peso.';
+        currentErrors.weight = 'Indicá el peso.';
       }
     }
 
     if (item.assetType === 'OTHER' && !item.metadata.description?.trim()) {
-      currentErrors.description = 'DescribÃ­ el valor a trasladar.';
+      currentErrors.description = 'Describí el valor a trasladar.';
     }
 
     if (Object.keys(currentErrors).length) {
@@ -239,17 +239,29 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [messengerOptions, setMessengerOptions] = useState<MessengerOption[]>([]);
   const [messengersLoading, setMessengersLoading] = useState(false);
+  const [addressSelection, setAddressSelection] = useState<string>('');
 
   const { createOrder, updateOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
 
   useEffect(() => {
     if (isOpen) {
-      setForm(buildInitialForm(operation, editingOrder));
+      const initialForm = buildInitialForm(operation, editingOrder);
+      setForm(initialForm);
       setStep(1);
       setFieldErrors({});
       setItemErrors({});
       setBannerError(null);
       resetError();
+      const existingAddressId = editingOrder?.destinationAddressId || editingOrder?.originAddressId;
+      if (existingAddressId) {
+        setAddressSelection(existingAddressId);
+      } else if (editingOrder?.destination || editingOrder?.origin) {
+        setAddressSelection(CUSTOM_OPTION_ID);
+      } else if (operation?.clientAddresses?.[0]?.id) {
+        setAddressSelection(operation.clientAddresses[0].id);
+      } else {
+        setAddressSelection(CUSTOM_OPTION_ID);
+      }
     }
   }, [isOpen, operation, editingOrder, resetError]);
 
@@ -438,23 +450,47 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
     }));
   };
 
-  const handleSelectAddress = (field: 'origin' | 'destination', addressId: string | null) => {
-    const selected = addressOptions.find((address) => address.id === addressId) || null;
-    if (field === 'origin') {
+  const applyAddressSelection = (selection: string) => {
+    if (selection === CUSTOM_OPTION_ID) {
       setForm((prev) => ({
         ...prev,
-        origin: selected?.formatted || '',
-        originAddressId: selected?.id || null,
+        origin: '',
+        destination: '',
+        originAddressId: null,
+        destinationAddressId: null,
       }));
-      setFieldErrors((prev) => ({ ...prev, origin: '' }));
+      setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
       return;
     }
+
+    if (selection === BRANCH_OPTION_ID) {
+      const fallback = operation?.clientAddresses?.[0]?.formatted || 'Sucursal';
+      setForm((prev) => ({
+        ...prev,
+        origin: fallback,
+        destination: fallback,
+        originAddressId: null,
+        destinationAddressId: null,
+      }));
+      setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
+      return;
+    }
+
+    const selected = addressOptions.find((address) => address.id === selection) || null;
     setForm((prev) => ({
       ...prev,
+      origin: selected?.formatted || '',
       destination: selected?.formatted || '',
+      originAddressId: selected?.id || null,
       destinationAddressId: selected?.id || null,
     }));
-    setFieldErrors((prev) => ({ ...prev, destination: '' }));
+    setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
+  };
+
+  const handleSelectAddress = (selection: string) => {
+    const effective = selection || CUSTOM_OPTION_ID;
+    setAddressSelection(effective);
+    applyAddressSelection(effective);
   };
 
   const handleSelectMessenger = (optionId: string | null) => {
@@ -526,7 +562,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
       if (Object.keys(errors).length === 0 && form.items.length > 0) {
         setStep(3);
       } else if (form.items.length === 0) {
-        setBannerError('AgregÃ¡ al menos un Ã­tem de valor.');
+        setBannerError('Agregá al menos un ítem de valor.');
       }
     }
   };
@@ -543,7 +579,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
     setItemErrors(itemValidation);
     if (Object.keys(stepErrors).length > 0 || Object.keys(itemValidation).length > 0 || form.items.length === 0) {
       if (form.items.length === 0) {
-        setBannerError('AgregÃ¡ al menos un Ã­tem para la orden.');
+        setBannerError('Agregá al menos un ítem para la orden.');
       }
       setStep((prev) => (Object.keys(stepErrors).length ? 1 : 2));
       return;
@@ -577,6 +613,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
           operation={operation}
           onChange={handleFieldChange}
           addressOptions={addressOptions}
+          addressSelection={addressSelection}
           onSelectAddress={handleSelectAddress}
           messengerOptions={messengerOptions}
           onSelectMessenger={handleSelectMessenger}
@@ -602,16 +639,16 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nueva orden logÃ­stica">
+    <Modal isOpen={isOpen} onClose={onClose} size="lg" title="Nueva orden logística">
       <div className="space-y-4">
         <div className="flex items-center justify-between text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${step >= 1 ? 'bg-primary' : 'bg-gray-300'}`} />
-            Datos bÃ¡sicos
+            Datos básicos
           </div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${step >= 2 ? 'bg-primary' : 'bg-gray-300'}`} />
-            Ãtems
+            Ítems
           </div>
           <div className="flex items-center gap-2">
             <span className={`w-2.5 h-2.5 rounded-full ${step === 3 ? 'bg-primary' : 'bg-gray-300'}`} />
@@ -665,7 +702,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
                 onClick={() => handleSubmit('BORRADOR')}
                 disabled={saving}
               >
-                {saving ? 'Guardandoâ€¦' : 'Guardar borrador'}
+                {saving ? 'Guardando…' : 'Guardar borrador'}
               </button>
               <button
                 type="button"
@@ -673,7 +710,7 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
                 onClick={() => handleSubmit('PROGRAMADA')}
                 disabled={saving}
               >
-                {saving ? 'Programandoâ€¦' : 'Programar'}
+                {saving ? 'Programando…' : 'Programar'}
               </button>
             </div>
           )}

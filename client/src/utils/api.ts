@@ -394,6 +394,24 @@ export const api = {
       method: 'POST',
       body: { token, password },
     }),
+
+  changePassword: (payload: { currentPassword: string; newPassword: string }) =>
+    apiRequest('/api/auth/profile/password', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  updateProfile: (payload: { fullName: string }) =>
+    apiRequest('/api/auth/profile', {
+      method: 'PATCH',
+      body: payload,
+    }),
+
+  updateTwoFactor: (payload: { enabled: boolean }) =>
+    apiRequest('/api/auth/profile/2fa', {
+      method: 'POST',
+      body: payload,
+    }),
     
   // Configuration
   getConfig: () =>

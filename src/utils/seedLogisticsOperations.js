@@ -9,7 +9,9 @@ const buildTimeline = (steps) =>
   }));
 
 const seedLogisticsOperations = async () => {
-  if (process.env.SEED_LOGISTICS === 'false') {
+  // Only seed when explicitly requested to avoid injecting mock data in shared envs
+  const shouldSeed = process.env.SEED_LOGISTICS === 'true';
+  if (!shouldSeed) {
     return;
   }
 
