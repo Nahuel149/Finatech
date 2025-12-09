@@ -123,6 +123,11 @@ export const ContactBalanceDetailPage: React.FC = () => {
   });
 
   useEffect(() => {
+    // Ensure the view starts at the top when entering the detail page
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [contactId]);
+
+  useEffect(() => {
     if (!toast) {
       return undefined;
     }
