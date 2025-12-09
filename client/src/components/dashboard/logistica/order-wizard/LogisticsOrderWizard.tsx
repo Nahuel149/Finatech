@@ -239,7 +239,10 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   const [bannerError, setBannerError] = useState<string | null>(null);
   const [messengerOptions, setMessengerOptions] = useState<MessengerOption[]>([]);
   const [messengersLoading, setMessengersLoading] = useState(false);
-  const [addressSelection, setAddressSelection] = useState<string>('');
+  const [addressSelection, setAddressSelection] = useState<{ origin: string; destination: string }>({
+    origin: '',
+    destination: '',
+  });
 
   const { createOrder, updateOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
 
@@ -252,16 +255,13 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
       setItemErrors({});
       setBannerError(null);
       resetError();
-      const existingAddressId = editingOrder?.destinationAddressId || editingOrder?.originAddressId;
-      if (existingAddressId) {
-        setAddressSelection(existingAddressId);
-      } else if (editingOrder?.destination || editingOrder?.origin) {
-        setAddressSelection(CUSTOM_OPTION_ID);
-      } else if (operation?.clientAddresses?.[0]?.id) {
-        setAddressSelection(operation.clientAddresses[0].id);
-      } else {
-        setAddressSelection(CUSTOM_OPTION_ID);
-      }
+      const originId = editingOrder?.originAddressId || operation?.clientAddresses?.[0]?.id || CUSTOM_OPTION_ID;
+      const destinationId =
+        editingOrder?.destinationAddressId || operation?.clientAddresses?.[0]?.id || CUSTOM_OPTION_ID;
+      setAddressSelection({
+        origin: originId,
+        destination: destinationId,
+      });
     }
   }, [isOpen, operation, editingOrder, resetError]);
 
@@ -450,16 +450,14 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
     }));
   };
 
-  const applyAddressSelection = (selection: string) => {
+  const applyAddressSelection = (field: 'origin' | 'destination', selection: string) => {
     if (selection === CUSTOM_OPTION_ID) {
       setForm((prev) => ({
         ...prev,
-        origin: '',
-        destination: '',
-        originAddressId: null,
-        destinationAddressId: null,
+        [field]: '',
+        [`${field}AddressId`]: null,
       }));
-      setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
+      setFieldErrors((prev) => ({ ...prev, [field]: '' }));
       return;
     }
 
@@ -467,30 +465,26 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
       const fallback = operation?.clientAddresses?.[0]?.formatted || 'Sucursal';
       setForm((prev) => ({
         ...prev,
-        origin: fallback,
-        destination: fallback,
-        originAddressId: null,
-        destinationAddressId: null,
+        [field]: fallback,
+        [`${field}AddressId`]: null,
       }));
-      setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
+      setFieldErrors((prev) => ({ ...prev, [field]: '' }));
       return;
     }
 
     const selected = addressOptions.find((address) => address.id === selection) || null;
     setForm((prev) => ({
       ...prev,
-      origin: selected?.formatted || '',
-      destination: selected?.formatted || '',
-      originAddressId: selected?.id || null,
-      destinationAddressId: selected?.id || null,
+      [field]: selected?.formatted || '',
+      [`${field}AddressId`]: selected?.id || null,
     }));
-    setFieldErrors((prev) => ({ ...prev, origin: '', destination: '' }));
+    setFieldErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
-  const handleSelectAddress = (selection: string) => {
+  const handleSelectAddress = (field: 'origin' | 'destination', selection: string) => {
     const effective = selection || CUSTOM_OPTION_ID;
-    setAddressSelection(effective);
-    applyAddressSelection(effective);
+    setAddressSelection((prev) => ({ ...prev, [field]: effective }));
+    applyAddressSelection(field, effective);
   };
 
   const handleSelectMessenger = (optionId: string | null) => {
