@@ -12,6 +12,7 @@ const {
   completePartial,
   reportDiscrepancy,
   getOrderTimeline,
+  listMessengerOptions,
 } = require('../services/logisticsOrder.service');
 
 const buildContext = (req) => ({
@@ -156,6 +157,15 @@ const getLogisticsOrderTimeline = async (req, res, next) => {
   }
 };
 
+const getLogisticsMessengers = async (_req, res, next) => {
+  try {
+    const messengers = await listMessengerOptions();
+    res.json({ messengers });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getOperationLogisticsOrders,
   createOperationLogisticsOrder,
@@ -170,4 +180,5 @@ module.exports = {
   completeLogisticsOrderPartial,
   reportLogisticsDiscrepancyController,
   getLogisticsOrderTimeline,
+  getLogisticsMessengers,
 };

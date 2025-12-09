@@ -1,5 +1,8 @@
+const mongoose = require('mongoose');
 const Client = require('../models/Client');
 const Transaction = require('../models/Transaction');
+const TreasuryMovement = require('../models/TreasuryMovement');
+const TransferOperation = require('../models/TransferOperation');
 const { ensureContactBalance } = require('./currentAccount.service');
 
 const MOCK_SAMPLE_CUITS = [
@@ -229,9 +232,113 @@ const createClient = async (payload) => {
   return formatClient(document.toObject());
 };
 
+const getRecentClients = async ({ limit = 8 } = {}) => {
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 8, 1), 30);
+  const recentById = new Map();
+
+  const recentMovements = await TreasuryMovement.aggregate([
+    { $match: { contact: { $ne: null } } },
+    { $sort: { movementAt: -1, createdAt: -1 } },
+    {
+      $project: {
+        contact: 1,
+        lastUsedAt: { $ifNull: ['$movementAt', '$createdAt'] },
+      },
+    },
+    {
+      $group: {
+        _id: '$contact',
+        lastUsedAt: { $first: '$lastUsedAt' },
+      },
+    },
+    { $limit: sanitizedLimit * 3 },
+  ]);
+
+  recentMovements.forEach((entry) => {
+    if (entry?._id && mongoose.Types.ObjectId.isValid(entry._id)) {
+      recentById.set(entry._id.toString(), new Date(entry.lastUsedAt || Date.now()));
+    }
+  });
+
+  const recentTransfers = await TransferOperation.aggregate([
+    { $unwind: '$distributionLines' },
+    { $sort: { createdAt: -1 } },
+    {
+      $group: {
+        _id: '$distributionLines.contact',
+        lastUsedAt: { $first: '$createdAt' },
+      },
+    },
+    { $limit: sanitizedLimit * 3 },
+  ]);
+
+  recentTransfers.forEach((entry) => {
+    if (entry?._id && mongoose.Types.ObjectId.isValid(entry._id)) {
+      const date = new Date(entry.lastUsedAt || Date.now());
+      const key = entry._id.toString();
+      const current = recentById.get(key);
+      if (!current || date > current) {
+        recentById.set(key, date);
+      }
+    }
+  });
+
+  const baseFilter = {
+    status: 'active',
+    cuit: { $nin: MOCK_SAMPLE_CUITS },
+  };
+
+  const latestClients = await Client.find(baseFilter)
+    .sort({ createdAt: -1 })
+    .limit(sanitizedLimit * 2)
+    .lean();
+
+  latestClients.forEach((client) => {
+    const id = client?._id?.toString();
+    if (!id) return;
+    const createdAt = client.createdAt ? new Date(client.createdAt) : new Date();
+    const current = recentById.get(id);
+    if (!current || createdAt > current) {
+      recentById.set(id, createdAt);
+    }
+  });
+
+  const uniqueIds = Array.from(
+    new Set([...recentById.keys(), ...latestClients.map((client) => client._id.toString())])
+  );
+
+  if (!uniqueIds.length) {
+    return [];
+  }
+
+  const clients = await Client.find({ _id: { $in: uniqueIds } }).lean();
+  const formatted = clients.map((client) => formatClient(client));
+
+  const ranked = formatted
+    .map((client) => ({
+      client,
+      lastUsedAt: recentById.get(client.id) || (client.createdAt ? new Date(client.createdAt) : new Date(0)),
+    }))
+    .sort((a, b) => {
+      const aTime = a.lastUsedAt ? new Date(a.lastUsedAt).getTime() : 0;
+      const bTime = b.lastUsedAt ? new Date(b.lastUsedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+  const seen = new Set();
+  const deduped = ranked.filter((entry) => {
+    if (seen.has(entry.client.id)) return false;
+    seen.add(entry.client.id);
+    return true;
+  });
+
+  return deduped.slice(0, sanitizedLimit).map((entry) => entry.client);
+};
+
 module.exports = {
   searchClients,
   getClientById,
   createClient,
   updateClient,
+  getRecentClients,
 };

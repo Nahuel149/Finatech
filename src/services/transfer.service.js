@@ -378,22 +378,34 @@ const getTransferOperationById = async (id) => {
   return formatTransferOperation(operation, contacts);
 };
 
-const listTransferOperations = async ({ limit = 20, skip = 0, search = '' } = {}) => {
+const listTransferOperations = async ({ limit = 20, skip = 0, search = '', contactId = null } = {}) => {
   const sanitizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 100);
   const sanitizedSkip = Math.max(Number(skip) || 0, 0);
   const searchTerm = typeof search === 'string' ? search.trim() : '';
   const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), 'i') : null;
+  const contactFilter =
+    contactId && mongoose.Types.ObjectId.isValid(contactId)
+      ? new mongoose.Types.ObjectId(contactId)
+      : null;
 
-  const pipeline = [
-    {
-      $lookup: {
-        from: 'clients',
-        localField: 'distributionLines.contact',
-        foreignField: '_id',
-        as: 'contacts',
+  const pipeline = [];
+
+  if (contactFilter) {
+    pipeline.push({
+      $match: {
+        'distributionLines.contact': contactFilter,
       },
+    });
+  }
+
+  pipeline.push({
+    $lookup: {
+      from: 'clients',
+      localField: 'distributionLines.contact',
+      foreignField: '_id',
+      as: 'contacts',
     },
-  ];
+  });
 
   if (regex) {
     const orFilters = [

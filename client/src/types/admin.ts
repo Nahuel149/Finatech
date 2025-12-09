@@ -4,6 +4,7 @@ export interface AdminUser {
   email: string;
   permissions: string[];
   isVerified?: boolean;
+  isMessenger?: boolean;
   createdAt?: string | Date;
 }
 

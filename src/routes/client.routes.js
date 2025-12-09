@@ -1,10 +1,17 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
-const { listClients, findClient, createClient, updateClient } = require('../controllers/client.controller');
+const {
+  listClients,
+  listRecentClients,
+  findClient,
+  createClient,
+  updateClient,
+} = require('../controllers/client.controller');
 
 const router = Router();
 
 router.get('/', listClients);
+router.get('/recent', listRecentClients);
 router.get('/:id', findClient);
 router.post(
   '/',

@@ -14,6 +14,45 @@ const {
 const { emitBalanceUpdated } = require('../utils/eventBus');
 const { emitNotification } = require('./notifications.service');
 
+const normalizeTransferToSuggestion = (operation) => {
+  if (!operation) return null;
+  const id = operation._id ? operation._id.toString() : operation.id;
+  return {
+    id,
+    code: operation.operationCode ? `#${operation.operationCode}` : id,
+    model: 'TransferOperation',
+    amount: Number(operation.totalAmount || 0),
+    currency: operation.currency || 'ARS',
+    movementType: operation.movementType,
+    direction: operation.direction,
+    medium: operation.movementType === 'cash' ? 'cash' : 'transfer',
+    status: operation.status,
+    confirmedAt: operation.confirmedAt ? new Date(operation.confirmedAt).toISOString() : null,
+    description:
+      (Array.isArray(operation.contacts) && operation.contacts[0]?.shortName) ||
+      (Array.isArray(operation.contacts) && operation.contacts[0]?.fullName) ||
+      (Array.isArray(operation.distributionLines) && operation.distributionLines[0]?.contactName) ||
+      null,
+  };
+};
+
+const normalizeTreasuryMovementToSuggestion = (movement) => {
+  if (!movement) return null;
+  return {
+    id: movement._id ? movement._id.toString() : movement.id,
+    code: movement.movementCode || null,
+    model: 'TreasuryMovement',
+    amount: Number(movement.amount || 0),
+    currency: movement.currency || 'ARS',
+    movementType: movement.type,
+    direction: movement.type,
+    medium: movement.medium || null,
+    status: movement.status,
+    confirmedAt: movement.movementAt ? new Date(movement.movementAt).toISOString() : null,
+    description: movement.reference || movement.description || null,
+  };
+};
+
 const BALANCE_METADATA = {
   transfers: {
     label: 'Transferencias en ARS',
@@ -1956,11 +1995,13 @@ const computeReceptionTotals = (order) => {
   const map = new Map();
   (order.items || []).forEach((item) => {
     const currency = String(item?.assetCode || 'ARS').toUpperCase();
-    const isDelivery = String(order?.type || '').toUpperCase() === 'ENTREGA';
-    const primaryAmount = isDelivery ? item?.pendingAmount : item?.receivedAmount;
-    const fallbackAmount = isDelivery ? item?.expectedAmount : item?.pendingAmount;
     const amount = roundAmount(
-      Number(primaryAmount ?? fallbackAmount ?? item?.expectedAmount ?? 0)
+      Number(
+        item?.receivedAmount ??
+          item?.pendingAmount ??
+          item?.expectedAmount ??
+          0
+      )
     );
     if (!amount) {
       return;
@@ -2110,12 +2151,19 @@ const pushReceptionEvent = (order, eventPayload = {}) => {
   });
 };
 
-const getDestinationBalanceKey = (order, currency) => {
+const getDestinationBalanceKey = (order, currency, mediumOverride = null) => {
   const normalizedCurrency = String(currency || 'ARS').toUpperCase();
   if (normalizedCurrency === 'USD') {
     return 'usd';
   }
-  return order?.type === 'ENTREGA' ? 'cash' : 'cash';
+  if (mediumOverride === 'cash' || mediumOverride === 'transfer' || mediumOverride === 'transfers') {
+    return mediumOverride === 'transfer' ? 'transfers' : mediumOverride;
+  }
+  const operationType = String(order?.operationType || '').toLowerCase();
+  if (normalizedCurrency === 'ARS') {
+    return operationType === 'buy' ? 'transfers' : 'cash';
+  }
+  return 'cash';
 };
 
 const emitBalanceDelta = ({ key, currency, delta, orderId, status, userId }) => {
@@ -2130,14 +2178,14 @@ const emitBalanceDelta = ({ key, currency, delta, orderId, status, userId }) => 
   });
 };
 
-const applyReceptionBalances = async (order, totals, context = {}, { reverse = false } = {}) => {
+const applyReceptionBalances = async (order, totals, context = {}, { reverse = false, mediumByCurrency = {} } = {}) => {
   for (const entry of totals.totalsByCurrency) {
     const currency = (entry.currency || 'ARS').toUpperCase();
     const amount = roundAmount(entry.amount || 0);
     if (!amount) {
       continue;
     }
-    const destinationKey = getDestinationBalanceKey(order, currency);
+    const destinationKey = getDestinationBalanceKey(order, currency, mediumByCurrency?.[currency]);
     const transitDelta = reverse ? amount : -amount;
     const destinationDelta = reverse ? -amount : amount;
 
@@ -3607,6 +3655,127 @@ const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) 
   };
 };
 
+const listOperationSuggestions = async ({ search = '', contactId = null, limit = 10 } = {}) => {
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 10, 1), 30);
+  const searchTerm = typeof search === 'string' ? search.trim() : '';
+  const regex = searchTerm ? new RegExp(escapeRegex(searchTerm), 'i') : null;
+  const contactFilter =
+    contactId && mongoose.Types.ObjectId.isValid(contactId) ? new mongoose.Types.ObjectId(contactId) : null;
+
+  const transferPipeline = [];
+
+  if (contactFilter) {
+    transferPipeline.push({
+      $match: {
+        'distributionLines.contact': contactFilter,
+      },
+    });
+  }
+
+  transferPipeline.push({
+    $lookup: {
+      from: 'clients',
+      localField: 'distributionLines.contact',
+      foreignField: '_id',
+      as: 'contacts',
+    },
+  });
+
+  if (regex) {
+    const orFilters = [
+      { operationCode: regex },
+      { status: regex },
+      { movementType: regex },
+      { currency: regex },
+      { direction: regex },
+    ];
+
+    if (mongoose.Types.ObjectId.isValid(searchTerm)) {
+      orFilters.push({ _id: new mongoose.Types.ObjectId(searchTerm) });
+    }
+
+    transferPipeline.push({
+      $match: { $or: orFilters },
+    });
+  }
+
+  transferPipeline.push(
+    { $sort: { confirmedAt: -1, createdAt: -1 } },
+    { $limit: sanitizedLimit },
+    {
+      $project: {
+        operationCode: 1,
+        movementType: 1,
+        direction: 1,
+        currency: 1,
+        totalAmount: 1,
+        distributionLines: 1,
+        contacts: 1,
+        status: 1,
+        confirmedAt: 1,
+        createdAt: 1,
+      },
+    }
+  );
+
+  const transferResults = await TransferOperation.aggregate(transferPipeline);
+  const transferSuggestions = transferResults
+    .map((operation) => normalizeTransferToSuggestion(operation))
+    .filter(Boolean);
+
+  const movementMatch = {
+    status: 'registered',
+  };
+
+  if (contactFilter) {
+    movementMatch.contact = contactFilter;
+  }
+
+  if (regex) {
+    movementMatch.$or = [
+      { movementCode: regex },
+      { reference: regex },
+      { description: regex },
+      { currency: regex },
+    ];
+  }
+
+  const movementResults = await TreasuryMovement.find(movementMatch)
+    .sort({ movementAt: -1 })
+    .limit(sanitizedLimit)
+    .select({
+      movementCode: 1,
+      amount: 1,
+      currency: 1,
+      type: 1,
+      medium: 1,
+      status: 1,
+      reference: 1,
+      description: 1,
+      movementAt: 1,
+    })
+    .lean();
+
+  const movementSuggestions = movementResults
+    .map((movement) => normalizeTreasuryMovementToSuggestion(movement))
+    .filter(Boolean);
+
+  const merged = [...transferSuggestions, ...movementSuggestions].sort((a, b) => {
+    const aDate = a.confirmedAt ? new Date(a.confirmedAt).getTime() : 0;
+    const bDate = b.confirmedAt ? new Date(b.confirmedAt).getTime() : 0;
+    return bDate - aDate;
+  });
+
+  const seen = new Set();
+  const deduped = merged.filter((item) => {
+    if (seen.has(item.id)) return false;
+    seen.add(item.id);
+    return true;
+  });
+
+  return deduped.slice(0, sanitizedLimit);
+};
+
 exports.normalizeBalanceKey = normalizeBalanceKey;
 exports.ensureBalance = ensureBalance;
 exports.adjustTreasuryBalanceForMovement = adjustTreasuryBalanceForMovement;
@@ -3629,3 +3798,4 @@ exports.confirmTreasuryReception = confirmTreasuryReception;
 exports.omitTreasuryReception = omitTreasuryReception;
 exports.revertTreasuryReception = revertTreasuryReception;
 exports.reserveCourierTransitBalance = reserveCourierTransitBalance;
+exports.listOperationSuggestions = listOperationSuggestions;

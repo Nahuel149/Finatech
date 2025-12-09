@@ -2,7 +2,11 @@ import React from 'react';
 
 export interface AttachmentItem {
   id: string;
-  file: File;
+  file?: File;
+  url?: string;
+  name?: string;
+  size?: number;
+  type?: string;
 }
 
 interface AttachmentListProps {
@@ -25,8 +29,11 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({ items, onRemove 
 
   return (
     <div id="file-list" className="mt-3 space-y-2">
-      {items.map(({ id, file }) => {
-        const isPdf = file.type.includes('pdf');
+      {items.map(({ id, file, url, name, size, type }) => {
+        const displayName = name || file?.name || 'Archivo';
+        const mimeType = type || file?.type || '';
+        const displaySize = size || file?.size || 0;
+        const isPdf = mimeType.includes('pdf');
         return (
           <div
             key={id}
@@ -37,15 +44,26 @@ export const AttachmentList: React.FC<AttachmentListProps> = ({ items, onRemove 
                 className={`fa-solid ${isPdf ? 'fa-file-pdf text-red-600' : 'fa-image text-blue-600'} mr-3`}
               />
               <div>
-                <div className="text-sm font-medium text-text-primary">{file.name}</div>
-                <div className="text-xs text-gray-500">{formatFileSize(file.size)}</div>
+                {url ? (
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-sm font-medium text-primary hover:underline break-all"
+                  >
+                    {displayName}
+                  </a>
+                ) : (
+                  <div className="text-sm font-medium text-text-primary break-all">{displayName}</div>
+                )}
+                <div className="text-xs text-gray-500">{formatFileSize(displaySize)}</div>
               </div>
             </div>
             <button
               type="button"
               onClick={() => onRemove(id)}
               className="text-gray-400 hover:text-red-600"
-              aria-label={`Eliminar archivo ${file.name}`}
+              aria-label={`Eliminar archivo ${file?.name || displayName}`}
             >
               <i className="fa-solid fa-trash" />
             </button>

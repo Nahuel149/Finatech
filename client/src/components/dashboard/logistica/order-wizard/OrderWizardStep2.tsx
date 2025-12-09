@@ -78,7 +78,7 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
   const selectedAssetCode = items[0]?.assetCode || balances[0]?.assetCode || 'ARS';
   const bannerBalance = balances.find((entry) => entry.assetCode === selectedAssetCode);
   const totalPending = remainingByAsset.get(selectedAssetCode) ?? bannerBalance?.pendingAmount ?? 0;
-  const assetOptions = useMemo(() => {
+  const assetOptionsMap = useMemo(() => {
     const map = new Map<
       string,
       { assetCode: string; assetLabel: string; roles: Set<LogisticsOrderBalance['role']> }
@@ -95,7 +95,13 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
         });
       }
     });
-    return Array.from(map.values()).map((entry) => {
+    return map;
+  }, [balances]);
+
+  const singleAsset = assetOptionsMap.size === 1;
+
+  const assetOptions = useMemo(() => {
+    return Array.from(assetOptionsMap.values()).map((entry) => {
       const rolesLabel = entry.roles.size > 1
         ? 'Ingreso/Egreso'
         : entry.roles.has('incoming')
@@ -112,7 +118,7 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
         label: `${uniqueLabel} · ${rolesLabel}`,
       };
     });
-  }, [balances]);
+  }, [assetOptionsMap]);
 
   return (
     <div className="space-y-4">
@@ -129,11 +135,11 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
           const remaining = remainingByAsset.get(item.assetCode) ?? available;
           return (
             <div key={item.id} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex items-center justify-between mb-3">
-                <p className="text-sm font-semibold text-text-primary">Ítem #{index + 1}</p>
-                <button
-                  type="button"
-                  className="text-sm text-red-600 hover:text-red-700"
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-sm font-semibold text-text-primary">Ítem #{index + 1}</p>
+          <button
+            type="button"
+            className="text-sm text-red-600 hover:text-red-700"
                   onClick={() => onRemoveItem(item.id)}
                   disabled={items.length === 1}
                 >
@@ -145,31 +151,43 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
                   <label className="text-xs uppercase text-gray-500">Tipo</label>
-                  <select
-                    className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetType ? 'border-red-300' : 'border-gray-300'}`}
-                    value={item.assetType}
-                    onChange={(event) => onItemChange(item.id, 'assetType', event.target.value)}
-                  >
-                    {ITEM_TYPE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  {singleAsset ? (
+                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                      {ITEM_TYPE_OPTIONS.find((opt) => opt.value === item.assetType)?.label || 'Efectivo / Transferencia'}
+                    </div>
+                  ) : (
+                    <select
+                      className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetType ? 'border-red-300' : 'border-gray-300'}`}
+                      value={item.assetType}
+                      onChange={(event) => onItemChange(item.id, 'assetType', event.target.value)}
+                    >
+                      {ITEM_TYPE_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="text-xs uppercase text-gray-500">Activo / Divisa</label>
-                  <select
-                    className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetCode ? 'border-red-300' : 'border-gray-300'}`}
-                    value={item.assetCode}
-                    onChange={(event) => onItemChange(item.id, 'assetCode', event.target.value)}
-                  >
-                    {assetOptions.map((option) => (
-                      <option key={option.assetCode} value={option.assetCode}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
+                  {singleAsset ? (
+                    <div className="w-full rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-700">
+                      {assetOptions[0]?.label || items[0]?.assetCode}
+                    </div>
+                  ) : (
+                    <select
+                      className={`w-full border rounded-lg px-3 py-2 text-sm ${itemError.assetCode ? 'border-red-300' : 'border-gray-300'}`}
+                      value={item.assetCode}
+                      onChange={(event) => onItemChange(item.id, 'assetCode', event.target.value)}
+                    >
+                      {assetOptions.map((option) => (
+                        <option key={option.assetCode} value={option.assetCode}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                   {itemError.assetCode && <p className="text-xs text-red-600 mt-1">{itemError.assetCode}</p>}
                 </div>
                 <div>
@@ -302,3 +320,5 @@ export const OrderWizardStep2: React.FC<OrderWizardStep2Props> = ({
     </div>
   );
 };
+
+

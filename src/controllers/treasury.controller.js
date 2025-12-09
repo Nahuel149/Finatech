@@ -14,7 +14,9 @@ const {
   confirmTreasuryReception,
   omitTreasuryReception,
   revertTreasuryReception,
+  listOperationSuggestions,
 } = require('../services/treasury.service');
+const { storeTreasuryAttachments } = require('../utils/treasuryAttachmentStorage');
 
 const parseFilters = (query) => {
   const filters = {};
@@ -261,6 +263,29 @@ const revertReception = async (req, res, next) => {
   }
 };
 
+const operationSuggestions = async (req, res, next) => {
+  try {
+    const suggestions = await listOperationSuggestions({
+      search: req.query.search || req.query.q || '',
+      contactId: req.query.contactId || req.query.contact,
+      limit: req.query.limit,
+    });
+    res.json({ suggestions });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const uploadTreasuryAttachments = async (req, res, next) => {
+  try {
+    const files = Array.isArray(req.files) ? req.files : [];
+    const attachments = await storeTreasuryAttachments(files);
+    res.json({ attachments });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   balances,
   list,
@@ -277,4 +302,6 @@ module.exports = {
   confirmReception,
   omitReception,
   revertReception,
+  operationSuggestions,
+  uploadTreasuryAttachments,
 };

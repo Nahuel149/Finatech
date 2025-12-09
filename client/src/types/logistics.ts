@@ -19,6 +19,15 @@ export interface LogisticsApiAttachment {
   color?: string | null;
 }
 
+export interface LogisticsAddressOption {
+  id: string;
+  label: string;
+  formatted: string;
+  placeId?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
 export interface LogisticsApiTimelineEntry {
   label: string;
   status: 'pending' | 'current' | 'completed';
@@ -302,6 +311,8 @@ export interface LogisticsOrderOperationContext {
   type: TransactionType;
   clientId: string | null;
   clientName: string | null;
+  clientPhone?: string | null;
+  clientAddresses?: LogisticsAddressOption[];
   assets: {
     incoming: LogisticsOrderOperationAssets | null;
     outgoing: LogisticsOrderOperationAssets | null;
@@ -331,11 +342,14 @@ export interface LogisticsOrder {
   status: LogisticsOrderStatus;
   type: LogisticsOrderType;
   origin: string;
+  originAddressId?: string | null;
   destination: string;
+  destinationAddressId?: string | null;
   windowStart: string;
   windowEnd: string;
   contactName: string;
   contactPhone: string;
+  messengerId?: string | null;
   messenger: string | null;
   assignedTo: string | null;
   priority: 'low' | 'normal' | 'high' | 'urgent';
@@ -383,7 +397,9 @@ export interface LogisticsOrderItemPayload {
 export interface LogisticsOrderPayload {
   type: LogisticsOrderType;
   origin: string;
+  originAddressId?: string | null;
   destination: string;
+  destinationAddressId?: string | null;
   contactName: string;
   contactPhone: string;
   windowStart: string;
@@ -392,6 +408,7 @@ export interface LogisticsOrderPayload {
   items: LogisticsOrderItemPayload[];
   notes?: string | null;
   internalNotes?: string | null;
+  messengerId?: string | null;
   messenger?: string | null;
 }
 

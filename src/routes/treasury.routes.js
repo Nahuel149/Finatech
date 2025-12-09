@@ -15,12 +15,22 @@ const {
   confirmReception,
   omitReception,
   revertReception,
+  operationSuggestions,
+  uploadTreasuryAttachments,
 } = require('../controllers/treasury.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
+const multer = require('multer');
 
 const router = Router();
 const VIEW_BALANCES_PERMISSIONS = ['view-balances', 'access-treasury'];
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024,
+    files: 5,
+  },
+});
 
 router.use(requireAuth);
 
@@ -63,6 +73,17 @@ router.get(
   '/movements/:movementId/suggestions',
   requirePermission('access-treasury'),
   suggestions
+);
+router.get(
+  '/operations/suggestions',
+  requirePermission('access-treasury'),
+  operationSuggestions
+);
+router.post(
+  '/movements/attachments',
+  requirePermission('manage-treasury'),
+  upload.array('files', 5),
+  uploadTreasuryAttachments
 );
 router.get('/movements', requirePermission('access-treasury'), list);
 router.post('/movements', requirePermission('manage-treasury'), create);

@@ -215,10 +215,20 @@ const logisticsOrderSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    originAddressId: {
+      type: String,
+      trim: true,
+      default: null,
+    },
     destination: {
       type: String,
       required: true,
       trim: true,
+    },
+    destinationAddressId: {
+      type: String,
+      trim: true,
+      default: null,
     },
     windowStart: {
       type: Date,
@@ -268,6 +278,11 @@ const logisticsOrderSchema = new mongoose.Schema(
     internalNotes: {
       type: String,
       trim: true,
+      default: null,
+    },
+    messengerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
       default: null,
     },
     messenger: {

@@ -10,6 +10,7 @@ interface Props {
   onBack?: () => void;
   backLabel?: string;
   continueLabel?: string;
+  extraActions?: React.ReactNode;
 }
 
 export const WizardActions: React.FC<Props> = ({
@@ -22,6 +23,7 @@ export const WizardActions: React.FC<Props> = ({
   onBack,
   backLabel = 'Atrás',
   continueLabel = 'Continuar',
+  extraActions,
 }) => (
   <div
     id="step-1-actions"
@@ -80,5 +82,10 @@ export const WizardActions: React.FC<Props> = ({
         )}
       </button>
     </div>
+    {extraActions && (
+      <div className="flex flex-wrap gap-2 pt-2">
+        {extraActions}
+      </div>
+    )}
   </div>
 );

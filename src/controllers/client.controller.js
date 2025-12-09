@@ -1,5 +1,11 @@
 const { validationResult } = require('express-validator');
-const { searchClients, getClientById, createClient, updateClient } = require('../services/client.service');
+const {
+  searchClients,
+  getClientById,
+  createClient,
+  updateClient,
+  getRecentClients,
+} = require('../services/client.service');
 
 const listClients = async (req, res, next) => {
   try {
@@ -9,6 +15,16 @@ const listClients = async (req, res, next) => {
       limit: limit ? Number(limit) : undefined,
     });
     res.json({ items: results });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listRecentClients = async (req, res, next) => {
+  try {
+    const { limit } = req.query;
+    const items = await getRecentClients({ limit: limit ? Number(limit) : undefined });
+    res.json({ items });
   } catch (error) {
     next(error);
   }
@@ -123,6 +139,7 @@ const updateClientHandler = async (req, res, next) => {
 
 module.exports = {
   listClients,
+  listRecentClients,
   findClient,
   createClient: createClientHandler,
   updateClient: updateClientHandler,

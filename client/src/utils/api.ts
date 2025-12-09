@@ -414,6 +414,11 @@ export const api = {
       method: 'PUT',
       body: { permissions },
     }),
+  updateMessengerFlag: (userId: string, enabled: boolean) =>
+    apiRequest(`/api/admin/users/${encodeURIComponent(userId)}/messenger`, {
+      method: 'PATCH',
+      body: { enabled },
+    }),
 
   // Logistics
   getLogisticsOperations: (params?: Record<string, unknown>) =>
@@ -455,6 +460,9 @@ export const api = {
 
   getOperationLogisticsOrders: (operationId: string) =>
     apiRequest(`/api/operations/${encodeURIComponent(operationId)}/logistics-orders`),
+
+  getLogisticsMessengers: () =>
+    apiRequest('/api/logistics/messengers'),
 
   createLogisticsOrder: (operationId: string, payload: LogisticsOrderPayload) =>
     apiRequest(`/api/operations/${encodeURIComponent(operationId)}/logistics-orders`, {

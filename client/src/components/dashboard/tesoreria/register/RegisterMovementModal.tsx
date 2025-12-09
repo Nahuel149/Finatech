@@ -10,9 +10,11 @@ import {
   useClientSearch,
   useCreateTreasuryMovement,
   useOperationSearch,
+  useRecentClients,
   useUserPermissions,
 } from '../../../../hooks';
 import { Alert } from '../../../ui';
+import { NewClientModal } from '../../../clients/NewClientModal';
 import { MovementTypeSelector } from './MovementTypeSelector';
 import { AttachmentItem, AttachmentList } from './AttachmentList';
 
@@ -44,6 +46,16 @@ const MEDIUM_OPTIONS: Array<{ value: MovementMediumValue; label: string }> = [
 
 const MAX_ATTACHMENT_SIZE = 5 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const DRAFT_STORAGE_KEY = 'treasury-register-draft';
+
+interface MovementDraft {
+  form: FormValues;
+  contactId?: string | null;
+  contactName?: string | null;
+  operation?: OperationSuggestion | null;
+  attachments?: AttachmentItem[];
+  savedAt: number;
+}
 
 const formatDateTimeLocal = (date: Date) => {
   const offset = date.getTimezoneOffset();
@@ -84,16 +96,23 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const [contactDropdownVisible, setContactDropdownVisible] = useState(false);
   const [selectedOperation, setSelectedOperation] = useState<OperationSuggestion | null>(null);
   const [operationInput, setOperationInput] = useState('');
+  const [operationDropdownVisible, setOperationDropdownVisible] = useState(false);
   const [operationInfoVisible, setOperationInfoVisible] = useState(false);
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
+  const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
 
   const contactInputRef = useRef<HTMLDivElement | null>(null);
   const operationInputRef = useRef<HTMLDivElement | null>(null);
 
   const clientSearch = useClientSearch();
-  const operationSearch = useOperationSearch();
+  const recentClients = useRecentClients(8);
+  const operationSearch = useOperationSearch({
+    contactId: selectedContact?.id ?? null,
+    enableEmptyQueryWithContact: true,
+  });
   const { createMovement, loading: submitting, error: createError, reset: resetCreateError } =
     useCreateTreasuryMovement();
   const { permissions, loading: permissionsLoading } = useUserPermissions();
@@ -105,6 +124,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     if (open) {
       document.body.style.overflow = 'hidden';
       resetForm();
+      setTimeout(() => loadDraftFromStorage(), 0);
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -129,17 +149,18 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   }, [contactDropdownVisible]);
 
   useEffect(() => {
-    if (!operationInfoVisible) return;
+    if (!operationInfoVisible && !operationDropdownVisible) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (operationInputRef.current && !operationInputRef.current.contains(event.target as Node)) {
         setOperationInfoVisible(false);
+        setOperationDropdownVisible(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [operationInfoVisible]);
+  }, [operationInfoVisible, operationDropdownVisible]);
 
   useEffect(() => {
     if (form.currency === '') {
@@ -159,13 +180,47 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setErrors({});
     setSelectedContact(null);
     setContactInput('');
+    setContactDropdownVisible(false);
     clientSearch.setQuery('');
     setSelectedOperation(null);
     setOperationInput('');
+    setOperationDropdownVisible(false);
     operationSearch.reset();
     setAttachments([]);
+    setUploadingAttachments(false);
     setSubmitError(null);
     resetCreateError();
+  };
+
+  const loadDraftFromStorage = () => {
+    try {
+      const raw = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!raw) return;
+      const draft: MovementDraft = JSON.parse(raw);
+      if (!draft || !draft.form) return;
+      setForm(draft.form);
+      if (draft.contactName) {
+        setContactInput(draft.contactName);
+      }
+      if (draft.contactId) {
+        setSelectedContact({
+          id: draft.contactId,
+          fullName: draft.contactName || '',
+          shortName: draft.contactName || '',
+          contactType: 'client',
+        } as ClientSummary);
+      }
+      if (draft.operation) {
+        setSelectedOperation(draft.operation);
+        setOperationInput(draft.operation.code || '');
+        setOperationInfoVisible(true);
+      }
+      if (Array.isArray(draft.attachments)) {
+        setAttachments(draft.attachments);
+      }
+    } catch {
+      // ignore broken drafts
+    }
   };
 
   const validateForm = (values: FormValues) => {
@@ -217,14 +272,22 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const handleContactInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const value = event.target.value;
     setContactInput(value);
-    setSelectedContact(null);
+    if (!value.trim()) {
+      setSelectedContact(null);
+      setSelectedOperation(null);
+      setOperationInput('');
+      setOperationInfoVisible(false);
+      setOperationDropdownVisible(false);
+      operationSearch.reset();
+    } else {
+      setSelectedContact(null);
+    }
     if (value.trim().length > 2) {
       clientSearch.setQuery(value.trim());
-      setContactDropdownVisible(true);
     } else {
       clientSearch.setQuery('');
-      setContactDropdownVisible(false);
     }
+    setContactDropdownVisible(true);
   };
 
   const handleOperationInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,6 +295,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setOperationInput(value);
     setSelectedOperation(null);
     setOperationInfoVisible(false);
+    setOperationDropdownVisible(true);
     if (value.trim().length > 3) {
       operationSearch.setQuery(value.trim());
     } else {
@@ -243,17 +307,26 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setSelectedContact(contact);
     setContactInput(contact.fullName || contact.shortName || '');
     setContactDropdownVisible(false);
+    setSelectedOperation(null);
+    setOperationInput('');
+    setOperationInfoVisible(false);
+    setOperationDropdownVisible(false);
+    operationSearch.setQuery('');
   };
 
   const handleSelectOperation = (operation: OperationSuggestion) => {
     setSelectedOperation(operation);
     setOperationInput(operation.code || '');
     setOperationInfoVisible(true);
+    setOperationDropdownVisible(false);
 
     setForm((prev) => ({
       ...prev,
       currency: operation.currency === 'USD' ? 'USD' : 'ARS',
       amount: operation.amount ? String(operation.amount) : prev.amount,
+      medium: (operation.medium as MovementMediumValue) || prev.medium,
+      type: (operation.direction as MovementTypeValue) || prev.type,
+      reference: prev.reference || operation.code || prev.reference,
     }));
     setErrors((prev) => ({
       ...prev,
@@ -266,9 +339,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setAttachments((prev) => prev.filter((item) => item.id !== id));
   };
 
-  const handleFiles = (files: FileList) => {
+  const handleFiles = async (files: FileList) => {
     const items = Array.from(files);
-    const accepted: AttachmentItem[] = [];
+    const accepted: File[] = [];
     items.forEach((file) => {
       if (file.size > MAX_ATTACHMENT_SIZE) {
         onShowToast({
@@ -284,13 +357,47 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
         });
         return;
       }
-      accepted.push({
-        id: `${file.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
-        file,
-      });
+      accepted.push(file);
     });
-    if (accepted.length) {
-      setAttachments((prev) => [...prev, ...accepted]);
+
+    if (!accepted.length) {
+      return;
+    }
+
+    const formData = new FormData();
+    accepted.forEach((file) => formData.append('files', file));
+
+    try {
+      setUploadingAttachments(true);
+      const response = await fetch('/api/treasury/movements/attachments', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        throw new Error('No se pudo subir el archivo.');
+      }
+      const payload = await response.json();
+      const uploaded = Array.isArray(payload.attachments) ? payload.attachments : [];
+      const mapped: AttachmentItem[] = uploaded.map((item: any) => ({
+        id: `${item.url || item.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        url: item.url,
+        name: item.name,
+        type: item.mimeType,
+        size: item.size,
+      }));
+      setAttachments((prev) => [...prev, ...mapped]);
+      onShowToast({
+        type: 'success',
+        message: 'Adjuntos cargados correctamente.',
+      });
+    } catch (error) {
+      onShowToast({
+        type: 'error',
+        message: (error as Error).message || 'No pudimos subir los archivos.',
+      });
+    } finally {
+      setUploadingAttachments(false);
     }
   };
 
@@ -313,16 +420,37 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const handleSaveDraft = () => {
+    const draft: MovementDraft = {
+      form,
+      contactId: selectedContact?.id,
+      contactName: contactInput || selectedContact?.fullName || null,
+      operation: selectedOperation,
+      attachments,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft));
     onShowToast({
-      type: 'info',
-      message: 'Funcionalidad de borrador en desarrollo.',
+      type: 'success',
+      message: 'Borrador guardado localmente.',
     });
   };
 
   const handleCreateNewContact = () => {
+    setIsNewClientModalOpen(true);
+    setContactDropdownVisible(false);
+  };
+
+  const handleCloseNewClientModal = () => {
+    setIsNewClientModalOpen(false);
+  };
+
+  const handleNewClientCreated = (client: ClientSummary) => {
+    handleSelectContact(client);
+    setIsNewClientModalOpen(false);
+    recentClients.refresh();
     onShowToast({
-      type: 'info',
-      message: 'Creación de contactos disponible próximamente.',
+      type: 'success',
+      message: 'Contacto creado correctamente.',
     });
   };
 
@@ -331,10 +459,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     const metadata: Record<string, unknown> = {};
 
     if (attachments.length) {
-      metadata.attachments = attachments.map(({ file }) => ({
-        name: file.name,
-        type: file.type,
-        size: file.size,
+      metadata.attachments = attachments.map(({ file, url, name, type, size, id }) => ({
+        id,
+        name: name || file?.name,
+        type: type || file?.type,
+        size: size || file?.size,
+        url,
       }));
     }
 
@@ -378,6 +508,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       const response = await createMovement(payload);
       if (response?.movement) {
         onSuccess(response.movement);
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
         onShowToast({
           type: 'success',
           message: `Movimiento ${response.movement.movementCode ?? ''} registrado correctamente.`,
@@ -392,47 +523,114 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const renderContactDropdown = () => {
     if (!contactDropdownVisible) return null;
 
-    const suggestions = clientSearch.suggestions.slice(0, 10);
+    const searchTerm = contactInput.trim();
+    const searchActive = searchTerm.length > 2;
+    const suggestions = searchActive ? clientSearch.suggestions.slice(0, 10) : [];
+    const recent = recentClients.recent
+      .filter((contact) => !suggestions.some((item) => item.id === contact.id))
+      .slice(0, 8);
 
     return (
-      <div className="absolute z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1">
-        {clientSearch.loading && (
-          <div className="p-3 text-sm text-gray-500 flex items-center">
-            <i className="fa-solid fa-spinner fa-spin mr-2" />
-            Buscando contactos…
+      <div className="absolute z-20 w-full bg-white border border-gray-300 rounded-lg shadow-lg mt-1 divide-y">
+        <div className="p-3">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center justify-between">
+            <span>{searchActive ? 'Resultados' : 'Buscar contacto'}</span>
+            {clientSearch.loading && (
+              <span className="flex items-center text-gray-400 text-[11px]">
+                <i className="fa-solid fa-spinner fa-spin mr-1" />
+                Buscando
+              </span>
+            )}
           </div>
-        )}
-        {!clientSearch.loading && clientSearch.error && (
-          <div className="p-3 text-sm text-red-600">
-            {clientSearch.error.message || 'Error al buscar contactos.'}
+          {searchActive && clientSearch.error && (
+            <div className="text-sm text-red-600">
+              {clientSearch.error.message || 'Error al buscar contactos.'}
+            </div>
+          )}
+          {searchActive && !clientSearch.loading && !clientSearch.error && suggestions.length === 0 && (
+            <div className="text-sm text-gray-500">No se encontraron contactos</div>
+          )}
+          {searchActive &&
+            !clientSearch.loading &&
+            !clientSearch.error &&
+            suggestions.map((contact) => (
+              <button
+                key={contact.id}
+                type="button"
+                className="w-full text-left p-3 hover:bg-gray-50 rounded-md"
+                onClick={() => handleSelectContact(contact)}
+              >
+                <div className="font-medium text-gray-900">{contact.fullName}</div>
+                <div className="text-sm text-gray-500">
+                  {contact.contactType} • {contact.cuit || '—'}
+                </div>
+              </button>
+            ))}
+          {!searchActive && (
+            <div className="text-sm text-gray-500">Escribí al menos 3 letras para buscar.</div>
+          )}
+        </div>
+        <div className="p-3 bg-gray-50 rounded-b-lg">
+          <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2 flex items-center justify-between">
+            <span>Últimos contactos</span>
+            {recentClients.loading && (
+              <span className="flex items-center text-gray-400 text-[11px]">
+                <i className="fa-solid fa-spinner fa-spin mr-1" />
+                Cargando
+              </span>
+            )}
           </div>
-        )}
-        {!clientSearch.loading && !clientSearch.error && suggestions.length === 0 && (
-          <div className="p-3 text-sm text-gray-500">No se encontraron contactos</div>
-        )}
-        {!clientSearch.loading &&
-          !clientSearch.error &&
-          suggestions.map((contact) => (
-            <button
-              key={contact.id}
-              type="button"
-              className="w-full text-left p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0"
-              onClick={() => handleSelectContact(contact)}
-            >
-              <div className="font-medium text-gray-900">{contact.fullName}</div>
-              <div className="text-sm text-gray-500">
-                {contact.contactType} • {contact.cuit || '—'}
-              </div>
-            </button>
-          ))}
+          {recentClients.error && (
+            <div className="text-sm text-red-600">
+              {recentClients.error.message || 'No pudimos cargar los contactos recientes.'}
+            </div>
+          )}
+          {!recentClients.loading && !recentClients.error && recent.length === 0 && (
+            <div className="text-sm text-gray-500">Todavía no hay contactos recientes.</div>
+          )}
+          {!recentClients.loading &&
+            !recentClients.error &&
+            recent.map((contact) => (
+              <button
+                key={`recent-${contact.id}`}
+                type="button"
+                className="w-full text-left p-3 hover:bg-white rounded-md border border-transparent hover:border-gray-200 mb-2 last:mb-0"
+                onClick={() => handleSelectContact(contact)}
+              >
+                <div className="font-medium text-gray-900">{contact.fullName}</div>
+                <div className="text-sm text-gray-500">
+                  {contact.contactType} • {contact.cuit || '—'}
+                </div>
+              </button>
+            ))}
+        </div>
       </div>
     );
   };
 
   const renderOperationSuggestions = () => {
-    if (operationInput.trim().length <= 3 || operationSearch.loading) {
-      return null;
+    if (!operationDropdownVisible) return null;
+
+    const hasQuery = operationInput.trim().length > 3;
+    const hasContact = Boolean(selectedContact);
+
+    if (!hasQuery && !hasContact) {
+      return (
+        <div className="mt-2 text-sm text-gray-500">
+          Seleccioná un contacto o escribí al menos 4 caracteres para buscar operaciones.
+        </div>
+      );
     }
+
+    if (operationSearch.loading) {
+      return (
+        <div className="mt-2 text-sm text-gray-500 flex items-center">
+          <i className="fa-solid fa-spinner fa-spin mr-2" />
+          Buscando operaciones…
+        </div>
+      );
+    }
+
     if (operationSearch.error) {
       return (
         <div className="mt-2 text-sm text-red-600">
@@ -440,11 +638,15 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
         </div>
       );
     }
+
     if (!operationSearch.suggestions.length) {
       return (
-        <div className="mt-2 text-sm text-gray-500">No se encontraron operaciones recientes.</div>
+        <div className="mt-2 text-sm text-gray-500">
+          {hasContact ? 'No encontramos operaciones recientes para este contacto.' : 'No se encontraron operaciones.'}
+        </div>
       );
     }
+
     return (
       <div className="mt-2 border border-gray-200 rounded-lg divide-y">
         {operationSearch.suggestions.map((suggestion) => (
@@ -668,6 +870,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                         placeholder="Buscar contacto..."
                         value={contactInput}
                         onChange={handleContactInputChange}
+                        onFocus={() => {
+                          setContactDropdownVisible(true);
+                          if (!recentClients.recent.length) {
+                            recentClients.refresh();
+                          }
+                        }}
                         autoComplete="off"
                       />
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -699,6 +907,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                       placeholder="Buscar operación por ID (#FT-000123)..."
                       value={operationInput}
                       onChange={handleOperationInputChange}
+                      onFocus={() => {
+                        setOperationDropdownVisible(true);
+                        if (selectedContact && !operationSearch.loading && operationSearch.suggestions.length === 0) {
+                          operationSearch.refresh();
+                        }
+                      }}
                       autoComplete="off"
                     />
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
@@ -708,13 +922,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                   <p className="text-sm text-gray-500 mt-1">
                     Opcional - Si se selecciona, autocompletará moneda y monto sugerido
                   </p>
-                  {operationSearch.loading && (
-                    <div className="mt-2 text-sm text-gray-500 flex items-center">
-                      <i className="fa-solid fa-spinner fa-spin mr-2" />
-                      Buscando operaciones…
-                    </div>
-                  )}
-                  {!operationSearch.loading && renderOperationSuggestions()}
+                  {renderOperationSuggestions()}
                   {operationInfoVisible && operationInfo}
                 </div>
 
@@ -748,6 +956,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                       <div className="text-sm text-gray-500 mt-2">
                         PDF o imágenes (máx. 5MB cada uno)
                       </div>
+                      {uploadingAttachments && (
+                        <div className="text-sm text-gray-500 mt-2 flex items-center">
+                          <i className="fa-solid fa-spinner fa-spin mr-2" />
+                          Subiendo archivos...
+                        </div>
+                      )}
                     </div>
                   </div>
                   <AttachmentList items={attachments} onRemove={handleRemoveAttachment} />
@@ -798,5 +1012,16 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
 
   if (!open) return null;
 
-  return modalContent;
+  return (
+    <>
+      {modalContent}
+      <NewClientModal
+        open={isNewClientModalOpen}
+        onClose={handleCloseNewClientModal}
+        onCreated={handleNewClientCreated}
+        defaultOwner="Tesorería"
+        defaultType="client"
+      />
+    </>
+  );
 };

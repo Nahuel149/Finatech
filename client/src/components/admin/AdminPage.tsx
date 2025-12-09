@@ -88,6 +88,7 @@ export const AdminPage: React.FC = () => {
   const [draftPermissions, setDraftPermissions] = useState<Record<string, Set<string>>>({});
   const [loading, setLoading] = useState<boolean>(true);
   const [savingUserId, setSavingUserId] = useState<string | null>(null);
+  const [updatingMessengerId, setUpdatingMessengerId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [search, setSearch] = useState<string>('');
@@ -231,6 +232,35 @@ export const AdminPage: React.FC = () => {
     }
   };
 
+  const updateMessenger = async (userId: string, enabled: boolean) => {
+    setUpdatingMessengerId(userId);
+    setError(null);
+    setSuccess(null);
+    try {
+      const response = await api.updateMessengerFlag(userId, enabled);
+      const updatedUser = response?.user || users.find((entry) => entry.id === userId);
+      setUsers((prev) =>
+        prev.map((entry) =>
+          entry.id === userId
+            ? {
+                ...entry,
+                ...updatedUser,
+                isMessenger: enabled,
+              }
+            : entry,
+        ),
+      );
+      if (user?.id === userId) {
+        await refresh();
+      }
+      setSuccess(enabled ? 'Mensajero habilitado.' : 'Mensajero removido.');
+    } catch (err: any) {
+      setError(err.message || 'No pudimos actualizar el mensajero.');
+    } finally {
+      setUpdatingMessengerId(null);
+    }
+  };
+
   const permissionCatalog = useMemo(
     () => buildPermissionCatalog(managedPermissions),
     [managedPermissions],
@@ -364,6 +394,13 @@ export const AdminPage: React.FC = () => {
                         >
                           {entry.isVerified ? 'Verificado' : 'No verificado'}
                         </span>
+                        <span
+                          className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
+                            entry.isMessenger ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {entry.isMessenger ? 'Mensajero' : 'Sin mensajero'}
+                        </span>
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -373,6 +410,14 @@ export const AdminPage: React.FC = () => {
                         onClick={() => resetDraftForUser(entry.id)}
                       >
                         Deshacer cambios
+                      </Button>
+                      <Button
+                        variant={entry.isMessenger ? 'secondary' : 'outline'}
+                        size="sm"
+                        onClick={() => updateMessenger(entry.id, !entry.isMessenger)}
+                        loading={updatingMessengerId === entry.id}
+                      >
+                        {entry.isMessenger ? 'Quitar de mensajeros' : 'Agregar a mensajeros'}
                       </Button>
                       <Button
                         variant="primary"

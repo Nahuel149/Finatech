@@ -1,69 +1,66 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  ApiError,
-  ListTransfersResponse,
-  OperationSuggestion,
-  TransferOperation,
-} from '../../types';
+import { ApiError, OperationSuggestion } from '../../types';
 import { apiRequest, handleApiError } from '../../utils/api';
-
-const normalizeOperationToSuggestion = (operation: TransferOperation): OperationSuggestion => {
-  const baseCode = operation.operationCode || operation.id;
-  const displayCode = baseCode ? `#${baseCode}` : null;
-
-  return {
-    id: operation.id,
-    code: displayCode,
-    model: 'TransferOperation',
-    amount: operation.totalAmount,
-    currency: operation.currency,
-    movementType: operation.movementType,
-    status: operation.status,
-    confirmedAt: operation.confirmedAt,
-    description: operation.distributionLines?.[0]?.contactName ?? null, // Use null as default instead of redundant null/undefined
-  };
-};
 
 interface UseOperationSearchOptions {
   minimumQueryLength?: number;
   limit?: number;
+  contactId?: string | null;
+  enableEmptyQueryWithContact?: boolean;
 }
 
 export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
-  const { minimumQueryLength = 3, limit = 50 } = options;
+  const {
+    minimumQueryLength = 3,
+    limit = 50,
+    contactId = null,
+    enableEmptyQueryWithContact = false,
+  } = options;
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [items, setItems] = useState<OperationSuggestion[]>([]);
+  const normalizedContactId = contactId || null;
 
   useEffect(() => {
     const trimmed = query.trim();
     const sanitized = trimmed.replace(/#/g, '').trim();
+    const hasQuery = sanitized.length >= minimumQueryLength;
+    const shouldFetchByContact = enableEmptyQueryWithContact && Boolean(normalizedContactId);
+    const shouldFetch = hasQuery || shouldFetchByContact;
 
-    if (sanitized.length < minimumQueryLength) {
+    if (!shouldFetch) {
       setItems([]);
       setLoading(false);
       setError(null);
       return;
     }
 
+    const searchParam = hasQuery ? sanitized : '';
+
     setLoading(true);
     setError(null);
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       try {
-        const response = await apiRequest<ListTransfersResponse>(
-          `/api/transfers/pesos?limit=${encodeURIComponent(limit)}&skip=0&search=${encodeURIComponent(
-            sanitized
-          )}`,
+        const params = new URLSearchParams();
+        params.set('limit', String(limit));
+        if (searchParam) {
+          params.set('search', searchParam);
+        }
+        if (normalizedContactId) {
+          params.set('contactId', normalizedContactId);
+        }
+
+        const response = await apiRequest<{ suggestions: OperationSuggestion[] }>(
+          `/api/treasury/operations/suggestions?${params.toString()}`,
           {
             method: 'GET',
             signal: controller.signal as any,
           } as any
         );
 
-        const rawItems: TransferOperation[] = response.items ?? [];
-        const normalized = rawItems.map((op) => normalizeOperationToSuggestion(op));
+        const normalized = response.suggestions || [];
         setItems(normalized.slice(0, 10));
       } catch (err) {
         setError(handleApiError(err));
@@ -77,7 +74,7 @@ export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
       clearTimeout(timer);
       controller.abort();
     };
-  }, [limit, minimumQueryLength, query]);
+  }, [enableEmptyQueryWithContact, limit, minimumQueryLength, normalizedContactId, query]);
 
   const suggestions = useMemo(() => items, [items]);
 
@@ -88,6 +85,44 @@ export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
     setError(null);
   }, []);
 
+  const refresh = useCallback(async () => {
+    const sanitized = query.trim().replace(/#/g, '').trim();
+    const hasQuery = sanitized.length >= minimumQueryLength;
+    const shouldFetchByContact = enableEmptyQueryWithContact && Boolean(normalizedContactId);
+    const shouldFetch = hasQuery || shouldFetchByContact;
+
+    if (!shouldFetch) {
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const params = new URLSearchParams();
+      params.set('limit', String(limit));
+      if (hasQuery) {
+        params.set('search', sanitized);
+      }
+      if (normalizedContactId) {
+        params.set('contactId', normalizedContactId);
+      }
+      const response = await apiRequest<{ suggestions: OperationSuggestion[] }>(
+        `/api/treasury/operations/suggestions?${params.toString()}`,
+        {
+          method: 'GET',
+        }
+      );
+      const normalized = response.suggestions || [];
+      setItems(normalized.slice(0, 10));
+    } catch (err) {
+      setError(handleApiError(err));
+      setItems([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [enableEmptyQueryWithContact, limit, minimumQueryLength, normalizedContactId, query]);
+
   return {
     query,
     setQuery,
@@ -95,5 +130,6 @@ export const useOperationSearch = (options: UseOperationSearchOptions = {}) => {
     error,
     suggestions,
     reset,
+    refresh,
   };
 };

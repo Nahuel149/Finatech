@@ -82,6 +82,10 @@ const userSchema = new mongoose.Schema(
         'access-logistics'
       ],
     },
+    isMessenger: {
+      type: Boolean,
+      default: false,
+    },
     audit: {
       createdByIp: {
         type: String,

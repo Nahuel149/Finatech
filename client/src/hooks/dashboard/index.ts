@@ -4,6 +4,7 @@ export * from './useTransferOperations';
 export * from './useDashboardOperations';
 export * from './useCreateTransfer';
 export * from './useClientSearch';
+export * from './useRecentClients';
 export * from './useClientsList';
 export * from './useTransactionDraft';
 export * from './useTreasuryBalances';

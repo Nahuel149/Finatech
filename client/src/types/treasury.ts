@@ -123,6 +123,8 @@ export interface OperationSuggestion {
   amount: number;
   currency: string;
   movementType?: string | null;
+  direction?: string | null;
+  medium?: string | null;
   status?: string | null;
   confirmedAt?: string | null;
   description?: string | null;

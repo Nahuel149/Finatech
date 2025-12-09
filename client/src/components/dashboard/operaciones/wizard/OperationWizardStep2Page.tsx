@@ -524,6 +524,7 @@ export const OperationWizardStep2Page: React.FC = () => {
                 incomingCurrency={incomingCurrency}
                 outgoingCurrency={outgoingCurrency}
                 apr={draft?.apr ?? null}
+                currentMarginPercent={draft?.marginPercentage ?? null}
               />
             </div>
 

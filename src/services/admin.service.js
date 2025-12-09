@@ -12,6 +12,7 @@ const buildAdminUserPayload = (user) => ({
   fullName: user.fullName,
   email: user.email,
   isVerified: user.isVerified,
+  isMessenger: Boolean(user.isMessenger),
   permissions: dedupePermissions(user.permissions || []),
   createdAt: user.createdAt,
 });
@@ -19,7 +20,7 @@ const buildAdminUserPayload = (user) => ({
 const listUsers = async () => {
   const users = await User.find(
     {},
-    'fullName email permissions isVerified createdAt',
+    'fullName email permissions isVerified createdAt isMessenger',
   ).sort({ createdAt: -1, fullName: 1 });
 
   return users.map(buildAdminUserPayload);
@@ -99,8 +100,23 @@ const updatePermissions = async ({ targetUserId, permissions, actingUserId }) =>
 
 const getManagedPermissions = () => MANAGED_PERMISSIONS;
 
+const setMessengerFlag = async ({ targetUserId, enabled }) => {
+  const user = await User.findById(targetUserId);
+  if (!user) {
+    throw new AppError('No encontramos el usuario solicitado.', 404, {
+      code: 'USER_NOT_FOUND',
+    });
+  }
+
+  user.isMessenger = Boolean(enabled);
+  await user.save();
+
+  return buildAdminUserPayload(user);
+};
+
 module.exports = {
   listUsers,
   updatePermissions,
   getManagedPermissions,
+  setMessengerFlag,
 };

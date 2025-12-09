@@ -2,6 +2,7 @@ const {
   listUsers,
   updatePermissions,
   getManagedPermissions,
+  setMessengerFlag,
 } = require('../services/admin.service');
 
 const getUsers = async (_req, res, next) => {
@@ -36,8 +37,20 @@ const updateUserPermissions = async (req, res, next) => {
   }
 };
 
+const updateMessengerFlag = async (req, res, next) => {
+  try {
+    const { userId } = req.params;
+    const { enabled } = req.body;
+    const user = await setMessengerFlag({ targetUserId: userId, enabled });
+    res.json({ user });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getUsers,
   getPermissions,
   updateUserPermissions,
+  updateMessengerFlag,
 };

@@ -65,3 +65,28 @@ export interface DashboardRecentOperationsResponse {
   items: DashboardOperationRow[];
   pagination?: PaginationMeta;
 }
+
+export type LiveOperationSource = 'transaction' | 'transfer' | 'treasury' | 'logistics';
+
+export interface LiveOperationImpacts {
+  cash: number;
+  transfers: number;
+  usd: number;
+}
+
+export interface LiveOperationItem {
+  id: string;
+  source: LiveOperationSource;
+  state: string;
+  impacts: LiveOperationImpacts;
+  marginPercent: number | null;
+  marginWeightArs?: number;
+  updatedAt?: string;
+}
+
+export interface LiveOperationsResponse {
+  items: LiveOperationItem[];
+  totals: LiveOperationImpacts;
+  weightedMarginPercent: number | null;
+  timestamp: string;
+}

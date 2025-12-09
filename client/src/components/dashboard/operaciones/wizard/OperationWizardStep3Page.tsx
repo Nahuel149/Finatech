@@ -359,6 +359,15 @@ export const OperationWizardStep3Page: React.FC = () => {
     navigate('/dashboard');
   }, [navigate]);
 
+  const handleRegisterCaja = useCallback(() => {
+    navigate('/dashboard/tesoreria', {
+      state: {
+        fromOperationId: draft?.id || null,
+        fromOperationCode: draft?.operationCode || null,
+      },
+    });
+  }, [draft?.id, draft?.operationCode, navigate]);
+
   const handleExportPDF = useCallback(() => {
     const card = document.getElementById('success-card');
     if (!card) {
@@ -715,6 +724,20 @@ export const OperationWizardStep3Page: React.FC = () => {
                 saving={busy}
                 disableContinue={!canConfirm || busy}
                 disableSave={busy}
+                extraActions={
+                  successStateVisible
+                    ? null
+                    : (
+                      <button
+                        type="button"
+                        onClick={handleRegisterCaja}
+                        className="h-12 px-6 text-sm font-medium bg-white border border-primary text-primary rounded-lg shadow-sm hover:bg-primary hover:text-white transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
+                      >
+                        <i className="fa-solid fa-cash-register mr-2" />
+                        Registrar caja
+                      </button>
+                    )
+                }
               />
             )}
           </>

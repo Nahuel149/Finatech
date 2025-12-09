@@ -1,6 +1,11 @@
 const { Router } = require('express');
 const { body, param } = require('express-validator');
-const { getUsers, getPermissions, updateUserPermissions } = require('../controllers/admin.controller');
+const {
+  getUsers,
+  getPermissions,
+  updateUserPermissions,
+  updateMessengerFlag,
+} = require('../controllers/admin.controller');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 const { validateRequest } = require('../middleware/validateRequest');
@@ -36,6 +41,16 @@ router.put(
   ],
   validateRequest,
   updateUserPermissions,
+);
+
+router.patch(
+  '/users/:userId/messenger',
+  [
+    param('userId').isMongoId().withMessage('ID de usuario invalido.'),
+    body('enabled').isBoolean().withMessage('Debes indicar si el usuario esta habilitado como mensajero.'),
+  ],
+  validateRequest,
+  updateMessengerFlag,
 );
 
 module.exports = router;

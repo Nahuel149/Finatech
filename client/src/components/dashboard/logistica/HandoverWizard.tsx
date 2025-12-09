@@ -48,7 +48,6 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
-  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     if (!order?.items?.length) {
@@ -75,7 +74,6 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         discrepancyReason: item.discrepancyReason || '',
       }))
     );
-    setHasUnsavedChanges(false);
   }, [order]);
 
   const totals = useMemo(() => {
@@ -91,23 +89,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     );
   }, [drafts]);
 
-  const hasRecordedValues = useMemo(() => {
-    if (!order?.items?.length) {
-      return false;
-    }
-    return order.items.every((item) => {
-      const hasReceived = item.receivedAmount !== null && item.receivedAmount !== undefined;
-      const hasPending = item.pendingAmount !== null && item.pendingAmount !== undefined;
-      return hasReceived || hasPending || Boolean(item.discrepancyFlag);
-    });
-  }, [order.items]);
-
-  const completionDisabled = saving || hasUnsavedChanges || !hasRecordedValues;
-  const disableReason = hasUnsavedChanges
-    ? 'Guardá el conteo para habilitar las acciones.'
-    : !hasRecordedValues
-    ? 'Registrá y guardá los montos recibidos antes de finalizar.'
-    : '';
+  const completionDisabled = saving || !drafts.length;
 
   const setDraftValue = (itemId: string, field: keyof ItemDraft, value: string | boolean) => {
     setDrafts((current) =>
@@ -121,7 +103,6 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         };
       })
     );
-    setHasUnsavedChanges(true);
   };
 
   const setMetadataValue = (itemId: string, field: keyof LogisticsOrderItem['metadata'], value: string) => {
@@ -139,49 +120,52 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         };
       })
     );
-    setHasUnsavedChanges(true);
   };
 
-  const handleSave = async () => {
-    const payload: LogisticsItemsHandoverPayload = {
-      items: drafts.map((draft) => ({
-        id: draft.id,
-        receivedAmount: formatNumber(draft.receivedAmount),
-        pendingAmount: formatNumber(draft.pendingAmount),
-        discrepancyFlag: draft.discrepancyFlag,
-        discrepancyReason: draft.discrepancyReason || undefined,
-        metadata: draft.metadata,
-      })),
-    };
+  const buildItemsPayload = (): LogisticsItemsHandoverPayload => ({
+    items: drafts.map((draft) => ({
+      id: draft.id,
+      receivedAmount: formatNumber(draft.receivedAmount),
+      pendingAmount: formatNumber(draft.pendingAmount),
+      discrepancyFlag: draft.discrepancyFlag,
+      discrepancyReason: draft.discrepancyReason || undefined,
+      metadata: draft.metadata,
+    })),
+  });
 
-    const hasChanges = payload.items.some(
-      (item) =>
-        item.receivedAmount !== undefined ||
-        item.pendingAmount !== undefined ||
-        item.discrepancyFlag ||
-        (item.discrepancyReason && item.discrepancyReason.length) ||
-        (item.metadata && Object.keys(item.metadata).length)
+  const ensureAllReceivedRecorded = () => {
+    const missing = drafts.filter(
+      (draft) => draft.receivedAmount === '' || !Number.isFinite(Number(draft.receivedAmount))
     );
-
-    if (!hasChanges) {
-      setLocalMessage({ type: 'error', text: 'No registraste cambios en los ítems.' });
-      return;
-    }
-
-    setLocalMessage(null);
-    try {
-      await onSaveItems(payload);
-      setLocalMessage({ type: 'success', text: 'Conteo actualizado correctamente.' });
-      setHasUnsavedChanges(false);
-    } catch (error) {
+    if (missing.length) {
       setLocalMessage({
         type: 'error',
-        text: error instanceof Error ? error.message : 'No pudimos guardar el conteo.',
+        text: 'CompletÃ¡ el monto recibido para cada Ã­tem antes de finalizar.',
       });
+      return false;
     }
+    return true;
+  };
+
+  const handleCompleteTotal = async () => {
+    if (!ensureAllReceivedRecorded()) {
+      return;
+    }
+    const payload = buildItemsPayload();
+    const totalLabel = formatCurrency(totals.received || totals.expected, order.items[0]?.assetCode || 'ARS');
+    const confirmed = window.confirm(`Completar total por ${totalLabel}?`);
+    if (!confirmed) {
+      return;
+    }
+    setLocalMessage(null);
+    await onSaveItems(payload);
+    await onCompleteTotal();
   };
 
   const handlePartialCompletion = async () => {
+    if (!ensureAllReceivedRecorded()) {
+      return;
+    }
     const items = drafts
       .map((draft) => ({
         id: draft.id,
@@ -194,11 +178,24 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     if (!items.length) {
       setLocalMessage({
         type: 'error',
-        text: 'Indicá qué valores quedaron pendientes antes de completar parcial.',
+        text: 'IndicÃ¡ quÃ© valores quedaron pendientes antes de completar parcial.',
       });
       return;
     }
 
+    const invalidPending = items.find(
+      (item) => !Number.isFinite(item.pendingAmount) || item.pendingAmount < 0 || item.receivedAmount < 0
+    );
+    if (invalidPending) {
+      setLocalMessage({
+        type: 'error',
+        text: 'CompletÃ¡ montos pendientes y recibidos vÃ¡lidos para los Ã­tems seleccionados.',
+      });
+      return;
+    }
+
+    const payload = buildItemsPayload();
+    await onSaveItems(payload);
     await onCompletePartial({ items });
   };
 
@@ -217,7 +214,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
             />
           </label>
           <label className="text-xs uppercase text-gray-500">
-            Número
+            NÃºmero
             <input
               type="text"
               value={item.metadata.number || ''}
@@ -280,7 +277,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
     return (
       <label className="text-xs uppercase text-gray-500">
-        Descripción
+        DescripciÃ³n
         <input
           type="text"
           value={item.metadata.description || ''}
@@ -304,9 +301,9 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm space-y-4"
       >
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
+          <div className="flex flex-col">
             <p className="text-sm font-semibold text-text-primary">
-              {item.assetCode} · {item.assetType}
+              {item.assetCode} - {item.assetType}
             </p>
             <p className="text-xs text-gray-500">
               Esperado: {formatCurrency(item.expectedAmount, item.assetCode)}
@@ -382,12 +379,12 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h2 className="text-lg font-semibold text-text-primary">Conteo y traspaso en sitio</h2>
         <button
           type="button"
           onClick={onReportDiscrepancy}
-          className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+          className="inline-flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-100 w-full sm:w-auto justify-center"
           disabled={saving}
         >
           <i className="fa-solid fa-circle-exclamation" aria-hidden="true" />
@@ -397,7 +394,7 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
       <Alert
         type="info"
-        message="Registrá los montos recibidos/entregados por ítem y completá los metadatos obligatorios (cheques, metales). Guardá el conteo antes de finalizar."
+        message="RegistrÃ¡ los montos recibidos/entregados por Ã­tem y completÃ¡ los metadatos obligatorios (cheques, metales). PodÃ©s finalizar directo."
       />
 
       {localMessage && (
@@ -407,24 +404,24 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
       <div className="space-y-4">
         {drafts.map(renderItem)}
         {!drafts.length && (
-          <p className="text-sm text-gray-500">No hay ítems cargados para esta orden.</p>
+          <p className="text-sm text-gray-500">No hay Ã­tems cargados para esta orden.</p>
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
-        <div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 rounded-xl border border-gray-200 bg-gray-50 p-4 text-sm">
+        <div className="flex flex-col">
           <p className="text-gray-500 uppercase text-xs">Total esperado</p>
           <p className="text-lg font-semibold text-text-primary">
             {formatCurrency(totals.expected, order.items[0]?.assetCode || 'ARS')}
           </p>
         </div>
-        <div>
+        <div className="flex flex-col">
           <p className="text-gray-500 uppercase text-xs">Total registrado</p>
           <p className="text-lg font-semibold text-text-primary">
             {formatCurrency(totals.received, order.items[0]?.assetCode || 'ARS')}
           </p>
         </div>
-        <div>
+        <div className="flex flex-col">
           <p className="text-gray-500 uppercase text-xs">Diferencia</p>
           <p className="text-lg font-semibold text-text-primary">
             {formatCurrency(totals.received - totals.expected, order.items[0]?.assetCode || 'ARS')}
@@ -432,21 +429,11 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
         <button
           type="button"
-          onClick={handleSave}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
-          disabled={saving}
-        >
-          <i className="fa-solid fa-floppy-disk" aria-hidden="true" />
-          Guardar conteo
-        </button>
-
-        <button
-          type="button"
-          onClick={onCompleteTotal}
-          className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-70"
+          onClick={handleCompleteTotal}
+          className="inline-flex items-center gap-2 rounded-lg bg-success px-4 py-2 text-sm font-semibold text-white hover:bg-green-600 disabled:opacity-70 w-full sm:w-auto justify-center"
           disabled={completionDisabled}
           >
           <i className="fa-solid fa-check-double" aria-hidden="true" />
@@ -456,19 +443,12 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         <button
           type="button"
           onClick={handlePartialCompletion}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-70"
+          className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-70 w-full sm:w-auto justify-center"
           disabled={completionDisabled}
         >
           <i className="fa-solid fa-scale-balanced" aria-hidden="true" />
           Completar parcial
         </button>
-
-        {(disableReason || hasUnsavedChanges) && (
-          <span className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-800">
-            <i className="fa-solid fa-info-circle" aria-hidden="true" />
-            {disableReason || 'Guardá el conteo para habilitar las acciones.'}
-          </span>
-        )}
       </div>
     </section>
   );

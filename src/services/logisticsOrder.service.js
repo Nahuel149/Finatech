@@ -1,12 +1,13 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const AppError = require('../utils/AppError');
 const LogisticsOrder = require('../models/LogisticsOrder');
 const LogisticsOrderEvent = require('../models/LogisticsOrderEvent');
 const Transaction = require('../models/Transaction');
 const SequenceCounter = require('../models/SequenceCounter');
 const Client = require('../models/Client');
+const User = require('../models/User');
 const { storeEvidenceFiles } = require('../utils/evidenceStorage');
-const { reserveCourierTransitBalance } = require('./treasury.service');
+const { reserveCourierTransitBalance, applyReceptionBalances, computeReceptionTotals } = require('./treasury.service');
 const { emitNotification } = require('./notifications.service');
 
 const ORDER_PREFIX = 'OL';
@@ -26,6 +27,10 @@ const PRIORITY_SORT_ORDER = {
   normal: 2,
   low: 3,
 };
+const SEEDED_MESSENGERS = [
+  { id: 'seed-mensajero-1', name: 'Mensajero demo 1' },
+  { id: 'seed-mensajero-2', name: 'Mensajero demo 2' },
+];
 
 const shouldCreateTreasuryReception = (order) => {
   if (!order) {
@@ -139,7 +144,7 @@ const validateWindow = (windowStart, windowEnd, { requireFuture = true } = {}) =
   const end = new Date(windowEnd);
 
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
-    throw new AppError('La ventana horaria es inválida.', 422);
+    throw new AppError('La ventana horaria es invÃ¡lida.', 422);
   }
 
   if (start >= end) {
@@ -162,13 +167,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
     const number = normalizeString(metadata.number || metadata.checkNumber);
     const dueDate = metadata.dueDate ? new Date(metadata.dueDate) : null;
     if (!bank) {
-      throw new AppError(`Indicá el banco del cheque #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ el banco del cheque #${index + 1}.`, 422);
     }
     if (!number) {
-      throw new AppError(`Indicá el número del cheque #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ el nÃºmero del cheque #${index + 1}.`, 422);
     }
     if (!dueDate || Number.isNaN(dueDate.getTime())) {
-      throw new AppError(`Indicá la fecha del cheque #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ la fecha del cheque #${index + 1}.`, 422);
     }
     return {
       bank,
@@ -183,13 +188,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
     const purity = normalizeString(metadata.purity);
     const weight = Number(metadata.weight);
     if (!metalType) {
-      throw new AppError(`Indicá el tipo de metal del ítem #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ el tipo de metal del Ã­tem #${index + 1}.`, 422);
     }
     if (!purity) {
-      throw new AppError(`Indicá la pureza del ítem #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ la pureza del Ã­tem #${index + 1}.`, 422);
     }
     if (!Number.isFinite(weight) || weight <= 0) {
-      throw new AppError(`Indicá el peso del ítem #${index + 1}.`, 422);
+      throw new AppError(`IndicÃ¡ el peso del Ã­tem #${index + 1}.`, 422);
     }
     return {
       metalType,
@@ -202,7 +207,7 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
   if (assetType === 'OTHER') {
     const description = normalizeString(metadata.description);
     if (!description) {
-      throw new AppError(`Agregá una descripción para el ítem #${index + 1}.`, 422);
+      throw new AppError(`AgregÃ¡ una descripciÃ³n para el Ã­tem #${index + 1}.`, 422);
     }
     return { description };
   }
@@ -214,13 +219,13 @@ const normalizeMetadata = (assetType, metadata = {}, index) => {
 
 const normalizeItems = (items) => {
   if (!Array.isArray(items) || !items.length) {
-    throw new AppError('Debés cargar al menos un ítem de valor.', 422);
+    throw new AppError('DebÃ©s cargar al menos un Ã­tem de valor.', 422);
   }
 
   return items.map((item, index) => {
     const assetCode = normalizeString(item.assetCode || item.currency).toUpperCase();
     if (!assetCode) {
-      throw new AppError(`Seleccioná la divisa o activo para el ítem #${index + 1}.`, 422);
+      throw new AppError(`SeleccionÃ¡ la divisa o activo para el Ã­tem #${index + 1}.`, 422);
     }
 
     const rawType = normalizeString(item.assetType || item.kind).toUpperCase();
@@ -228,7 +233,7 @@ const normalizeItems = (items) => {
 
     const expectedAmount = Number(item.expectedAmount);
     if (!Number.isFinite(expectedAmount) || expectedAmount <= 0) {
-      throw new AppError(`El monto esperado del ítem #${index + 1} debe ser mayor a 0.`, 422);
+      throw new AppError(`El monto esperado del Ã­tem #${index + 1} debe ser mayor a 0.`, 422);
     }
 
     return {
@@ -319,7 +324,7 @@ const ensureCapacity = (items, totalsMap, allocated) => {
   items.forEach((item) => {
     const entry = totalsMap.get(item.assetCode);
     if (!entry) {
-      throw new AppError('El activo seleccionado no pertenece a la operación original.', 422);
+      throw new AppError('El activo seleccionado no pertenece a la operaciÃ³n original.', 422);
     }
     const current = local.get(item.assetCode) || 0;
     local.set(item.assetCode, roundAmount(current + item.expectedAmount));
@@ -329,7 +334,7 @@ const ensureCapacity = (items, totalsMap, allocated) => {
     const total = totalsMap.get(code)?.total || 0;
     const alreadyAllocated = allocated.get(code) || 0;
     if (amount + alreadyAllocated - total > 0.01) {
-      throw new AppError('El monto esperado supera el saldo pendiente de la operación.', 422);
+      throw new AppError('El monto esperado supera el saldo pendiente de la operaciÃ³n.', 422);
     }
   });
 };
@@ -387,12 +392,54 @@ const formatClientSnapshot = (client) => {
   };
 };
 
-const resolveClientSnapshot = async (clientId) => {
-  if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
+const formatClientAddress = (address, id, label) => {
+  if (!address) {
     return null;
   }
-  const client = await Client.findById(clientId).select('fullName shortName contactType phone email').lean();
-  return formatClientSnapshot(client);
+  const formatted = address.formatted || address.description;
+  if (!formatted) {
+    return null;
+  }
+  return {
+    id,
+    label,
+    formatted,
+    placeId: address.placeId || null,
+    latitude: Number.isFinite(address.latitude) ? address.latitude : null,
+    longitude: Number.isFinite(address.longitude) ? address.longitude : null,
+  };
+};
+
+const formatClientAddresses = (client) => {
+  if (!client) {
+    return [];
+  }
+  const addresses = [];
+  const primary = formatClientAddress(client.primaryAddress, 'primary', 'Principal');
+  const secondary = formatClientAddress(client.secondaryAddress, 'secondary', 'Secundario');
+  if (primary) {
+    addresses.push(primary);
+  }
+  if (secondary) {
+    addresses.push(secondary);
+  }
+  return addresses;
+};
+
+const loadClientForLogistics = async (clientId) => {
+  if (!clientId || !mongoose.Types.ObjectId.isValid(clientId)) {
+    return { snapshot: null, addresses: [] };
+  }
+  const client = await Client.findById(clientId)
+    .select('fullName shortName contactType phone email primaryAddress secondaryAddress')
+    .lean();
+  if (!client) {
+    return { snapshot: null, addresses: [] };
+  }
+  return {
+    snapshot: formatClientSnapshot(client),
+    addresses: formatClientAddresses(client),
+  };
 };
 
 const generateOrderNumber = async () => {
@@ -452,11 +499,14 @@ const formatOrder = (order, { timeline = [] } = {}) => {
     status: doc.status,
     type: doc.type,
     origin: doc.origin,
+    originAddressId: doc.originAddressId || null,
     destination: doc.destination,
+    destinationAddressId: doc.destinationAddressId || null,
     windowStart: doc.windowStart,
     windowEnd: doc.windowEnd,
     contactName: doc.contactName,
     contactPhone: doc.contactPhone,
+    messengerId: doc.messengerId ? doc.messengerId.toString() : null,
     messenger: doc.messenger || null,
     assignedTo: doc.assignedTo ? doc.assignedTo.toString() : null,
     priority: doc.priority || 'normal',
@@ -508,7 +558,7 @@ const toObjectId = (value) => {
 const ensureAuthenticated = (context) => {
   const userId = context?.userId;
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('AutenticaciÃ³n requerida.', 401);
   }
   return userId;
 };
@@ -660,13 +710,12 @@ const ensureItemsWithinTolerance = (order) => {
 
   if (invalidItems.length) {
     throw new AppError(
-      'Los montos recibidos difieren de lo esperado. Revisá los ítems: ' + invalidItems.join(', '),
+      'Los montos recibidos difieren de lo esperado. RevisÃ¡ los Ã­tems: ' + invalidItems.join(', '),
       422,
       { invalidItems }
     );
   }
 };
-
 const loadOrderForMessenger = async (orderId, userId, { includeTimeline = false } = {}) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
     throw new AppError('Orden logística no encontrada.', 404);
@@ -685,7 +734,53 @@ const loadOrderForMessenger = async (orderId, userId, { includeTimeline = false 
   return { order, timeline };
 };
 
-const buildOperationSummary = (transaction, balances, clientSnapshot) => {
+const classifySettlementMedium = (method, defaultCurrency = 'ARS') => {
+  const normalized = normalizeString(method).toLowerCase();
+  let currency = String(defaultCurrency || 'ARS').toUpperCase();
+  if (normalized.includes('usd') || normalized.includes('dolar') || normalized.includes('dolar')) {
+    currency = 'USD';
+  } else if (normalized.includes('ars') || normalized.includes('peso')) {
+    currency = 'ARS';
+  }
+  let medium = 'transfer';
+  if (normalized.includes('efectivo') || normalized.includes('cash')) {
+    medium = 'cash';
+  } else if (normalized.includes('transfer')) {
+    medium = 'transfer';
+  }
+  return { currency, medium };
+};
+
+const inferSettlementMediums = async (order) => {
+  if (!order?.operationId || !mongoose.Types.ObjectId.isValid(order.operationId)) {
+    return {};
+  }
+  const transaction = await Transaction.findById(order.operationId).lean();
+  if (!transaction || !transaction.settlement) {
+    return {};
+  }
+  const defaultCurrency =
+    transaction.type === 'buy'
+      ? transaction.outgoingAsset?.code || transaction.outgoingAsset?.label || 'ARS'
+      : transaction.incomingAsset?.code || transaction.incomingAsset?.label || 'ARS';
+
+  const lines =
+    transaction.settlement.mode === 'simple'
+      ? [
+          {
+            method: transaction.settlement.simpleMethod || 'transfer',
+          },
+        ]
+      : transaction.settlement.lines || [];
+
+  const map = {};
+  lines.forEach((line) => {
+    const { currency, medium } = classifySettlementMedium(line.method, defaultCurrency);
+    map[currency] = medium;
+  });
+  return map;
+};
+const buildOperationSummary = (transaction, balances, clientSnapshot, clientAddresses = []) => {
   if (!transaction) {
     return null;
   }
@@ -695,6 +790,7 @@ const buildOperationSummary = (transaction, balances, clientSnapshot) => {
     type: transaction.type,
     clientId: transaction.client ? transaction.client.toString() : null,
     clientName: clientSnapshot?.fullName || null,
+    clientPhone: clientSnapshot?.phone || null,
     assets: {
       incoming: transaction.incomingAsset
         ? {
@@ -712,16 +808,17 @@ const buildOperationSummary = (transaction, balances, clientSnapshot) => {
         : null,
     },
     balances,
+    clientAddresses,
   };
 };
 
 const loadTransaction = async (operationId) => {
   if (!mongoose.Types.ObjectId.isValid(operationId)) {
-    throw new AppError('La operación indicada es inválida.', 404);
+    throw new AppError('La operaciÃ³n indicada es invÃ¡lida.', 404);
   }
   const transaction = await Transaction.findById(operationId).lean();
   if (!transaction) {
-    throw new AppError('No encontramos la operación vinculada.', 404);
+    throw new AppError('No encontramos la operaciÃ³n vinculada.', 404);
   }
   return transaction;
 };
@@ -736,10 +833,12 @@ const listByOperation = async (operationId) => {
   const totalsMap = buildTotalsMap(snapshot);
   const allocated = computeAllocatedAmounts(orders);
   const balances = computeBalances(totalsMap, allocated);
-  const clientSnapshot = await resolveClientSnapshot(transaction.client);
+  const { snapshot: clientSnapshot, addresses: clientAddresses } = await loadClientForLogistics(
+    transaction.client
+  );
 
   return {
-    operation: buildOperationSummary(transaction, balances, clientSnapshot),
+    operation: buildOperationSummary(transaction, balances, clientSnapshot, clientAddresses),
     orders: orders.map(formatOrder),
     balances,
   };
@@ -748,15 +847,25 @@ const listByOperation = async (operationId) => {
 const preparePayload = (payload, user) => {
   const type = payload.type === 'ENTREGA' ? 'ENTREGA' : 'RETIRO';
   const origin = normalizeString(payload.origin);
+  const originAddressId = normalizeString(payload.originAddressId) || null;
   const destination = normalizeString(payload.destination);
+  const destinationAddressId = normalizeString(payload.destinationAddressId) || null;
   const contactName = normalizeString(payload.contactName);
   const contactPhone = normalizeString(payload.contactPhone);
+  const messengerId = toObjectId(payload.messengerId);
+  const messenger = normalizeString(payload.messenger) || null;
 
   if (!origin || !destination) {
     throw new AppError('El origen y destino son obligatorios.', 422);
   }
+  if (origin.toLowerCase() === destination.toLowerCase()) {
+    throw new AppError('El origen y destino no pueden ser iguales.', 422);
+  }
+  if (originAddressId && destinationAddressId && originAddressId === destinationAddressId) {
+    throw new AppError('Elegir direcciones distintas para origen y destino.', 422);
+  }
   if (!contactName || !contactPhone) {
-    throw new AppError('Indicá el contacto responsable (nombre y teléfono).', 422);
+    throw new AppError('Indica el contacto responsable (nombre y telefono).', 422);
   }
 
   const { start: windowStart, end: windowEnd } = validateWindow(payload.windowStart, payload.windowEnd);
@@ -764,13 +873,15 @@ const preparePayload = (payload, user) => {
   const items = normalizeItems(payload.items || []);
   const status = payload.status === 'PROGRAMADA' ? 'PROGRAMADA' : 'BORRADOR';
   if (status === 'PROGRAMADA' && !canProgramOrder(user)) {
-    throw new AppError('No tenés permisos para programar órdenes logísticas.', 403);
+    throw new AppError('No tenes permisos para programar ordenes logisticas.', 403);
   }
 
   return {
     type,
     origin,
+    originAddressId,
     destination,
+    destinationAddressId,
     contactName,
     contactPhone,
     windowStart,
@@ -779,14 +890,15 @@ const preparePayload = (payload, user) => {
     items,
     notes: normalizeString(payload.notes) || null,
     internalNotes: normalizeString(payload.internalNotes) || null,
-    messenger: normalizeString(payload.messenger) || null,
+    messengerId,
+    messenger,
   };
 };
 
 const createFromOperation = async (operationId, payload, context = {}) => {
   const userId = context.userId;
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('AutenticaciÃ³n requerida.', 401);
   }
   const transaction = await loadTransaction(operationId);
   const normalized = preparePayload(payload, context.user);
@@ -802,7 +914,18 @@ const createFromOperation = async (operationId, payload, context = {}) => {
     normalized.items,
     transaction
   );
-  const clientSnapshot = await resolveClientSnapshot(transaction.client);
+  const { snapshot: clientSnapshot } = await loadClientForLogistics(transaction.client);
+  let messengerUser = null;
+  if (normalized.messengerId) {
+    messengerUser = await User.findById(normalized.messengerId).select('fullName email isMessenger').lean();
+    if (!messengerUser) {
+      throw new AppError('No encontramos al mensajero seleccionado.', 404);
+    }
+    if (!messengerUser.isMessenger) {
+      throw new AppError('El usuario seleccionado no esta habilitado como mensajero.', 422);
+    }
+  }
+  const messengerName = normalized.messenger || messengerUser?.fullName || messengerUser?.email || null;
 
   const order = await LogisticsOrder.create({
     operationId,
@@ -813,6 +936,8 @@ const createFromOperation = async (operationId, payload, context = {}) => {
     orderSequence,
     orderYear,
     ...normalized,
+    messengerId: messengerUser?._id || normalized.messengerId || null,
+    messenger: messengerName,
     liquidationPercentage,
     operationSnapshot: snapshot,
     clientSnapshot,
@@ -820,7 +945,7 @@ const createFromOperation = async (operationId, payload, context = {}) => {
     updatedBy: userId,
     createdByName: context.userName || context.user?.fullName || null,
     updatedByName: context.userName || context.user?.fullName || null,
-    assignedTo: context.userId || null,
+    assignedTo: messengerUser?._id || context.userId || null,
   });
 
   return formatOrder(order);
@@ -828,23 +953,35 @@ const createFromOperation = async (operationId, payload, context = {}) => {
 
 const updateOrder = async (orderId, payload, context = {}) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new AppError('El identificador de la orden es inválido.', 404);
+    throw new AppError('El identificador de la orden es invalido.', 404);
   }
   const userId = context.userId;
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('Autenticacion requerida.', 401);
   }
 
   const order = await LogisticsOrder.findById(orderId);
   if (!order) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logistica no encontrada.', 404);
   }
   if (order.status !== 'BORRADOR') {
-    throw new AppError('Solo podés editar órdenes en borrador.', 409);
+    throw new AppError('Solo podes editar ordenes en borrador.', 409);
   }
 
   const transaction = await loadTransaction(order.operationId);
   const normalized = preparePayload(payload, context.user);
+  let messengerUser = null;
+  if (normalized.messengerId) {
+    messengerUser = await User.findById(normalized.messengerId).select('fullName email isMessenger').lean();
+    if (!messengerUser) {
+      throw new AppError('No encontramos al mensajero seleccionado.', 404);
+    }
+    if (!messengerUser.isMessenger) {
+      throw new AppError('El usuario seleccionado no esta habilitado como mensajero.', 422);
+    }
+  }
+  const messengerName = normalized.messenger || messengerUser?.fullName || messengerUser?.email || null;
+
   const existingOrders = await LogisticsOrder.find({ operationId: order.operationId }).lean();
   const snapshot = buildOperationSnapshot(transaction);
   const totalsMap = buildTotalsMap(snapshot);
@@ -853,7 +990,9 @@ const updateOrder = async (orderId, payload, context = {}) => {
 
   order.type = normalized.type;
   order.origin = normalized.origin;
+  order.originAddressId = normalized.originAddressId;
   order.destination = normalized.destination;
+  order.destinationAddressId = normalized.destinationAddressId;
   order.contactName = normalized.contactName;
   order.contactPhone = normalized.contactPhone;
   order.windowStart = normalized.windowStart;
@@ -862,7 +1001,9 @@ const updateOrder = async (orderId, payload, context = {}) => {
   order.items = normalized.items;
   order.notes = normalized.notes;
   order.internalNotes = normalized.internalNotes;
-  order.messenger = normalized.messenger;
+  order.messengerId = messengerUser?._id || normalized.messengerId || null;
+  order.messenger = messengerName;
+  order.assignedTo = messengerUser?._id || userId || null;
   order.liquidationPercentage = computeLiquidationPercentage(normalized.type, normalized.items, transaction);
   order.operationSnapshot = snapshot;
   order.updatedBy = userId;
@@ -874,11 +1015,11 @@ const updateOrder = async (orderId, payload, context = {}) => {
 
 const getOrderById = async (orderId) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   const order = await LogisticsOrder.findById(orderId).lean();
   if (!order) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   const timeline = await loadOrderTimeline(order._id);
   return formatOrder(order, { timeline });
@@ -974,10 +1115,10 @@ const sortAssignedOrders = (orders) =>
 
 const listAssignedOrders = async (userId, filters = {}) => {
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('AutenticaciÃ³n requerida.', 401);
   }
   if (!mongoose.Types.ObjectId.isValid(userId)) {
-    throw new AppError('Usuario inválido.', 403);
+    throw new AppError('Usuario invÃ¡lido.', 403);
   }
   const query = buildAssignedOrdersQuery(userId, filters);
   const orders = await LogisticsOrder.find(query).lean();
@@ -991,7 +1132,7 @@ const startRoute = async (orderId, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!ROUTE_START_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podés iniciar órdenes programadas o asignadas.', 409);
+    throw new AppError('Solo podÃ©s iniciar Ã³rdenes programadas o asignadas.', 409);
   }
 
   order.status = 'EN_CAMINO';
@@ -1005,7 +1146,7 @@ const startRoute = async (orderId, context = {}) => {
     {
       type: 'STARTED',
       title: 'Recorrido iniciado',
-      description: `${order.updatedByName || 'Logístico'} marcó la orden en camino.`,
+      description: `${order.updatedByName || 'LogÃ­stico'} marcÃ³ la orden en camino.`,
       metadata: {
         status: order.status,
         startedAt: order.startedAt,
@@ -1026,14 +1167,14 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!ROUTE_ARRIVAL_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podés marcar la llegada cuando la orden está en camino.', 409);
+    throw new AppError('Solo podÃ©s marcar la llegada cuando la orden estÃ¡ en camino.', 409);
   }
 
   const gpsLat = Number(payload.gpsLat);
   const gpsLng = Number(payload.gpsLng);
   const distanceCheck = validateGeofenceDistance(order, gpsLat, gpsLng);
   if (!distanceCheck.ok) {
-    throw new AppError('No estás dentro de la geocerca permitida.', 422, {
+    throw new AppError('No estÃ¡s dentro de la geocerca permitida.', 422, {
       distance: distanceCheck.distance,
       gpsLat,
       gpsLng,
@@ -1051,8 +1192,8 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
     order,
     {
       type: 'ARRIVED',
-      title: 'Logístico en sitio',
-      description: 'Se confirmó la llegada al destino.',
+      title: 'LogÃ­stico en sitio',
+      description: 'Se confirmÃ³ la llegada al destino.',
       metadata: {
         gpsLat,
         gpsLng,
@@ -1076,13 +1217,13 @@ const validateItemUpdate = (item, payload) => {
   const pending = payload.pendingAmount !== undefined ? Number(payload.pendingAmount) : null;
   const discrepancyFlag = Boolean(payload.discrepancyFlag);
   if (received !== null && !Number.isFinite(received)) {
-    throw new AppError('El monto recibido es inválido.', 422);
+    throw new AppError('El monto recibido es invÃ¡lido.', 422);
   }
   if (pending !== null && !Number.isFinite(pending)) {
-    throw new AppError('El monto pendiente es inválido.', 422);
+    throw new AppError('El monto pendiente es invÃ¡lido.', 422);
   }
   if (!discrepancyFlag && received !== null && received > Number(item.expectedAmount) + ITEM_AMOUNT_TOLERANCE) {
-    throw new AppError('El monto recibido supera lo esperado. Marcá discrepancia para continuar.', 422);
+    throw new AppError('El monto recibido supera lo esperado. MarcÃ¡ discrepancia para continuar.', 422);
   }
   return { received, pending, discrepancyFlag };
 };
@@ -1091,10 +1232,10 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podés registrar conteo cuando estás en sitio.', 409);
+    throw new AppError('Solo podÃ©s registrar conteo cuando estÃ¡s en sitio.', 409);
   }
   if (!Array.isArray(itemsPayload) || !itemsPayload.length) {
-    throw new AppError('Debés enviar al menos un ítem para actualizar.', 422);
+    throw new AppError('DebÃ©s enviar al menos un Ã­tem para actualizar.', 422);
   }
 
   itemsPayload.forEach((payload) => {
@@ -1103,7 +1244,7 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
     }
     const item = order.items.id(payload.id) || order.items.find((entry) => entry._id?.toString() === payload.id);
     if (!item) {
-      throw new AppError('Ítem de valor no encontrado.', 404);
+      throw new AppError('Ãtem de valor no encontrado.', 404);
     }
     const { received, pending, discrepancyFlag } = validateItemUpdate(item, payload);
     if (received !== null) {
@@ -1133,7 +1274,7 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
     {
       type: 'ITEMS_UPDATED',
       title: 'Conteo actualizado',
-      description: 'Se registraron montos y pendientes de los ítems.',
+      description: 'Se registraron montos y pendientes de los Ã­tems.',
     },
     context
   );
@@ -1146,14 +1287,14 @@ const addEvidence = async (orderId, payload = {}, files = [], context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!LOGISTICS_ACTIVE_STATUSES.includes(order.status) && !HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('No podés adjuntar evidencias en este estado.', 409);
+    throw new AppError('No podÃ©s adjuntar evidencias en este estado.', 409);
   }
   const type = String(payload.type || '').trim();
   if (!type) {
-    throw new AppError('Indicá el tipo de evidencia.', 422);
+    throw new AppError('IndicÃ¡ el tipo de evidencia.', 422);
   }
   if (!Array.isArray(files) || !files.length) {
-    throw new AppError('Debés adjuntar al menos un archivo de evidencia.', 422);
+    throw new AppError('DebÃ©s adjuntar al menos un archivo de evidencia.', 422);
   }
 
   const storedFiles = await storeEvidenceFiles(order._id.toString(), files);
@@ -1196,10 +1337,10 @@ const completeTotal = async (orderId, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (COMPLETION_BLOCKED_STATUSES.includes(order.status)) {
-    throw new AppError('No podés completar una orden con discrepancias.', 409);
+    throw new AppError('No podÃ©s completar una orden con discrepancias.', 409);
   }
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('Debés estar en sitio para completar la orden.', 409);
+    throw new AppError('DebÃ©s estar en sitio para completar la orden.', 409);
   }
   ensureRequiredEvidences(order);
   ensureItemsWithinTolerance(order);
@@ -1213,6 +1354,14 @@ const completeTotal = async (orderId, context = {}) => {
   order.updatedByName = context.userName || context.user?.fullName || null;
 
   await ensureTreasuryReceptionPending(order, context);
+  const totals = computeReceptionTotals(order);
+  if (totals?.totalsByCurrency?.length) {
+    const mediumByCurrency = await inferSettlementMediums(order);
+    await applyReceptionBalances(order, totals, { userId: context.userId }, { reverse: false, mediumByCurrency });
+    order.treasuryReceptionStatus = 'confirmed';
+    order.treasuryReception = order.treasuryReception || {};
+    order.treasuryReception.closedWithoutAccountingImpact = false;
+  }
 
   await order.save();
   await recordTimelineEvent(
@@ -1220,7 +1369,7 @@ const completeTotal = async (orderId, context = {}) => {
     {
       type: 'COMPLETED_TOTAL',
       title: 'Orden completada',
-      description: 'Se entregó/retiró la totalidad de los valores.',
+      description: 'Se entregÃ³/retirÃ³ la totalidad de los valores.',
       metadata: {
         receiptId: receipt.receiptId,
         receiptUrl: receipt.receiptUrl,
@@ -1243,16 +1392,16 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (COMPLETION_BLOCKED_STATUSES.includes(order.status)) {
-    throw new AppError('No podés completar una orden con discrepancias abiertas.', 409);
+    throw new AppError('No podÃ©s completar una orden con discrepancias abiertas.', 409);
   }
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('Debés estar en sitio para completar la orden.', 409);
+    throw new AppError('DebÃ©s estar en sitio para completar la orden.', 409);
   }
   ensureRequiredEvidences(order);
 
   const pendingItems = Array.isArray(pendingInfo.items) ? pendingInfo.items : [];
   if (!pendingItems.length) {
-    throw new AppError('Indicá cuáles ítems quedaron pendientes.', 422);
+    throw new AppError('IndicÃ¡ cuÃ¡les Ã­tems quedaron pendientes.', 422);
   }
   const pendingMap = new Map();
   pendingItems.forEach((entry) => {
@@ -1266,7 +1415,7 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     });
   });
   if (!pendingMap.size) {
-    throw new AppError('No se recibieron ítems pendientes válidos.', 422);
+    throw new AppError('No se recibieron Ã­tems pendientes vÃ¡lidos.', 422);
   }
 
   let hasPending = false;
@@ -1282,10 +1431,10 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     const received = Number(entry.receivedAmount ?? item.receivedAmount);
     const pending = Number(entry.pendingAmount);
     if (!Number.isFinite(pending) || pending < 0) {
-      throw new AppError('El monto pendiente es inválido.', 422);
+      throw new AppError('El monto pendiente es invÃ¡lido.', 422);
     }
     if (!Number.isFinite(received) || received < 0) {
-      throw new AppError('El monto recibido es inválido.', 422);
+      throw new AppError('El monto recibido es invÃ¡lido.', 422);
     }
     if (pending + received > expected + ITEM_AMOUNT_TOLERANCE) {
       throw new AppError('La suma recibida + pendiente excede lo esperado.', 422);
@@ -1309,6 +1458,14 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
   order.updatedByName = context.userName || context.user?.fullName || null;
 
   await ensureTreasuryReceptionPending(order, context);
+  const totals = computeReceptionTotals(order);
+  if (totals?.totalsByCurrency?.length) {
+    const mediumByCurrency = await inferSettlementMediums(order);
+    await applyReceptionBalances(order, totals, { userId: context.userId }, { reverse: false, mediumByCurrency });
+    order.treasuryReceptionStatus = 'confirmed';
+    order.treasuryReception = order.treasuryReception || {};
+    order.treasuryReception.closedWithoutAccountingImpact = false;
+  }
 
   await order.save();
   await recordTimelineEvent(
@@ -1339,12 +1496,12 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (order.status === 'CANCELADA') {
-    throw new AppError('No podés reportar discrepancias en órdenes canceladas.', 409);
+    throw new AppError('No podÃ©s reportar discrepancias en Ã³rdenes canceladas.', 409);
   }
   const reason = String(payload.reason || '').trim();
   const description = String(payload.description || '').trim();
   if (!reason) {
-    throw new AppError('Indicá el motivo de la discrepancia.', 422);
+    throw new AppError('IndicÃ¡ el motivo de la discrepancia.', 422);
   }
 
   order.status = 'DISCREPANCIA';
@@ -1358,7 +1515,7 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
     {
       type: 'DISCREPANCIA_REPORTED',
       title: 'Discrepancia reportada',
-      description: description || 'Se reportó un incidente en el handover.',
+      description: description || 'Se reportÃ³ un incidente en el handover.',
       metadata: {
         reason,
         evidenceIds: payload.evidenceIds || [],
@@ -1380,20 +1537,49 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
 
 const getOrderTimeline = async (orderId, userId) => {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('AutenticaciÃ³n requerida.', 401);
   }
   const order = await LogisticsOrder.findById(orderId).select({ assignedTo: 1 }).lean();
   if (!order) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   if (order.assignedTo && order.assignedTo.toString() !== userId.toString()) {
-    throw new AppError('No tenés permisos para ver esta timeline.', 403);
+    throw new AppError('No tenÃ©s permisos para ver esta timeline.', 403);
   }
   const events = await loadOrderTimeline(orderId);
   return formatTimelineEvents(events);
+};
+
+const listMessengerOptions = async () => {
+  const users = await User.find({ isMessenger: true })
+    .select('fullName email _id')
+    .sort({ fullName: 1, email: 1 })
+    .lean();
+
+  const mappedUsers = (users || [])
+    .map((user) => {
+      const label = user.fullName || user.email;
+      if (!label) {
+        return null;
+      }
+      return {
+        id: user._id.toString(),
+        name: label,
+        email: user.email || null,
+        type: 'user',
+      };
+    })
+    .filter(Boolean);
+
+  const seeded = SEEDED_MESSENGERS.map((entry) => ({
+    ...entry,
+    type: 'seed',
+  }));
+
+  return [...seeded, ...mappedUsers];
 };
 
 module.exports = {
@@ -1410,4 +1596,6 @@ module.exports = {
   completePartial,
   reportDiscrepancy,
   getOrderTimeline,
+  listMessengerOptions,
 };
+

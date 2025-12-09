@@ -41,10 +41,10 @@ const fetchTransferOperation = async (req, res, next) => {
 
 const listTransferOperationsHandler = async (req, res, next) => {
   try {
-    const { limit, skip, search, q } = req.query;
+    const { limit, skip, search, q, contactId, contact } = req.query;
     const key = `${req.user?._id || req.user?.id || 'anon'}:transfers:pesos:list:${limit || ''}:${
       skip || ''
-    }:${search || q || ''}`;
+    }:${search || q || ''}:${contactId || contact || ''}`;
 
     await sendCached({
       req,
@@ -56,6 +56,7 @@ const listTransferOperationsHandler = async (req, res, next) => {
           limit,
           skip,
           search: search || q,
+          contactId: contactId || contact,
         });
         return { items: operations };
       },

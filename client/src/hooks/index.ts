@@ -6,6 +6,7 @@ export * from './useApi';
 export * from './useConfig';
 export * from './useForm';
 export * from './dashboard';
+export * from './useLiveOperations';
 export * from './useClientDetail';
 export * from './useCreateClient';
 export * from './useNotifications';
