@@ -190,13 +190,13 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [marketApr, setMarketApr] = useState<number>(830.0);
   const [incomingAmount, setIncomingAmount] = useState<number>(operationType === 'buy' ? 150.0 : 125000.0);
   const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
-  const [secondaryRate, setSecondaryRate] = useState<number>(1);
-  const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(1);
+  const [secondaryRate, setSecondaryRate] = useState<number>(0);
+  const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(0);
   const secondaryRateEditedRef = useRef(false);
   const [aprInput, setAprInput] = useState<string>(formatRateInput(apr));
   const [marketAprInput, setMarketAprInput] = useState<string>(formatRateInput(marketApr));
-  const [secondaryRateInput, setSecondaryRateInput] = useState<string>(formatRateInput(secondaryRate));
-  const [secondaryMarketRateInput, setSecondaryMarketRateInput] = useState<string>(formatRateInput(secondaryMarketRate));
+  const [secondaryRateInput, setSecondaryRateInput] = useState<string>('');
+  const [secondaryMarketRateInput, setSecondaryMarketRateInput] = useState<string>('');
   const lastSecondaryRates = useRef<Map<string, { rate: number; marketRate: number }>>(new Map());
   const [formError, setFormError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -271,25 +271,34 @@ const canEditMarketRate = useMemo(
     enabled: canEditMarketRate,
   });
 
+  const resolveMarketRateForType = useCallback(
+    (rate?: { rate?: number | null; buyRate?: number | null; sellRate?: number | null }) => {
+      if (!rate) return null;
+      const value =
+        operationType === 'buy'
+          ? rate.buyRate ?? rate.rate
+          : rate.sellRate ?? rate.rate;
+      const numeric = Number(value);
+      return Number.isFinite(numeric) ? numeric : null;
+    },
+    [operationType],
+  );
+
   useEffect(() => {
-    if (!latestMarketRate) {
+    const resolvedRate = resolveMarketRateForType(latestMarketRate || undefined);
+    if (!resolvedRate) {
       return;
     }
 
-    const normalizedRate = Number(latestMarketRate.rate);
-    if (!Number.isFinite(normalizedRate)) {
-      return;
+    if (!ratesAreEqual(autoMarketRate, resolvedRate)) {
+      setAutoMarketRate(resolvedRate);
     }
 
-    if (!ratesAreEqual(autoMarketRate, normalizedRate)) {
-      setAutoMarketRate(normalizedRate);
+    if (canEditMarketRate && !ratesAreEqual(marketApr, resolvedRate)) {
+      setMarketApr(resolvedRate);
+      setMarketAprInput(formatRateInput(resolvedRate));
     }
-
-    if (canEditMarketRate && !ratesAreEqual(marketApr, normalizedRate)) {
-      setMarketApr(normalizedRate);
-      setMarketAprInput(formatRateInput(normalizedRate));
-    }
-  }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate]);
+  }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate, resolveMarketRateForType]);
 
   // Hydrate form with draft data when available
   useEffect(() => {
@@ -338,20 +347,20 @@ const canEditMarketRate = useMemo(
     if (draftIncomingAmount !== incomingAmount) {
       setIncomingAmount(draftIncomingAmount);
     }
-    const metadata = parseNotes(draft.notes);
-    if (metadata) {
-      const draftSecondaryRate = sanitizeNumber(metadata.rate) || 1;
-      const draftSecondaryMarketRate = sanitizeNumber(metadata.marketRate) || 1;
-      
-      if (draftSecondaryRate !== secondaryRate) {
-        setSecondaryRate(draftSecondaryRate);
-        setSecondaryRateInput(formatRateInput(draftSecondaryRate));
+      const metadata = parseNotes(draft.notes);
+      if (metadata) {
+        const draftSecondaryRate = sanitizeNumber(metadata.rate);
+        const draftSecondaryMarketRate = sanitizeNumber(metadata.marketRate);
+        
+        if (Number.isFinite(draftSecondaryRate)) {
+          setSecondaryRate(draftSecondaryRate);
+          setSecondaryRateInput(formatRateInput(draftSecondaryRate));
+        }
+        if (Number.isFinite(draftSecondaryMarketRate)) {
+          setSecondaryMarketRate(draftSecondaryMarketRate);
+          setSecondaryMarketRateInput(formatRateInput(draftSecondaryMarketRate));
+        }
       }
-      if (draftSecondaryMarketRate !== secondaryMarketRate) {
-        setSecondaryMarketRate(draftSecondaryMarketRate);
-        setSecondaryMarketRateInput(formatRateInput(draftSecondaryMarketRate));
-      }
-    }
 
     if (draft.client) {
       const clientToAdd = draft.client as ClientSummary;
@@ -367,22 +376,61 @@ const canEditMarketRate = useMemo(
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
 
-  // Keep outgoing amount in sync with incoming amount and APR
+  // Keep outgoing amount in sync with incoming amount and APR, considering secondary assets
   useEffect(() => {
     if (apr <= 0) {
       setOutgoingAmount(0);
       return;
     }
 
-    // For buy operations: USD -> ARS, so multiply by rate
-    // For sell operations: ARS -> USD, so divide by rate
-    const computed =
-      operationType === 'buy'
-        ? Number((incomingAmount * apr).toFixed(2))  // USD * (ARS/USD) = ARS
-        : Number((incomingAmount / apr).toFixed(2)); // ARS / (ARS/USD) = USD
+    let computed = 0;
+
+    if (!showSecondaryRates) {
+      // Legacy USD/ARS path
+      computed =
+        operationType === 'buy'
+          ? Number((incomingAmount * apr).toFixed(4)) // USD * (ARS/USD) = ARS
+          : Number((incomingAmount / apr).toFixed(4)); // ARS / (ARS/USD) = USD
+    } else {
+      // Secondary asset path using the secondary operation rate (secondary -> USD)
+      const secRate = secondaryRate || secondaryMarketRate || 0;
+      if (!secRate || secRate <= 0) {
+        setOutgoingAmount(0);
+        return;
+      }
+
+      if (secondaryIsOutgoing) {
+        // Incoming ARS -> USD -> secondary (e.g., sell EUR for ARS or buy EUR with ARS)
+        if (operationType === 'sell') {
+          const usdAmount = incomingAmount / apr;
+          computed = Number((usdAmount / secRate).toFixed(4)); // outgoing secondary units
+        } else {
+          // buying secondary with ARS: how many ARS to pay for incoming secondary units
+          const usdNeeded = incomingAmount * secRate;
+          computed = Number((usdNeeded * apr).toFixed(4)); // ARS to pay
+        }
+      } else if (secondaryIsIncoming) {
+        // Incoming secondary -> USD -> ARS
+        const usdValue =
+          operationType === 'buy'
+            ? incomingAmount * secRate
+            : incomingAmount / secRate;
+
+        computed = Number((usdValue * apr).toFixed(4)); // ARS pay/receive
+      }
+    }
 
     setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
-  }, [incomingAmount, apr, operationType]);
+  }, [
+    apr,
+    incomingAmount,
+    operationType,
+    secondaryIsIncoming,
+    secondaryIsOutgoing,
+    secondaryMarketRate,
+    secondaryRate,
+    showSecondaryRates,
+  ]);
   // When the preset type changes via query params (e.g. shortcuts)
   useEffect(() => {
     if (presetType === 'venta') {
@@ -502,6 +550,27 @@ const canEditMarketRate = useMemo(
   }, [incomingAssetCode, outgoingAssetCode]);
 
   const showSecondaryRates = Boolean(secondaryAssetCode);
+  const secondaryIsIncoming = showSecondaryRates && secondaryAssetCode === incomingAssetCode;
+  const secondaryIsOutgoing = showSecondaryRates && secondaryAssetCode === outgoingAssetCode;
+  const { data: latestSecondaryMarketRate } = useLatestMarketRate({
+    baseAsset: secondaryAssetCode || 'USD',
+    quoteAsset: 'USD',
+    enabled: showSecondaryRates && Boolean(secondaryAssetCode),
+  });
+
+  const secondaryAssetCode = useMemo(() => {
+    if (incomingAssetCode !== 'USD' && incomingAssetCode !== 'ARS') {
+      return incomingAssetCode;
+    }
+    if (outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS') {
+      return outgoingAssetCode;
+    }
+    return null;
+  }, [incomingAssetCode, outgoingAssetCode]);
+
+  const showSecondaryRates = Boolean(secondaryAssetCode);
+  const secondaryIsIncoming = showSecondaryRates && secondaryAssetCode === incomingAssetCode;
+  const secondaryIsOutgoing = showSecondaryRates && secondaryAssetCode === outgoingAssetCode;
   const { data: latestSecondaryMarketRate } = useLatestMarketRate({
     baseAsset: secondaryAssetCode || 'USD',
     quoteAsset: 'USD',
@@ -510,10 +579,17 @@ const canEditMarketRate = useMemo(
 
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
-      return marketApr / secondaryMarketRate;
+      if (secondaryIsOutgoing) {
+        // ARS/USD divided by USD/secondary = ARS per secondary
+        return marketApr / secondaryMarketRate;
+      }
+      if (secondaryIsIncoming) {
+        // ARS/USD multiplied by USD/secondary = ARS per secondary
+        return marketApr * secondaryMarketRate;
+      }
     }
     return marketApr;
-  }, [marketApr, showSecondaryRates, secondaryMarketRate]);
+  }, [marketApr, secondaryIsIncoming, secondaryIsOutgoing, secondaryMarketRate, showSecondaryRates]);
 
   const marginInputsValid = useMemo(
     () =>
@@ -566,26 +642,18 @@ const canEditMarketRate = useMemo(
     secondaryRateEditedRef.current = false;
 
     const cached = lastSecondaryRates.current.get(secondaryAssetCode);
-    const liveMarket = Number(latestSecondaryMarketRate?.rate);
-    const hasLiveMarket = Number.isFinite(liveMarket);
-
-    const nextMarket = hasLiveMarket
-      ? liveMarket
-      : cached?.marketRate ?? 1;
-    const nextOperationRate = hasLiveMarket
-      ? liveMarket
-      : cached?.rate ?? nextMarket;
-
-    setSecondaryMarketRate(nextMarket);
-    setSecondaryMarketRateInput(formatRateInput(nextMarket));
-    setSecondaryRate(nextOperationRate);
-    setSecondaryRateInput(formatRateInput(nextOperationRate));
-
-    lastSecondaryRates.current.set(secondaryAssetCode, {
-      rate: nextOperationRate,
-      marketRate: nextMarket,
-    });
-  }, [secondaryAssetCode, showSecondaryRates, latestSecondaryMarketRate]);
+    if (cached) {
+      setSecondaryMarketRate(cached.marketRate);
+      setSecondaryMarketRateInput(formatRateInput(cached.marketRate));
+      setSecondaryRate(cached.rate);
+      setSecondaryRateInput(formatRateInput(cached.rate));
+    } else {
+      setSecondaryMarketRate(0);
+      setSecondaryMarketRateInput('');
+      setSecondaryRate(0);
+      setSecondaryRateInput('');
+    }
+  }, [secondaryAssetCode, showSecondaryRates]);
 
   useEffect(() => {
     if (!showSecondaryRates || !secondaryAssetCode) {

@@ -132,28 +132,57 @@ export const useLatestMarketRate = (
       .then(async (payload) => {
         let override = payload?.override ?? null;
 
-        // Fallback: try fetching official rate if no override is set
+        // Fallbacks: official USD/ARS, then public FX API for any pair
+        const isUsdArsPair =
+          baseAsset.toUpperCase() === 'USD' && quoteAsset.toUpperCase() === 'ARS';
         if (!override) {
-          try {
-            const official = await apiRequest<{ quote: any }>(
-              `/api/rates/market/official?baseAsset=${encodeURIComponent(baseAsset)}&quoteAsset=${encodeURIComponent(quoteAsset)}`
-            );
-            if (official?.quote?.buyRate && official?.quote?.sellRate) {
-              override = {
-                baseAsset: baseAsset,
-                quoteAsset: quoteAsset,
-                buyRate: Number(official.quote.buyRate),
-                sellRate: Number(official.quote.sellRate),
-                rate: Number(official.quote.sellRate),
-                selectedSide: 'sell',
-                validFrom: new Date().toISOString(),
-                source: official.quote.source || 'official-fallback',
-                createdAt: new Date().toISOString(),
-              };
+          if (isUsdArsPair) {
+            try {
+              const official = await apiRequest<{ quote: any }>(
+                `/api/rates/market/official?baseAsset=${encodeURIComponent(baseAsset)}&quoteAsset=${encodeURIComponent(quoteAsset)}`
+              );
+              if (official?.quote?.buyRate && official?.quote?.sellRate) {
+                override = {
+                  baseAsset: baseAsset,
+                  quoteAsset: quoteAsset,
+                  buyRate: Number(official.quote.buyRate),
+                  sellRate: Number(official.quote.sellRate),
+                  rate: Number(official.quote.sellRate),
+                  selectedSide: 'sell',
+                  validFrom: new Date().toISOString(),
+                  source: official.quote.source || 'official-fallback',
+                  createdAt: new Date().toISOString(),
+                };
+              }
+            } catch (fallbackErr: any) {
+              setError(handleApiError(fallbackErr));
             }
-          } catch (fallbackErr: any) {
-            // Only surface error if we also lacked override
-            setError(handleApiError(fallbackErr));
+          } else {
+            try {
+              const response = await fetch(
+                `https://api.exchangerate.host/convert?from=${encodeURIComponent(
+                  baseAsset
+                )}&to=${encodeURIComponent(quoteAsset)}`
+              );
+              const json = await response.json();
+              const fxRate = Number(json?.result);
+              if (Number.isFinite(fxRate) && fxRate > 0) {
+                const nowIso = new Date().toISOString();
+                override = {
+                  baseAsset,
+                  quoteAsset,
+                  rate: fxRate,
+                  buyRate: fxRate,
+                  sellRate: fxRate,
+                  selectedSide: 'sell',
+                  validFrom: nowIso,
+                  source: 'exchangerate-host',
+                  createdAt: nowIso,
+                };
+              }
+            } catch {
+              // Silent: leave override null to allow manual input
+            }
           }
         }
 
