@@ -31,6 +31,49 @@ const toIncidentDto = (incidentDoc) => {
   };
 };
 
+const createIncident = async ({ movementId, data = {}, status = 'abierta' } = {}) => {
+  const now = new Date();
+  const incidentCode = `INC-${Date.now()}`;
+  const severity = ['baja', 'media', 'alta', 'critica'].includes((data.severity || '').toLowerCase())
+    ? data.severity.toLowerCase()
+    : 'media';
+  const normalizedStatus = ['abierta', 'en-proceso', 'resuelta', 'anulada'].includes(status)
+    ? status
+    : 'abierta';
+
+  const operationalImpacts = Array.isArray(data.operationalImpacts)
+    ? data.operationalImpacts
+    : Object.entries(data.operationalImpact || {})
+        .filter(([, flag]) => Boolean(flag))
+        .map(([key]) => key);
+
+  const incident = await LogisticsIncident.create({
+    incidentCode,
+    status: normalizedStatus,
+    severity,
+    type: data.type || 'Incidente',
+    reportDate: data.dateTime ? new Date(data.dateTime) : now,
+    responsible: data.responsible || null,
+    reportedBy: data.reportedBy || null,
+    associatedMovement: movementId || null,
+    description: data.description || '',
+    operationalImpacts,
+    involvedItems: Array.isArray(data.involvedItems) ? data.involvedItems : [],
+    attachedDocuments: Array.isArray(data.attachments) ? data.attachments : [],
+    changeHistory: [
+      {
+        action: 'Incidencia creada',
+        description: 'Cargada desde el panel logístico.',
+        date: now,
+        user: data.responsible || 'Panel Logística',
+        type: 'created',
+      },
+    ],
+  });
+
+  return toIncidentDto(incident);
+};
+
 const normalizeIncidentIdentifier = (identifier) => {
   if (!identifier) {
     return null;
@@ -151,4 +194,5 @@ module.exports = {
   getIncident,
   listIncidents,
   updateIncidentStatus,
+  createIncident,
 };

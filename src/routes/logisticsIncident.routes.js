@@ -5,6 +5,7 @@ const {
   listLogisticsIncidents,
   getLogisticsIncident,
   patchLogisticsIncidentStatus,
+  postLogisticsIncident,
 } = require('../controllers/logisticsIncident.controller');
 
 const router = Router();
@@ -17,6 +18,11 @@ router.patch(
   '/logistics/incidents/:incidentId/status',
   requirePermission('access-logistics'),
   patchLogisticsIncidentStatus
+);
+router.post(
+  '/logistics/incidents',
+  requirePermission(['manage-logistics', 'access-logistics']),
+  postLogisticsIncident
 );
 
 module.exports = router;

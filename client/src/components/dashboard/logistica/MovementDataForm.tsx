@@ -35,9 +35,9 @@ const LOCATION_OPTIONS = [
 interface MovementDataFormProps {
   value: {
     type: string;
-    reference?: string;
+    reference: string;
   };
-  onChange: (value: { type: string; reference?: string }) => void;
+  onChange: React.Dispatch<React.SetStateAction<{ type: string; reference: string }>>;
 }
 
 const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) => {
@@ -79,7 +79,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
                   type="button"
                   onClick={() => {
                     setMovementType(option.value);
-                    onChange({ ...value, type: option.value });
+                    onChange((prev) => ({ ...prev, type: option.value }));
                   }}
                   className={`flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all ${
                     isActive
@@ -205,7 +205,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
             onChange={(e) => {
               const next = e.target.value.slice(0, referenceCharacterLimit);
               setReference(next);
-              onChange({ ...value, reference: next });
+              onChange((prev) => ({ ...prev, reference: next }));
             }}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"

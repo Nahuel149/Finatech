@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { IncidentGeneralInfoForm } from './IncidentGeneralInfoForm';
 import { IncidentAssociationsForm } from './IncidentAssociationsForm';
 import type { IncidentFormData } from './incidentFormTypes';
-import { devLog } from '../../../utils/devLogger';
 import { apiRequest } from '../../../utils/api';
 import { Alert } from '../../ui/Alert';
 

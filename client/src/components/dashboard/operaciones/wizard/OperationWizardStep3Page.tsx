@@ -375,7 +375,7 @@ export const OperationWizardStep3Page: React.FC = () => {
           : null,
       },
     });
-  }, [draft?.id, draft?.operationCode, navigate]);
+  }, [clientSummary, draft?.id, draft?.operationCode, navigate]);
 
   const handleExportPDF = useCallback(() => {
     const card = document.getElementById('success-card');

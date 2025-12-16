@@ -2,6 +2,7 @@ const {
   getIncident,
   listIncidents,
   updateIncidentStatus,
+  createIncident,
 } = require('../services/logisticsIncident.service');
 
 const listLogisticsIncidents = async (req, res, next) => {
@@ -35,8 +36,22 @@ const patchLogisticsIncidentStatus = async (req, res, next) => {
   }
 };
 
+const postLogisticsIncident = async (req, res, next) => {
+  try {
+    const incident = await createIncident({
+      movementId: req.body?.movementId,
+      data: req.body?.data || {},
+      status: req.body?.status || 'abierta',
+    });
+    res.status(201).json(incident);
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   listLogisticsIncidents,
   getLogisticsIncident,
   patchLogisticsIncidentStatus,
+  postLogisticsIncident,
 };

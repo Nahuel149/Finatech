@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ApiError,
   ClientSummary,
@@ -222,6 +222,30 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     operationSearch.refresh();
   }, [open, operationSearch, selectedContact, selectedOperation]);
 
+  const handleSelectOperation = useCallback(
+    (operation: OperationSuggestion) => {
+      setSelectedOperation(operation);
+      setOperationInput(operation.code || '');
+      setOperationInfoVisible(true);
+      setOperationDropdownVisible(false);
+
+      setForm((prev) => ({
+        ...prev,
+        currency: operation.currency === 'USD' ? 'USD' : 'ARS',
+        amount: operation.amount ? String(operation.amount) : prev.amount,
+        medium: (operation.medium as MovementMediumValue) || prev.medium,
+        type: (operation.direction as MovementTypeValue) || prev.type,
+        reference: prev.reference || operation.code || prev.reference,
+      }));
+      setErrors((prev) => ({
+        ...prev,
+        currency: undefined,
+        amount: undefined,
+      }));
+    },
+    [],
+  );
+
   useEffect(() => {
     if (!open || !prefillOperation || prefillAppliedRef.current) return;
     const match = operationSearch.suggestions.find(
@@ -381,27 +405,6 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setOperationDropdownVisible(true);
     operationSearch.setQuery('');
     operationSearch.refresh();
-  };
-
-  const handleSelectOperation = (operation: OperationSuggestion) => {
-    setSelectedOperation(operation);
-    setOperationInput(operation.code || '');
-    setOperationInfoVisible(true);
-    setOperationDropdownVisible(false);
-
-    setForm((prev) => ({
-      ...prev,
-      currency: operation.currency === 'USD' ? 'USD' : 'ARS',
-      amount: operation.amount ? String(operation.amount) : prev.amount,
-      medium: (operation.medium as MovementMediumValue) || prev.medium,
-      type: (operation.direction as MovementTypeValue) || prev.type,
-      reference: prev.reference || operation.code || prev.reference,
-    }));
-    setErrors((prev) => ({
-      ...prev,
-      currency: undefined,
-      amount: undefined,
-    }));
   };
 
   const handleRemoveAttachment = (id: string) => {
