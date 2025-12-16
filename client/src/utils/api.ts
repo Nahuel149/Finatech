@@ -442,11 +442,8 @@ export const api = {
   saveMarketRate: (payload: {
     baseAsset: string;
     quoteAsset: string;
-    rate?: number;
-    buyRate?: number;
-    sellRate?: number;
-    selectedSide?: 'buy' | 'sell';
-    validFrom?: string;
+    buyRate: number;
+    sellRate: number;
   }) =>
     apiRequest('/api/rates/market', {
       method: 'PUT',

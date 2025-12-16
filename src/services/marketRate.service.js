@@ -4,68 +4,34 @@ const MarketRateOverride = require('../models/MarketRateOverride');
 const saveManualMarketRate = async ({
   baseAsset,
   quoteAsset,
-  rate,
   buyRate,
   sellRate,
-  selectedSide = 'sell',
-  validFrom,
   userId,
   source = 'MANUAL',
 }) => {
   const normalizedBase = String(baseAsset || '').toUpperCase();
   const normalizedQuote = String(quoteAsset || '').toUpperCase();
-  const numericRate = Number(rate);
   const numericBuy = Number(buyRate);
   const numericSell = Number(sellRate);
-  const validFromDate = validFrom ? new Date(validFrom) : new Date();
-  const normalizedSelected = selectedSide === 'buy' ? 'buy' : 'sell';
 
   if (!normalizedBase || !normalizedQuote) {
-    throw new Error('Indicá los activos base y contra los que se cotiza.');
+    throw new Error('Indica los activos base y de referencia.');
   }
 
-  const hasAnyRate =
-    (Number.isFinite(numericRate) && numericRate > 0) ||
-    (Number.isFinite(numericBuy) && numericBuy > 0) ||
-    (Number.isFinite(numericSell) && numericSell > 0);
-
-  if (!hasAnyRate) {
-    throw new Error('Ingresá una tasa válida.');
-  }
-  if (Number.isNaN(validFromDate.getTime())) {
-    throw new Error('La fecha de vigencia es inválida.');
-  }
-
-  const resolvedRate =
-    normalizedSelected === 'buy'
-      ? (Number.isFinite(numericBuy) && numericBuy > 0 ? numericBuy : null)
-      : (Number.isFinite(numericSell) && numericSell > 0 ? numericSell : null);
-
-  if (normalizedSelected === 'buy' && !resolvedRate) {
-    throw new Error('Debés indicar el valor de compra para publicarlo.');
-  }
-  if (normalizedSelected === 'sell' && !resolvedRate) {
-    throw new Error('Debés indicar el valor de venta para publicarlo.');
-  }
-
-  const finalRate =
-    resolvedRate ||
-    (Number.isFinite(numericRate) && numericRate > 0 ? numericRate : null) ||
-    (Number.isFinite(numericBuy) && numericBuy > 0 ? numericBuy : null) ||
-    (Number.isFinite(numericSell) && numericSell > 0 ? numericSell : null);
-
-  if (!finalRate) {
-    throw new Error('No pudimos resolver la tasa seleccionada.');
+  const hasValidBuy = Number.isFinite(numericBuy) && numericBuy > 0;
+  const hasValidSell = Number.isFinite(numericSell) && numericSell > 0;
+  if (!hasValidBuy || !hasValidSell) {
+    throw new Error('Debes indicar precios de compra y venta mayores a 0.');
   }
 
   const override = await MarketRateOverride.create({
     baseAsset: normalizedBase,
     quoteAsset: normalizedQuote,
-    rate: finalRate,
-    buyRate: Number.isFinite(numericBuy) && numericBuy > 0 ? numericBuy : undefined,
-    sellRate: Number.isFinite(numericSell) && numericSell > 0 ? numericSell : undefined,
-    selectedSide: normalizedSelected,
-    validFrom: validFromDate,
+    rate: numericSell, // publish sell by default for compatibility
+    buyRate: numericBuy,
+    sellRate: numericSell,
+    selectedSide: 'sell',
+    validFrom: new Date(),
     source,
     user: userId || null,
   });
@@ -78,7 +44,7 @@ const getLatestMarketRate = async ({ baseAsset, quoteAsset }) => {
   const normalizedQuote = String(quoteAsset || '').toUpperCase();
 
   if (!normalizedBase || !normalizedQuote) {
-    throw new Error('Indicá los activos base y contra los que se cotiza.');
+    throw new Error('Indica los activos base y de referencia.');
   }
 
   const override = await MarketRateOverride.findOne({
@@ -106,46 +72,79 @@ const getLatestMarketRate = async ({ baseAsset, quoteAsset }) => {
 };
 
 const normalizeNumber = (value) => {
-  if (!value) return null;
+  if (!value && value !== 0) return null;
   const cleaned = String(value).replace(/\./g, '').replace(',', '.');
   const parsed = Number.parseFloat(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const fetchOfficialUsdArsRate = async () => {
+const fetchFromDolarHoy = async () => {
   const response = await axios.get('https://dolarhoy.com', {
     timeout: 8000,
     headers: {
       'User-Agent': 'Mozilla/5.0 (compatible; FinatechBot/1.0; +https://finatech.local)',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     },
   });
 
   const html = response?.data || '';
   const officialMatch =
-    html.match(/D[óÓ]LAR OFICIAL[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i) ||
-    html.match(/dolar oficial[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i);
+    html.match(/D[���"]LAR OFICIAL[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i) ||
+    html.match(/dolar oficial[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i) ||
+    html.match(/oficial[\s\S]{0,500}?compra[^\d$]*([\$\s\d.,]+)[\s\S]{0,120}?venta[^\d$]*([\$\s\d.,]+)/i);
 
   if (!officialMatch) {
-    throw new Error('No pudimos leer la cotización oficial desde dolarhoy.com');
+    throw new Error('No pudimos leer la cotizacion oficial desde dolarhoy.com');
   }
 
-  const buyRaw = officialMatch[1];
-  const sellRaw = officialMatch[2];
-  const buyRate = normalizeNumber(buyRaw);
-  const sellRate = normalizeNumber(sellRaw);
+  const buyRate = normalizeNumber(officialMatch[1]);
+  const sellRate = normalizeNumber(officialMatch[2]);
 
   if (!buyRate || !sellRate) {
-    throw new Error('La respuesta de dolarhoy.com no tiene valores válidos.');
+    throw new Error('La respuesta de dolarhoy.com no tiene valores validos.');
   }
 
-  return {
-    baseAsset: 'USD',
-    quoteAsset: 'ARS',
-    buyRate,
-    sellRate,
-    source: 'dolarhoy',
-    fetchedAt: new Date().toISOString(),
-  };
+  return { buyRate, sellRate, source: 'dolarhoy' };
+};
+
+const fetchFromDolarApi = async () => {
+  const response = await axios.get('https://dolarapi.com/v1/dolares/oficial', {
+    timeout: 6000,
+  });
+  const buyRate = normalizeNumber(response?.data?.compra);
+  const sellRate = normalizeNumber(response?.data?.venta);
+  if (!buyRate || !sellRate) {
+    throw new Error('Respuesta incompleta de dolarapi.com');
+  }
+  return { buyRate, sellRate, source: 'dolarapi' };
+};
+
+const fetchOfficialUsdArsRate = async () => {
+  const attempts = [fetchFromDolarHoy, fetchFromDolarApi];
+  const errors = [];
+
+  for (const attempt of attempts) {
+    try {
+      const { buyRate, sellRate, source } = await attempt();
+      return {
+        baseAsset: 'USD',
+        quoteAsset: 'ARS',
+        buyRate,
+        sellRate,
+        source,
+        fetchedAt: new Date().toISOString(),
+      };
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+
+  const lastError = errors[errors.length - 1];
+  const serviceError = new Error(
+    lastError?.message || 'No pudimos leer la cotizacion oficial desde los proveedores.'
+  );
+  serviceError.status = 502;
+  throw serviceError;
 };
 
 module.exports = {

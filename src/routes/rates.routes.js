@@ -17,32 +17,13 @@ router.put(
   '/market',
   requireAuth,
   requirePermission('manage-market-rates'),
-  body('baseAsset').isString().trim().notEmpty().withMessage('Indicá el activo base.'),
-  body('quoteAsset').isString().trim().notEmpty().withMessage('Indicá el activo de referencia.'),
-  body('rate').optional().isFloat({ gt: 0 }).withMessage('Ingresá una tasa válida mayor a 0.'),
-  body('buyRate').optional().isFloat({ gt: 0 }).withMessage('La compra debe ser mayor a 0.'),
-  body('sellRate').optional().isFloat({ gt: 0 }).withMessage('La venta debe ser mayor a 0.'),
-  body('selectedSide').optional().isIn(['buy', 'sell']).withMessage('El lado debe ser buy o sell.'),
-  body('validFrom').optional().isISO8601().withMessage('La fecha de vigencia es inválida.'),
+  body('baseAsset').isString().trim().notEmpty().withMessage('Indicǭ el activo base.'),
+  body('quoteAsset').isString().trim().notEmpty().withMessage('Indicǭ el activo de referencia.'),
+  body('buyRate').isFloat({ gt: 0 }).withMessage('La compra debe ser mayor a 0.'),
+  body('sellRate').isFloat({ gt: 0 }).withMessage('La venta debe ser mayor a 0.'),
   validateRequest,
   async (req, res, next) => {
     try {
-      if (!req.body.rate && !req.body.buyRate && !req.body.sellRate) {
-        const error = new Error('Debés indicar al menos compra o venta.');
-        error.status = 400;
-        throw error;
-      }
-      if (req.body.selectedSide === 'buy' && !req.body.buyRate) {
-        const error = new Error('Seleccionaste publicar compra, pero falta el valor de compra.');
-        error.status = 400;
-        throw error;
-      }
-      if (req.body.selectedSide === 'sell' && !req.body.sellRate) {
-        const error = new Error('Seleccionaste publicar venta, pero falta el valor de venta.');
-        error.status = 400;
-        throw error;
-      }
-
       const context = {
         userId: req.user?._id || req.user?.id || null,
       };

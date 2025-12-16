@@ -95,11 +95,10 @@ export const AdminPage: React.FC = () => {
   const [filterVerified, setFilterVerified] = useState<'all' | 'verified' | 'unverified'>('all');
   const [fxBuy, setFxBuy] = useState<string>('');
   const [fxSell, setFxSell] = useState<string>('');
-  const [fxSide, setFxSide] = useState<'buy' | 'sell'>('sell');
-  const [fxDate, setFxDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const [fxLoading, setFxLoading] = useState<boolean>(false);
   const [fxError, setFxError] = useState<string | null>(null);
   const [fxSuccess, setFxSuccess] = useState<string | null>(null);
+  const [visibleUserCount, setVisibleUserCount] = useState<number>(5);
 
   const currentUserPermissions = useMemo(() => {
     const list = user?.permissions;
@@ -176,6 +175,10 @@ export const AdminPage: React.FC = () => {
       );
     });
   }, [users, search, filterVerified]);
+
+  useEffect(() => {
+    setVisibleUserCount(5);
+  }, [search, filterVerified]);
 
   const togglePermission = (userId: string, permission: string) => {
     const normalized = normalizePermission(permission);
@@ -316,10 +319,6 @@ export const AdminPage: React.FC = () => {
               ? String(override.rate)
               : ''
         );
-        setFxSide(override.selectedSide === 'buy' ? 'buy' : 'sell');
-        if (override.validFrom) {
-          setFxDate(String(override.validFrom).slice(0, 10));
-        }
       }
       setFxSuccess(null);
     } catch (err: any) {
@@ -339,7 +338,6 @@ export const AdminPage: React.FC = () => {
       if (quote?.buyRate && quote?.sellRate) {
         setFxBuy(String(quote.buyRate));
         setFxSell(String(quote.sellRate));
-        setFxSide('sell');
         setFxSuccess('Cotización oficial cargada desde dolarhoy.com.');
       } else {
         setFxError('No recibimos valores válidos desde el proveedor.');
@@ -353,7 +351,7 @@ export const AdminPage: React.FC = () => {
 
   const handleSaveFx = useCallback(async () => {
     if (!canManageMarketRates) {
-      setFxError('No tenés permiso para actualizar el tipo de cambio.');
+      setFxError('No tenes permiso para actualizar el tipo de cambio.');
       return;
     }
     setFxLoading(true);
@@ -361,24 +359,13 @@ export const AdminPage: React.FC = () => {
     setFxSuccess(null);
     const buy = parseNumberInput(fxBuy);
     const sell = parseNumberInput(fxSell);
-    if (!buy && !sell) {
-      setFxError('Ingresá al menos precio de compra o venta.');
+    if (!buy || !sell) {
+      setFxError('Ingresa precios de compra y venta.');
       setFxLoading(false);
       return;
     }
-    if (fxSide === 'buy' && !buy) {
-      setFxError('Seleccionaste publicar compra, pero falta el valor de compra.');
-      setFxLoading(false);
-      return;
-    }
-    if (fxSide === 'sell' && !sell) {
-      setFxError('Seleccionaste publicar venta, pero falta el valor de venta.');
-      setFxLoading(false);
-      return;
-    }
-    const selectedValue = fxSide === 'buy' ? buy || sell : sell || buy;
-    if (!selectedValue) {
-      setFxError('Seleccioná un valor válido para publicar.');
+    if (buy <= 0 || sell <= 0) {
+      setFxError('Los valores deben ser mayores a 0.');
       setFxLoading(false);
       return;
     }
@@ -386,17 +373,9 @@ export const AdminPage: React.FC = () => {
       const payload: any = {
         baseAsset: 'USD',
         quoteAsset: 'ARS',
-        selectedSide: fxSide,
-        rate: selectedValue,
+        buyRate: buy,
+        sellRate: sell,
       };
-      if (buy) payload.buyRate = buy;
-      if (sell) payload.sellRate = sell;
-      if (fxDate) {
-        const date = new Date(fxDate);
-        if (!Number.isNaN(date.getTime())) {
-          payload.validFrom = date.toISOString();
-        }
-      }
       await api.saveMarketRate(payload);
       setFxSuccess('Tipo de cambio guardado.');
       loadMarketRate();
@@ -405,7 +384,7 @@ export const AdminPage: React.FC = () => {
     } finally {
       setFxLoading(false);
     }
-  }, [canManageMarketRates, fxBuy, fxSell, fxSide, fxDate, loadMarketRate]);
+  }, [canManageMarketRates, fxBuy, fxSell, loadMarketRate]);
 
   useEffect(() => {
     if (hasAdminAccess && canManageMarketRates) {
@@ -498,9 +477,9 @@ export const AdminPage: React.FC = () => {
               <Alert type="success" message={fxSuccess} onClose={() => setFxSuccess(null)} />
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-                Compra (USD → ARS)
+                Compra (USD &gt; ARS)
                 <input
                   type="text"
                   value={fxBuy}
@@ -511,7 +490,7 @@ export const AdminPage: React.FC = () => {
                 />
               </label>
               <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-                Venta (USD → ARS)
+                Venta (USD &gt; ARS)
                 <input
                   type="text"
                   value={fxSell}
@@ -521,41 +500,11 @@ export const AdminPage: React.FC = () => {
                   disabled={fxLoading}
                 />
               </label>
-              <div className="flex flex-col gap-2 text-sm text-slate-800">
-                <span className="font-medium">Publicar</span>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={fxSide === 'buy'}
-                    onChange={() => setFxSide('buy')}
-                    disabled={fxLoading}
-                  />
-                  <span>Usar precio de compra</span>
-                </label>
-                <label className="inline-flex items-center gap-2">
-                  <input
-                    type="radio"
-                    checked={fxSide === 'sell'}
-                    onChange={() => setFxSide('sell')}
-                    disabled={fxLoading}
-                  />
-                  <span>Usar precio de venta</span>
-                </label>
-              </div>
-              <label className="flex flex-col gap-1 text-sm font-medium text-slate-800">
-                Vigencia
-                <input
-                  type="date"
-                  value={fxDate}
-                  onChange={(event) => setFxDate(event.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-primary focus:border-primary text-sm"
-                  disabled={fxLoading}
-                />
-                <span className="text-xs text-slate-500">
-                  Se aplica a partir de esta fecha (hora local).
-                </span>
-              </label>
             </div>
+            <p className="text-xs text-slate-600">
+              Los valores se publican al guardar y aplican de inmediato.
+            </p>
+
           </div>
         )}
 
@@ -598,7 +547,7 @@ export const AdminPage: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredUsers.map((entry) => {
+            {filteredUsers.slice(0, visibleUserCount).map((entry) => {
               const currentDraft = draftPermissions[entry.id] || new Set<string>();
               return (
                 <div
@@ -682,6 +631,17 @@ export const AdminPage: React.FC = () => {
                 </div>
               );
             })}
+            {visibleUserCount < filteredUsers.length && (
+              <div className="flex justify-center">
+                <Button
+                  variant="outline"
+                  onClick={() => setVisibleUserCount((prev) => prev + 5)}
+                  size="sm"
+                >
+                  Mostrar 5 más ({filteredUsers.length - visibleUserCount} restantes)
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </main>
