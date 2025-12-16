@@ -132,6 +132,7 @@ export const AdminPage: React.FC = () => {
 
       setManagedPermissions(permissionKeys);
 
+      const catalogSet = new Set(permissionKeys);
       const fetchedUsers: AdminUser[] = usersResponse?.users ?? [];
       setUsers(fetchedUsers);
 
@@ -139,7 +140,7 @@ export const AdminPage: React.FC = () => {
       fetchedUsers.forEach((item: AdminUser) => {
         const normalizedPermissions = (item.permissions || [])
           .map((permission: string) => normalizePermission(permission))
-          .filter(Boolean);
+          .filter((permission: string) => permission && catalogSet.has(permission));
 
         nextDrafts[item.id] = new Set(normalizedPermissions);
       });
@@ -180,6 +181,8 @@ export const AdminPage: React.FC = () => {
     setVisibleUserCount(5);
   }, [search, filterVerified]);
 
+  const managedPermissionsSet = useMemo(() => new Set(managedPermissions), [managedPermissions]);
+
   const togglePermission = (userId: string, permission: string) => {
     const normalized = normalizePermission(permission);
     setSuccess(null);
@@ -199,7 +202,9 @@ export const AdminPage: React.FC = () => {
   const resetDraftForUser = (userId: string) => {
     const sourceUser = users.find((entry) => entry.id === userId);
     const nextDraft = new Set(
-      (sourceUser?.permissions || []).map((permission) => normalizePermission(permission)).filter(Boolean),
+      (sourceUser?.permissions || [])
+        .map((permission) => normalizePermission(permission))
+        .filter((permission) => permission && managedPermissionsSet.has(permission)),
     );
     setDraftPermissions((prev) => ({ ...prev, [userId]: nextDraft }));
     setSuccess(null);
@@ -210,12 +215,16 @@ export const AdminPage: React.FC = () => {
     setError(null);
     setSuccess(null);
 
-    const permissions = Array.from(draftPermissions[userId] || []);
+    const permissions = Array.from(draftPermissions[userId] || []).filter((permission) =>
+      managedPermissionsSet.has(permission),
+    );
 
     try {
       const response = await api.updateUserPermissions(userId, permissions);
       const updatedUser = response?.user || users.find((entry) => entry.id === userId);
-      const normalizedPermissions = (updatedUser?.permissions || permissions).map(normalizePermission);
+      const normalizedPermissions = (updatedUser?.permissions || permissions)
+        .map(normalizePermission)
+        .filter((permission: string) => permission && managedPermissionsSet.has(permission));
 
       setUsers((prev) =>
         prev.map((entry) =>
@@ -546,6 +555,9 @@ export const AdminPage: React.FC = () => {
           <div className="space-y-4">
             {filteredUsers.slice(0, visibleUserCount).map((entry) => {
               const currentDraft = draftPermissions[entry.id] || new Set<string>();
+              const visiblePermissionCount =
+                Array.from(currentDraft).filter((permission) => managedPermissionsSet.has(permission)).length +
+                (entry.isMessenger ? 1 : 0);
               return (
                 <div
                   key={entry.id}
@@ -557,7 +569,7 @@ export const AdminPage: React.FC = () => {
                       <p className="text-sm text-slate-600">{entry.email}</p>
                       <div className="flex gap-2 mt-2">
                         <span className="inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full bg-slate-100 text-slate-700">
-                          {entry.permissions?.length ?? 0} permisos
+                          {visiblePermissionCount} permisos
                         </span>
                         <span
                           className={`inline-flex items-center px-2 py-1 text-xs font-semibold rounded-full ${
