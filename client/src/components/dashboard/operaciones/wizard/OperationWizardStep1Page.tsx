@@ -559,6 +559,8 @@ const canEditMarketRate = useMemo(
     [operationType, incomingAssetCode, outgoingAssetCode],
   );
 
+  const isUsdPair = incomingAssetCode === 'USD' || outgoingAssetCode === 'USD';
+
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
       // secondaryMarketRate is quoted as secondary -> USD, so ARS per secondary = (ARS per USD) * (USD per secondary)
@@ -992,6 +994,7 @@ const canEditMarketRate = useMemo(
                 assetLabel={secondaryAssetLabel}
                 showSecondaryRates={showSecondaryRates}
                 disabled={busy || !canEditMarketRate}
+                disablePrimaryRates={!isUsdPair && showSecondaryRates}
               />
               <AmountSection
                 enterAmount={incomingAmount}
