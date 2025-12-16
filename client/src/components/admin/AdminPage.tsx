@@ -458,9 +458,6 @@ export const AdminPage: React.FC = () => {
                 </p>
               </div>
               <div className="flex gap-2 flex-wrap">
-                <Button variant="outline" size="sm" onClick={loadMarketRate} loading={fxLoading}>
-                  Recargar actual
-                </Button>
                 <Button variant="secondary" size="sm" onClick={handleFetchOfficial} loading={fxLoading}>
                   Traer oficial (dolarhoy.com)
                 </Button>
@@ -608,6 +605,23 @@ export const AdminPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label
+                      className="flex items-start gap-3 p-3 border border-slate-200 rounded-md hover:border-primary/60 transition-colors cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-1 h-4 w-4 text-primary focus:ring-primary border-slate-300 rounded"
+                        checked={entry.isMessenger}
+                        onChange={() => updateMessenger(entry.id, !entry.isMessenger)}
+                        disabled={updatingMessengerId === entry.id}
+                      />
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Mensajero</p>
+                        <p className="text-xs text-slate-600">
+                          Incluye a este usuario en la lista de mensajeros disponibles.
+                        </p>
+                      </div>
+                    </label>
                     {permissionCatalog.map((permission) => (
                       <label
                         key={`${entry.id}-${permission.key}`}
