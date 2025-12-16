@@ -6,6 +6,9 @@ export interface MarketRateOverride {
   baseAsset: string;
   quoteAsset: string;
   rate: number;
+  buyRate?: number | null;
+  sellRate?: number | null;
+  selectedSide?: 'buy' | 'sell';
   validFrom: string;
   source: string;
   createdAt: string;
@@ -126,8 +129,34 @@ export const useLatestMarketRate = (
     const promise = apiRequest<{ override: MarketRateOverride | null }>(
       `/api/rates/market?baseAsset=${encodeURIComponent(baseAsset)}&quoteAsset=${encodeURIComponent(quoteAsset)}`
     )
-      .then((payload) => {
-        const override = payload?.override ?? null;
+      .then(async (payload) => {
+        let override = payload?.override ?? null;
+
+        // Fallback: try fetching official rate if no override is set
+        if (!override) {
+          try {
+            const official = await apiRequest<{ quote: any }>(
+              `/api/rates/market/official?baseAsset=${encodeURIComponent(baseAsset)}&quoteAsset=${encodeURIComponent(quoteAsset)}`
+            );
+            if (official?.quote?.buyRate && official?.quote?.sellRate) {
+              override = {
+                baseAsset: baseAsset,
+                quoteAsset: quoteAsset,
+                buyRate: Number(official.quote.buyRate),
+                sellRate: Number(official.quote.sellRate),
+                rate: Number(official.quote.sellRate),
+                selectedSide: 'sell',
+                validFrom: new Date().toISOString(),
+                source: official.quote.source || 'official-fallback',
+                createdAt: new Date().toISOString(),
+              };
+            }
+          } catch (fallbackErr: any) {
+            // Only surface error if we also lacked override
+            setError(handleApiError(fallbackErr));
+          }
+        }
+
         // Soft cache the fresh value
         shared.cache.set(key, { data: override, expiry: Date.now() + CACHE_TTL_MS });
         setData(override);

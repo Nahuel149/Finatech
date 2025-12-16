@@ -1,5 +1,11 @@
 import React, { useMemo } from 'react';
-import { useDashboardBalances, useLatestMarketRate, useLiveOperations } from '../../../../hooks';
+import {
+  useDashboardBalances,
+  useLatestMarketRate,
+  useLiveOperations,
+} from '../../../../hooks';
+import { CompoundComputed, CompoundLine } from './CompoundSettlementForm';
+import { TransactionType } from '../../../../types';
 
 interface Props {
   incomingAmount: number;
@@ -8,6 +14,13 @@ interface Props {
   outgoingCurrency: string;
   apr?: number | null;
   currentMarginPercent?: number | null;
+  settlementMode: 'simple' | 'compound';
+  simpleMethod: string;
+  compoundLines: CompoundLine[];
+  computedLines: Record<string, CompoundComputed>;
+  baseAmount: number;
+  baseCurrency: string;
+  operationType: TransactionType;
 }
 
 const formatArs = (value: number) =>
@@ -42,6 +55,11 @@ const formatRate = (value?: number | null) => {
   return Number(value).toFixed(2);
 };
 
+const formatRateCurrency = (value?: number | null) => {
+  if (!Number.isFinite(Number(value))) return '--';
+  return `$${Number(value).toFixed(2)}`;
+};
+
 export const ArsPositionAside: React.FC<Props> = ({
   incomingAmount,
   outgoingAmount,
@@ -49,9 +67,17 @@ export const ArsPositionAside: React.FC<Props> = ({
   outgoingCurrency,
   apr = null,
   currentMarginPercent = null,
+  settlementMode,
+  simpleMethod,
+  compoundLines,
+  computedLines,
+  baseAmount,
+  baseCurrency,
+  operationType,
 }) => {
   const { balances, loading, error } = useDashboardBalances({ pollInterval: 15000 });
-  const { totals: liveTotals, weightedMarginPercent, status: liveStatus, error: liveError } = useLiveOperations();
+  const { totals: liveTotals, weightedMarginPercent, status: liveStatus, error: liveError } =
+    useLiveOperations();
   const { data: liveRate } = useLatestMarketRate({
     baseAsset: 'USD',
     quoteAsset: 'ARS',
@@ -83,21 +109,56 @@ export const ArsPositionAside: React.FC<Props> = ({
     const impacts = { cash: 0, transfers: 0, usd: 0 };
     const incomingIsUsd = incomingCurrency === 'USD';
     const outgoingIsUsd = outgoingCurrency === 'USD';
+    const arsDirection = operationType === 'buy' ? -1 : 1;
 
+    // USD leg always impact USD caja directly
     if (incomingIsUsd) {
       impacts.usd += incomingAmount;
-    } else {
-      impacts.transfers += incomingAmount;
     }
-
     if (outgoingIsUsd) {
       impacts.usd -= outgoingAmount;
-    } else {
-      impacts.transfers -= outgoingAmount;
+    }
+
+    // ARS leg: distribute by settlement method (efectivo vs transferencia/deposito)
+    const baseIsArs = baseCurrency === 'ARS' && Number.isFinite(baseAmount) && baseAmount > 0;
+    if (baseIsArs) {
+      const pushToBucket = (method: string, amount: number) => {
+        const normalized = (method || '').toLowerCase();
+        const isCash = normalized.includes('efectivo');
+        if (isCash) {
+          impacts.cash += amount;
+        } else {
+          impacts.transfers += amount;
+        }
+      };
+
+      if (settlementMode === 'simple') {
+        pushToBucket(simpleMethod, arsDirection * baseAmount);
+      } else {
+        compoundLines.forEach((line) => {
+          const info = computedLines[line.id];
+          const rawAmount =
+            info && Number.isFinite(info.amount) ? info.amount : Number(line.value) || 0;
+          if (!rawAmount) return;
+          pushToBucket(line.method, arsDirection * rawAmount);
+        });
+      }
     }
 
     return impacts;
-  }, [incomingAmount, incomingCurrency, outgoingAmount, outgoingCurrency]);
+  }, [
+    baseAmount,
+    baseCurrency,
+    compoundLines,
+    computedLines,
+    incomingAmount,
+    incomingCurrency,
+    operationType,
+    outgoingAmount,
+    outgoingCurrency,
+    settlementMode,
+    simpleMethod,
+  ]);
 
   const aggregated = useMemo(
     () => ({
@@ -120,6 +181,8 @@ export const ArsPositionAside: React.FC<Props> = ({
 
   const projectedArs = aggregated.cash + aggregated.transfers;
   const trend = deltaArs === 0 ? 'neutral' : deltaArs > 0 ? 'up' : 'down';
+  const buyRateDisplay = liveRate?.buyRate ?? liveRate?.rate ?? null;
+  const sellRateDisplay = liveRate?.sellRate ?? liveRate?.rate ?? null;
 
   const currentMarginWeightArs = useMemo(() => {
     if (outgoingCurrency === 'ARS') {
@@ -162,7 +225,11 @@ export const ArsPositionAside: React.FC<Props> = ({
           <span className="flex items-center gap-1">
             <span
               className={`h-2 w-2 rounded-full ${
-                liveStatus === 'live' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
+                liveStatus === 'live'
+                  ? 'bg-green-500 animate-pulse'
+                  : liveStatus === 'polling'
+                  ? 'bg-yellow-500'
+                  : 'bg-red-500'
               }`}
             />
             Tiempo real
@@ -170,6 +237,23 @@ export const ArsPositionAside: React.FC<Props> = ({
           {effectiveRate && (
             <span className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
               USD/ARS: {formatRate(effectiveRate)}
+            </span>
+          )}
+          {liveStatus !== 'live' && (
+            <span
+              className={`px-2 py-1 rounded-full text-xs ${
+                liveStatus === 'polling'
+                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
+                  : 'bg-red-50 text-red-700 border border-red-200'
+              }`}
+              title="Mostrando datos en modo degradado (polling)"
+            >
+              Modo degradado
+            </span>
+          )}
+          {(buyRateDisplay || sellRateDisplay) && (
+            <span className="px-2 py-1 bg-blue-50 rounded-full text-xs text-blue-700">
+              TC compra {formatRateCurrency(buyRateDisplay)} / venta {formatRateCurrency(sellRateDisplay)}
             </span>
           )}
           {combinedWeightedMargin != null && (

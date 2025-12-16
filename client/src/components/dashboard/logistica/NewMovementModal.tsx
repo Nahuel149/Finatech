@@ -6,6 +6,8 @@ import ItemsBulkForm from './ItemsBulkForm';
 import AttachmentsForm from './AttachmentsForm';
 import CompletionConfirmationModal from './CompletionConfirmationModal';
 import { devLog } from '../../../utils/devLogger';
+import { apiRequest } from '../../../utils/api';
+import { Alert } from '../../ui/Alert';
 
 interface NewMovementModalProps {
   isOpen: boolean;
@@ -14,13 +16,15 @@ interface NewMovementModalProps {
 
 const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [movementData] = useState({
+  const [movementData, setMovementData] = useState({
     type: '',
     reference: ''
   });
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   // Mantener el orden de Hooks y evitar llamadas condicionales
   useEffect(() => {
@@ -62,11 +66,22 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
     setShowConfirmation(true);
   };
 
-  const handleConfirmRegistration = () => {
-    // TODO: Implement movement registration
-    devLog('Registering movement...');
-    setShowConfirmation(false);
-    onClose();
+  const handleConfirmRegistration = async () => {
+    setSubmitting(true);
+    try {
+      await apiRequest('/api/logistics/operations', {
+        method: 'POST',
+        body: movementData,
+      });
+      setSubmitError(null);
+      setShowConfirmation(false);
+      onClose();
+    } catch (err) {
+      devLog('Register movement failed', err);
+      setSubmitError('No pudimos registrar el movimiento.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCloseConfirmation = () => {
@@ -114,10 +129,13 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
               </div>
             </header>
 
-            <div className="flex-1 overflow-y-auto">
+           <div className="flex-1 overflow-y-auto">
               <div className="px-6 sm:px-8 py-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                  <MovementDataForm />
+                  <MovementDataForm
+                    value={movementData}
+                    onChange={setMovementData}
+                  />
                   <div className="space-y-8">
                     <AssociationsDocumentsForm />
                     <ItemsBulkForm />
@@ -128,6 +146,11 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
             </div>
 
             <footer className="px-6 sm:px-8 py-5 sm:py-6 border-t border-gray-200 bg-gray-50">
+              {submitError && (
+                <div className="mb-2">
+                  <Alert type="error" message={submitError} onClose={() => setSubmitError(null)} />
+                </div>
+              )}
               <div className="flex flex-col sm:flex-row justify-end gap-3">
                 <button
                   onClick={handleClose}
@@ -143,9 +166,10 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
                 </button>
                 <button
                   onClick={handleRegisterMovement}
-                  className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors"
+                  className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
+                  disabled={submitting}
                 >
-                  Registrar movimiento
+                  {submitting ? 'Registrando...' : 'Registrar movimiento'}
                 </button>
               </div>
               {(saveMessage || saveError) && (

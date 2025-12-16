@@ -32,14 +32,22 @@ const LOCATION_OPTIONS = [
   { value: 'oficina-principal', label: 'Oficina Principal' },
 ];
 
-const MovementDataForm: React.FC = () => {
-  const [movementType, setMovementType] = useState<MovementTypeValue>('entrega');
+interface MovementDataFormProps {
+  value: {
+    type: string;
+    reference?: string;
+  };
+  onChange: (value: { type: string; reference?: string }) => void;
+}
+
+const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) => {
+  const [movementType, setMovementType] = useState<MovementTypeValue>((value.type as MovementTypeValue) || 'entrega');
   const [initialState, setInitialState] = useState('pendiente');
   const [origin, setOrigin] = useState('');
   const [destination, setDestination] = useState('');
   const [internalResponsible, setInternalResponsible] = useState('');
   const [dateTime, setDateTime] = useState('');
-  const [reference, setReference] = useState('');
+  const [reference, setReference] = useState(value.reference || '');
 
   const movementHint = useMemo(() => {
     if (movementType === 'transferencia') {
@@ -69,7 +77,10 @@ const MovementDataForm: React.FC = () => {
                 <button
                   key={option.value}
                   type="button"
-                  onClick={() => setMovementType(option.value)}
+                  onClick={() => {
+                    setMovementType(option.value);
+                    onChange({ ...value, type: option.value });
+                  }}
                   className={`flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all ${
                     isActive
                       ? 'border-primary bg-blue-50 text-primary shadow-sm'
@@ -191,7 +202,11 @@ const MovementDataForm: React.FC = () => {
           </label>
           <textarea
             value={reference}
-            onChange={(e) => setReference(e.target.value.slice(0, referenceCharacterLimit))}
+            onChange={(e) => {
+              const next = e.target.value.slice(0, referenceCharacterLimit);
+              setReference(next);
+              onChange({ ...value, reference: next });
+            }}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
             placeholder="Ingresá detalles adicionales sobre el movimiento…"

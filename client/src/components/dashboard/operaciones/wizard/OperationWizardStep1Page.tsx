@@ -531,7 +531,7 @@ const canEditMarketRate = useMemo(
       return 0;
     }
 
-    // Calcular t_operacion como ARS/bien2 seg�n las reglas
+    // Calcular t_operacion como ARS/bien2 segun las reglas
     let operationRate: number;
     
     if (operationType === 'buy') {
@@ -544,8 +544,13 @@ const canEditMarketRate = useMemo(
       operationRate = incomingAmount / outgoingAmount;
     }
 
-    // Aplicar la fórmula: margen = (t_mercado - t_operacion) / t_mercado
-    return ((effectiveMarketRate - operationRate) / effectiveMarketRate) * 100;
+    const marginFormula = (
+      operationType === 'sell'
+        ? (operationRate - effectiveMarketRate) / effectiveMarketRate
+        : (effectiveMarketRate - operationRate) / effectiveMarketRate
+    );
+
+    return marginFormula * 100;
   }, [incomingAmount, effectiveMarketRate, marginInputsValid, operationType, outgoingAmount]);
 
   const secondaryAssetLabel = useMemo(

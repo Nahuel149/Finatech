@@ -437,6 +437,37 @@ export const api = {
       method: 'PATCH',
       body: { enabled },
     }),
+  getMarketRate: (params?: { baseAsset?: string; quoteAsset?: string }) =>
+    apiRequest('/api/rates/market' + buildQueryString(params)),
+  saveMarketRate: (payload: {
+    baseAsset: string;
+    quoteAsset: string;
+    rate?: number;
+    buyRate?: number;
+    sellRate?: number;
+    selectedSide?: 'buy' | 'sell';
+    validFrom?: string;
+  }) =>
+    apiRequest('/api/rates/market', {
+      method: 'PUT',
+      body: payload,
+    }),
+  fetchOfficialRate: (params?: { baseAsset?: string; quoteAsset?: string }) =>
+    apiRequest('/api/rates/market/official' + buildQueryString(params)),
+  publishDraftImpact: (payload: {
+    draftId: string;
+    impacts: { cash: number; transfers: number; usd: number };
+    marginPercent?: number | null;
+    marginWeightArs?: number;
+  }) =>
+    apiRequest('/api/live-ops/operations/drafts', {
+      method: 'POST',
+      body: payload,
+    }),
+  removeDraftImpact: (draftId: string) =>
+    apiRequest(`/api/live-ops/operations/drafts/${encodeURIComponent(draftId)}`, {
+      method: 'DELETE',
+    }),
 
   // Logistics
   getLogisticsOperations: (params?: Record<string, unknown>) =>
@@ -470,6 +501,8 @@ export const api = {
     apiRequest(`/api/logistics/incidents${buildQueryString(params)}`),
   getLogisticsIncident: (incidentId: string) =>
     apiRequest(`/api/logistics/incidents/${encodeURIComponent(incidentId)}`),
+  createLogisticsIncident: (payload: any) =>
+    apiRequest('/api/logistics/incidents', { method: 'POST', body: payload }),
   updateLogisticsIncidentStatus: (incidentId: string, payload: { status: string }) =>
     apiRequest(`/api/logistics/incidents/${encodeURIComponent(incidentId)}/status`, {
       method: 'PATCH',

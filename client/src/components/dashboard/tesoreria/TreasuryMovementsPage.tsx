@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   useClientsList,
   useTreasuryMovements,
@@ -13,7 +13,7 @@ import { TreasuryBalanceStripe } from './TreasuryBalanceStripe';
 import { TreasuryHeader } from './TreasuryHeader';
 import { TreasuryFilters } from './TreasuryFilters';
 import { TreasuryMovementsTable } from './TreasuryMovementsTable';
-import { ApiError, TreasuryMovement } from '../../../types';
+import { ApiError, ClientSummary, TreasuryMovement } from '../../../types';
 import { RegisterMovementModal } from './register';
 import { MovementDetailPanel } from './detail';
 import { ReconciliationModal } from './reconciliation';
@@ -43,9 +43,12 @@ export const TreasuryMovementsPage: React.FC = () => {
   const [globalSearch, setGlobalSearch] = useState('');
   const [toast, setToast] = useState<ToastState | null>(null);
   const [registerOpen, setRegisterOpen] = useState(false);
+  const [prefillOperation, setPrefillOperation] = useState<{ id?: string | null; code?: string | null } | null>(null);
+  const [prefillContact, setPrefillContact] = useState<ClientSummary | null>(null);
   const [reconciliationOpen, setReconciliationOpen] = useState(false);
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
   const navigate = useNavigate();
+  const location = useLocation();
   const { movementId: movementIdParam } = useParams<{ movementId?: string }>();
   const detailMovementId = movementIdParam ?? null;
 
@@ -135,6 +138,8 @@ export const TreasuryMovementsPage: React.FC = () => {
 
   const handleRegisterMovement = () => {
     setRegisterOpen(true);
+    setPrefillOperation(null);
+    setPrefillContact(null);
   };
 
   const handleOpenConciliation = () => {
@@ -230,6 +235,32 @@ export const TreasuryMovementsPage: React.FC = () => {
     });
   };
 
+  useEffect(() => {
+    const state = location.state as
+      | {
+          fromOperationId?: string | null;
+          fromOperationCode?: string | null;
+          fromOperationContact?: ClientSummary | null;
+        }
+      | undefined;
+
+    if (state?.fromOperationId || state?.fromOperationCode) {
+      setPrefillOperation({
+        id: state.fromOperationId || undefined,
+        code: state.fromOperationCode || undefined,
+      });
+      setPrefillContact(state.fromOperationContact || null);
+      setRegisterOpen(true);
+      navigate(
+        {
+          pathname: location.pathname,
+          search: location.search,
+        },
+        { replace: true }
+      );
+    }
+  }, [location.pathname, location.search, location.state, navigate]);
+
   return (
     <div className="bg-gray-50 min-h-screen flex flex-col text-sm lg:text-base">
       <TreasuryNavbar search={globalSearch} onSearchChange={handleGlobalSearchChange} />
@@ -272,7 +303,13 @@ export const TreasuryMovementsPage: React.FC = () => {
 
       <RegisterMovementModal
         open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
+        prefillOperation={prefillOperation}
+        prefillContact={prefillContact}
+        onClose={() => {
+          setRegisterOpen(false);
+          setPrefillOperation(null);
+          setPrefillContact(null);
+        }}
         onSuccess={handleRegisterSuccess}
         onShowToast={showToast}
       />

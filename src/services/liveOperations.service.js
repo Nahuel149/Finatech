@@ -3,6 +3,10 @@ const TransferOperation = require('../models/TransferOperation');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const LogisticsOperation = require('../models/LogisticsOperation');
 
+// In-memory draft impacts (Step 2 drafts) with TTL
+const draftImpactsStore = new Map(); // draftId -> { impacts, marginPercent, marginWeightArs, updatedAt, expiresAt }
+const DRAFT_TTL_MS = 10 * 60 * 1000; // 10 minutes
+
 // Buckets mapped to UI cards
 const BUCKETS = {
   CASH: 'cash', // Efectivo (ARS)
@@ -196,6 +200,49 @@ const buildTotals = (items) => {
   return { totals, weightedMarginPercent };
 };
 
+const purgeDrafts = () => {
+  const now = Date.now();
+  for (const [draftId, entry] of draftImpactsStore.entries()) {
+    if (!entry || entry.expiresAt <= now) {
+      draftImpactsStore.delete(draftId);
+    }
+  }
+};
+
+const upsertDraftImpact = ({ draftId, impacts, marginPercent = null, marginWeightArs = 0 }) => {
+  if (!draftId || !impacts) return;
+  purgeDrafts();
+  draftImpactsStore.set(String(draftId), {
+    impacts: {
+      cash: Number(impacts.cash) || 0,
+      transfers: Number(impacts.transfers) || 0,
+      usd: Number(impacts.usd) || 0,
+    },
+    marginPercent: marginPercent == null ? null : Number(marginPercent),
+    marginWeightArs: Number(marginWeightArs) || 0,
+    updatedAt: new Date(),
+    expiresAt: Date.now() + DRAFT_TTL_MS,
+  });
+};
+
+const removeDraftImpact = (draftId) => {
+  if (!draftId) return;
+  draftImpactsStore.delete(String(draftId));
+};
+
+const mapDraftToLive = ([draftId, payload]) => {
+  if (!payload) return null;
+  return {
+    id: `draft-${draftId}`,
+    source: 'draft',
+    state: 'draft',
+    impacts: payload.impacts,
+    marginPercent: payload.marginPercent,
+    marginWeightArs: payload.marginWeightArs,
+    updatedAt: payload.updatedAt || new Date(),
+  };
+};
+
 const listActiveOperations = async () => {
   const [transactions, transfers, treasuryMovs, logisticsOps] = await Promise.all([
     Transaction.find({ status: { $in: ACTIVE_STATES.transaction } }),
@@ -209,6 +256,7 @@ const listActiveOperations = async () => {
     ...transfers.map(mapTransferOperationToLive).filter(Boolean),
     ...treasuryMovs.map(mapTreasuryMovementToLive).filter(Boolean),
     ...logisticsOps.map(mapLogisticsOperationToLive).filter(Boolean),
+    ...Array.from(draftImpactsStore.entries()).map(mapDraftToLive).filter(Boolean),
   ];
 
   const { totals, weightedMarginPercent } = buildTotals(items);
@@ -225,4 +273,6 @@ module.exports = {
   listActiveOperations,
   BUCKETS,
   ACTIVE_STATES,
+  upsertDraftImpact,
+  removeDraftImpact,
 };

@@ -24,6 +24,7 @@ export const useLiveOperations = () => {
   const [error, setError] = useState<string | null>(null);
   const sseRef = useRef<EventSource | null>(null);
   const pollTimerRef = useRef<number | null>(null);
+  const retryTimerRef = useRef<number | null>(null);
 
   const applySnapshot = useCallback((payload: LiveOperationsResponse) => {
     setState({
@@ -69,8 +70,16 @@ export const useLiveOperations = () => {
     }
   }, []);
 
+  const clearRetry = useCallback(() => {
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
   const startSse = useCallback(() => {
     stopSse();
+    clearRetry();
     const url = buildApiUrl('/api/live-ops/operations/events');
     try {
       const es = new EventSource(url, { withCredentials: true });
@@ -98,15 +107,24 @@ export const useLiveOperations = () => {
       es.onerror = () => {
         stopSse();
         setStatus('error');
-        setError('Stream desconectado, usando polling');
+        setError('Stream desconectado, reintentando y usando polling');
         startPolling();
+        // retry SSE in background
+        clearRetry();
+        retryTimerRef.current = window.setTimeout(() => {
+          startSse();
+        }, 8000);
       };
     } catch (err) {
       setStatus('error');
       setError('No se pudo abrir el stream, usando polling');
       startPolling();
+      clearRetry();
+      retryTimerRef.current = window.setTimeout(() => {
+        startSse();
+      }, 8000);
     }
-  }, [applySnapshot, startPolling, stopSse]);
+  }, [applySnapshot, clearRetry, startPolling, stopSse]);
 
   useEffect(() => {
     fetchSnapshot();
@@ -114,8 +132,9 @@ export const useLiveOperations = () => {
     return () => {
       stopPolling();
       stopSse();
+      clearRetry();
     };
-  }, [fetchSnapshot, startSse, stopPolling, stopSse]);
+  }, [clearRetry, fetchSnapshot, startPolling, startSse, stopPolling, stopSse]);
 
   const connectionStatus = status;
 

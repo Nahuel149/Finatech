@@ -53,6 +53,58 @@ const normalizeTreasuryMovementToSuggestion = (movement) => {
   };
 };
 
+const normalizeTransactionToSuggestion = (transaction) => {
+  if (!transaction) return null;
+
+  const preferredCurrencies = [
+    'ARS',
+    'USD',
+    transaction.outgoingAsset?.code,
+    transaction.incomingAsset?.code,
+  ].filter(Boolean);
+
+  let amount = null;
+  let currency = null;
+
+  for (const code of preferredCurrencies) {
+    const value = deriveTransactionAmountForCurrency(transaction, code);
+    if (Number.isFinite(value)) {
+      amount = Number(value);
+      currency = code.toUpperCase();
+      break;
+    }
+  }
+
+  if (!Number.isFinite(amount)) {
+    amount = Number(transaction.outgoingAmount || transaction.incomingAmount || 0);
+  }
+
+  if (!currency) {
+    currency =
+      transaction.outgoingAsset?.code ||
+      transaction.incomingAsset?.code ||
+      'ARS';
+  }
+
+  const direction = transaction.type === 'buy' ? 'outgoing' : 'incoming';
+
+  return {
+    id: transaction._id ? transaction._id.toString() : transaction.id,
+    code: transaction.operationCode || null,
+    model: 'Transaction',
+    amount: Number.isFinite(amount) ? amount : 0,
+    currency: currency || 'ARS',
+    movementType: direction,
+    direction,
+    medium: null,
+    status: transaction.status || null,
+    confirmedAt: transaction.completedAt
+      ? new Date(transaction.completedAt).toISOString()
+      : null,
+    description: transaction.notes || null,
+  };
+};
+
 const BALANCE_METADATA = {
   transfers: {
     label: 'Transferencias en ARS',
@@ -3030,8 +3082,20 @@ const buildMovementQuery = (filters = {}) => {
   if (filters.search && typeof filters.search === 'string') {
     const cleaned = filters.search.trim().replace(/^#/, '');
     if (cleaned) {
-      // Use MongoDB text search for efficient lookup across indexed text fields. Requires text index on relevant fields.
-      query.$text = { $search: cleaned };
+      const regex = new RegExp(escapeRegex(cleaned), 'i');
+      const orFilters = [
+        { movementCode: regex },
+        { reference: regex },
+        { description: regex },
+        { 'linkedOperations.code': regex },
+      ];
+
+      if (mongoose.Types.ObjectId.isValid(cleaned)) {
+        const objectId = new mongoose.Types.ObjectId(cleaned);
+        orFilters.push({ _id: objectId }, { contact: objectId });
+      }
+
+      query.$or = orFilters;
     }
   }
 
@@ -3760,7 +3824,53 @@ const listOperationSuggestions = async ({ search = '', contactId = null, limit =
     .map((movement) => normalizeTreasuryMovementToSuggestion(movement))
     .filter(Boolean);
 
-  const merged = [...transferSuggestions, ...movementSuggestions].sort((a, b) => {
+  const transactionMatch = {
+    status: { $in: ['pending', 'registered', 'completed'] },
+  };
+
+  if (contactFilter) {
+    transactionMatch.client = contactFilter;
+  }
+
+  if (regex) {
+    const txFilters = [
+      { operationCode: regex },
+      { status: regex },
+      { type: regex },
+      { 'incomingAsset.code': regex },
+      { 'outgoingAsset.code': regex },
+    ];
+
+    if (mongoose.Types.ObjectId.isValid(searchTerm)) {
+      txFilters.push({ _id: new mongoose.Types.ObjectId(searchTerm) });
+    }
+
+    transactionMatch.$or = txFilters;
+  }
+
+  const transactionResults = await Transaction.find(transactionMatch)
+    .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 })
+    .limit(sanitizedLimit)
+    .select({
+      operationCode: 1,
+      type: 1,
+      status: 1,
+      incomingAsset: 1,
+      outgoingAsset: 1,
+      incomingAmount: 1,
+      outgoingAmount: 1,
+      notes: 1,
+      completedAt: 1,
+      createdAt: 1,
+      client: 1,
+    })
+    .lean();
+
+  const transactionSuggestions = transactionResults
+    .map((tx) => normalizeTransactionToSuggestion(tx))
+    .filter(Boolean);
+
+  const merged = [...transferSuggestions, ...movementSuggestions, ...transactionSuggestions].sort((a, b) => {
     const aDate = a.confirmedAt ? new Date(a.confirmedAt).getTime() : 0;
     const bDate = b.confirmedAt ? new Date(b.confirmedAt).getTime() : 0;
     return bDate - aDate;

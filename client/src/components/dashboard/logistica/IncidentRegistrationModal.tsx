@@ -4,6 +4,8 @@ import { IncidentGeneralInfoForm } from './IncidentGeneralInfoForm';
 import { IncidentAssociationsForm } from './IncidentAssociationsForm';
 import type { IncidentFormData } from './incidentFormTypes';
 import { devLog } from '../../../utils/devLogger';
+import { apiRequest } from '../../../utils/api';
+import { Alert } from '../../ui/Alert';
 
 interface IncidentRegistrationModalProps {
   isOpen: boolean;
@@ -35,6 +37,8 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [draftMessage, setDraftMessage] = useState<string | null>(null);
 
   const handleFormDataChange = (updates: Partial<IncidentFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
@@ -46,23 +50,31 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
   };
 
   const handleSaveDraft = async () => {
-    // TODO: Implement save draft functionality
-    devLog('Saving draft:', formData);
+    try {
+      await apiRequest('/api/logistics/incidents', {
+        method: 'POST',
+        body: { movementId, data: formData, status: 'draft' },
+      });
+      setDraftMessage('Borrador guardado.');
+      setSubmitError(null);
+    } catch (error) {
+      console.error('Error saving draft:', error);
+      setSubmitError('No pudimos guardar el borrador.');
+    }
   };
 
   const handleRegisterIncident = async () => {
     setIsSubmitting(true);
     try {
-      // TODO: Implement incident registration API call
-      devLog('Registering incident:', formData);
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Close modal and navigate back
+      await apiRequest('/api/logistics/incidents', {
+        method: 'POST',
+        body: { movementId, data: formData, status: 'open' },
+      });
+      setSubmitError(null);
       handleClose();
     } catch (error) {
       console.error('Error registering incident:', error);
+      setSubmitError('No pudimos registrar la incidencia.');
     } finally {
       setIsSubmitting(false);
     }
@@ -122,6 +134,18 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
 
         {/* Modal Content */}
         <div className="flex-1 overflow-y-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          {(submitError || draftMessage) && (
+            <div className="mb-4">
+              <Alert
+                type={submitError ? 'error' : 'success'}
+                message={submitError || draftMessage || ''}
+                onClose={() => {
+                  setSubmitError(null);
+                  setDraftMessage(null);
+                }}
+              />
+            </div>
+          )}
           <form className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
             
             {/* Left Column: General Information */}

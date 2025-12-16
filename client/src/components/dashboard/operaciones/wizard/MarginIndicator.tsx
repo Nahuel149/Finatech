@@ -42,7 +42,12 @@ export const MarginIndicator: React.FC<Props> = ({
       ? 'Compra: t_operacion = ARS pagados por unidad del bien2'
       : 'Venta: t_operacion = ARS recibidos por unidad del bien2';
 
-  const tooltipText = `Formula: (t_mercado - t_operacion) / t_mercado. ${operationHint}`;
+  const baseFormula =
+    operationType === 'sell'
+      ? '(t_operacion - t_mercado) / t_mercado'
+      : '(t_mercado - t_operacion) / t_mercado';
+
+  const tooltipText = `Formula: ${baseFormula}. ${operationHint}`;
 
   return (
     <div id="margin-indicator" className="mb-6">

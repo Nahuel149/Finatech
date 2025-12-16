@@ -21,6 +21,7 @@ interface Props {
   onDuplicate: () => void;
   onVoid?: () => void;
   canVoid?: boolean;
+  onRegisterTreasury?: () => void;
 
   // Datos para el resumen breve
   clientName: string;
@@ -50,6 +51,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
   onDuplicate,
   onVoid,
   canVoid = true,
+  onRegisterTreasury,
   clientName,
   clientDocument,
   operationType,
@@ -165,10 +167,19 @@ export const CompletionSuccessState: React.FC<Props> = ({
 
     {/* 3. Primary Actions */}
     <div
-      id="primary-actions"
-      className="px-8 py-6 bg-gray-50 border-t border-gray-200"
-    >
+    id="primary-actions"
+    className="px-8 py-6 bg-gray-50 border-t border-gray-200"
+  >
       <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+        {onRegisterTreasury && (
+          <button
+            onClick={onRegisterTreasury}
+            className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium w-full sm:w-auto"
+          >
+            <i className="fa-solid fa-building-columns mr-2" />
+            Ir a carga de tesorer��a
+          </button>
+        )}
         <button
           onClick={onViewDetails}
           className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium w-full sm:w-auto"

@@ -25,6 +25,8 @@ interface RegisterMovementModalProps {
   onClose: () => void;
   onSuccess: (movement: TreasuryMovement) => void;
   onShowToast: (toast: { type: ToastType; message: string }) => void;
+  prefillOperation?: { id?: string | null; code?: string | null } | null;
+  prefillContact?: ClientSummary | null;
 }
 
 type MovementTypeValue = 'incoming' | 'outgoing' | '';
@@ -81,6 +83,8 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   onClose,
   onSuccess,
   onShowToast,
+  prefillOperation = null,
+  prefillContact = null,
 }) => {
   const [form, setForm] = useState<FormValues>({
     type: '',
@@ -103,6 +107,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   const [isDragOver, setIsDragOver] = useState(false);
   const [submitError, setSubmitError] = useState<ApiError | null>(null);
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
+  const prefillAppliedRef = useRef(false);
 
   const contactInputRef = useRef<HTMLDivElement | null>(null);
   const operationInputRef = useRef<HTMLDivElement | null>(null);
@@ -125,6 +130,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       document.body.style.overflow = 'hidden';
       resetForm();
       setTimeout(() => loadDraftFromStorage(), 0);
+      prefillAppliedRef.current = false;
     } else {
       document.body.style.overflow = 'unset';
     }
@@ -167,6 +173,68 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       setForm((prev) => ({ ...prev, amount: '' }));
     }
   }, [form.currency]);
+
+  useEffect(() => {
+    if (!open || !prefillContact) return;
+    if (selectedContact?.id === prefillContact.id) return;
+    setSelectedContact(prefillContact);
+    setContactInput(prefillContact.fullName || prefillContact.shortName || '');
+    setContactDropdownVisible(false);
+    clientSearch.setQuery('');
+    setOperationDropdownVisible(true);
+  }, [clientSearch, open, prefillContact, selectedContact?.id]);
+
+  useEffect(() => {
+    if (!open || !prefillOperation) return;
+    if (
+      selectedOperation &&
+      ((prefillOperation.id && selectedOperation.id === prefillOperation.id) ||
+        (prefillOperation.code && selectedOperation.code === prefillOperation.code))
+    ) {
+      return;
+    }
+    const prefillQuery =
+      (prefillOperation.code ? prefillOperation.code.replace(/#/g, '').trim() : '') ||
+      (prefillOperation.id ? prefillOperation.id.trim() : '');
+
+    if (!prefillQuery) {
+      return;
+    }
+
+    setOperationInput(prefillOperation.code || prefillQuery);
+    setOperationDropdownVisible(true);
+    setOperationInfoVisible(false);
+    operationSearch.setQuery(prefillQuery);
+  }, [open, operationSearch, prefillOperation, selectedOperation]);
+
+  useEffect(() => {
+    if (!open) return;
+    if (!selectedContact) {
+      setOperationDropdownVisible(false);
+      return;
+    }
+    if (selectedOperation) {
+      return;
+    }
+    setOperationDropdownVisible(true);
+    setOperationInfoVisible(false);
+    operationSearch.setQuery('');
+    operationSearch.refresh();
+  }, [open, operationSearch, selectedContact, selectedOperation]);
+
+  useEffect(() => {
+    if (!open || !prefillOperation || prefillAppliedRef.current) return;
+    const match = operationSearch.suggestions.find(
+      (suggestion) =>
+        (prefillOperation.id && suggestion.id === prefillOperation.id) ||
+        (prefillOperation.code && suggestion.code === prefillOperation.code)
+    );
+    if (match) {
+      handleSelectOperation(match);
+      setOperationInfoVisible(true);
+      prefillAppliedRef.current = true;
+    }
+  }, [handleSelectOperation, open, operationSearch.suggestions, prefillOperation]);
 
   const resetForm = () => {
     setForm({
@@ -310,8 +378,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setSelectedOperation(null);
     setOperationInput('');
     setOperationInfoVisible(false);
-    setOperationDropdownVisible(false);
+    setOperationDropdownVisible(true);
     operationSearch.setQuery('');
+    operationSearch.refresh();
   };
 
   const handleSelectOperation = (operation: OperationSuggestion) => {

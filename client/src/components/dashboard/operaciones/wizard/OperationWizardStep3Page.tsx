@@ -364,6 +364,15 @@ export const OperationWizardStep3Page: React.FC = () => {
       state: {
         fromOperationId: draft?.id || null,
         fromOperationCode: draft?.operationCode || null,
+        fromOperationContact: clientSummary
+          ? {
+              id: clientSummary.id,
+              fullName: clientSummary.fullName,
+              shortName: clientSummary.shortName,
+              contactType: clientSummary.contactType,
+              cuit: clientSummary.cuit ?? null,
+            }
+          : null,
       },
     });
   }, [draft?.id, draft?.operationCode, navigate]);
@@ -759,8 +768,9 @@ export const OperationWizardStep3Page: React.FC = () => {
             onDuplicate={handleDuplicate}
             onVoid={handleOpenVoidModal}
             canVoid={!isVoided && !voidSubmitting}
+            onRegisterTreasury={handleRegisterCaja}
             // Props para el resumen
-            clientName={clientSummary?.fullName ?? '—'}
+            clientName={clientSummary?.fullName ?? '-'}
             clientDocument={clientSummary?.cuit}
             operationType={operationType}
             settlementMode={draft.settlement?.mode ?? 'simple'}

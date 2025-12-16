@@ -19,13 +19,28 @@ const marketRateOverrideSchema = new mongoose.Schema(
       required: true,
       min: 0,
     },
+    buyRate: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    sellRate: {
+      type: Number,
+      min: 0,
+      default: null,
+    },
+    selectedSide: {
+      type: String,
+      enum: ['buy', 'sell'],
+      default: 'sell',
+    },
     validFrom: {
       type: Date,
       required: true,
     },
     source: {
       type: String,
-      enum: ['MANUAL'],
+      enum: ['MANUAL', 'FETCH'],
       default: 'MANUAL',
     },
     user: {

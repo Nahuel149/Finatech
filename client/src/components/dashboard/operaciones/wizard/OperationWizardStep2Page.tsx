@@ -26,6 +26,7 @@ import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { ArsPositionAside } from './ArsPositionAside';
+import { api } from '../../../../utils';
 
 const WIZARD_STEPS = [
   { label: 'Datos', description: 'Información' },
@@ -410,6 +411,98 @@ export const OperationWizardStep2Page: React.FC = () => {
     handleSubmit(true);
   }, [handleSubmit]);
 
+  // ----- Draft impact publishing (live aside) -----
+  const [draftPublishWarning, setDraftPublishWarning] = useState<string | null>(null);
+
+  const publishDraftImpact = useCallback(
+    async (impacts: { cash: number; transfers: number; usd: number }) => {
+      if (!draft?.id) return;
+      try {
+        await api.publishDraftImpact({
+          draftId: draft.id,
+          impacts,
+          marginPercent: draft?.marginPercentage ?? null,
+          marginWeightArs:
+            baseCurrency === 'ARS'
+              ? Math.abs(operationType === 'buy' ? outgoingAmount : incomingAmount)
+              : 0,
+        });
+        setDraftPublishWarning(null);
+      } catch {
+        setDraftPublishWarning('No pudimos publicar el impacto en vivo. Se mostrará al guardar.');
+      }
+    },
+    [baseCurrency, draft?.id, draft?.marginPercentage, incomingAmount, operationType, outgoingAmount]
+  );
+
+  const removeDraftImpact = useCallback(async () => {
+    if (!draft?.id) return;
+    try {
+      await api.removeDraftImpact(draft.id);
+    } catch {
+      // ignore
+    }
+  }, [draft?.id]);
+
+  useEffect(() => {
+    if (!draft?.id) return undefined;
+    if (baseAmount <= 0) return undefined;
+
+    const impacts = { cash: 0, transfers: 0, usd: 0 };
+    const arsDirection = operationType === 'buy' ? -1 : 1;
+
+    // USD leg
+    if (incomingCurrency === 'USD') {
+      impacts.usd += incomingAmount;
+    }
+    if (outgoingCurrency === 'USD') {
+      impacts.usd -= outgoingAmount;
+    }
+
+    // ARS leg
+    const pushToBucket = (method: string, amount: number) => {
+      const normalized = (method || '').toLowerCase();
+      const isCash = normalized.includes('efectivo');
+      if (isCash) {
+        impacts.cash += amount;
+      } else {
+        impacts.transfers += amount;
+      }
+    };
+
+    if (settlementMode === 'simple') {
+      pushToBucket(simpleMethod, arsDirection * baseAmount);
+    } else {
+      compoundLines.forEach((line) => {
+        const info = computedLines[line.id];
+        const rawValue =
+          info && Number.isFinite(info.amount) ? info.amount : Number(line.value) || 0;
+        if (!rawValue) return;
+        pushToBucket(line.method, arsDirection * rawValue);
+      });
+    }
+
+    publishDraftImpact(impacts);
+
+    return () => {
+      removeDraftImpact();
+    };
+  }, [
+    baseAmount,
+    compoundLines,
+    computedLines,
+    draft?.id,
+    incomingAmount,
+    incomingCurrency,
+    operationType,
+    outgoingAmount,
+    outgoingCurrency,
+    publishDraftImpact,
+    removeDraftImpact,
+    settlementMode,
+    simpleMethod,
+  ]);
+
   const busy = draftLoading || saving;
   const isReady = Boolean(draft);
 
@@ -471,11 +564,11 @@ export const OperationWizardStep2Page: React.FC = () => {
               </div>
             )}
 
-            <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6">
-              <div className="flex-1 space-y-6">
-                <OperationSummary
-                  clientName={clientName}
-                  operationLabel={operationLabel}
+          <div className="flex flex-col lg:flex-row lg:items-start lg:gap-6">
+            <div className="flex-1 space-y-6">
+              <OperationSummary
+                clientName={clientName}
+                operationLabel={operationLabel}
                   amountLabel={totalLabel}
                   onEdit={handleBack}
                 />
@@ -525,7 +618,23 @@ export const OperationWizardStep2Page: React.FC = () => {
                 outgoingCurrency={outgoingCurrency}
                 apr={draft?.apr ?? null}
                 currentMarginPercent={draft?.marginPercentage ?? null}
+                settlementMode={settlementMode}
+                simpleMethod={simpleMethod}
+                compoundLines={compoundLines}
+                computedLines={computedLines}
+                baseAmount={baseAmount}
+                baseCurrency={baseCurrency}
+                operationType={operationType}
               />
+
+              {draftPublishWarning && (
+                <Alert
+                  type="warning"
+                  message={draftPublishWarning}
+                  className="mt-4"
+                  onClose={() => setDraftPublishWarning(null)}
+                />
+              )}
             </div>
 
             <WizardActions

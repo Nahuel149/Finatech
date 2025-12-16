@@ -1,7 +1,13 @@
 const { Router } = require('express');
 const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
-const { listActiveOperations } = require('../services/liveOperations.service');
+const {
+  listActiveOperations,
+  upsertDraftImpact,
+  removeDraftImpact,
+} = require('../services/liveOperations.service');
+const { body } = require('express-validator');
+const { validateRequest } = require('../middleware/validateRequest');
 
 const router = Router();
 
@@ -67,5 +73,41 @@ router.get('/operations/events', requireAuth, requirePermission('view-balances')
   req.on('close', cleanup);
   req.on('error', cleanup);
 });
+
+router.post(
+  '/operations/drafts',
+  requireAuth,
+  requirePermission(['view-balances', 'access-treasury', 'access-transfers', 'manage-treasury']),
+  body('draftId').isString().trim().notEmpty().withMessage('draftId requerido'),
+  body('impacts').isObject().withMessage('impacts requerido'),
+  validateRequest,
+  async (req, res, next) => {
+    try {
+      upsertDraftImpact({
+        draftId: req.body.draftId,
+        impacts: req.body.impacts,
+        marginPercent: req.body.marginPercent,
+        marginWeightArs: req.body.marginWeightArs,
+      });
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.delete(
+  '/operations/drafts/:draftId',
+  requireAuth,
+  requirePermission(['view-balances', 'access-treasury', 'access-transfers', 'manage-treasury']),
+  async (req, res, next) => {
+    try {
+      removeDraftImpact(req.params.draftId);
+      res.json({ ok: true });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 module.exports = router;
