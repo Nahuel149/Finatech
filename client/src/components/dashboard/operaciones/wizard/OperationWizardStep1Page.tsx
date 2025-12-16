@@ -301,6 +301,7 @@ const canEditMarketRate = useMemo(
   }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate, resolveMarketRateForType]);
 
   // Hydrate form with draft data when available
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!draft) {
       return;
@@ -375,6 +376,25 @@ const canEditMarketRate = useMemo(
   // We intentionally omit setClients from deps to avoid unnecessary re-runs
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [draft]);
+
+  const secondaryAssetCode = useMemo(() => {
+    if (incomingAssetCode !== 'USD' && incomingAssetCode !== 'ARS') {
+      return incomingAssetCode;
+    }
+    if (outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS') {
+      return outgoingAssetCode;
+    }
+    return null;
+  }, [incomingAssetCode, outgoingAssetCode]);
+
+  const showSecondaryRates = Boolean(secondaryAssetCode);
+  const secondaryIsIncoming = showSecondaryRates && secondaryAssetCode === incomingAssetCode;
+  const secondaryIsOutgoing = showSecondaryRates && secondaryAssetCode === outgoingAssetCode;
+  const { data: latestSecondaryMarketRate } = useLatestMarketRate({
+    baseAsset: secondaryAssetCode || 'USD',
+    quoteAsset: 'USD',
+    enabled: showSecondaryRates && Boolean(secondaryAssetCode),
+  });
 
   // Keep outgoing amount in sync with incoming amount and APR, considering secondary assets
   useEffect(() => {
@@ -539,57 +559,13 @@ const canEditMarketRate = useMemo(
     [operationType, incomingAssetCode, outgoingAssetCode],
   );
 
-  const secondaryAssetCode = useMemo(() => {
-    if (incomingAssetCode !== 'USD' && incomingAssetCode !== 'ARS') {
-      return incomingAssetCode;
-    }
-    if (outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS') {
-      return outgoingAssetCode;
-    }
-    return null;
-  }, [incomingAssetCode, outgoingAssetCode]);
-
-  const showSecondaryRates = Boolean(secondaryAssetCode);
-  const secondaryIsIncoming = showSecondaryRates && secondaryAssetCode === incomingAssetCode;
-  const secondaryIsOutgoing = showSecondaryRates && secondaryAssetCode === outgoingAssetCode;
-  const { data: latestSecondaryMarketRate } = useLatestMarketRate({
-    baseAsset: secondaryAssetCode || 'USD',
-    quoteAsset: 'USD',
-    enabled: showSecondaryRates && Boolean(secondaryAssetCode),
-  });
-
-  const secondaryAssetCode = useMemo(() => {
-    if (incomingAssetCode !== 'USD' && incomingAssetCode !== 'ARS') {
-      return incomingAssetCode;
-    }
-    if (outgoingAssetCode !== 'USD' && outgoingAssetCode !== 'ARS') {
-      return outgoingAssetCode;
-    }
-    return null;
-  }, [incomingAssetCode, outgoingAssetCode]);
-
-  const showSecondaryRates = Boolean(secondaryAssetCode);
-  const secondaryIsIncoming = showSecondaryRates && secondaryAssetCode === incomingAssetCode;
-  const secondaryIsOutgoing = showSecondaryRates && secondaryAssetCode === outgoingAssetCode;
-  const { data: latestSecondaryMarketRate } = useLatestMarketRate({
-    baseAsset: secondaryAssetCode || 'USD',
-    quoteAsset: 'USD',
-    enabled: showSecondaryRates && Boolean(secondaryAssetCode),
-  });
-
   const effectiveMarketRate = useMemo(() => {
     if (showSecondaryRates && secondaryMarketRate && secondaryMarketRate !== 0) {
-      if (secondaryIsOutgoing) {
-        // ARS/USD divided by USD/secondary = ARS per secondary
-        return marketApr / secondaryMarketRate;
-      }
-      if (secondaryIsIncoming) {
-        // ARS/USD multiplied by USD/secondary = ARS per secondary
-        return marketApr * secondaryMarketRate;
-      }
+      // secondaryMarketRate is quoted as secondary -> USD, so ARS per secondary = (ARS per USD) * (USD per secondary)
+      return marketApr * secondaryMarketRate;
     }
     return marketApr;
-  }, [marketApr, secondaryIsIncoming, secondaryIsOutgoing, secondaryMarketRate, showSecondaryRates]);
+  }, [marketApr, secondaryMarketRate, showSecondaryRates]);
 
   const marginInputsValid = useMemo(
     () =>
