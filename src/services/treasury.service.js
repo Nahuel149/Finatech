@@ -1444,6 +1444,11 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
     const amount = roundAmount(operation.amount || 0);
     const isIncoming = amount >= 0;
     const status = mapStageToStatus(operation.stage, operation.metadata?.status);
+    const rawOperationId = operation.operation?.id;
+    const operationId =
+      rawOperationId && typeof rawOperationId === 'object' && rawOperationId.toString
+        ? rawOperationId.toString()
+        : rawOperationId || null;
     return {
       id: operation._id ? operation._id.toString() : null,
       createdAt: operation.createdAt ? new Date(operation.createdAt).toISOString() : null,
@@ -1451,6 +1456,7 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
       amount,
       direction: isIncoming ? 'incoming' : 'outgoing',
       operation: {
+        id: operationId,
         type: operation.operation?.type || operation.metadata?.operationType || 'Operación',
         code: operation.operation?.code || null,
         source: operation.operation?.source || null,
@@ -2813,6 +2819,11 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
     await session.withTransaction(async () => {
       const normalized = await validateAndNormalizeMovementPayload(payload, { session });
       const applySettlement = getApplyTreasurySettlement();
+      const autoCompensate =
+        typeof context.autoCompensate === 'boolean'
+          ? context.autoCompensate
+          : !normalized.operationLink || normalized.operationLink.model !== 'Transaction';
+      const shouldApplySettlement = !skipSettlement && autoCompensate;
 
       const balanceMovementType = resolveMovementBalanceType(normalized.currency, normalized.medium);
       const movementCode = await generateTreasuryMovementCode();
@@ -2898,7 +2909,7 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
           .lean();
       }
 
-      if (!skipSettlement) {
+      if (shouldApplySettlement) {
         if (normalized.contactDoc) {
           const settlementPayload = {
             _id: movement._id,
@@ -2979,7 +2990,7 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
         }
       }
 
-      if (movement.linkedOperations && movement.linkedOperations.length > 0) {
+      if (autoCompensate && movement.linkedOperations && movement.linkedOperations.length > 0) {
         movement.status = 'compensated';
         movement.compensatedAt = new Date();
         movement.compensatedBy =

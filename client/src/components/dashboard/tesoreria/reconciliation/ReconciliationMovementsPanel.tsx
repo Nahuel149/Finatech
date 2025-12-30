@@ -55,7 +55,7 @@ export const ReconciliationMovementsPanel: React.FC<Props> = ({
   }, [movements, filter]);
 
   return (
-    <div id="movements-panel" className="w-full bg-gray-50 border border-gray-200 lg:border-l lg:border-t-0 rounded-lg lg:rounded-none flex flex-col slide-in-right">
+    <div id="movements-panel" className="w-full min-h-0 bg-gray-50 border border-gray-200 lg:border-l lg:border-t-0 rounded-lg lg:rounded-none flex flex-col slide-in-right">
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-text-primary mb-4">Movimientos disponibles</h3>
         <select

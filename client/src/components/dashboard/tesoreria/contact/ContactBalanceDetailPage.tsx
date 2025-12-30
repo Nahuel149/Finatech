@@ -89,6 +89,28 @@ const sortValueToApi = (sort: string): ContactBalanceDetailFilters['sort'] => {
   return 'date-desc';
 };
 
+const resolveOperationDetailPath = (operation: TreasuryContactBalanceOperation) => {
+  const operationId = operation.operation.id;
+  if (!operationId) {
+    return null;
+  }
+
+  const source = (operation.operation.source || '').toLowerCase();
+  if (source === 'transaction') {
+    return `/dashboard/operaciones/detalle/${operationId}`;
+  }
+  if (source === 'transfer_operation' || source === 'treasury' || source.includes('transfer')) {
+    return `/dashboard/operaciones/transfer-pesos/detalle/${operationId}`;
+  }
+
+  const normalizedType = (operation.operation.type || '').toLowerCase();
+  if (normalizedType === 'buy' || normalizedType === 'sell') {
+    return `/dashboard/operaciones/detalle/${operationId}`;
+  }
+
+  return null;
+};
+
 export const ContactBalanceDetailPage: React.FC = () => {
   // Estabilizar opciones del responsable interno para evitar cambios de referencia
   const OWNER_OPTIONS = React.useMemo(() => ['Tesorería', 'Operaciones', 'Comercial'], []);
@@ -223,8 +245,15 @@ export const ContactBalanceDetailPage: React.FC = () => {
   }, [navigate]);
 
   const handleViewOperation = (operation: TreasuryContactBalanceOperation) => {
-    const identifier = operation.operation.code ? `#${operation.operation.code}` : 'esta operación';
-    setToast({ type: 'info', message: `Próximamente podrás ver el detalle de ${identifier}.` });
+    const detailPath = resolveOperationDetailPath(operation);
+    if (detailPath) {
+      navigate(detailPath);
+      return;
+    }
+
+    const code = operation.operation.code;
+    const identifier = code ? (code.startsWith('#') ? code : `#${code}`) : 'esta operacion';
+    setToast({ type: 'info', message: `No encontramos el detalle de ${identifier}.` });
   };
 
   const handleSelectBalanceStripe = (balanceId: string) => {

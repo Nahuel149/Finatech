@@ -337,6 +337,7 @@ export interface TreasuryContactBalanceOperation {
   amount: number;
   direction: 'incoming' | 'outgoing';
   operation: {
+    id: string | null;
     type: string;
     code: string | null;
     source: string | null;

@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Transaction = require('../models/Transaction');
 const Client = require('../models/Client');
+const TreasuryMovement = require('../models/TreasuryMovement');
 const { getClientById } = require('./client.service');
 const {
   applyTransactionRegistration,
@@ -97,118 +98,144 @@ const mapSettlementMethodToMovementType = (method) => {
   return 'transfer';
 };
 
-const classifyLiquidationMethod = (method, defaultCurrency = 'ARS') => {
-  const normalized = stripDiacritics(method || '').toLowerCase();
-  let currency = String(defaultCurrency || 'ARS').toUpperCase();
+const SUPPORTED_TREASURY_CURRENCIES = new Set(['ARS', 'USD']);
 
-  if (normalized.includes('usd') || normalized.includes('dolar') || normalized.includes('dólar')) {
-    currency = 'USD';
-  } else if (normalized.includes('ars') || normalized.includes('peso')) {
-    currency = 'ARS';
+const resolveReconciliationCurrency = (transaction) => {
+  const normalizedType = String(transaction?.type || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
+  const incoming = transaction?.incomingAsset?.code
+    ? String(transaction.incomingAsset.code).toUpperCase()
+    : null;
+  const outgoing = transaction?.outgoingAsset?.code
+    ? String(transaction.outgoingAsset.code).toUpperCase()
+    : null;
+
+  if (normalizedType === 'sell') {
+    if (outgoing && outgoing !== 'ARS') {
+      return outgoing;
+    }
+    if (incoming && incoming !== 'ARS') {
+      return incoming;
+    }
+  } else {
+    if (incoming && incoming !== 'ARS') {
+      return incoming;
+    }
+    if (outgoing && outgoing !== 'ARS') {
+      return outgoing;
+    }
   }
-
-  let medium = 'transfer';
-  if (normalized.includes('efectivo') || normalized.includes('cash')) {
-    medium = 'cash';
-  } else if (normalized.includes('deposito') || normalized.includes('depósito')) {
-    medium = 'deposit';
+  if (incoming) {
+    return incoming;
   }
-
-  if (currency === 'USD' && medium === 'deposit') {
-    medium = 'transfer';
+  if (outgoing) {
+    return outgoing;
   }
+  return 'ARS';
+};
 
-  return { currency, medium };
+const mapMovementTypeToMedium = (movementType) => {
+  if (movementType === 'cash') {
+    return 'cash';
+  }
+  if (movementType === 'transfer') {
+    return 'transfer';
+  }
+  return 'cash';
 };
 
 const buildPlannedTreasuryMovements = (transaction) => {
-  if (!transaction || !transaction.settlement || !transaction.settlement.isComplete) {
+  if (!transaction) {
     return [];
   }
 
-  const baseAmount = transaction.type === 'buy'
-    ? Number(transaction.outgoingAmount)
-    : Number(transaction.incomingAmount);
+  const incomingCurrency = transaction.incomingAsset?.code
+    ? String(transaction.incomingAsset.code).toUpperCase()
+    : null;
+  const outgoingCurrency = transaction.outgoingAsset?.code
+    ? String(transaction.outgoingAsset.code).toUpperCase()
+    : null;
+  const incomingAmount = roundAmount(transaction.incomingAmount);
+  const outgoingAmount = roundAmount(transaction.outgoingAmount);
+  const movementAt = transaction.completedAt ? new Date(transaction.completedAt) : new Date();
+  const reconciliationCurrency = resolveReconciliationCurrency(transaction);
 
-  const defaultCurrency = transaction.type === 'buy'
-    ? transaction.outgoingAsset?.code || transaction.outgoingAsset?.label || 'ARS'
-    : transaction.incomingAsset?.code || transaction.incomingAsset?.label || 'ARS';
+  const movements = [];
 
-  if (!Number.isFinite(baseAmount) || baseAmount <= 0) {
-    return [];
-  }
+  const pushMovement = (movement) => {
+    if (!movement || !movement.currency || !Number.isFinite(movement.amount) || movement.amount <= 0) {
+      return;
+    }
+    movements.push({
+      ...movement,
+      movementAt,
+      autoCompensate: movement.currency !== reconciliationCurrency,
+    });
+  };
 
-  const direction = transaction.type === 'sell' ? 'incoming' : 'outgoing';
+  const addArsMovements = (direction, amount) => {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
 
-  const lines = transaction.settlement.mode === 'simple'
-    ? [
-        {
-          method: transaction.settlement.simpleMethod || 'Sin especificar',
-          computedPercentage: 100,
-          computedAmount: baseAmount,
-          allocationType: 'percentage',
-        },
-      ]
-    : (transaction.settlement.lines || []).map((line) => {
-        const percentage = Number.isFinite(Number(line.computedPercentage))
-          ? Number(line.computedPercentage)
-          : line.allocationType === 'percentage'
-          ? Number(line.value)
-          : (Number(line.value) / baseAmount) * 100;
-
-        const amount = line.allocationType === 'amount'
-          ? Number(line.value)
-          : (percentage / 100) * baseAmount;
-
-        return {
-          method: line.method,
-          computedPercentage: Number.isFinite(percentage) ? percentage : 0,
-          computedAmount: Number.isFinite(amount) ? amount : 0,
-          allocationType: line.allocationType,
-        };
-      });
-
-  return lines
-    .map((line) => {
-      const normalizedAmount = roundAmount(Math.abs(Number(line.computedAmount) || 0));
-      if (!Number.isFinite(normalizedAmount) || normalizedAmount <= 0) {
-        return null;
-      }
-
-      const { currency, medium } = classifyLiquidationMethod(line.method, defaultCurrency);
-
-      const metadata = {
-        source: 'transaction_settlement',
-        transactionId: transaction._id,
-        settlementMethod: line.method,
-        computedPercentage: Number(line.computedPercentage || 0),
-        allocationType: line.allocationType,
-      };
-
-      const movementAt = transaction.completedAt || transaction.updatedAt || transaction.createdAt || new Date();
-
-      const contactId = transaction.client && mongoose.Types.ObjectId.isValid(transaction.client)
-        ? transaction.client.toString()
-        : null;
-
-      return {
+    const slices = resolveSettlementSlices(transaction, amount);
+    if (!slices.length) {
+      const fallbackMethod = transaction?.settlement?.simpleMethod || 'Transferencia';
+      const movementType = mapSettlementMethodToMovementType(fallbackMethod);
+      pushMovement({
         type: direction,
-        medium,
-        currency,
-        amount: normalizedAmount,
-        movementAt,
-        contactId,
-        reference: transaction.operationCode || null,
-        description: `Liquidación ${transaction.operationCode || transaction._id.toString()}`,
-        metadata,
-        operation: {
-          id: transaction._id,
-          model: 'Transaction',
-        },
-      };
-    })
-    .filter(Boolean);
+        medium: mapMovementTypeToMedium(movementType),
+        currency: 'ARS',
+        amount,
+      });
+      return;
+    }
+
+    slices.forEach((slice) => {
+      pushMovement({
+        type: direction,
+        medium: mapMovementTypeToMedium(slice.movementType),
+        currency: 'ARS',
+        amount: slice.amount,
+      });
+    });
+  };
+
+  const addForeignMovement = (direction, currency, amount) => {
+    const normalizedCurrency = currency ? currency.toUpperCase() : null;
+    if (!normalizedCurrency || !SUPPORTED_TREASURY_CURRENCIES.has(normalizedCurrency)) {
+      return;
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return;
+    }
+    pushMovement({
+      type: direction,
+      medium: 'cash',
+      currency: normalizedCurrency,
+      amount,
+    });
+  };
+
+  if (incomingCurrency) {
+    if (incomingCurrency === 'ARS') {
+      addArsMovements('incoming', incomingAmount);
+    } else {
+      addForeignMovement('incoming', incomingCurrency, incomingAmount);
+    }
+  }
+
+  if (outgoingCurrency) {
+    if (outgoingCurrency === 'ARS') {
+      addArsMovements('outgoing', outgoingAmount);
+    } else {
+      addForeignMovement('outgoing', outgoingCurrency, outgoingAmount);
+    }
+  }
+
+  return movements;
 };
+
+
 
 const resolveSettlementSlices = (transaction, totalAmount) => {
   const safeTotal = roundAmount(totalAmount);
@@ -756,7 +783,7 @@ const finalizeTransaction = async (id, context = {}) => {
   const session = await mongoose.startSession();
   let formatted;
   let registrationResult = null;
-  let plannedTreasuryMovements = [];
+  let shouldEnsureTreasuryMovements = false;
 
   try {
     await session.withTransaction(async () => {
@@ -767,6 +794,7 @@ const finalizeTransaction = async (id, context = {}) => {
 
       if (transaction.status === 'registered') {
         formatted = formatTransaction(transaction);
+        shouldEnsureTreasuryMovements = true;
         return;
       }
 
@@ -795,34 +823,55 @@ const finalizeTransaction = async (id, context = {}) => {
         );
       }
 
-      plannedTreasuryMovements = buildPlannedTreasuryMovements(transaction);
-
       formatted = formatTransaction(transaction);
+      shouldEnsureTreasuryMovements = true;
     });
   } finally {
     session.endSession();
   }
 
-  if (plannedTreasuryMovements.length) {
-    await Promise.all(
-      plannedTreasuryMovements.map(async (payload) => {
-        try {
-          if (!payload.contactId) {
-            payload.contactId = formatted?.clientId || null;
-          }
+  if (formatted && shouldEnsureTreasuryMovements) {
+    const existingMovements = await TreasuryMovement.find({
+      'linkedOperations.id': formatted.id,
+      'linkedOperations.model': 'Transaction',
+    })
+      .select({ currency: 1, type: 1, medium: 1, amount: 1 })
+      .lean();
 
-          await registerTreasuryMovement(payload, {
-            userId,
-            skipBalanceAdjustments: true,
-            skipSettlement: true,
-            skipBalanceEvent: false,
-          });
-        } catch (error) {
-          // eslint-disable-next-line no-console
-          console.error('No pudimos registrar el movimiento de tesorería planificado', error);
-        }
-      })
+    const existingKeys = new Set(
+      existingMovements.map(
+        (movement) =>
+          `${movement.currency}:${movement.type}:${movement.medium}:${roundAmount(movement.amount)}`
+      )
     );
+
+    const plannedMovements = buildPlannedTreasuryMovements(formatted);
+
+    for (const planned of plannedMovements) {
+      const key = `${planned.currency}:${planned.type}:${planned.medium}:${roundAmount(planned.amount)}`;
+      if (existingKeys.has(key)) {
+        continue;
+      }
+
+      // eslint-disable-next-line no-await-in-loop
+      await registerTreasuryMovement(
+        {
+          type: planned.type,
+          medium: planned.medium,
+          currency: planned.currency,
+          amount: planned.amount,
+          movementAt: planned.movementAt,
+          operation: { id: formatted.id, model: 'Transaction' },
+        },
+        {
+          userId,
+          autoCompensate: planned.autoCompensate,
+          skipSettlement: true,
+        }
+      );
+
+      existingKeys.add(key);
+    }
   }
 
   if (registrationResult) {
