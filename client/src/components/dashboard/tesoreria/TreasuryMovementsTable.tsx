@@ -259,6 +259,7 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
             {items.map((movement) => {
               const dateInfo = formatDate(movement.movementAt);
               const isCancelled = movement.status === 'cancelled';
+              const isEditable = movement.status === 'registered';
               const statusCls = statusBadgeClass(movement.status);
               const currencyCls = currencyBadgeClass(movement.currency);
 
@@ -311,11 +312,11 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        if (!isCancelled) onEdit(movement);
+                        if (isEditable) onEdit(movement);
                       }}
-                      className={`mobile-button-small text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'}`}
+                      className={`mobile-button-small text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
                       aria-label="Editar movimiento"
-                      disabled={isCancelled}
+                      disabled={!isEditable}
                     >
                       <i className="fa-solid fa-edit" />
                     </button>
@@ -384,6 +385,7 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
               items.map((movement) => {
                 const dateInfo = formatDate(movement.movementAt);
                 const isCancelled = movement.status === 'cancelled';
+                const isEditable = movement.status === 'registered';
                 const statusCls = statusBadgeClass(movement.status);
 
                 return (
@@ -454,13 +456,13 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
                           type="button"
                           onClick={(event) => {
                             event.stopPropagation();
-                            if (!isCancelled) {
+                            if (isEditable) {
                               onEdit(movement);
                             }
                           }}
-                          className={`text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-gray-600 hover:text-gray-800'}`}
+                          className={`text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
                           aria-label="Editar movimiento"
-                          disabled={isCancelled}
+                          disabled={!isEditable}
                         >
                           <i className="fa-solid fa-edit" />
                         </button>

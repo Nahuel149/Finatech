@@ -130,7 +130,7 @@ export const MovementDetailPanel: React.FC<MovementDetailPanelProps> = ({
   };
 
   const handleEditClick = () => {
-    if (!movement) return;
+    if (!movement || movement.status !== 'registered') return;
     onEdit(movement);
   };
 
@@ -238,7 +238,7 @@ export const MovementDetailPanel: React.FC<MovementDetailPanelProps> = ({
                 type="button"
                 className="flex items-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
                 onClick={handleEditClick}
-                disabled={!movement}
+                disabled={!movement || movement.status !== 'registered'}
               >
                 <i className="fa-solid fa-edit mr-2" />
                 Editar movimiento

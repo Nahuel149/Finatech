@@ -2,6 +2,7 @@ const {
   getTreasuryBalances,
   listTreasuryMovements,
   registerTreasuryMovement,
+  updateTreasuryMovement,
   getTreasuryMovementById,
   compensateTreasuryMovement,
   cancelTreasuryMovement,
@@ -122,6 +123,17 @@ const create = async (req, res, next) => {
       userId: req.user?.id || req.user?._id,
     });
     res.status(201).json(result);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const update = async (req, res, next) => {
+  try {
+    const result = await updateTreasuryMovement(req.params.movementId || req.params.id, req.body, {
+      userId: req.user?.id || req.user?._id,
+    });
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -304,4 +316,5 @@ module.exports = {
   revertReception,
   operationSuggestions,
   uploadTreasuryAttachments,
+  update,
 };

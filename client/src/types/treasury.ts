@@ -116,6 +116,20 @@ export interface CreateTreasuryMovementResponse {
   } | null;
 }
 
+export type UpdateTreasuryMovementPayload = CreateTreasuryMovementPayload;
+
+export interface UpdateTreasuryMovementResponse {
+  movement: TreasuryMovement;
+  balance: {
+    id: string;
+    label: string;
+    currency: string;
+    amount: number;
+    status: string;
+    updatedAt: string;
+  } | null;
+}
+
 export interface OperationSuggestion {
   id: string;
   code: string | null;

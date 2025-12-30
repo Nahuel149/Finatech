@@ -3,6 +3,7 @@ const {
   balances,
   list,
   create,
+  update,
   detail,
   compensate,
   cancel,
@@ -88,6 +89,7 @@ router.post(
 router.get('/movements', requirePermission('access-treasury'), list);
 router.post('/movements', requirePermission('manage-treasury'), create);
 router.get('/movements/:movementId', requirePermission('access-treasury'), detail);
+router.put('/movements/:movementId', requirePermission('manage-treasury'), update);
 router.post(
   '/movements/:movementId/compensate',
   requirePermission('manage-treasury'),

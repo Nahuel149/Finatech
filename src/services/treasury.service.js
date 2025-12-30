@@ -2688,6 +2688,15 @@ const getApplyTreasurySettlement = () => {
   return service.applyTreasurySettlement;
 };
 
+const getCurrentAccountService = () => {
+  // Lazy-load to avoid circular dependency resolution issues
+  const service = require('./currentAccount.service');
+  if (!service || typeof service.adjustAccountBalance !== 'function') {
+    throw new Error('currentAccount.service is not available');
+  }
+  return service;
+};
+
 const fetchOperationLink = async (operationPayload, { session } = {}) => {
   if (!operationPayload) {
     return null;
@@ -2803,6 +2812,34 @@ const validateAndNormalizeMovementPayload = async (payload = {}, { session } = {
     description,
     metadata,
   };
+};
+
+const reverseTreasurySettlementForMovement = async (movement, { session, userId } = {}) => {
+  if (!movement) {
+    return;
+  }
+
+  const { ACCOUNT_KEY, adjustAccountBalance, adjustContactBalance } = getCurrentAccountService();
+  const currency = String(movement.currency || 'ARS').toUpperCase();
+  const amount = roundAmount(movement.amount || 0);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return;
+  }
+
+  const direction = movement.type === 'outgoing' ? 'outgoing' : 'incoming';
+  const delta = direction === 'incoming' ? -amount : amount;
+
+  await adjustAccountBalance(ACCOUNT_KEY, currency, -delta, { session, userId });
+
+  if (movement.contact && mongoose.Types.ObjectId.isValid(movement.contact)) {
+    await adjustContactBalance(movement.contact, currency, -delta, { session, userId });
+  }
+
+  await CurrentAccountMovement.deleteMany({
+    'operation.id': movement._id,
+    'operation.source': 'treasury',
+    stage: 'settlement',
+  }).session(session || null);
 };
 
 const registerTreasuryMovement = async (payload = {}, context = {}) => {
@@ -3040,6 +3077,270 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
     userId: context.userId || null,
   });
   evaluateBalanceAlerts(balanceSnapshot, { performedBy: context.userId });
+
+  return {
+    movement: formattedMovement,
+    balance: balanceSnapshot ? formatBalance(balanceSnapshot) : null,
+  };
+};
+
+const updateTreasuryMovement = async (movementId, payload = {}, context = {}) => {
+  if (!mongoose.Types.ObjectId.isValid(movementId)) {
+    throw new AppError('El identificador de movimiento es inv lido.', 400);
+  }
+
+  const session = await mongoose.startSession();
+  let updatedDocument;
+  let contactForResponse = null;
+  let balanceSnapshot = null;
+  const balanceChanges = [];
+  const hasOperationPayload =
+    Object.prototype.hasOwnProperty.call(payload, 'operation') ||
+    Object.prototype.hasOwnProperty.call(payload, 'operationReference');
+  const hasContactPayload =
+    Object.prototype.hasOwnProperty.call(payload, 'contactId') ||
+    Object.prototype.hasOwnProperty.call(payload, 'contact');
+  const hasReferencePayload = Object.prototype.hasOwnProperty.call(payload, 'reference');
+  const hasDescriptionPayload = Object.prototype.hasOwnProperty.call(payload, 'description');
+  const hasMetadataPayload = Object.prototype.hasOwnProperty.call(payload, 'metadata');
+
+  try {
+    await session.withTransaction(async () => {
+      const movement = await TreasuryMovement.findById(movementId).session(session);
+      if (!movement) {
+        throw new AppError('El movimiento indicado no existe.', 404);
+      }
+
+      if (movement.status !== 'registered') {
+        throw new AppError('Solo pod‚s editar movimientos pendientes.', 409);
+      }
+
+      const mergedPayload = {
+        type: payload.type ?? movement.type,
+        medium: payload.medium ?? movement.medium,
+        currency: payload.currency ?? movement.currency,
+        amount: payload.amount ?? movement.amount,
+        movementAt: payload.movementAt ?? movement.movementAt,
+        contactId: hasContactPayload ? payload.contactId ?? payload.contact : movement.contact?.toString(),
+        reference: hasReferencePayload ? payload.reference : movement.reference,
+        description: hasDescriptionPayload ? payload.description : movement.description,
+        metadata: hasMetadataPayload
+          ? { ...(movement.metadata || {}), ...(payload.metadata || {}) }
+          : movement.metadata || {},
+      };
+
+      if (hasOperationPayload) {
+        mergedPayload.operation = payload.operation || payload.operationReference || null;
+      }
+
+      const normalized = await validateAndNormalizeMovementPayload(mergedPayload, { session });
+
+      const oldBalanceMovementType = resolveMovementBalanceType(movement.currency, movement.medium);
+      const newBalanceMovementType = resolveMovementBalanceType(normalized.currency, normalized.medium);
+      const previousSnapshot = {
+        type: movement.type,
+        medium: movement.medium,
+        currency: movement.currency,
+        amount: roundAmount(movement.amount || 0),
+      };
+      const oldDelta =
+        movement.type === 'incoming'
+          ? roundAmount(movement.amount || 0)
+          : -roundAmount(movement.amount || 0);
+      const newDelta =
+        normalized.type === 'incoming'
+          ? roundAmount(normalized.amount || 0)
+          : -roundAmount(normalized.amount || 0);
+
+      const hadSettlementApplied = Boolean(movement.metadata?.settlementApplied);
+      if (hadSettlementApplied) {
+        await reverseTreasurySettlementForMovement(movement, {
+          session,
+          userId: context.userId,
+        });
+        movement.metadata = {
+          ...(movement.metadata || {}),
+          settlementApplied: false,
+        };
+      }
+
+      if (oldBalanceMovementType === newBalanceMovementType && movement.currency === normalized.currency) {
+        const deltaDiff = roundAmount(newDelta - oldDelta);
+        if (deltaDiff) {
+          balanceSnapshot = await adjustTreasuryBalanceForMovement(
+            newBalanceMovementType,
+            normalized.currency,
+            deltaDiff,
+            {
+              session,
+              userId: context.userId,
+            }
+          );
+          balanceChanges.push({
+            balanceKey: normalizeBalanceKey(newBalanceMovementType),
+            currency: normalized.currency,
+            delta: deltaDiff,
+          });
+        }
+      } else {
+        const reverseDelta = roundAmount(-oldDelta);
+        if (reverseDelta) {
+          await adjustTreasuryBalanceForMovement(oldBalanceMovementType, movement.currency, reverseDelta, {
+            session,
+            userId: context.userId,
+          });
+          balanceChanges.push({
+            balanceKey: normalizeBalanceKey(oldBalanceMovementType),
+            currency: movement.currency,
+            delta: reverseDelta,
+          });
+        }
+
+        if (newDelta) {
+          balanceSnapshot = await adjustTreasuryBalanceForMovement(
+            newBalanceMovementType,
+            normalized.currency,
+            newDelta,
+            {
+              session,
+              userId: context.userId,
+            }
+          );
+          balanceChanges.push({
+            balanceKey: normalizeBalanceKey(newBalanceMovementType),
+            currency: normalized.currency,
+            delta: newDelta,
+          });
+        }
+      }
+
+      movement.type = normalized.type;
+      movement.medium = normalized.medium;
+      movement.currency = normalized.currency;
+      movement.amount = normalized.amount;
+      movement.movementAt = normalized.movementAt;
+      movement.contact = normalized.contactDoc ? normalized.contactDoc._id : null;
+      movement.reference = normalized.reference;
+      movement.description = normalized.description;
+      movement.balanceKey = normalizeBalanceKey(newBalanceMovementType);
+      movement.metadata = {
+        ...(movement.metadata || {}),
+        ...(normalized.metadata || {}),
+      };
+
+      if (hasOperationPayload) {
+        if (normalized.operationLink) {
+          const { document, model } = normalized.operationLink;
+          const operationAmount =
+            model === 'Transaction'
+              ? deriveTransactionAmountForCurrency(document, normalized.currency) || normalized.amount
+              : Number(document.totalAmount || normalized.amount);
+
+          movement.linkedOperations = [
+            {
+              id: document._id,
+              model,
+              code: document.operationCode || document.movementCode || null,
+              type: model === 'Transaction' ? document.type : document.movementType,
+              currency: normalized.currency,
+              amount: roundAmount(operationAmount || normalized.amount),
+              matchedAt: new Date(),
+              matchedBy:
+                context.userId && mongoose.Types.ObjectId.isValid(context.userId)
+                  ? context.userId
+                  : null,
+            },
+          ];
+          movement.source = 'operation';
+        } else {
+          movement.linkedOperations = [];
+          movement.source = 'manual';
+        }
+      } else if (movement.linkedOperations && movement.linkedOperations.length > 0) {
+        movement.linkedOperations = movement.linkedOperations.map((entry) => ({
+          ...entry,
+          currency: normalized.currency,
+          amount: roundAmount(normalized.amount || entry.amount || 0),
+        }));
+      }
+
+      if (hadSettlementApplied && normalized.contactDoc) {
+        const applySettlement = getApplyTreasurySettlement();
+        await applySettlement(
+          {
+            _id: movement._id,
+            movementType: newBalanceMovementType,
+            direction: normalized.type,
+            currency: normalized.currency,
+            totalAmount: normalized.amount,
+            distributionLines: [
+              {
+                contact: normalized.contactDoc._id,
+                amount: normalized.amount,
+              },
+            ],
+            operationCode: movement.movementCode,
+          },
+          { session, userId: context.userId }
+        );
+
+        movement.metadata = {
+          ...(movement.metadata || {}),
+          settlementApplied: true,
+        };
+      }
+
+      movement.auditTrail = movement.auditTrail || [];
+      movement.auditTrail.push(
+        buildAuditEntry('updated', context.userId, {
+          previous: previousSnapshot,
+          current: {
+            type: normalized.type,
+            medium: normalized.medium,
+            currency: normalized.currency,
+            amount: roundAmount(normalized.amount),
+          },
+        })
+      );
+
+      movement.updatedBy =
+        context.userId && mongoose.Types.ObjectId.isValid(context.userId) ? context.userId : null;
+      await movement.save({ session });
+
+      updatedDocument = movement.toObject();
+      if (normalized.contactDoc) {
+        contactForResponse = normalized.contactDoc.toObject();
+      }
+
+      if (!balanceSnapshot) {
+        balanceSnapshot = await TreasuryBalance.findOne({
+          key: normalizeBalanceKey(newBalanceMovementType),
+          currency: normalized.currency,
+        })
+          .session(session)
+          .lean();
+      }
+    });
+  } finally {
+    session.endSession();
+  }
+
+  const formattedMovement = formatTreasuryMovement(
+    updatedDocument,
+    contactForResponse ? [contactForResponse] : []
+  );
+
+  balanceChanges.forEach((change) => {
+    emitBalanceUpdated({
+      source: 'treasury_movement_update',
+      movementId: formattedMovement?.id || null,
+      movementCode: formattedMovement?.movementCode || null,
+      balanceKey: change.balanceKey,
+      currency: change.currency,
+      delta: change.delta,
+      emittedBy: context.userId || null,
+    });
+  });
 
   return {
     movement: formattedMovement,
@@ -3905,6 +4206,7 @@ exports.resolveMovementBalanceType = resolveMovementBalanceType;
 exports.generateTreasuryMovementCode = generateTreasuryMovementCode;
 exports.formatTreasuryMovement = formatTreasuryMovement;
 exports.registerTreasuryMovement = registerTreasuryMovement;
+exports.updateTreasuryMovement = updateTreasuryMovement;
 exports.listTreasuryMovements = listTreasuryMovements;
 exports.getTreasuryMovementById = getTreasuryMovementById;
 exports.compensateTreasuryMovement = compensateTreasuryMovement;

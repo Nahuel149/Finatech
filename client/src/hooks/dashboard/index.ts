@@ -14,6 +14,7 @@ export * from './useOperationSearch';
 export * from './useTreasuryMovement';
 export * from './useCancelTreasuryMovement';
 export * from './useCompensateTreasuryMovement';
+export * from './useUpdateTreasuryMovement';
 export * from './useReconciliationSuggestions';
 export * from './useLinkedTreasuryBalances';
 export * from './useLinkedBalanceDetail';

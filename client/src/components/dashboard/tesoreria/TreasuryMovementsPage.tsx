@@ -45,6 +45,7 @@ export const TreasuryMovementsPage: React.FC = () => {
   const [registerOpen, setRegisterOpen] = useState(false);
   const [prefillOperation, setPrefillOperation] = useState<{ id?: string | null; code?: string | null } | null>(null);
   const [prefillContact, setPrefillContact] = useState<ClientSummary | null>(null);
+  const [editMovement, setEditMovement] = useState<TreasuryMovement | null>(null);
   const [reconciliationOpen, setReconciliationOpen] = useState(false);
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
   const navigate = useNavigate();
@@ -138,6 +139,7 @@ export const TreasuryMovementsPage: React.FC = () => {
 
   const handleRegisterMovement = () => {
     setRegisterOpen(true);
+    setEditMovement(null);
     setPrefillOperation(null);
     setPrefillContact(null);
   };
@@ -171,10 +173,7 @@ export const TreasuryMovementsPage: React.FC = () => {
   };
 
   const handleEdit = (movement: TreasuryMovement) => {
-    showToast({
-      type: 'info',
-      message: `Edición de ${movementIdentifier(movement)} estará disponible próximamente.`,
-    });
+    handleEditMovement(movement);
   };
 
   const handleCancelMovement = async (movement: TreasuryMovement) => {
@@ -219,8 +218,11 @@ export const TreasuryMovementsPage: React.FC = () => {
     updateSort(nextSort);
   };
 
-  const handleRegisterSuccess = (_movement: TreasuryMovement) => {
+  const handleRegisterSuccess = (movement: TreasuryMovement) => {
     refresh();
+    if (detailMovementId && movement?.id === detailMovementId) {
+      setDetailRefreshToken((prev) => prev + 1);
+    }
   };
 
   const handleCloseMovementDetail = () => {
@@ -229,10 +231,20 @@ export const TreasuryMovementsPage: React.FC = () => {
   };
 
   const handleEditMovement = (movement: TreasuryMovement) => {
-    showToast({
-      type: 'info',
-      message: `Edición de ${movementIdentifier(movement)} estará disponible próximamente.`,
-    });
+    if (movement.status !== 'registered') {
+      showToast({
+        type: 'warning',
+        message: 'Solo podes editar movimientos pendientes.',
+      });
+      return;
+    }
+    setEditMovement(movement);
+    setRegisterOpen(false);
+    setPrefillOperation(null);
+    setPrefillContact(null);
+    if (detailMovementId) {
+      handleCloseMovementDetail();
+    }
   };
 
   useEffect(() => {
@@ -302,11 +314,14 @@ export const TreasuryMovementsPage: React.FC = () => {
       </main>
 
       <RegisterMovementModal
-        open={registerOpen}
-        prefillOperation={prefillOperation}
-        prefillContact={prefillContact}
+        open={registerOpen || Boolean(editMovement)}
+        prefillOperation={editMovement ? null : prefillOperation}
+        prefillContact={editMovement ? null : prefillContact}
+        mode={editMovement ? 'edit' : 'create'}
+        movement={editMovement}
         onClose={() => {
           setRegisterOpen(false);
+          setEditMovement(null);
           setPrefillOperation(null);
           setPrefillContact(null);
         }}
@@ -346,3 +361,13 @@ export const TreasuryMovementsPage: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+
+

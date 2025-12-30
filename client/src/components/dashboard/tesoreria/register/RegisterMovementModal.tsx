@@ -11,6 +11,7 @@ import {
   useCreateTreasuryMovement,
   useOperationSearch,
   useRecentClients,
+  useUpdateTreasuryMovement,
   useUserPermissions,
 } from '../../../../hooks';
 import { Alert } from '../../../ui';
@@ -27,6 +28,8 @@ interface RegisterMovementModalProps {
   onShowToast: (toast: { type: ToastType; message: string }) => void;
   prefillOperation?: { id?: string | null; code?: string | null } | null;
   prefillContact?: ClientSummary | null;
+  mode?: 'create' | 'edit';
+  movement?: TreasuryMovement | null;
 }
 
 type MovementTypeValue = 'incoming' | 'outgoing' | '';
@@ -85,6 +88,8 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   onShowToast,
   prefillOperation = null,
   prefillContact = null,
+  mode = 'create',
+  movement = null,
 }) => {
   const [form, setForm] = useState<FormValues>({
     type: '',
@@ -120,16 +125,106 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   });
   const { createMovement, loading: submitting, error: createError, reset: resetCreateError } =
     useCreateTreasuryMovement();
+  const {
+    updateMovement,
+    loading: updating,
+    error: updateError,
+    reset: resetUpdateError,
+  } = useUpdateTreasuryMovement();
   const { permissions, loading: permissionsLoading } = useUserPermissions();
   const canManageTreasury = permissions.includes('manage-treasury');
+  const isEditMode = mode === 'edit' && Boolean(movement);
+  const isSubmitting = submitting || updating;
 
   const currencySymbol = form.currency === 'USD' ? 'USD' : '$';
+  const lockOperation = isEditMode && movement?.source === 'operation';
+  const lockContact = isEditMode && movement?.source === 'operation';
+
+  const buildOperationSuggestionFromMovement = (
+    sourceMovement: TreasuryMovement
+  ): OperationSuggestion | null => {
+    const linkedOperation = sourceMovement.linkedOperations?.[0];
+    if (!linkedOperation?.id) {
+      return null;
+    }
+    return {
+      id: linkedOperation.id,
+      code: linkedOperation.code || null,
+      model: linkedOperation.model || 'Transaction',
+      amount: Number(sourceMovement.amount || 0),
+      currency: sourceMovement.currency || 'ARS',
+      movementType: linkedOperation.type || sourceMovement.type || null,
+      direction: sourceMovement.type || null,
+      medium: sourceMovement.medium || null,
+      status: sourceMovement.status || null,
+      confirmedAt: sourceMovement.compensatedAt || null,
+      description:
+        sourceMovement.contact?.fullName || sourceMovement.contact?.shortName || null,
+    };
+  };
+
+  const applyMovementDefaults = useCallback((sourceMovement: TreasuryMovement) => {
+    const movementDate = sourceMovement.movementAt
+      ? new Date(sourceMovement.movementAt)
+      : new Date();
+    setForm({
+      type: (sourceMovement.type as MovementTypeValue) || '',
+      medium: (sourceMovement.medium as MovementMediumValue) || '',
+      currency: (sourceMovement.currency as 'ARS' | 'USD' | '') || '',
+      amount: sourceMovement.amount ? String(sourceMovement.amount) : '',
+      movementAt: formatDateTimeLocal(movementDate),
+      reference: sourceMovement.reference || sourceMovement.description || '',
+    });
+    setErrors({});
+
+    if (sourceMovement.contact?.id) {
+      setSelectedContact(sourceMovement.contact as ClientSummary);
+      setContactInput(
+        sourceMovement.contact.fullName ||
+          sourceMovement.contact.shortName ||
+          ''
+      );
+    } else {
+      setSelectedContact(null);
+      setContactInput('');
+    }
+    setContactDropdownVisible(false);
+    clientSearch.setQuery('');
+
+    const operationSuggestion = buildOperationSuggestionFromMovement(sourceMovement);
+    if (operationSuggestion) {
+      setSelectedOperation(operationSuggestion);
+      setOperationInput(operationSuggestion.code || '');
+      setOperationInfoVisible(true);
+    } else {
+      setSelectedOperation(null);
+      setOperationInput('');
+      setOperationInfoVisible(false);
+    }
+    setOperationDropdownVisible(false);
+    operationSearch.reset();
+
+    const existingAttachments = Array.isArray(sourceMovement.metadata?.attachments)
+      ? sourceMovement.metadata.attachments.map((item: any) => ({
+          id: `${item.id || item.url || item.name}-${Math.random().toString(36).slice(2)}`,
+          url: item.url,
+          name: item.name,
+          type: item.type || item.mimeType,
+          size: item.size,
+        }))
+      : [];
+    setAttachments(existingAttachments);
+  }, [clientSearch, operationSearch]);
 
   useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
       resetForm();
-      setTimeout(() => loadDraftFromStorage(), 0);
+      if (isEditMode && movement) {
+        applyMovementDefaults(movement);
+      } else {
+        setTimeout(() => loadDraftFromStorage(), 0);
+      }
       prefillAppliedRef.current = false;
     } else {
       document.body.style.overflow = 'unset';
@@ -139,7 +234,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       document.body.style.overflow = 'unset';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, applyMovementDefaults, isEditMode, movement]);
 
   useEffect(() => {
     if (!contactDropdownVisible) return;
@@ -175,17 +270,17 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   }, [form.currency]);
 
   useEffect(() => {
-    if (!open || !prefillContact) return;
+    if (!open || !prefillContact || isEditMode) return;
     if (selectedContact?.id === prefillContact.id) return;
     setSelectedContact(prefillContact);
     setContactInput(prefillContact.fullName || prefillContact.shortName || '');
     setContactDropdownVisible(false);
     clientSearch.setQuery('');
     setOperationDropdownVisible(true);
-  }, [clientSearch, open, prefillContact, selectedContact?.id]);
+  }, [clientSearch, isEditMode, open, prefillContact, selectedContact?.id]);
 
   useEffect(() => {
-    if (!open || !prefillOperation) return;
+    if (!open || !prefillOperation || isEditMode) return;
     if (
       selectedOperation &&
       ((prefillOperation.id && selectedOperation.id === prefillOperation.id) ||
@@ -205,10 +300,10 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setOperationDropdownVisible(true);
     setOperationInfoVisible(false);
     operationSearch.setQuery(prefillQuery);
-  }, [open, operationSearch, prefillOperation, selectedOperation]);
+  }, [isEditMode, open, operationSearch, prefillOperation, selectedOperation]);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open || isEditMode) return;
     if (!selectedContact) {
       setOperationDropdownVisible(false);
       return;
@@ -220,7 +315,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setOperationInfoVisible(false);
     operationSearch.setQuery('');
     operationSearch.refresh();
-  }, [open, operationSearch, selectedContact, selectedOperation]);
+  }, [isEditMode, open, operationSearch, selectedContact, selectedOperation]);
 
   const handleSelectOperation = useCallback(
     (operation: OperationSuggestion) => {
@@ -247,7 +342,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   );
 
   useEffect(() => {
-    if (!open || !prefillOperation || prefillAppliedRef.current) return;
+    if (!open || !prefillOperation || prefillAppliedRef.current || isEditMode) return;
     const match = operationSearch.suggestions.find(
       (suggestion) =>
         (prefillOperation.id && suggestion.id === prefillOperation.id) ||
@@ -258,7 +353,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       setOperationInfoVisible(true);
       prefillAppliedRef.current = true;
     }
-  }, [handleSelectOperation, open, operationSearch.suggestions, prefillOperation]);
+  }, [handleSelectOperation, isEditMode, open, operationSearch.suggestions, prefillOperation]);
 
   const resetForm = () => {
     setForm({
@@ -282,6 +377,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setUploadingAttachments(false);
     setSubmitError(null);
     resetCreateError();
+    resetUpdateError();
   };
 
   const loadDraftFromStorage = () => {
@@ -362,6 +458,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const handleContactInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (lockContact) {
+      return;
+    }
     const value = event.target.value;
     setContactInput(value);
     if (!value.trim()) {
@@ -383,6 +482,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const handleOperationInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (lockOperation) {
+      return;
+    }
     const value = event.target.value;
     setOperationInput(value);
     setSelectedOperation(null);
@@ -492,6 +594,13 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const handleSaveDraft = () => {
+    if (isEditMode) {
+      onShowToast({
+        type: 'info',
+        message: 'Los borradores no estan disponibles al editar movimientos.',
+      });
+      return;
+    }
     const draft: MovementDraft = {
       form,
       contactId: selectedContact?.id,
@@ -530,7 +639,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     const amountNumber = Number(values.amount.replace(',', '.'));
     const metadata: Record<string, unknown> = {};
 
-    if (attachments.length) {
+    if (attachments.length || isEditMode) {
       metadata.attachments = attachments.map(({ file, url, name, type, size, id }) => ({
         id,
         name: name || file?.name,
@@ -546,7 +655,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       currency: values.currency || 'ARS',
       amount: amountNumber,
       movementAt: values.movementAt ? new Date(values.movementAt).toISOString() : undefined,
-      contactId: selectedContact?.id ?? undefined,
+      contactId: isEditMode ? selectedContact?.id ?? null : selectedContact?.id ?? undefined,
       reference: values.reference ? values.reference.trim() : undefined,
       description: values.reference ? values.reference.trim() : undefined,
       metadata,
@@ -564,7 +673,15 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
 
   const handleSubmit = async () => {
     if (!canManageTreasury) {
-      onShowToast({ type: 'warning', message: 'No tenés permiso para registrar movimientos de tesorería.' });
+      onShowToast({
+        type: 'warning',
+        message: 'No tenes permiso para registrar movimientos de tesoreria.',
+      });
+      return;
+    }
+
+    if (isEditMode && !movement?.id) {
+      onShowToast({ type: 'error', message: 'No encontramos el movimiento a editar.' });
       return;
     }
 
@@ -577,13 +694,19 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     setSubmitError(null);
     try {
       const payload = buildPayload(form);
-      const response = await createMovement(payload);
+      const response = isEditMode && movement?.id
+        ? await updateMovement(movement.id, payload)
+        : await createMovement(payload);
       if (response?.movement) {
         onSuccess(response.movement);
-        localStorage.removeItem(DRAFT_STORAGE_KEY);
+        if (!isEditMode) {
+          localStorage.removeItem(DRAFT_STORAGE_KEY);
+        }
         onShowToast({
           type: 'success',
-          message: `Movimiento ${response.movement.movementCode ?? ''} registrado correctamente.`,
+          message: isEditMode
+            ? `Movimiento ${response.movement.movementCode ?? ''} actualizado correctamente.`
+            : `Movimiento ${response.movement.movementCode ?? ''} registrado correctamente.`,
         });
       }
       onClose();
@@ -593,6 +716,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const renderContactDropdown = () => {
+    if (lockContact) return null;
     if (!contactDropdownVisible) return null;
 
     const searchTerm = contactInput.trim();
@@ -681,6 +805,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
   };
 
   const renderOperationSuggestions = () => {
+    if (lockOperation) {
+      return null;
+    }
     if (!operationDropdownVisible) return null;
 
     const hasQuery = operationInput.trim().length > 3;
@@ -779,12 +906,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
               Tesorería
             </button>
             <i className="fa-solid fa-chevron-right text-xs" />
-            <span>Nuevo movimiento</span>
+            <span>{isEditMode ? 'Editar movimiento' : 'Nuevo movimiento'}</span>
           </nav>
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-text-primary mb-2">Registrar nuevo movimiento</h1>
-              <p className="text-gray-600">Cargá manualmente un ingreso o egreso de fondos</p>
+              <h1 className="text-2xl font-bold text-text-primary mb-2">{isEditMode ? 'Editar movimiento' : 'Registrar nuevo movimiento'}</h1>
+              <p className="text-gray-600">{isEditMode ? 'Actualiza los datos del movimiento seleccionado' : 'Carga manualmente un ingreso o egreso de fondos'}</p>
             </div>
             <button
               type="button"
@@ -797,11 +924,11 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
         </div>
 
         <div className="overflow-y-auto p-6">
-          {(submitError || createError) && (
+          {(submitError || createError || updateError) && (
             <div className="mb-4">
               <Alert
                 type="error"
-                message={submitError?.message || createError?.message || 'Ocurrió un error inesperado.'}
+                message={submitError?.message || createError?.message || updateError?.message || 'Ocurrió un error inesperado.'}
               />
             </div>
           )}
@@ -943,12 +1070,14 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                         value={contactInput}
                         onChange={handleContactInputChange}
                         onFocus={() => {
+                          if (lockContact) return;
                           setContactDropdownVisible(true);
                           if (!recentClients.recent.length) {
                             recentClients.refresh();
                           }
                         }}
                         autoComplete="off"
+                        disabled={lockContact}
                       />
                       <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                         <i className="fa-solid fa-search text-gray-400" />
@@ -959,6 +1088,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                       type="button"
                       className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                       onClick={handleCreateNewContact}
+                      disabled={lockContact}
                     >
                       <i className="fa-solid fa-plus mr-2" />
                       Nuevo
@@ -976,16 +1106,18 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                       id="operation"
                       name="operation"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Buscar operación por ID (#FT-000123)..."
+                      placeholder="Buscar operaci¢n por ID (#FT-000123)..."
                       value={operationInput}
                       onChange={handleOperationInputChange}
                       onFocus={() => {
+                        if (lockOperation) return;
                         setOperationDropdownVisible(true);
                         if (selectedContact && !operationSearch.loading && operationSearch.suggestions.length === 0) {
                           operationSearch.refresh();
                         }
                       }}
                       autoComplete="off"
+                      disabled={lockOperation}
                     />
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
                       <i className="fa-solid fa-search text-gray-400" />
@@ -1054,28 +1186,30 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
               >
                 Cancelar
               </button>
-              <button
-                type="button"
-                className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
-                onClick={handleSaveDraft}
-              >
-                Guardar borrador
-              </button>
+              {!isEditMode && (
+                <button
+                  type="button"
+                  className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                  onClick={handleSaveDraft}
+                >
+                  Guardar borrador
+                </button>
+              )}
               <button
                 type="button"
                 className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                 onClick={handleSubmit}
-                disabled={submitting || permissionsLoading || !canManageTreasury}
+                disabled={isSubmitting || permissionsLoading || !canManageTreasury}
                 title={
                   !canManageTreasury
-                    ? 'Necesitás permiso de Tesorería para registrar movimientos.'
+                    ? 'Necesitas permiso de Tesoreria para registrar movimientos.'
                     : undefined
                 }
               >
-                <span>Registrar movimiento</span>
-                {submitting && <i className="fa-solid fa-spinner fa-spin ml-2" />}
+                <span>{isEditMode ? 'Guardar cambios' : 'Registrar movimiento'}</span>
+                {isSubmitting && <i className="fa-solid fa-spinner fa-spin ml-2" />}
               </button>
-            </div>
+</div>
           </div>
         </div>
       </div>
@@ -1097,3 +1231,13 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     </>
   );
 };
+
+
+
+
+
+
+
+
+
+
