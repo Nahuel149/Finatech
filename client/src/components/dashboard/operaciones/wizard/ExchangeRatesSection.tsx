@@ -12,6 +12,7 @@ interface Props {
   assetLabel: string;
   showSecondaryRates?: boolean;
   disabled?: boolean;
+  disableMarketRates?: boolean;
   disablePrimaryRates?: boolean;
 }
 
@@ -27,6 +28,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
   assetLabel,
   showSecondaryRates = true,
   disabled = false,
+  disableMarketRates = false,
   disablePrimaryRates = false,
 }) => (
   <div id="exchange-rates" className="mb-6">
@@ -56,7 +58,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
           value={arsMarketRate}
           onChange={(event) => onArsMarketRateChange(event.target.value)}
           className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-          disabled={disabled || disablePrimaryRates}
+          disabled={disabled || disablePrimaryRates || disableMarketRates}
           autoComplete="off"
           placeholder="0,00"
         />
@@ -104,7 +106,7 @@ export const ExchangeRatesSection: React.FC<Props> = ({
               value={assetMarketRate}
               onChange={(event) => onAssetMarketRateChange(event.target.value)}
               className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-              disabled={disabled}
+              disabled={disabled || disableMarketRates}
               autoComplete="off"
               placeholder="0,00"
             />

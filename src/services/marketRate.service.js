@@ -91,7 +91,7 @@ const fetchFromDolarHoy = async () => {
   const officialMatch =
     html.match(/D[���"]LAR OFICIAL[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i) ||
     html.match(/dolar oficial[\s\S]{0,800}?(\$[\s\d.,]+)[\s\S]{0,40}?(\$[\s\d.,]+)/i) ||
-    html.match(/oficial[\s\S]{0,500}?compra[^\d$]*([\$\s\d.,]+)[\s\S]{0,120}?venta[^\d$]*([\$\s\d.,]+)/i);
+    html.match(/oficial[\s\S]{0,500}?compra[^\d$]*([$\s\d.,]+)[\s\S]{0,120}?venta[^\d$]*([$\s\d.,]+)/i);
 
   if (!officialMatch) {
     throw new Error('No pudimos leer la cotizacion oficial desde dolarhoy.com');
@@ -152,3 +152,5 @@ module.exports = {
   getLatestMarketRate,
   fetchOfficialUsdArsRate,
 };
+
+

@@ -955,7 +955,7 @@ const classifySettlementMedium = (method, defaultCurrency = 'ARS') => {
   return { currency, medium };
 };
 
-const inferSettlementMediums = async (order) => {
+const _inferSettlementMediums = async (order) => {
   if (!order?.operationId || !mongoose.Types.ObjectId.isValid(order.operationId)) {
     return {};
   }

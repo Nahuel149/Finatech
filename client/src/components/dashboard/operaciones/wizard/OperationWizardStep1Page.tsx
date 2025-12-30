@@ -267,7 +267,11 @@ const canEditMarketRate = useMemo(
   [normalizedPermissions]
 );
   const [autoMarketRate, setAutoMarketRate] = useState<number>(marketApr);
-  const { data: latestMarketRate } = useLatestMarketRate({
+  const {
+    data: latestMarketRate,
+    error: latestMarketRateError,
+    loading: latestMarketRateLoading,
+  } = useLatestMarketRate({
     baseAsset: 'USD',
     quoteAsset: 'ARS',
     enabled: true,
@@ -301,6 +305,18 @@ const canEditMarketRate = useMemo(
       setMarketAprInput(formatRateInput(resolvedRate));
     }
   }, [autoMarketRate, latestMarketRate, marketApr, resolveMarketRateForType]);
+  const hasMarketRate = useMemo(() => {
+    const resolvedRate = resolveMarketRateForType(latestMarketRate || undefined);
+    return Number.isFinite(resolvedRate ?? Number.NaN);
+  }, [latestMarketRate, resolveMarketRateForType]);
+
+  const allowMarketRateEdit = useMemo(
+    () =>
+      canEditMarketRate ||
+      Boolean(latestMarketRateError) ||
+      (!latestMarketRateLoading && !hasMarketRate),
+    [canEditMarketRate, hasMarketRate, latestMarketRateError, latestMarketRateLoading]
+  );
 
   // Hydrate form with draft data when available
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -474,19 +490,10 @@ const canEditMarketRate = useMemo(
 
   useEffect(() => {
     if (operationType === 'buy') {
-      const incomingIsArs = incomingAssetCode === 'ARS';
-      const outgoingIsArs = outgoingAssetCode === 'ARS';
-
-      if (incomingIsArs && !outgoingIsArs) {
-        return;
-      }
-
-      if (incomingIsArs && outgoingIsArs) {
+      if (incomingAssetCode === 'ARS') {
         setIncomingAssetCode(ASSET_DEFAULTS.buy.incoming);
-        return;
       }
-
-      if (outgoingAssetCode === 'USD') {
+      if (outgoingAssetCode !== 'ARS') {
         setOutgoingAssetCode('ARS');
       }
       return;
@@ -545,7 +552,7 @@ const canEditMarketRate = useMemo(
     if (operationType === 'buy') {
       return {
         enter: ASSET_CATALOG.filter((option) => option.code !== 'ARS'),
-        exit: ASSET_CATALOG.filter((option) => option.code !== 'USD'),
+        exit: ASSET_CATALOG.filter((option) => option.code === 'ARS'),
       };
     }
 
@@ -743,16 +750,12 @@ const canEditMarketRate = useMemo(
   );
 
   const handleOutgoingAssetChange = useCallback(
-    (code: string) => {
+    (_code: string) => {
       if (operationType === 'buy') {
-        if (code === 'USD') {
-          setOutgoingAssetCode('ARS');
-          return;
-        }
-        setOutgoingAssetCode(code);
+        setOutgoingAssetCode('ARS');
         return;
       }
-      setOutgoingAssetCode(code);
+      setOutgoingAssetCode(_code);
     },
     [operationType],
   );
@@ -819,8 +822,8 @@ const canEditMarketRate = useMemo(
       setFormError('En compras, el activo de entrada debe ser distinto de ARS.');
       return false;
     }
-    if (operationType === 'buy' && outgoingAssetCode === 'USD') {
-      setFormError('En compras, el activo de salida no puede ser USD.');
+    if (operationType === 'buy' && outgoingAssetCode !== 'ARS') {
+      setFormError('En compras, el activo de salida debe ser ARS.');
       return false;
     }
     setFormError(null);
@@ -999,7 +1002,8 @@ const canEditMarketRate = useMemo(
                 onAssetMarketRateChange={handleSecondaryMarketRateInputChange}
                 assetLabel={secondaryAssetLabel}
                 showSecondaryRates={showSecondaryRates}
-                disabled={busy || !canEditMarketRate}
+                disabled={busy}
+                disableMarketRates={!allowMarketRateEdit}
                 disablePrimaryRates={!isUsdPair && showSecondaryRates}
               />
               <AmountSection
