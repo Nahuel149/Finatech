@@ -828,7 +828,16 @@ const canEditMarketRate = useMemo(
     }
     setFormError(null);
     return true;
-  }, [apr, clientId, incomingAmount, incomingAssetCode, marketApr, operationType, outgoingAssetCode]);
+  }, [
+    apr,
+    clientId,
+    incomingAmount,
+    incomingAssetCode,
+    marketApr,
+    operationType,
+    outgoingAmount,
+    outgoingAssetCode,
+  ]);
 
   const executeSave = useCallback(
     async (navigateToNext: boolean) => {

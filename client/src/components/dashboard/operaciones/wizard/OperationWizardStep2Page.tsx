@@ -134,11 +134,6 @@ export const OperationWizardStep2Page: React.FC = () => {
         setSimpleMethod(newMethod);
       }
 
-      const draftBaseAmount =
-        draft.type === 'buy'
-          ? Number(draft.outgoingAmount)
-          : Number(draft.incomingAmount);
-
       if (draft.settlement?.mode === 'compound' && draft.settlement.lines.length > 0) {
         const newCompoundLines: CompoundLine[] = draft.settlement.lines.map((line, index) => {
           const numericValue = Number(line.value);

@@ -338,6 +338,16 @@ export const useLogisticsOrderActions = () => {
   const offlineQueue = useOfflineQueue();
   const retryingRef = useRef(false);
 
+  const resolveArrivePayload = (payload?: LogisticsOfflineActionPayload) => {
+    if (payload && typeof payload === 'object') {
+      const maybePayload = payload as { gpsLat?: number; gpsLng?: number };
+      if ('gpsLat' in maybePayload || 'gpsLng' in maybePayload) {
+        return { gpsLat: maybePayload.gpsLat, gpsLng: maybePayload.gpsLng };
+      }
+    }
+    return {};
+  };
+
   const executeAction = useCallback(
     async (action: {
       type: LogisticsOfflineActionType;
@@ -348,7 +358,7 @@ export const useLogisticsOrderActions = () => {
         case 'start-route':
           return api.startLogisticsRoute(action.orderId);
         case 'arrive':
-          return api.arriveAtLogisticsOrder(action.orderId, action.payload || {});
+          return api.arriveAtLogisticsOrder(action.orderId, resolveArrivePayload(action.payload));
         case 'update-items':
           return api.updateLogisticsOrderItems(action.orderId, action.payload as LogisticsItemsHandoverPayload);
         case 'complete-total':
