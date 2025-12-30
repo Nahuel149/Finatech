@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardBalances } from '../../../hooks';
+import { useDashboardBalances, useUserPermissions } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
 import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
@@ -27,7 +27,12 @@ const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
 
 export const BalanceStripe: React.FC = () => {
   const navigate = useNavigate();
-  const { balances, loading, error, refresh } = useDashboardBalances({ pollInterval: 60000 });
+  const { permissions, loading: permissionsLoading } = useUserPermissions();
+  const canViewBalances = permissions.includes('view-balances');
+  const { balances, loading, error, refresh } = useDashboardBalances({
+    enabled: canViewBalances,
+    pollInterval: 60000,
+  });
   const visibleBalances = useMemo(
     () => balances.filter((balance) => balance.id !== 'courier_in_transit'),
     [balances]
@@ -43,11 +48,14 @@ export const BalanceStripe: React.FC = () => {
   }, [visibleBalances]);
 
   useEffect(() => {
+    if (!canViewBalances) {
+      return undefined;
+    }
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
       refresh().catch(() => {});
     });
     return unsubscribe;
-  }, [refresh]);
+  }, [canViewBalances, refresh]);
 
   const handleBalanceClick = () => {
     navigate('/dashboard/tesoreria/saldos');
@@ -83,6 +91,10 @@ export const BalanceStripe: React.FC = () => {
   const handleHideTooltip = () => {
     setShowTooltip(false);
   };
+
+  if (!canViewBalances && !permissionsLoading) {
+    return null;
+  }
 
   return (
     <div

@@ -4,8 +4,11 @@ import { Alert } from '../../../ui';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { apiRequest, handleApiError } from '../../../../utils/api';
+import { useLogisticsOrdersByOperation } from '../../../../hooks/dashboard';
 import {
   ApiError,
+  LogisticsOrder,
+  LogisticsOrderStatus,
   TransferOperation,
 } from '../../../../types';
 import {
@@ -14,6 +17,8 @@ import {
   formatDateTime,
 } from './utils';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
+import { LinkedLogisticsOrdersSection } from '../logistics/LinkedLogisticsOrdersSection';
+import { LogisticsOrderWizard } from '../../logistica/order-wizard';
 
 const MOVEMENT_TYPE_TEXT: Record<string, string> = {
   transfer: 'Transferencia bancaria',
@@ -58,6 +63,18 @@ export const TransferPesosDetailPage: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<ApiError | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [isWizardOpen, setWizardOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<LogisticsOrder | null>(null);
+  const [toast, setToast] = useState<{ type: 'success' | 'info' | 'error'; message: string } | null>(null);
+
+  const {
+    operation: logisticsContext,
+    orders: logisticsOrders,
+    balances: logisticsBalances,
+    loading: logisticsLoading,
+    error: logisticsError,
+    refresh: refreshLogistics,
+  } = useLogisticsOrdersByOperation(operationId);
 
   useEffect(() => {
     if (!operationId) {
@@ -90,6 +107,19 @@ export const TransferPesosDetailPage: React.FC = () => {
       cancelled = true;
     };
   }, [operationId, navigate]);
+
+  useEffect(() => {
+    if (!toast) {
+      return;
+    }
+    const timeout = setTimeout(() => setToast(null), 5000);
+    return () => clearTimeout(timeout);
+  }, [toast]);
+
+  const handleOpenWizard = (order?: LogisticsOrder) => {
+    setEditingOrder(order ?? null);
+    setWizardOpen(true);
+  };
 
   const accountingSummary = useMemo(() => {
     if (!operation) {
@@ -164,6 +194,13 @@ export const TransferPesosDetailPage: React.FC = () => {
       <BalanceStripe />
 
       <main className="pt-[240px] px-6 pb-32 max-w-4xl mx-auto space-y-8">
+        {toast && (
+          <Alert
+            type={toast.type === 'success' ? 'success' : toast.type === 'error' ? 'error' : 'info'}
+            message={toast.message}
+            onClose={() => setToast(null)}
+          />
+        )}
         <header className="bg-white rounded-lg border border-gray-200 shadow-sm p-10">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="space-y-3">
@@ -303,6 +340,17 @@ export const TransferPesosDetailPage: React.FC = () => {
             </div>
           </div>
         </section>
+
+        <LinkedLogisticsOrdersSection
+          loading={logisticsLoading}
+          error={logisticsError}
+          orders={logisticsOrders}
+          balances={logisticsBalances}
+          onRetry={refreshLogistics}
+          onCreateOrder={() => handleOpenWizard()}
+          onEditOrder={(order) => handleOpenWizard(order)}
+          disableCreate={!logisticsContext}
+        />
       </main>
 
       <TransferAccountingPanel
@@ -310,6 +358,28 @@ export const TransferPesosDetailPage: React.FC = () => {
         onClose={() => setPanelOpen(false)}
         operation={operation}
         summary={accountingSummary}
+      />
+
+      <LogisticsOrderWizard
+        isOpen={isWizardOpen}
+        onClose={() => {
+          setWizardOpen(false);
+          setEditingOrder(null);
+        }}
+        operation={logisticsContext}
+        balances={logisticsBalances}
+        editingOrder={editingOrder}
+        onCompleted={(newOrder: LogisticsOrder, status: LogisticsOrderStatus) => {
+          setToast({
+            type: status === 'PROGRAMADA' ? 'success' : 'info',
+            message:
+              status === 'PROGRAMADA'
+                ? `Orden ${newOrder.orderNumber} programada correctamente.`
+                : `Borrador ${newOrder.orderNumber} guardado.`,
+          });
+          refreshLogistics();
+          setEditingOrder(null);
+        }}
       />
     </div>
   );

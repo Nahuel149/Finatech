@@ -39,6 +39,8 @@ export const DEFAULT_PENDING_RECEPTIONS_FILTERS: PendingReceptionFilters = {
   search: '',
 };
 
+const isObjectId = (value: string) => /^[0-9a-fA-F]{24}$/.test(value);
+
 const buildQueryParams = (
   filters: PendingReceptionFilters,
   page: number,
@@ -52,9 +54,30 @@ const buildQueryParams = (
   if (filters.status) params.status = filters.status;
   if (filters.dateFrom) params.dateFrom = filters.dateFrom;
   if (filters.dateTo) params.dateTo = filters.dateTo;
-  if (filters.courier) params.courierId = filters.courier.trim();
-  if (filters.contact) params.contactId = filters.contact.trim();
-  if (filters.operation) params.operationId = filters.operation.trim();
+  if (filters.courier) {
+    const courierValue = filters.courier.trim();
+    if (isObjectId(courierValue)) {
+      params.courierId = courierValue;
+    } else {
+      params.courier = courierValue;
+    }
+  }
+  if (filters.contact) {
+    const contactValue = filters.contact.trim();
+    if (isObjectId(contactValue)) {
+      params.contactId = contactValue;
+    } else {
+      params.contact = contactValue;
+    }
+  }
+  if (filters.operation) {
+    const operationValue = filters.operation.trim();
+    if (isObjectId(operationValue)) {
+      params.operationId = operationValue;
+    } else if (!filters.search) {
+      params.search = operationValue;
+    }
+  }
   if (filters.amountMin) params.amountMin = filters.amountMin;
   if (filters.amountMax) params.amountMax = filters.amountMax;
   if (filters.currency) params.currency = filters.currency.toUpperCase();

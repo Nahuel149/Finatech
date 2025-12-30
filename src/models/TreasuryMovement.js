@@ -8,7 +8,7 @@ const movementOperationSchema = new mongoose.Schema(
     },
     model: {
       type: String,
-      enum: ['Transaction', 'TransferOperation'],
+      enum: ['Transaction', 'TransferOperation', 'CurrentAccountMovement'],
     },
     code: {
       type: String,

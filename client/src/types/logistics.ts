@@ -236,6 +236,7 @@ export type LogisticsOrderStatus =
   | 'DISCREPANCIA'
   | 'CANCELADA';
 export type LogisticsOrderItemType = 'CURRENCY' | 'CHEQUE' | 'METAL' | 'OTHER';
+export type LogisticsHandoverVerificationMethod = 'OTP' | 'QR' | 'DNI';
 
 export interface LogisticsOrderItemMetadata {
   bank?: string;
@@ -280,6 +281,19 @@ export interface LogisticsEvidence {
   metadata?: LogisticsEvidenceMetadata | null;
 }
 
+export interface LogisticsEvidenceUploadFile {
+  name: string;
+  type: string;
+  size: number;
+  lastModified?: number;
+  dataUrl: string;
+}
+
+export interface LogisticsEvidenceUploadPayload {
+  type: LogisticsEvidenceType | string;
+  files: LogisticsEvidenceUploadFile[];
+}
+
 export interface LogisticsOrderTimelineEvent {
   id?: string;
   type: string;
@@ -288,6 +302,17 @@ export interface LogisticsOrderTimelineEvent {
   metadata?: Record<string, unknown> | null;
   createdAt?: string;
   createdBy?: string | null;
+}
+
+export interface LogisticsHandoverVerification {
+  method: LogisticsHandoverVerificationMethod | string | null;
+  requiresDni?: boolean;
+  valueLast4?: string | null;
+  verifiedAt?: string | null;
+  verifiedBy?: string | null;
+  verifiedMethod?: LogisticsHandoverVerificationMethod | string | null;
+  verifiedValueLast4?: string | null;
+  verifiedDni?: boolean;
 }
 
 export interface LogisticsOrderBalance {
@@ -308,7 +333,9 @@ export interface LogisticsOrderOperationAssets {
 export interface LogisticsOrderOperationContext {
   id: string;
   code: string | null;
-  type: TransactionType;
+  type: TransactionType | 'transfer';
+  operationModel?: 'Transaction' | 'TransferOperation' | string;
+  direction?: 'incoming' | 'outgoing' | null;
   clientId: string | null;
   clientName: string | null;
   clientPhone?: string | null;
@@ -360,7 +387,7 @@ export interface LogisticsOrder {
   operationId: string;
   operationCode: string | null;
   operationModel: string | null;
-  operationType: TransactionType | null;
+  operationType: TransactionType | string | null;
   operationSnapshot: LogisticsOrderSnapshotEntry[];
   client: LogisticsOrderClientSnapshot | null;
   createdAt: string;
@@ -377,6 +404,7 @@ export interface LogisticsOrder {
   completedAt: string | null;
   receiptId: string | null;
   receiptUrl: string | null;
+  handoverVerification?: LogisticsHandoverVerification | null;
   timeline: LogisticsOrderTimelineEvent[];
 }
 
@@ -406,10 +434,16 @@ export interface LogisticsOrderPayload {
   windowEnd: string;
   status: LogisticsOrderStatus;
   items: LogisticsOrderItemPayload[];
+  requestId?: string;
   notes?: string | null;
   internalNotes?: string | null;
   messengerId?: string | null;
   messenger?: string | null;
+  handoverVerification?: {
+    method?: LogisticsHandoverVerificationMethod | string;
+    value?: string;
+    requiresDni?: boolean;
+  } | null;
 }
 
 export interface LogisticsAssignedOrdersResponse {
@@ -427,6 +461,13 @@ export interface LogisticsHandoverItemPayload {
 
 export interface LogisticsItemsHandoverPayload {
   items: LogisticsHandoverItemPayload[];
+  verification?: {
+    method?: LogisticsHandoverVerificationMethod | string;
+    code?: string;
+    token?: string;
+    value?: string;
+    dniConfirmed?: boolean;
+  };
 }
 
 export interface LogisticsPartialCompletionItem {
@@ -443,9 +484,17 @@ export interface LogisticsPartialCompletionPayload {
 
 export interface LogisticsDiscrepancyPayload {
   reason: string;
-  description?: string;
+  description: string;
   evidenceIds?: string[];
 }
+
+export type LogisticsOfflineActionPayload =
+  | LogisticsItemsHandoverPayload
+  | LogisticsPartialCompletionPayload
+  | LogisticsDiscrepancyPayload
+  | LogisticsEvidenceUploadPayload
+  | { gpsLat?: number; gpsLng?: number }
+  | undefined;
 
 export type LogisticsOfflineActionType =
   | 'start-route'
@@ -460,6 +509,6 @@ export interface LogisticsOfflineAction {
   id: string;
   orderId: string;
   type: LogisticsOfflineActionType;
-  payload?: unknown;
+  payload?: LogisticsOfflineActionPayload;
   createdAt: string;
 }

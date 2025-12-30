@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import {
   LogisticsItemsHandoverPayload,
   LogisticsOrder,
@@ -48,6 +48,8 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
   const [localMessage, setLocalMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(
     null
   );
+  const [verificationCode, setVerificationCode] = useState('');
+  const [dniConfirmed, setDniConfirmed] = useState(false);
 
   useEffect(() => {
     if (!order?.items?.length) {
@@ -74,6 +76,8 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         discrepancyReason: item.discrepancyReason || '',
       }))
     );
+    setVerificationCode('');
+    setDniConfirmed(Boolean(order.handoverVerification?.verifiedDni));
   }, [order]);
 
   const totals = useMemo(() => {
@@ -90,6 +94,18 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
   }, [drafts]);
 
   const completionDisabled = saving || !drafts.length;
+  const verificationConfig = order.handoverVerification;
+  const verificationRequired = Boolean(
+    verificationConfig?.method || verificationConfig?.requiresDni
+  );
+  const verificationDone = Boolean(verificationConfig?.verifiedAt);
+  const requiresCode =
+    verificationRequired &&
+    verificationConfig?.method &&
+    verificationConfig.method !== 'DNI';
+  const requiresDni = Boolean(
+    verificationConfig?.requiresDni || verificationConfig?.method === 'DNI'
+  );
 
   const setDraftValue = (itemId: string, field: keyof ItemDraft, value: string | boolean) => {
     setDrafts((current) =>
@@ -131,6 +147,14 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
       discrepancyReason: draft.discrepancyReason || undefined,
       metadata: draft.metadata,
     })),
+    verification:
+      verificationRequired && !verificationDone
+        ? {
+            method: verificationConfig?.method || undefined,
+            code: verificationCode.trim() || undefined,
+            dniConfirmed: requiresDni ? dniConfirmed : undefined,
+          }
+        : undefined,
   });
 
   const ensureAllReceivedRecorded = () => {
@@ -147,8 +171,32 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
     return true;
   };
 
+  const ensureVerificationReady = () => {
+    if (!verificationRequired || verificationDone) {
+      return true;
+    }
+    if (requiresCode && !verificationCode.trim()) {
+      setLocalMessage({
+        type: 'error',
+        text: 'Ingresa el codigo de verificacion antes de finalizar.',
+      });
+      return false;
+    }
+    if (requiresDni && !dniConfirmed) {
+      setLocalMessage({
+        type: 'error',
+        text: 'Confirma el DNI de la contraparte antes de finalizar.',
+      });
+      return false;
+    }
+    return true;
+  };
+
   const handleCompleteTotal = async () => {
     if (!ensureAllReceivedRecorded()) {
+      return;
+    }
+    if (!ensureVerificationReady()) {
       return;
     }
     const payload = buildItemsPayload();
@@ -164,6 +212,9 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
 
   const handlePartialCompletion = async () => {
     if (!ensureAllReceivedRecorded()) {
+      return;
+    }
+    if (!ensureVerificationReady()) {
       return;
     }
     const items = drafts
@@ -396,6 +447,57 @@ export const HandoverWizard: React.FC<HandoverWizardProps> = ({
         type="info"
         message="Registrá los montos recibidos/entregados por ítem y completá los metadatos obligatorios (cheques, metales). Podés finalizar directo."
       />
+
+      {verificationRequired && (
+        <div className="rounded-xl border border-gray-200 bg-white p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-text-primary">Validacion de identidad</p>
+            {verificationDone && (
+              <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                Verificada
+              </span>
+            )}
+          </div>
+          {!verificationDone && (
+            <>
+              {verificationConfig?.method && (
+                <p className="text-xs text-gray-500">
+                  Metodo: <span className="font-semibold">{verificationConfig.method}</span>
+                </p>
+              )}
+              {requiresCode && (
+                <label className="text-xs uppercase text-gray-500 block">
+                  Codigo OTP / QR
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(event) => setVerificationCode(event.target.value)}
+                    className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary"
+                    placeholder="Ingresar codigo"
+                  />
+                </label>
+              )}
+              {requiresDni && (
+                <label className="text-xs uppercase text-gray-500 flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={dniConfirmed}
+                    onChange={(event) => setDniConfirmed(event.target.checked)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary"
+                  />
+                  DNI validado en sitio
+                </label>
+              )}
+            </>
+          )}
+          {verificationDone && verificationConfig?.verifiedValueLast4 && (
+            <p className="text-xs text-gray-500">
+              Codigo verificado (termina en {verificationConfig.verifiedValueLast4})
+            </p>
+          )}
+        </div>
+      )}
+
 
       {localMessage && (
         <Alert type={localMessage.type} message={localMessage.text} onClose={() => setLocalMessage(null)} />

@@ -8,6 +8,7 @@ import {
   ApiError,
   ClientSummary,
   TransactionType,
+  TransactionDraftPayload,
 } from '../../../../types';
 import {
   useClientsList,
@@ -83,6 +84,7 @@ export const OperationWizardStep3Page: React.FC = () => {
     saving,
     error: draftError,
     fetchDraft,
+    saveDraft,
     finalize,
     voidTransaction,
   } = useTransactionDraft(draftId);
@@ -248,14 +250,13 @@ export const OperationWizardStep3Page: React.FC = () => {
     try {
       await voidTransaction('cancelled_from_wizard');
       emitDashboardBalanceRefresh();
+      navigate('/dashboard');
     } catch (error) {
       const apiError = error as ApiError;
       setFormError(apiError.message || 'No se pudo cancelar la operación.');
       setSuccessMessage(null);
       setShowToast(true);
     }
-
-    navigate('/dashboard');
   }, [navigate, voidTransaction]);
 
   const handleOpenVoidModal = useCallback(() => {
@@ -303,13 +304,36 @@ export const OperationWizardStep3Page: React.FC = () => {
   );
 
   const handleSaveDraft = useCallback(async () => {
-    // Aquí iría la lógica para guardar el borrador sin finalizar
-    // (usando un hook o API call)
-    devLog('Guardando borrador...');
+    if (!draft?.id || !draft.clientId) {
+      setFormError('No encontramos el borrador de la operacion.');
+      setShowToast(true);
+      return;
+    }
+
     setFormError(null);
-    setSuccessMessage('Borrador guardado correctamente.');
-    setShowToast(true); // Reutilizamos el toast
-  }, []);
+
+    const payload: TransactionDraftPayload = {
+      clientId: draft.clientId,
+      type: draft.type,
+      incomingAsset: draft.incomingAsset,
+      outgoingAsset: draft.outgoingAsset,
+      apr: draft.apr,
+      marketApr: draft.marketApr,
+      incomingAmount: draft.incomingAmount,
+      outgoingAmount: draft.outgoingAmount,
+      notes: draft.notes ?? null,
+    };
+
+    try {
+      await saveDraft(payload);
+      setSuccessMessage('Borrador guardado correctamente.');
+      setShowToast(true);
+    } catch (error) {
+      const apiError = error as ApiError;
+      setFormError(apiError.message || 'No pudimos guardar el borrador.');
+      setShowToast(true);
+    }
+  }, [draft, saveDraft]);
 
   const handleConfirm = useCallback(async () => {
     if (!canConfirm || !draft?.id) {
@@ -846,3 +870,5 @@ export const OperationWizardStep3Page: React.FC = () => {
     </div>
   );
 };
+
+

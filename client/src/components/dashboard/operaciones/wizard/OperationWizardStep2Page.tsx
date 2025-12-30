@@ -142,16 +142,13 @@ export const OperationWizardStep2Page: React.FC = () => {
       if (draft.settlement?.mode === 'compound' && draft.settlement.lines.length > 0) {
         const newCompoundLines: CompoundLine[] = draft.settlement.lines.map((line, index) => {
           const numericValue = Number(line.value);
-          const isPercent = line.allocationType === 'percentage';
-          const normalizedAmount =
-            isPercent && Number.isFinite(draftBaseAmount) && draftBaseAmount > 0
-              ? (numericValue / 100) * draftBaseAmount
-              : numericValue;
+          const allocationType =
+            line.allocationType === 'percentage' ? 'percentage' : 'amount';
           return {
             id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
             method: line.method,
-            allocationType: 'amount' as const,
-            value: Number.isFinite(normalizedAmount) ? normalizedAmount : null,
+            allocationType,
+            value: Number.isFinite(numericValue) ? numericValue : null,
           };
         });
         
@@ -214,7 +211,12 @@ export const OperationWizardStep2Page: React.FC = () => {
 
     compoundLines.forEach((line) => {
       const rawValue = typeof line.value === 'number' ? line.value : Number(line.value);
-      const amount = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : 0;
+      const allocationType = line.allocationType === 'percentage' ? 'percentage' : 'amount';
+      const normalizedValue = Number.isFinite(rawValue) && rawValue > 0 ? rawValue : 0;
+      const amount =
+        allocationType === 'percentage' && safeBase > 0
+          ? (normalizedValue / 100) * safeBase
+          : normalizedValue;
       const percentage = safeBase > 0 ? (amount / safeBase) * 100 : 0;
 
       result[line.id] = {
@@ -362,7 +364,7 @@ export const OperationWizardStep2Page: React.FC = () => {
               mode: 'compound',
               lines: compoundLines.map((line) => ({
                 method: line.method,
-                allocationType: 'amount',
+                allocationType: line.allocationType,
                 value: Number(line.value),
               })),
             };

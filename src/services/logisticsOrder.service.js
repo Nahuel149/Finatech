@@ -1,19 +1,31 @@
 ﻿const mongoose = require('mongoose');
 const AppError = require('../utils/AppError');
+const crypto = require('crypto');
 const LogisticsOrder = require('../models/LogisticsOrder');
 const LogisticsOrderEvent = require('../models/LogisticsOrderEvent');
 const Transaction = require('../models/Transaction');
+const TransferOperation = require('../models/TransferOperation');
 const SequenceCounter = require('../models/SequenceCounter');
 const Client = require('../models/Client');
 const User = require('../models/User');
 const { storeEvidenceFiles } = require('../utils/evidenceStorage');
-const { reserveCourierTransitBalance, applyReceptionBalances, computeReceptionTotals } = require('./treasury.service');
+const { reserveCourierTransitBalance } = require('./treasury.service');
 const { emitNotification } = require('./notifications.service');
 
 const ORDER_PREFIX = 'OL';
 const PROGRAM_ORDER_PERMISSIONS = ['manage-treasury', 'manage-operations', 'manage-logistics'];
 const MIN_WINDOW_OFFSET_MINUTES = 30;
-const ALLOCATABLE_STATUSES = ['BORRADOR', 'PROGRAMADA'];
+const ALLOCATABLE_STATUSES = [
+  'BORRADOR',
+  'PROGRAMADA',
+  'ASIGNADA',
+  'EN_CAMINO',
+  'EN_SITIO',
+  'COMPLETADA',
+  'COMPLETADA_TOTAL',
+  'COMPLETADA_PARCIAL',
+  'DISCREPANCIA',
+];
 const LOGISTICS_ACTIVE_STATUSES = ['PROGRAMADA', 'ASIGNADA', 'EN_CAMINO', 'EN_SITIO'];
 const ROUTE_START_STATUSES = ['PROGRAMADA', 'ASIGNADA'];
 const ROUTE_ARRIVAL_STATUSES = ['EN_CAMINO'];
@@ -31,6 +43,7 @@ const SEEDED_MESSENGERS = [
   { id: 'seed-mensajero-1', name: 'Mensajero demo 1' },
   { id: 'seed-mensajero-2', name: 'Mensajero demo 2' },
 ];
+const VERIFICATION_METHODS = new Set(['OTP', 'QR', 'DNI']);
 
 const shouldCreateTreasuryReception = (order) => {
   if (!order) {
@@ -42,13 +55,14 @@ const shouldCreateTreasuryReception = (order) => {
   if (order.type === 'ENTREGA') {
     const hasPending = Array.isArray(order.items)
       ? order.items.some((item) => {
+          const tolerance = resolveItemTolerance(item);
           const pending = Number(item?.pendingAmount);
-          if (Number.isFinite(pending) && pending > ITEM_AMOUNT_TOLERANCE) {
+          if (Number.isFinite(pending) && pending > tolerance) {
             return true;
           }
           const expected = Number(item?.expectedAmount) || 0;
           const received = Number(item?.receivedAmount ?? expected);
-          return received + ITEM_AMOUNT_TOLERANCE < expected;
+          return received + tolerance < expected;
         })
       : false;
     return order.status === 'COMPLETADA_PARCIAL' || hasPending;
@@ -97,6 +111,57 @@ const roundAmount = (value) => {
 };
 
 const normalizeString = (value) => (typeof value === 'string' ? value.trim() : '');
+
+const resolveItemTolerance = (item) => {
+  const type = String(item?.assetType || '').toUpperCase();
+  return ['CHEQUE', 'METAL'].includes(type) ? 0 : ITEM_AMOUNT_TOLERANCE;
+};
+
+const normalizeVerificationMethod = (value) => {
+  const normalized = normalizeString(value).toUpperCase();
+  return VERIFICATION_METHODS.has(normalized) ? normalized : null;
+};
+
+const hashVerificationValue = (value) =>
+  crypto.createHash('sha256').update(value).digest('hex');
+
+const normalizeHandoverVerification = (payload = {}) => {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  const method = normalizeVerificationMethod(payload.method || payload.type);
+  if (!method) {
+    return null;
+  }
+  const rawValue = normalizeString(payload.value || payload.code || payload.token);
+  return {
+    method,
+    requiresDni: Boolean(payload.requiresDni || payload.requireDni || payload.dniRequired),
+    valueHash: rawValue ? hashVerificationValue(rawValue) : null,
+    valueLast4: rawValue ? rawValue.slice(-4) : null,
+    verifiedAt: null,
+    verifiedBy: null,
+    verifiedMethod: null,
+    verifiedValueLast4: null,
+    verifiedDni: false,
+  };
+};
+
+const formatHandoverVerification = (verification) => {
+  if (!verification) {
+    return null;
+  }
+  return {
+    method: verification.method || null,
+    requiresDni: Boolean(verification.requiresDni),
+    valueLast4: verification.valueLast4 || null,
+    verifiedAt: verification.verifiedAt || null,
+    verifiedBy: verification.verifiedBy ? verification.verifiedBy.toString() : null,
+    verifiedMethod: verification.verifiedMethod || null,
+    verifiedValueLast4: verification.verifiedValueLast4 || null,
+    verifiedDni: Boolean(verification.verifiedDni),
+  };
+};
 
 const buildOrderRecipients = (order, fallbackUserId = null) => {
   const target = order?.assignedTo || fallbackUserId;
@@ -279,6 +344,80 @@ const buildOperationSnapshot = (transaction) => {
   return snapshot;
 };
 
+const resolveTransferContactId = (operation) => {
+  if (!operation || !Array.isArray(operation.distributionLines) || !operation.distributionLines.length) {
+    return null;
+  }
+
+  let selectedContact = null;
+  let highestAmount = -1;
+  operation.distributionLines.forEach((line) => {
+    const amount = Number(line?.amountArs ?? line?.amount);
+    if (!Number.isFinite(amount)) {
+      return;
+    }
+    if (amount > highestAmount) {
+      highestAmount = amount;
+      selectedContact = line?.contact || null;
+    }
+  });
+
+  const fallbackContact = selectedContact || operation.distributionLines[0]?.contact;
+  if (!fallbackContact) {
+    return null;
+  }
+  if (typeof fallbackContact === 'object' && fallbackContact._id && fallbackContact._id.toString) {
+    return fallbackContact._id.toString();
+  }
+  if (typeof fallbackContact.toString === 'function') {
+    return fallbackContact.toString();
+  }
+  return String(fallbackContact || '');
+};
+
+const buildTransferOperationSnapshot = (operation) => {
+  if (!operation) {
+    return [];
+  }
+
+  const role = operation.direction === 'outgoing' ? 'outgoing' : 'incoming';
+  const snapshot = [];
+  const lines = Array.isArray(operation.distributionLines) ? operation.distributionLines : [];
+  lines.forEach((line) => {
+    const code = normalizeString(line?.method || operation.currency || 'ARS').toUpperCase();
+    const amount = Number(line?.amount);
+    if (!code || !Number.isFinite(amount)) {
+      return;
+    }
+    const existing = snapshot.find((entry) => entry.code === code);
+    if (existing) {
+      existing.amount = roundAmount(existing.amount + amount);
+    } else {
+      snapshot.push({
+        role,
+        code,
+        label: code,
+        amount: roundAmount(amount),
+      });
+    }
+  });
+
+  if (!snapshot.length) {
+    const fallbackCode = normalizeString(operation.currency || 'ARS').toUpperCase();
+    const fallbackAmount = Number(operation.totalAmount);
+    if (fallbackCode && Number.isFinite(fallbackAmount)) {
+      snapshot.push({
+        role,
+        code: fallbackCode,
+        label: fallbackCode,
+        amount: roundAmount(fallbackAmount),
+      });
+    }
+  }
+
+  return snapshot;
+};
+
 const buildTotalsMap = (snapshot) => {
   const map = new Map();
   snapshot.forEach((entry) => {
@@ -292,6 +431,20 @@ const buildTotalsMap = (snapshot) => {
     });
   });
   return map;
+};
+
+const resolveAllocatedItemAmount = (order, item) => {
+  const expectedAmount = Number(item?.expectedAmount) || 0;
+  if (!order || !item) {
+    return expectedAmount;
+  }
+  if (order.status === 'COMPLETADA_PARCIAL') {
+    const pendingAmount = Number(item.pendingAmount);
+    if (Number.isFinite(pendingAmount) && pendingAmount >= 0) {
+      return roundAmount(Math.max(0, expectedAmount - pendingAmount));
+    }
+  }
+  return expectedAmount;
 };
 
 const computeAllocatedAmounts = (orders = [], { excludeId } = {}) => {
@@ -308,7 +461,7 @@ const computeAllocatedAmounts = (orders = [], { excludeId } = {}) => {
         return;
       }
       const code = String(item.assetCode).toUpperCase();
-      const amount = Number(item.expectedAmount) || 0;
+      const amount = resolveAllocatedItemAmount(order, item);
       if (!code || !Number.isFinite(amount)) {
         return;
       }
@@ -353,16 +506,35 @@ const computeBalances = (totalsMap, allocated) =>
     };
   });
 
-const computeLiquidationPercentage = (orderType, items, transaction) => {
-  if (!transaction) {
+const computeLiquidationPercentage = (orderType, items, operation, { operationModel, totalsMap } = {}) => {
+  if (!operation) {
     return 0;
   }
+
+  if (operationModel === 'TransferOperation') {
+    const fallbackCode = String(operation.currency || '').toUpperCase();
+    const totalsIterator = totalsMap?.keys();
+    const firstCode = totalsIterator ? totalsIterator.next().value : null;
+    const referenceAsset = fallbackCode || firstCode;
+    const referenceAmount = totalsMap?.get(referenceAsset)?.total ?? Number(operation.totalAmount);
+    if (!referenceAsset || !Number.isFinite(referenceAmount) || referenceAmount <= 0) {
+      return 0;
+    }
+    const covered = items
+      .filter((item) => item.assetCode === referenceAsset)
+      .reduce((sum, item) => sum + (Number(item.expectedAmount) || 0), 0);
+    if (!covered) {
+      return 0;
+    }
+    return Math.min(100, roundAmount((covered / referenceAmount) * 100));
+  }
+
   const referenceAsset = orderType === 'RETIRO'
-    ? transaction.outgoingAsset?.code?.toUpperCase()
-    : transaction.incomingAsset?.code?.toUpperCase();
+    ? operation.outgoingAsset?.code?.toUpperCase()
+    : operation.incomingAsset?.code?.toUpperCase();
   const referenceAmount = orderType === 'RETIRO'
-    ? Number(transaction.outgoingAmount)
-    : Number(transaction.incomingAmount);
+    ? Number(operation.outgoingAmount)
+    : Number(operation.incomingAmount);
 
   if (!referenceAsset || !Number.isFinite(referenceAmount) || referenceAmount <= 0) {
     return 0;
@@ -541,6 +713,7 @@ const formatOrder = (order, { timeline = [] } = {}) => {
     completedAt: doc.completedAt || null,
     receiptId: doc.receiptId || null,
     receiptUrl: doc.receiptUrl || null,
+    handoverVerification: formatHandoverVerification(doc.handoverVerification),
     timeline: formatTimelineEvents(resolvedTimeline),
   };
 };
@@ -657,6 +830,36 @@ const generateLogisticsReceipt = (order) => {
   };
 };
 
+const summarizeEvidence = (evidence) => ({
+  id: evidence?._id ? evidence._id.toString() : null,
+  type: evidence?.type || null,
+  url: evidence?.url || null,
+  createdAt: evidence?.createdAt || null,
+  gpsLat: evidence?.metadata?.gpsLat ?? null,
+  gpsLng: evidence?.metadata?.gpsLng ?? null,
+});
+
+const buildReceiptMetadata = (order, receipt) => ({
+  receiptId: receipt?.receiptId || null,
+  receiptUrl: receipt?.receiptUrl || null,
+  items: (order.items || []).map((item) => ({
+    id: item?._id ? item._id.toString() : null,
+    assetCode: item?.assetCode || null,
+    assetType: item?.assetType || null,
+    expectedAmount: item?.expectedAmount ?? null,
+    receivedAmount: item?.receivedAmount ?? null,
+    pendingAmount: item?.pendingAmount ?? null,
+  })),
+  evidences: (order.evidences || []).map(summarizeEvidence),
+  verification: formatHandoverVerification(order.handoverVerification),
+  timestamps: {
+    startedAt: order.startedAt || null,
+    arrivedAt: order.arrivedAt || null,
+    completedAt: order.completedAt || null,
+  },
+  geofenceOK: Boolean(order.geofenceOK),
+});
+
 const ensureRequiredEvidences = (order) => {
   const missing = [];
   const evidencesByType = new Map();
@@ -694,6 +897,7 @@ const ensureItemsWithinTolerance = (order) => {
     }
     const expected = Number(item.expectedAmount) || 0;
     const received = Number(item.receivedAmount);
+    const tolerance = resolveItemTolerance(item);
     if (item.discrepancyFlag) {
       invalidItems.push(item.assetCode || item._id?.toString());
       return;
@@ -703,7 +907,7 @@ const ensureItemsWithinTolerance = (order) => {
       return;
     }
     const difference = Math.abs(expected - received);
-    if (difference > ITEM_AMOUNT_TOLERANCE) {
+    if (difference > tolerance) {
       invalidItems.push(item.assetCode || item._id?.toString());
     }
   });
@@ -780,30 +984,76 @@ const inferSettlementMediums = async (order) => {
   });
   return map;
 };
-const buildOperationSummary = (transaction, balances, clientSnapshot, clientAddresses = []) => {
-  if (!transaction) {
+const buildOperationSummary = (
+  operation,
+  balances,
+  clientSnapshot,
+  clientAddresses = [],
+  operationModel = 'Transaction'
+) => {
+  if (!operation) {
     return null;
   }
+
+  if (operationModel === 'TransferOperation') {
+    const currency = normalizeString(operation.currency || 'ARS').toUpperCase();
+    const totalAmount = Number(operation.totalAmount) || 0;
+    const incoming =
+      operation.direction === 'incoming'
+        ? {
+            code: currency,
+            label: currency,
+            amount: totalAmount,
+          }
+        : null;
+    const outgoing =
+      operation.direction === 'outgoing'
+        ? {
+            code: currency,
+            label: currency,
+            amount: totalAmount,
+          }
+        : null;
+
+    return {
+      id: operation._id.toString(),
+      code: operation.operationCode || null,
+      type: 'transfer',
+      operationModel,
+      direction: operation.direction || null,
+      clientId: clientSnapshot?.id || null,
+      clientName: clientSnapshot?.fullName || null,
+      clientPhone: clientSnapshot?.phone || null,
+      assets: {
+        incoming,
+        outgoing,
+      },
+      balances,
+      clientAddresses,
+    };
+  }
+
   return {
-    id: transaction._id.toString(),
-    code: transaction.operationCode || null,
-    type: transaction.type,
-    clientId: transaction.client ? transaction.client.toString() : null,
+    id: operation._id.toString(),
+    code: operation.operationCode || null,
+    type: operation.type,
+    operationModel,
+    clientId: operation.client ? operation.client.toString() : null,
     clientName: clientSnapshot?.fullName || null,
     clientPhone: clientSnapshot?.phone || null,
     assets: {
-      incoming: transaction.incomingAsset
+      incoming: operation.incomingAsset
         ? {
-            code: transaction.incomingAsset.code,
-            label: transaction.incomingAsset.label,
-            amount: transaction.incomingAmount,
+            code: operation.incomingAsset.code,
+            label: operation.incomingAsset.label,
+            amount: operation.incomingAmount,
           }
         : null,
-      outgoing: transaction.outgoingAsset
+      outgoing: operation.outgoingAsset
         ? {
-            code: transaction.outgoingAsset.code,
-            label: transaction.outgoingAsset.label,
-            amount: transaction.outgoingAmount,
+            code: operation.outgoingAsset.code,
+            label: operation.outgoingAsset.label,
+            amount: operation.outgoingAmount,
           }
         : null,
     },
@@ -812,33 +1062,55 @@ const buildOperationSummary = (transaction, balances, clientSnapshot, clientAddr
   };
 };
 
-const loadTransaction = async (operationId) => {
+const loadOperation = async (operationId) => {
   if (!mongoose.Types.ObjectId.isValid(operationId)) {
     throw new AppError('La operación indicada es inválida.', 404);
+  }
+  const transaction = await Transaction.findById(operationId).lean();
+  if (transaction) {
+    return { operation: transaction, model: 'Transaction' };
+  }
+  const transfer = await TransferOperation.findById(operationId).lean();
+  if (transfer) {
+    return { operation: transfer, model: 'TransferOperation' };
+  }
+  throw new AppError('No encontramos la operación vinculada.', 404);
+};
+
+const loadOperationByModel = async (operationId, operationModel) => {
+  if (!mongoose.Types.ObjectId.isValid(operationId)) {
+    throw new AppError('La operación indicada es inválida.', 404);
+  }
+  if (operationModel === 'TransferOperation') {
+    const transfer = await TransferOperation.findById(operationId).lean();
+    if (!transfer) {
+      throw new AppError('No encontramos la operación vinculada.', 404);
+    }
+    return { operation: transfer, model: 'TransferOperation' };
   }
   const transaction = await Transaction.findById(operationId).lean();
   if (!transaction) {
     throw new AppError('No encontramos la operación vinculada.', 404);
   }
-  return transaction;
+  return { operation: transaction, model: 'Transaction' };
 };
 
 const listByOperation = async (operationId) => {
-  const transaction = await loadTransaction(operationId);
+  const { operation, model } = await loadOperation(operationId);
   const orders = await LogisticsOrder.find({ operationId })
     .sort({ createdAt: -1 })
     .lean();
 
-  const snapshot = buildOperationSnapshot(transaction);
+  const snapshot =
+    model === 'TransferOperation' ? buildTransferOperationSnapshot(operation) : buildOperationSnapshot(operation);
   const totalsMap = buildTotalsMap(snapshot);
   const allocated = computeAllocatedAmounts(orders);
   const balances = computeBalances(totalsMap, allocated);
-  const { snapshot: clientSnapshot, addresses: clientAddresses } = await loadClientForLogistics(
-    transaction.client
-  );
+  const clientId = model === 'TransferOperation' ? resolveTransferContactId(operation) : operation.client;
+  const { snapshot: clientSnapshot, addresses: clientAddresses } = await loadClientForLogistics(clientId);
 
   return {
-    operation: buildOperationSummary(transaction, balances, clientSnapshot, clientAddresses),
+    operation: buildOperationSummary(operation, balances, clientSnapshot, clientAddresses, model),
     orders: orders.map(formatOrder),
     balances,
   };
@@ -872,6 +1144,7 @@ const preparePayload = (payload, user) => {
 
   const items = normalizeItems(payload.items || []);
   const status = payload.status === 'PROGRAMADA' ? 'PROGRAMADA' : 'BORRADOR';
+  const handoverVerification = normalizeHandoverVerification(payload.handoverVerification);
   if (status === 'PROGRAMADA' && !canProgramOrder(user)) {
     throw new AppError('No tenes permisos para programar ordenes logisticas.', 403);
   }
@@ -892,6 +1165,7 @@ const preparePayload = (payload, user) => {
     internalNotes: normalizeString(payload.internalNotes) || null,
     messengerId,
     messenger,
+    handoverVerification,
   };
 };
 
@@ -900,10 +1174,18 @@ const createFromOperation = async (operationId, payload, context = {}) => {
   if (!userId) {
     throw new AppError('Autenticación requerida.', 401);
   }
-  const transaction = await loadTransaction(operationId);
+  const { operation, model } = await loadOperation(operationId);
   const normalized = preparePayload(payload, context.user);
+  const requestId = normalizeString(payload.requestId || payload.clientRequestId);
+  if (requestId) {
+    const existing = await LogisticsOrder.findOne({ operationId, clientRequestId: requestId }).lean();
+    if (existing) {
+      return formatOrder(existing);
+    }
+  }
   const existingOrders = await LogisticsOrder.find({ operationId }).lean();
-  const snapshot = buildOperationSnapshot(transaction);
+  const snapshot =
+    model === 'TransferOperation' ? buildTransferOperationSnapshot(operation) : buildOperationSnapshot(operation);
   const totalsMap = buildTotalsMap(snapshot);
   const allocated = computeAllocatedAmounts(existingOrders);
   ensureCapacity(normalized.items, totalsMap, allocated);
@@ -912,9 +1194,11 @@ const createFromOperation = async (operationId, payload, context = {}) => {
   const liquidationPercentage = computeLiquidationPercentage(
     normalized.type,
     normalized.items,
-    transaction
+    operation,
+    { operationModel: model, totalsMap }
   );
-  const { snapshot: clientSnapshot } = await loadClientForLogistics(transaction.client);
+  const clientId = model === 'TransferOperation' ? resolveTransferContactId(operation) : operation.client;
+  const { snapshot: clientSnapshot } = await loadClientForLogistics(clientId);
   let messengerUser = null;
   if (normalized.messengerId) {
     messengerUser = await User.findById(normalized.messengerId).select('fullName email isMessenger').lean();
@@ -929,12 +1213,13 @@ const createFromOperation = async (operationId, payload, context = {}) => {
 
   const order = await LogisticsOrder.create({
     operationId,
-    operationModel: 'Transaction',
-    operationType: transaction.type,
-    operationCode: transaction.operationCode || transaction._id.toString(),
+    operationModel: model,
+    operationType: model === 'TransferOperation' ? operation.direction || operation.movementType || 'transfer' : operation.type,
+    operationCode: operation.operationCode || operation._id.toString(),
     orderNumber,
     orderSequence,
     orderYear,
+    clientRequestId: requestId || null,
     ...normalized,
     messengerId: messengerUser?._id || normalized.messengerId || null,
     messenger: messengerName,
@@ -945,7 +1230,7 @@ const createFromOperation = async (operationId, payload, context = {}) => {
     updatedBy: userId,
     createdByName: context.userName || context.user?.fullName || null,
     updatedByName: context.userName || context.user?.fullName || null,
-    assignedTo: messengerUser?._id || context.userId || null,
+    assignedTo: messengerUser?._id || null,
   });
 
   return formatOrder(order);
@@ -968,7 +1253,7 @@ const updateOrder = async (orderId, payload, context = {}) => {
     throw new AppError('Solo podes editar ordenes en borrador.', 409);
   }
 
-  const transaction = await loadTransaction(order.operationId);
+  const { operation, model } = await loadOperationByModel(order.operationId, order.operationModel);
   const normalized = preparePayload(payload, context.user);
   let messengerUser = null;
   if (normalized.messengerId) {
@@ -983,7 +1268,8 @@ const updateOrder = async (orderId, payload, context = {}) => {
   const messengerName = normalized.messenger || messengerUser?.fullName || messengerUser?.email || null;
 
   const existingOrders = await LogisticsOrder.find({ operationId: order.operationId }).lean();
-  const snapshot = buildOperationSnapshot(transaction);
+  const snapshot =
+    model === 'TransferOperation' ? buildTransferOperationSnapshot(operation) : buildOperationSnapshot(operation);
   const totalsMap = buildTotalsMap(snapshot);
   const allocated = computeAllocatedAmounts(existingOrders, { excludeId: order._id });
   ensureCapacity(normalized.items, totalsMap, allocated);
@@ -1001,10 +1287,16 @@ const updateOrder = async (orderId, payload, context = {}) => {
   order.items = normalized.items;
   order.notes = normalized.notes;
   order.internalNotes = normalized.internalNotes;
+  if (payload.handoverVerification !== undefined) {
+    order.handoverVerification = normalized.handoverVerification;
+  }
   order.messengerId = messengerUser?._id || normalized.messengerId || null;
   order.messenger = messengerName;
-  order.assignedTo = messengerUser?._id || userId || null;
-  order.liquidationPercentage = computeLiquidationPercentage(normalized.type, normalized.items, transaction);
+  order.assignedTo = messengerUser?._id || null;
+  order.liquidationPercentage = computeLiquidationPercentage(normalized.type, normalized.items, operation, {
+    operationModel: model,
+    totalsMap,
+  });
   order.operationSnapshot = snapshot;
   order.updatedBy = userId;
   order.updatedByName = context.userName || context.user?.fullName || null;
@@ -1212,56 +1504,186 @@ const arriveOnSite = async (orderId, payload = {}, context = {}) => {
   return formatOrder(order.toObject(), { timeline });
 };
 
+const parseMetadataDate = (value) => {
+  if (!value) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const normalizeItemMetadata = (item, payloadMetadata = {}, index) => {
+  const merged = {
+    ...(item.metadata || {}),
+    ...(payloadMetadata || {}),
+  };
+
+  if (item.assetType === 'CHEQUE') {
+    const bank = normalizeString(merged.bank);
+    const number = normalizeString(merged.number || merged.checkNumber);
+    const dueDate = parseMetadataDate(merged.dueDate);
+    if (!bank) {
+      throw new AppError(`Indica el banco del cheque #${index + 1}.`, 422);
+    }
+    if (!number) {
+      throw new AppError(`Indica el numero del cheque #${index + 1}.`, 422);
+    }
+    if (!dueDate) {
+      throw new AppError(`Indica la fecha del cheque #${index + 1}.`, 422);
+    }
+    return {
+      ...merged,
+      bank,
+      number,
+      dueDate,
+    };
+  }
+
+  if (item.assetType === 'METAL') {
+    const metalType = normalizeString(merged.metalType || merged.type);
+    const purity = normalizeString(merged.purity);
+    const weight = Number(merged.weight);
+    if (!metalType) {
+      throw new AppError(`Indica el tipo de metal del item #${index + 1}.`, 422);
+    }
+    if (!purity) {
+      throw new AppError(`Indica la pureza del item #${index + 1}.`, 422);
+    }
+    if (!Number.isFinite(weight) || weight <= 0) {
+      throw new AppError(`Indica el peso del item #${index + 1}.`, 422);
+    }
+    return {
+      ...merged,
+      metalType,
+      purity,
+      weight,
+    };
+  }
+
+  return merged;
+};
+
+const isVerificationRequired = (order) =>
+  Boolean(order?.handoverVerification?.method || order?.handoverVerification?.requiresDni);
+
+const resolveVerificationPayload = (payload = {}) => {
+  const method = normalizeVerificationMethod(payload.method);
+  const code = normalizeString(payload.code || payload.token || payload.value);
+  const dniConfirmed = Boolean(payload.dniConfirmed);
+  return { method, code, dniConfirmed };
+};
+
+const applyHandoverVerification = (order, payload = {}, context = {}) => {
+  if (!isVerificationRequired(order)) {
+    return;
+  }
+
+  if (order.handoverVerification?.verifiedAt) {
+    return;
+  }
+
+  const requiredMethod = normalizeVerificationMethod(order.handoverVerification?.method);
+  const { method, code, dniConfirmed } = resolveVerificationPayload(payload);
+
+  if (requiredMethod === 'DNI') {
+    if (!dniConfirmed) {
+      throw new AppError('Confirma el DNI de la contraparte para continuar.', 422);
+    }
+  } else if (requiredMethod) {
+    if (!method) {
+      throw new AppError('Ingresa el metodo de validacion (OTP o QR).', 422);
+    }
+    if (method !== requiredMethod) {
+      throw new AppError('El metodo de validacion no coincide con la orden.', 422);
+    }
+    if (!code) {
+      throw new AppError('Ingresa el codigo de verificacion.', 422);
+    }
+    if (!order.handoverVerification?.valueHash) {
+      throw new AppError('No hay un codigo de verificacion configurado.', 409);
+    }
+    if (hashVerificationValue(code) !== order.handoverVerification.valueHash) {
+      throw new AppError('Codigo de verificacion invalido.', 422);
+    }
+  }
+
+  if (order.handoverVerification?.requiresDni && !dniConfirmed) {
+    throw new AppError('Confirma el DNI de la contraparte para continuar.', 422);
+  }
+
+  order.handoverVerification = {
+    ...order.handoverVerification,
+    verifiedAt: new Date(),
+    verifiedBy: toObjectId(context.userId),
+    verifiedMethod: requiredMethod || method || null,
+    verifiedValueLast4: code ? code.slice(-4) : null,
+    verifiedDni: Boolean(dniConfirmed),
+  };
+};
+
+const ensureHandoverVerificationSatisfied = (order) => {
+  if (!isVerificationRequired(order)) {
+    return;
+  }
+  if (!order.handoverVerification?.verifiedAt) {
+    throw new AppError('Tenes que validar identidad antes de completar.', 422);
+  }
+  if (order.handoverVerification.requiresDni && !order.handoverVerification.verifiedDni) {
+    throw new AppError('Falta confirmar el DNI de la contraparte.', 422);
+  }
+};
+
 const validateItemUpdate = (item, payload) => {
   const received = payload.receivedAmount !== undefined ? Number(payload.receivedAmount) : null;
   const pending = payload.pendingAmount !== undefined ? Number(payload.pendingAmount) : null;
   const discrepancyFlag = Boolean(payload.discrepancyFlag);
+  const tolerance = resolveItemTolerance(item);
   if (received !== null && !Number.isFinite(received)) {
     throw new AppError('El monto recibido es inválido.', 422);
   }
   if (pending !== null && !Number.isFinite(pending)) {
     throw new AppError('El monto pendiente es inválido.', 422);
   }
-  if (!discrepancyFlag && received !== null && received > Number(item.expectedAmount) + ITEM_AMOUNT_TOLERANCE) {
+  if (!discrepancyFlag && received !== null && received > Number(item.expectedAmount) + tolerance) {
     throw new AppError('El monto recibido supera lo esperado. Marcá discrepancia para continuar.', 422);
   }
   return { received, pending, discrepancyFlag };
 };
 
-const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) => {
+const updateItemsOnHandover = async (orderId, payload = {}, context = {}) => {
   const userId = ensureAuthenticated(context);
   const { order } = await loadOrderForMessenger(orderId, userId, { includeTimeline: true });
   if (!HANDOVER_ALLOWED_STATUSES.includes(order.status)) {
-    throw new AppError('Solo podés registrar conteo cuando estás en sitio.', 409);
+    throw new AppError('Solo podes registrar conteo cuando estas en sitio.', 409);
   }
-  if (!Array.isArray(itemsPayload) || !itemsPayload.length) {
-    throw new AppError('Debés enviar al menos un ítem para actualizar.', 422);
+  const itemsPayload = Array.isArray(payload.items) ? payload.items : [];
+  if (!itemsPayload.length) {
+    throw new AppError('Debes enviar al menos un item para actualizar.', 422);
   }
 
-  itemsPayload.forEach((payload) => {
-    if (!payload || !payload.id) {
+  applyHandoverVerification(order, payload.verification || {}, context);
+
+  itemsPayload.forEach((itemPayload, index) => {
+    if (!itemPayload || !itemPayload.id) {
       return;
     }
-    const item = order.items.id(payload.id) || order.items.find((entry) => entry._id?.toString() === payload.id);
+    const item =
+      order.items.id(itemPayload.id) ||
+      order.items.find((entry) => entry._id?.toString() === itemPayload.id);
     if (!item) {
-      throw new AppError('Ítem de valor no encontrado.', 404);
+      throw new AppError('Item de valor no encontrado.', 404);
     }
-    const { received, pending, discrepancyFlag } = validateItemUpdate(item, payload);
+    const { received, pending, discrepancyFlag } = validateItemUpdate(item, itemPayload);
     if (received !== null) {
       item.receivedAmount = received;
     }
     if (pending !== null) {
       item.pendingAmount = pending;
     }
-    if (payload.discrepancyReason !== undefined) {
-      item.discrepancyReason = payload.discrepancyReason || null;
+    if (itemPayload.discrepancyReason !== undefined) {
+      item.discrepancyReason = itemPayload.discrepancyReason || null;
     }
-    if (payload.metadata) {
-      item.metadata = {
-        ...item.metadata,
-        ...payload.metadata,
-      };
-    }
+    item.metadata = normalizeItemMetadata(item, itemPayload.metadata || {}, index);
     item.discrepancyFlag = discrepancyFlag;
   });
 
@@ -1274,7 +1696,7 @@ const updateItemsOnHandover = async (orderId, itemsPayload = [], context = {}) =
     {
       type: 'ITEMS_UPDATED',
       title: 'Conteo actualizado',
-      description: 'Se registraron montos y pendientes de los ítems.',
+      description: 'Se registraron montos y pendientes de los items.',
     },
     context
   );
@@ -1344,6 +1766,7 @@ const completeTotal = async (orderId, context = {}) => {
   }
   ensureRequiredEvidences(order);
   ensureItemsWithinTolerance(order);
+  ensureHandoverVerificationSatisfied(order);
 
   order.status = 'COMPLETADA_TOTAL';
   order.completedAt = new Date();
@@ -1354,14 +1777,6 @@ const completeTotal = async (orderId, context = {}) => {
   order.updatedByName = context.userName || context.user?.fullName || null;
 
   await ensureTreasuryReceptionPending(order, context);
-  const totals = computeReceptionTotals(order);
-  if (totals?.totalsByCurrency?.length) {
-    const mediumByCurrency = await inferSettlementMediums(order);
-    await applyReceptionBalances(order, totals, { userId: context.userId }, { reverse: false, mediumByCurrency });
-    order.treasuryReceptionStatus = 'confirmed';
-    order.treasuryReception = order.treasuryReception || {};
-    order.treasuryReception.closedWithoutAccountingImpact = false;
-  }
 
   await order.save();
   await recordTimelineEvent(
@@ -1373,6 +1788,7 @@ const completeTotal = async (orderId, context = {}) => {
       metadata: {
         receiptId: receipt.receiptId,
         receiptUrl: receipt.receiptUrl,
+        receipt: buildReceiptMetadata(order, receipt),
       },
     },
     context
@@ -1398,6 +1814,7 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     throw new AppError('Debés estar en sitio para completar la orden.', 409);
   }
   ensureRequiredEvidences(order);
+  ensureHandoverVerificationSatisfied(order);
 
   const pendingItems = Array.isArray(pendingInfo.items) ? pendingInfo.items : [];
   if (!pendingItems.length) {
@@ -1430,13 +1847,14 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
     const expected = Number(item.expectedAmount) || 0;
     const received = Number(entry.receivedAmount ?? item.receivedAmount);
     const pending = Number(entry.pendingAmount);
+    const tolerance = resolveItemTolerance(item);
     if (!Number.isFinite(pending) || pending < 0) {
       throw new AppError('El monto pendiente es inválido.', 422);
     }
     if (!Number.isFinite(received) || received < 0) {
       throw new AppError('El monto recibido es inválido.', 422);
     }
-    if (pending + received > expected + ITEM_AMOUNT_TOLERANCE) {
+    if (pending + received > expected + tolerance) {
       throw new AppError('La suma recibida + pendiente excede lo esperado.', 422);
     }
     item.receivedAmount = received;
@@ -1458,14 +1876,6 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
   order.updatedByName = context.userName || context.user?.fullName || null;
 
   await ensureTreasuryReceptionPending(order, context);
-  const totals = computeReceptionTotals(order);
-  if (totals?.totalsByCurrency?.length) {
-    const mediumByCurrency = await inferSettlementMediums(order);
-    await applyReceptionBalances(order, totals, { userId: context.userId }, { reverse: false, mediumByCurrency });
-    order.treasuryReceptionStatus = 'confirmed';
-    order.treasuryReception = order.treasuryReception || {};
-    order.treasuryReception.closedWithoutAccountingImpact = false;
-  }
 
   await order.save();
   await recordTimelineEvent(
@@ -1476,6 +1886,8 @@ const completePartial = async (orderId, pendingInfo = {}, context = {}) => {
       description: pendingInfo.reason || 'Quedaron valores pendientes.',
       metadata: {
         receiptId: receipt.receiptId,
+        receiptUrl: receipt.receiptUrl,
+        receipt: buildReceiptMetadata(order, receipt),
         pendingItems: pendingItems.map((item) => item.id),
       },
     },
@@ -1503,6 +1915,26 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
   if (!reason) {
     throw new AppError('Indicá el motivo de la discrepancia.', 422);
   }
+  if (!description) {
+    throw new AppError('Indica la descripcion de la discrepancia.', 422);
+  }
+
+  const evidenceIds = Array.isArray(payload.evidenceIds)
+    ? payload.evidenceIds.filter(Boolean)
+    : [];
+  const orderEvidenceIds = (order.evidences || [])
+    .map((evidence) => (evidence?._id ? evidence._id.toString() : null))
+    .filter(Boolean);
+  const invalidEvidenceIds = evidenceIds.filter((id) => !orderEvidenceIds.includes(id));
+  if (invalidEvidenceIds.length) {
+    throw new AppError('Las evidencias indicadas no pertenecen a la orden.', 422, {
+      invalidEvidenceIds,
+    });
+  }
+  const resolvedEvidenceIds = evidenceIds.length ? evidenceIds : orderEvidenceIds;
+  if (!resolvedEvidenceIds.length) {
+    throw new AppError('Debes adjuntar evidencias antes de reportar la discrepancia.', 422);
+  }
 
   order.status = 'DISCREPANCIA';
   order.updatedBy = toObjectId(userId);
@@ -1518,7 +1950,7 @@ const reportDiscrepancy = async (orderId, payload = {}, context = {}) => {
       description: description || 'Se reportó un incidente en el handover.',
       metadata: {
         reason,
-        evidenceIds: payload.evidenceIds || [],
+        evidenceIds: resolvedEvidenceIds,
       },
     },
     context

@@ -11,6 +11,7 @@ import { Modal } from '../../../ui/Modal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { useCreateOrUpdateLogisticsOrder } from '../../../../hooks/dashboard';
+import { useUserPermissions } from '../../../../hooks';
 import { OrderWizardStep1 } from './OrderWizardStep1';
 import { OrderWizardStep2 } from './OrderWizardStep2';
 import { OrderWizardSummary } from './OrderWizardSummary';
@@ -36,6 +37,7 @@ interface LogisticsOrderWizardProps {
 const MIN_WINDOW_OFFSET_MINUTES = 30;
 const BRANCH_OPTION_ID = 'branch';
 const CUSTOM_OPTION_ID = 'custom';
+const PROGRAM_ORDER_PERMISSIONS = ['manage-treasury', 'manage-operations', 'manage-logistics'];
 
 const buildDefaultDate = (minutesFromNow: number) => {
   const date = new Date(Date.now() + minutesFromNow * 60 * 1000);
@@ -43,7 +45,29 @@ const buildDefaultDate = (minutesFromNow: number) => {
   return date.toISOString().slice(0, 16);
 };
 
+const resolveDefaultOrderType = (
+  operation: LogisticsOrderOperationContext | null
+): LogisticsOrderFormState['type'] => {
+  if (!operation) {
+    return 'RETIRO';
+  }
+  if (operation.operationModel === 'TransferOperation') {
+    return operation.direction === 'outgoing' ? 'ENTREGA' : 'RETIRO';
+  }
+  if (operation.type === 'transfer' && operation.direction) {
+    return operation.direction === 'outgoing' ? 'ENTREGA' : 'RETIRO';
+  }
+  return operation.type === 'sell' ? 'ENTREGA' : 'RETIRO';
+};
+
 const createItemId = () => `order-item-${Math.random().toString(36).slice(2, 9)}`;
+
+const createRequestId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `order-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+};
 
 const buildInitialForm = (
   operation: LogisticsOrderOperationContext | null,
@@ -53,7 +77,11 @@ const buildInitialForm = (
   const preferredFormatted = preferredAddress?.formatted || '';
   const preferredId = preferredAddress?.id || null;
   const defaultAsset = operation?.balances?.[0]?.assetCode || operation?.assets?.outgoing?.code || 'ARS';
-  const defaultOrderType: LogisticsOrderFormState['type'] = operation?.type === 'sell' ? 'ENTREGA' : 'RETIRO';
+  const defaultOrderType = resolveDefaultOrderType(operation);
+  const defaultOrigin = defaultOrderType === 'RETIRO' ? preferredFormatted : '';
+  const defaultOriginAddressId = defaultOrderType === 'RETIRO' ? preferredId : null;
+  const defaultDestination = defaultOrderType === 'ENTREGA' ? preferredFormatted : '';
+  const defaultDestinationAddressId = defaultOrderType === 'ENTREGA' ? preferredId : null;
 
   if (editingOrder) {
     return {
@@ -83,10 +111,10 @@ const buildInitialForm = (
 
   return {
     type: defaultOrderType,
-    origin: preferredFormatted,
-    originAddressId: preferredId,
-    destination: preferredFormatted,
-    destinationAddressId: preferredId,
+    origin: defaultOrigin,
+    originAddressId: defaultOriginAddressId,
+    destination: defaultDestination,
+    destinationAddressId: defaultDestinationAddressId,
     contactName: operation?.clientName || '',
     contactPhone: operation?.clientPhone || '',
     windowStart: buildDefaultDate(MIN_WINDOW_OFFSET_MINUTES + 30),
@@ -115,6 +143,16 @@ const validateStep1 = (form: LogisticsOrderFormState): FormFieldErrors => {
   }
   if (!form.destination.trim()) {
     errors.destination = 'Ingresá el destino.';
+  }
+  if (
+    form.origin.trim() &&
+    form.destination.trim() &&
+    form.origin.trim().toLowerCase() === form.destination.trim().toLowerCase()
+  ) {
+    errors.destination = 'El origen y destino no pueden ser iguales.';
+  }
+  if (form.originAddressId && form.destinationAddressId && form.originAddressId === form.destinationAddressId) {
+    errors.destination = 'Elegí direcciones distintas para origen y destino.';
   }
   if (!form.contactName.trim()) {
     errors.contactName = 'Indicá el nombre del contacto.';
@@ -200,7 +238,11 @@ const validateItems = (
   return errors;
 };
 
-const mapFormToPayload = (form: LogisticsOrderFormState, status: WizardSubmissionMode) => ({
+const mapFormToPayload = (
+  form: LogisticsOrderFormState,
+  status: WizardSubmissionMode,
+  requestId?: string | null
+) => ({
   type: form.type,
   origin: form.origin.trim(),
   destination: form.destination.trim(),
@@ -209,6 +251,7 @@ const mapFormToPayload = (form: LogisticsOrderFormState, status: WizardSubmissio
   windowStart: form.windowStart,
   windowEnd: form.windowEnd,
   status,
+  requestId: requestId || undefined,
   notes: form.notes?.trim() || null,
   internalNotes: form.internalNotes?.trim() || null,
   originAddressId: form.originAddressId,
@@ -237,6 +280,8 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   const [fieldErrors, setFieldErrors] = useState<FormFieldErrors>({});
   const [itemErrors, setItemErrors] = useState<FormItemErrors>({});
   const [bannerError, setBannerError] = useState<string | null>(null);
+  const [requestId, setRequestId] = useState<string | null>(null);
+  const [lastFailedMode, setLastFailedMode] = useState<WizardSubmissionMode | null>(null);
   const [messengerOptions, setMessengerOptions] = useState<MessengerOption[]>([]);
   const [messengersLoading, setMessengersLoading] = useState(false);
   const [addressSelection, setAddressSelection] = useState<{ origin: string; destination: string }>({
@@ -244,7 +289,12 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
     destination: '',
   });
 
+  const { permissions } = useUserPermissions({ enabled: isOpen });
   const { createOrder, updateOrder, saving, error, resetError } = useCreateOrUpdateLogisticsOrder(operation?.id);
+  const canProgram = useMemo(() => {
+    const normalized = permissions.map((perm) => perm.toLowerCase());
+    return PROGRAM_ORDER_PERMISSIONS.some((perm) => normalized.includes(perm));
+  }, [permissions]);
 
   useEffect(() => {
     if (isOpen) {
@@ -254,13 +304,14 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
       setFieldErrors({});
       setItemErrors({});
       setBannerError(null);
+      setLastFailedMode(null);
+      setRequestId(editingOrder ? null : createRequestId());
       resetError();
-      const originId = editingOrder?.originAddressId || operation?.clientAddresses?.[0]?.id || CUSTOM_OPTION_ID;
-      const destinationId =
-        editingOrder?.destinationAddressId || operation?.clientAddresses?.[0]?.id || CUSTOM_OPTION_ID;
+      const originId = editingOrder?.originAddressId || initialForm.originAddressId || CUSTOM_OPTION_ID;
+      const destinationId = editingOrder?.destinationAddressId || initialForm.destinationAddressId || CUSTOM_OPTION_ID;
       setAddressSelection({
-        origin: originId,
-        destination: destinationId,
+        origin: originId || CUSTOM_OPTION_ID,
+        destination: destinationId || CUSTOM_OPTION_ID,
       });
     }
   }, [isOpen, operation, editingOrder, resetError]);
@@ -567,6 +618,10 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
   };
 
   const handleSubmit = async (mode: WizardSubmissionMode) => {
+    if (mode === 'PROGRAMADA' && !canProgram) {
+      setBannerError('No tenés permisos para programar órdenes logísticas.');
+      return;
+    }
     const stepErrors = validateStep1(form);
     const itemValidation = validateItems(form, effectiveBalances, getAvailableAmount);
     setFieldErrors(stepErrors);
@@ -580,13 +635,15 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
     }
 
     try {
-      const payload = mapFormToPayload(form, mode);
+      const payload = mapFormToPayload(form, mode, editingOrder ? null : requestId);
       const order = editingOrder
         ? await updateOrder(editingOrder.id, payload)
         : await createOrder(payload);
+      setLastFailedMode(null);
       onCompleted(order, mode);
       onClose();
     } catch (err) {
+      setLastFailedMode(mode);
       setBannerError((err as Error).message || 'No pudimos guardar la orden.');
     }
   };
@@ -654,6 +711,18 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
           <Alert type="error" message={bannerError} onClose={() => setBannerError(null)} />
         )}
         {error && <Alert type="error" message={error.message} onClose={resetError} />}
+        {lastFailedMode && (bannerError || error) && (
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="px-3 py-1.5 text-xs font-semibold text-primary border border-primary rounded-lg"
+              onClick={() => handleSubmit(lastFailedMode)}
+              disabled={saving}
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {renderStep()}
 
@@ -702,10 +771,13 @@ export const LogisticsOrderWizard: React.FC<LogisticsOrderWizardProps> = ({
                 type="button"
                 className="px-4 py-2 bg-primary text-white rounded-lg text-sm"
                 onClick={() => handleSubmit('PROGRAMADA')}
-                disabled={saving}
+                disabled={saving || !canProgram}
               >
                 {saving ? 'Programando…' : 'Programar'}
               </button>
+              {!canProgram && (
+                <p className="text-xs text-gray-500 self-center">Solo Tesorería u Operaciones puede programar.</p>
+              )}
             </div>
           )}
         </div>

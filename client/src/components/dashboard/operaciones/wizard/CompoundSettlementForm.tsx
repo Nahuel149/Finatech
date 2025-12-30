@@ -39,8 +39,9 @@ export const CompoundSettlementForm: React.FC<Props> = ({
     <div className="bg-white border border-gray-200 rounded-lg">
       <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 hidden md:block">
         <div className="grid grid-cols-12 gap-4 text-sm font-medium text-gray-500">
-          <div className="col-span-5">Metodo</div>
-          <div className="col-span-5">Monto</div>
+          <div className="col-span-4">Metodo</div>
+          <div className="col-span-2">Tipo</div>
+          <div className="col-span-4">Monto</div>
           <div className="col-span-1">Total</div>
           <div className="col-span-1 text-right">&nbsp;</div>
         </div>
@@ -54,7 +55,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
           return (
             <div key={line.id} className="px-4 py-4">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
-                <div className="md:col-span-5">
+                <div className="md:col-span-4">
                   <select
                     value={line.method}
                     onChange={(event) => onLineChange(line.id, { method: event.target.value })}
@@ -70,7 +71,23 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   </select>
                 </div>
 
-                <div className="md:col-span-5">
+                <div className="md:col-span-2">
+                  <select
+                    value={line.allocationType}
+                    onChange={(event) =>
+                      onLineChange(line.id, {
+                        allocationType: event.target.value as 'amount' | 'percentage',
+                      })
+                    }
+                    disabled={disabled}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm"
+                  >
+                    <option value="amount">Monto</option>
+                    <option value="percentage">%</option>
+                  </select>
+                </div>
+
+                <div className="md:col-span-4">
                   <input
                     type="number"
                     min="0"
@@ -81,11 +98,10 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                       const rawValue = event.target.value;
                       onLineChange(line.id, {
                         value: rawValue === '' ? null : Number(rawValue),
-                        allocationType: 'amount',
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm placeholder:text-gray-400"
-                    placeholder="Ej: 50000"
+                    placeholder={line.allocationType === 'percentage' ? 'Ej: 40' : 'Ej: 50000'}
                   />
                 </div>
 

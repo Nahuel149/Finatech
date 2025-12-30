@@ -100,7 +100,7 @@ const arriveAtLogisticsOrder = async (req, res, next) => {
 const updateLogisticsItems = async (req, res, next) => {
   try {
     const context = buildContext(req);
-    const order = await updateItemsOnHandover(req.params.orderId, req.body?.items || [], context);
+    const order = await updateItemsOnHandover(req.params.orderId, req.body || {}, context);
     res.json(order);
   } catch (error) {
     next(error);

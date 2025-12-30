@@ -139,6 +139,54 @@ const treasuryReceptionEventSchema = new mongoose.Schema(
   { _id: true }
 );
 
+const handoverVerificationSchema = new mongoose.Schema(
+  {
+    method: {
+      type: String,
+      enum: ['OTP', 'QR', 'DNI'],
+      default: null,
+    },
+    valueHash: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    valueLast4: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    requiresDni: {
+      type: Boolean,
+      default: false,
+    },
+    verifiedAt: {
+      type: Date,
+      default: null,
+    },
+    verifiedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    verifiedMethod: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    verifiedValueLast4: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    verifiedDni: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  { _id: false }
+);
+
 const operationAssetSnapshotSchema = new mongoose.Schema(
   {
     role: {
@@ -204,6 +252,11 @@ const logisticsOrderSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 1,
+    },
+    clientRequestId: {
+      type: String,
+      trim: true,
+      default: null,
     },
     type: {
       type: String,
@@ -373,6 +426,10 @@ const logisticsOrderSchema = new mongoose.Schema(
         default: [],
       },
     },
+    handoverVerification: {
+      type: handoverVerificationSchema,
+      default: null,
+    },
   },
   {
     timestamps: true,
@@ -381,5 +438,6 @@ const logisticsOrderSchema = new mongoose.Schema(
 
 logisticsOrderSchema.index({ operationId: 1, createdAt: -1 });
 logisticsOrderSchema.index({ status: 1, windowStart: 1 });
+logisticsOrderSchema.index({ operationId: 1, clientRequestId: 1 });
 
 module.exports = mongoose.model('LogisticsOrder', logisticsOrderSchema);

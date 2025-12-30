@@ -193,6 +193,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [secondaryRate, setSecondaryRate] = useState<number>(0);
   const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(0);
   const secondaryRateEditedRef = useRef(false);
+  const marketRateEditedRef = useRef(false);
   const [aprInput, setAprInput] = useState<string>(formatRateInput(apr));
   const [marketAprInput, setMarketAprInput] = useState<string>(formatRateInput(marketApr));
   const [secondaryRateInput, setSecondaryRateInput] = useState<string>('');
@@ -210,6 +211,7 @@ export const OperationWizardStep1Page: React.FC = () => {
   }, []);
 
   const handleArsMarketRateInputChange = useCallback((value: string) => {
+    marketRateEditedRef.current = true;
     const normalized = normalizeRateInput(value);
     setMarketAprInput(normalized);
     setMarketApr(parseRateInput(normalized));
@@ -268,7 +270,7 @@ const canEditMarketRate = useMemo(
   const { data: latestMarketRate } = useLatestMarketRate({
     baseAsset: 'USD',
     quoteAsset: 'ARS',
-    enabled: canEditMarketRate,
+    enabled: true,
   });
 
   const resolveMarketRateForType = useCallback(
@@ -294,11 +296,11 @@ const canEditMarketRate = useMemo(
       setAutoMarketRate(resolvedRate);
     }
 
-    if (canEditMarketRate && !ratesAreEqual(marketApr, resolvedRate)) {
+    if (!marketRateEditedRef.current && !ratesAreEqual(marketApr, resolvedRate)) {
       setMarketApr(resolvedRate);
       setMarketAprInput(formatRateInput(resolvedRate));
     }
-  }, [autoMarketRate, latestMarketRate, marketApr, canEditMarketRate, resolveMarketRateForType]);
+  }, [autoMarketRate, latestMarketRate, marketApr, resolveMarketRateForType]);
 
   // Hydrate form with draft data when available
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -807,6 +809,10 @@ const canEditMarketRate = useMemo(
     }
     if (!Number.isFinite(incomingAmount) || incomingAmount <= 0) {
       setFormError('El monto de entrada debe ser mayor a 0.');
+      return false;
+    }
+    if (!Number.isFinite(outgoingAmount) || outgoingAmount <= 0) {
+      setFormError('El monto de salida debe ser mayor a 0.');
       return false;
     }
     if (operationType === 'buy' && incomingAssetCode === 'ARS') {

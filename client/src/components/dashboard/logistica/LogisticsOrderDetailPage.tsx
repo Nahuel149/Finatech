@@ -7,7 +7,9 @@ import { Alert } from '../../ui/Alert';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { useLogisticsOrderActions, useLogisticsOrderDetail } from '../../../hooks/dashboard';
 import {
+  LogisticsDiscrepancyPayload,
   LogisticsEvidence,
+  LogisticsEvidenceUploadPayload,
   LogisticsItemsHandoverPayload,
   LogisticsOrder,
   LogisticsPartialCompletionPayload,
@@ -53,6 +55,35 @@ const requestLocation = (): Promise<{ gpsLat?: number; gpsLng?: number }> =>
       { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
     );
   });
+
+const resolveOperationPath = (order?: LogisticsOrder | null) => {
+  if (!order?.operationId) {
+    return null;
+  }
+  if (order.operationModel === 'TransferOperation') {
+    return `/dashboard/operaciones/transfer-pesos/detalle/${order.operationId}`;
+  }
+  return `/dashboard/operaciones/detalle/${order.operationId}`;
+};
+
+const readFileAsDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error('No pudimos leer el archivo.'));
+    reader.readAsDataURL(file);
+  });
+
+const serializeEvidenceFiles = async (files: FileList) =>
+  Promise.all(
+    Array.from(files).map(async (file) => ({
+      name: file.name,
+      type: file.type || 'application/octet-stream',
+      size: file.size,
+      lastModified: file.lastModified,
+      dataUrl: await readFileAsDataUrl(file),
+    }))
+  );
 
 const describeMetadata = (item: LogisticsOrder['items'][number]) => {
   if (item.assetType === 'CHEQUE') {
@@ -175,9 +206,15 @@ export const LogisticsOrderDetailPage: React.FC = () => {
     await refresh();
   };
 
-  const handleReportDiscrepancy = async (payload: { reason: string; description?: string }) => {
+  const handleReportDiscrepancy = async (payload: LogisticsDiscrepancyPayload) => {
     if (!orderId) return;
-    await reportDiscrepancy(orderId, payload);
+    const evidenceIds = (order?.evidences || [])
+      .map((evidence) => evidence.id)
+      .filter((id): id is string => Boolean(id));
+    await reportDiscrepancy(orderId, {
+      ...payload,
+      evidenceIds: evidenceIds.length ? evidenceIds : undefined,
+    });
     setDiscrepancyModalOpen(false);
     await refresh();
   };
@@ -187,12 +224,14 @@ export const LogisticsOrderDetailPage: React.FC = () => {
     if (!orderId || !evidenceType || !evidenceFiles?.length) {
       return;
     }
-    const formData = new FormData();
-    formData.append('type', evidenceType);
-    Array.from(evidenceFiles).forEach((file) => formData.append('files', file));
     setUploadingEvidence(true);
     try {
-      await uploadEvidence(orderId, formData);
+      const files = await serializeEvidenceFiles(evidenceFiles);
+      const payload: LogisticsEvidenceUploadPayload = {
+        type: evidenceType,
+        files,
+      };
+      await uploadEvidence(orderId, payload);
       setEvidenceType('');
       setEvidenceFiles(null);
       setEvidenceError(null);
@@ -219,6 +258,7 @@ export const LogisticsOrderDetailPage: React.FC = () => {
     if (!order) {
       return [];
     }
+    const operationPath = resolveOperationPath(order);
     const actions: Array<{
       value: string;
       label: string;
@@ -226,13 +266,13 @@ export const LogisticsOrderDetailPage: React.FC = () => {
       run: () => Promise<void> | void;
     }> = [];
 
-    if (order.status === 'BORRADOR' && order.operationModel === 'Transaction' && order.operationId) {
+    if (order.status === 'BORRADOR' && operationPath) {
       actions.push({
         value: 'edit-operation',
         label: 'Completar desde operación',
         disabled: false,
         run: () => {
-          navigate(`/dashboard/operaciones/detalle/${order.operationId}`);
+          navigate(operationPath);
         },
       });
     }
@@ -309,11 +349,12 @@ export const LogisticsOrderDetailPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => {
-                  if (order?.operationModel === 'Transaction' && order.operationId) {
-                    navigate(`/dashboard/operaciones/detalle/${order.operationId}`);
+                  const path = resolveOperationPath(order || undefined);
+                  if (path) {
+                    navigate(path);
                   }
                 }}
-                disabled={!order?.operationId}
+                disabled={!resolveOperationPath(order || undefined)}
                 className="px-4 py-2 text-sm rounded-lg bg-primary text-white disabled:bg-gray-300"
               >
                 Ver operación

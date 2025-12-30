@@ -5,8 +5,10 @@ import {
   ApiError,
   LogisticsAssignedOrdersResponse,
   LogisticsDiscrepancyPayload,
+  LogisticsEvidenceUploadPayload,
   LogisticsItemsHandoverPayload,
   LogisticsOfflineAction,
+  LogisticsOfflineActionPayload,
   LogisticsOfflineActionType,
   LogisticsOrder,
   LogisticsOrderBalance,
@@ -50,6 +52,45 @@ const createActionId = () => {
     return crypto.randomUUID();
   }
   return `offline-${Date.now()}-${Math.round(Math.random() * 1e6)}`;
+};
+
+const dataUrlToBlob = (dataUrl: string, fallbackType?: string) => {
+  if (!dataUrl) {
+    return new Blob([], { type: fallbackType || 'application/octet-stream' });
+  }
+  const parts = dataUrl.split(',');
+  const metadata = parts[0] || '';
+  const base64 = parts[1] || '';
+  const match = /data:(.*?);base64/.exec(metadata);
+  const mimeType = match?.[1] || fallbackType || 'application/octet-stream';
+  if (!base64) {
+    return new Blob([], { type: mimeType });
+  }
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+};
+
+const buildEvidenceFormData = (payload: LogisticsEvidenceUploadPayload) => {
+  if (!payload?.type || !Array.isArray(payload.files) || !payload.files.length) {
+    throw new Error('Faltan archivos de evidencia.');
+  }
+  if (typeof FormData === 'undefined') {
+    throw new Error('FormData no esta disponible.');
+  }
+  const formData = new FormData();
+  formData.append('type', payload.type);
+  payload.files.forEach((file) => {
+    if (!file?.dataUrl) {
+      return;
+    }
+    const blob = dataUrlToBlob(file.dataUrl, file.type);
+    formData.append('files', blob, file.name || 'evidence');
+  });
+  return formData;
 };
 
 export const useOfflineQueue = () => {
@@ -295,43 +336,53 @@ export const useLogisticsOrderActions = () => {
   const [runningAction, setRunningAction] = useState<LogisticsOfflineActionType | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const offlineQueue = useOfflineQueue();
+  const retryingRef = useRef(false);
 
-  const executeAction = useCallback(async (action: { type: LogisticsOfflineActionType; orderId: string; payload?: any }) => {
-    switch (action.type) {
-      case 'start-route':
-        return api.startLogisticsRoute(action.orderId);
-      case 'arrive':
-        return api.arriveAtLogisticsOrder(action.orderId, action.payload || {});
-      case 'update-items':
-        return api.updateLogisticsOrderItems(action.orderId, action.payload as LogisticsItemsHandoverPayload);
-      case 'complete-total':
-        return api.completeLogisticsOrderTotal(action.orderId);
-      case 'complete-partial':
-        return api.completeLogisticsOrderPartial(
-          action.orderId,
-          action.payload as LogisticsPartialCompletionPayload
-        );
-      case 'report-discrepancy':
-        return api.reportLogisticsDiscrepancy(
-          action.orderId,
-          action.payload as LogisticsDiscrepancyPayload
-        );
-      case 'add-evidence':
-        return api.uploadLogisticsEvidence(action.orderId, action.payload?.formData as FormData);
-      default:
-        throw new Error(`Acción desconocida: ${action.type}`);
-    }
-  }, []);
+  const executeAction = useCallback(
+    async (action: {
+      type: LogisticsOfflineActionType;
+      orderId: string;
+      payload?: LogisticsOfflineActionPayload;
+    }) => {
+      switch (action.type) {
+        case 'start-route':
+          return api.startLogisticsRoute(action.orderId);
+        case 'arrive':
+          return api.arriveAtLogisticsOrder(action.orderId, action.payload || {});
+        case 'update-items':
+          return api.updateLogisticsOrderItems(action.orderId, action.payload as LogisticsItemsHandoverPayload);
+        case 'complete-total':
+          return api.completeLogisticsOrderTotal(action.orderId);
+        case 'complete-partial':
+          return api.completeLogisticsOrderPartial(
+            action.orderId,
+            action.payload as LogisticsPartialCompletionPayload
+          );
+        case 'report-discrepancy':
+          return api.reportLogisticsDiscrepancy(
+            action.orderId,
+            action.payload as LogisticsDiscrepancyPayload
+          );
+        case 'add-evidence': {
+          const formData = buildEvidenceFormData(action.payload as LogisticsEvidenceUploadPayload);
+          return api.uploadLogisticsEvidence(action.orderId, formData);
+        }
+        default:
+          throw new Error(`Acci?n desconocida: ${action.type}`);
+      }
+    },
+    []
+  );
 
   const runOrQueue = useCallback(
-    async (type: LogisticsOfflineActionType, orderId: string, payload?: LogisticsOfflineAction['payload']) => {
+    async (type: LogisticsOfflineActionType, orderId: string, payload?: LogisticsOfflineActionPayload) => {
       setRunningAction(type);
       setError(null);
       try {
         return await executeAction({ type, orderId, payload });
       } catch (err) {
         const apiErr = handleApiError(err);
-        if (type !== 'add-evidence' && shouldQueueError(apiErr)) {
+        if (shouldQueueError(apiErr)) {
           offlineQueue.enqueue({ type, orderId, payload });
         } else {
           setError(apiErr);
@@ -345,17 +396,46 @@ export const useLogisticsOrderActions = () => {
   );
 
   const retryPendingActions = useCallback(async () => {
-    for (const pending of offlineQueue.queue) {
-      try {
-        await executeAction(pending);
-        offlineQueue.remove(pending.id);
-      } catch (err) {
-        const apiErr = handleApiError(err);
-        setError(apiErr);
-        throw apiErr;
+    if (retryingRef.current) {
+      return;
+    }
+    retryingRef.current = true;
+    try {
+      for (const pending of offlineQueue.queue) {
+        try {
+          await executeAction(pending);
+          offlineQueue.remove(pending.id);
+        } catch (err) {
+          const apiErr = handleApiError(err);
+          setError(apiErr);
+          throw apiErr;
+        }
       }
+    } finally {
+      retryingRef.current = false;
     }
   }, [executeAction, offlineQueue, setError]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+    const handleOnline = () => {
+      if (!offlineQueue.queue.length) {
+        return;
+      }
+      retryPendingActions().catch(() => {
+        // errors are surfaced via hook state
+      });
+    };
+    window.addEventListener('online', handleOnline);
+    if (typeof navigator !== 'undefined' && navigator.onLine && offlineQueue.queue.length) {
+      handleOnline();
+    }
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [offlineQueue.queue.length, retryPendingActions]);
 
   return {
     pendingActions: offlineQueue.queue,
@@ -371,8 +451,8 @@ export const useLogisticsOrderActions = () => {
       runOrQueue('complete-partial', orderId, payload),
     reportDiscrepancy: (orderId: string, payload: LogisticsDiscrepancyPayload) =>
       runOrQueue('report-discrepancy', orderId, payload),
-    uploadEvidence: (orderId: string, formData: FormData) =>
-      runOrQueue('add-evidence', orderId, { formData }),
+    uploadEvidence: (orderId: string, payload: LogisticsEvidenceUploadPayload) =>
+      runOrQueue('add-evidence', orderId, payload),
     retryPendingActions,
     clearOfflineQueue: offlineQueue.clear,
   };

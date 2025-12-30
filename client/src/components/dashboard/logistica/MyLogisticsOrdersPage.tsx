@@ -71,7 +71,7 @@ const requestLocation = (): Promise<{ gpsLat?: number; gpsLng?: number }> =>
 export const MyLogisticsOrdersPage: React.FC = () => {
   const navigate = useNavigate();
   const defaultStatuses = useMemo(
-    () => Object.keys(STATUS_LABELS) as LogisticsOrderStatus[],
+    () => ['PROGRAMADA', 'ASIGNADA', 'EN_CAMINO', 'EN_SITIO'] as LogisticsOrderStatus[],
     []
   );
   const [search, setSearch] = useState('');
@@ -79,6 +79,9 @@ export const MyLogisticsOrdersPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<LogisticsOrderStatus[]>(defaultStatuses);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [windowEndFrom, setWindowEndFrom] = useState('');
+  const [windowEndTo, setWindowEndTo] = useState('');
+  const [zone, setZone] = useState('');
   const [actionMessage, setActionMessage] = useState<ApiError | null>(null);
   const [syncingOffline, setSyncingOffline] = useState(false);
 
@@ -102,9 +105,12 @@ export const MyLogisticsOrdersPage: React.FC = () => {
       type: typeFilter === 'ALL' ? undefined : typeFilter,
       dateFrom: dateFrom || undefined,
       dateTo: dateTo || undefined,
+      windowEndFrom: windowEndFrom || undefined,
+      windowEndTo: windowEndTo || undefined,
+      zone: zone || undefined,
       search: search || undefined,
     });
-  }, [statusFilter, typeFilter, dateFrom, dateTo, search, setFilters]);
+  }, [statusFilter, typeFilter, dateFrom, dateTo, windowEndFrom, windowEndTo, zone, search, setFilters]);
 
   const filteredOrders = useMemo(() => {
     if (typeFilter === 'ALL' && !search) {
@@ -266,6 +272,34 @@ export const MyLogisticsOrdersPage: React.FC = () => {
               type="date"
               value={dateTo}
               onChange={(event) => setDateTo(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary"
+            />
+          </label>
+          <label className="text-xs uppercase text-gray-500">
+            Ventana fin desde
+            <input
+              type="date"
+              value={windowEndFrom}
+              onChange={(event) => setWindowEndFrom(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary"
+            />
+          </label>
+          <label className="text-xs uppercase text-gray-500">
+            Ventana fin hasta
+            <input
+              type="date"
+              value={windowEndTo}
+              onChange={(event) => setWindowEndTo(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary"
+            />
+          </label>
+          <label className="text-xs uppercase text-gray-500">
+            Zona
+            <input
+              type="text"
+              value={zone}
+              onChange={(event) => setZone(event.target.value)}
+              placeholder="Barrio, ciudad, area"
               className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-primary focus:ring-primary"
             />
           </label>

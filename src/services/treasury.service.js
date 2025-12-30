@@ -2109,27 +2109,67 @@ const reserveCourierTransitBalance = async (order, totals, context = {}) =>
 const releaseCourierTransitBalance = async (order, totals, context = {}) =>
   adjustCourierTransitBalance(order, totals, context, -1);
 
+const buildReceptionCurrencyTotals = (items = []) => {
+  const totals = new Map();
+
+  (items || []).forEach((item) => {
+    const currency = String(item?.assetCode || item?.currency || 'ARS').toUpperCase();
+    const current = totals.get(currency) || {
+      expectedAmount: 0,
+      receivedAmount: 0,
+      pendingAmount: 0,
+    };
+    current.expectedAmount += Number(item?.expectedAmount || 0);
+    current.receivedAmount += Number(item?.receivedAmount || 0);
+    current.pendingAmount += Number(item?.pendingAmount || 0);
+    totals.set(currency, current);
+  });
+
+  return Array.from(totals.entries()).map(([currency, amounts]) => ({
+    currency,
+    expectedAmount: roundAmount(amounts.expectedAmount),
+    receivedAmount: roundAmount(amounts.receivedAmount),
+    pendingAmount: roundAmount(amounts.pendingAmount),
+  }));
+};
+
 const formatReceptionEvents = (events = []) =>
   events
     .slice()
     .sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
-    .map((event) => ({
-      id: event?._id ? event._id.toString() : null,
-      type: event?.type || null,
-      user: event?.user ? event.user.toString() : null,
-      userName: event?.userName || null,
-      timestamp: event?.createdAt || null,
-      reason: event?.reason || null,
-      notes: event?.notes || null,
-      ip: event?.ip || null,
-      userAgent: event?.userAgent || null,
-      totalsByCurrency: Array.isArray(event?.totalsByCurrency)
+    .map((event) => {
+      const userId = event?.user ? event.user.toString() : null;
+      const userName = event?.userName || null;
+      const baseMetadata =
+        event?.metadata && typeof event.metadata === 'object' && !Array.isArray(event.metadata)
+          ? event.metadata
+          : {};
+      const totalsByCurrency = Array.isArray(event?.totalsByCurrency)
         ? event.totalsByCurrency.map((entry) => ({
             currency: (entry?.currency || '').toUpperCase(),
             amount: roundAmount(entry?.amount || 0),
           }))
-        : [],
-    }));
+        : Array.isArray(baseMetadata.totalsByCurrency)
+        ? baseMetadata.totalsByCurrency
+        : [];
+
+      return {
+        id: event?._id ? event._id.toString() : null,
+        type: event?.type || null,
+        user: userId || userName ? { id: userId, fullName: userName, avatarUrl: null } : null,
+        userId,
+        userName,
+        timestamp: event?.createdAt ? new Date(event.createdAt).toISOString() : null,
+        metadata: {
+          ...baseMetadata,
+          reason: event?.reason || baseMetadata.reason || null,
+          notes: event?.notes || baseMetadata.notes || null,
+          ip: event?.ip || baseMetadata.ip || null,
+          userAgent: event?.userAgent || baseMetadata.userAgent || null,
+          totalsByCurrency,
+        },
+      };
+    });
 
 const formatReception = (order, totalsOverride) => {
   if (!order) {
@@ -2137,43 +2177,73 @@ const formatReception = (order, totalsOverride) => {
   }
   const plain = order.toObject ? order.toObject() : order;
   const totals = totalsOverride || computeReceptionTotals(plain);
+  const completedAt = plain.completedAt ? new Date(plain.completedAt).toISOString() : null;
+  const createdAt = plain.createdAt ? new Date(plain.createdAt).toISOString() : null;
+  const updatedAt = plain.updatedAt ? new Date(plain.updatedAt).toISOString() : null;
+  const courierId = plain.messengerId
+    ? plain.messengerId.toString()
+    : plain.assignedTo
+    ? plain.assignedTo.toString()
+    : null;
+  const items = Array.isArray(plain.items)
+    ? plain.items.map((item) => ({
+        id: item?._id ? item._id.toString() : null,
+        assetCode: item?.assetCode,
+        assetType: item?.assetType,
+        expectedAmount: item?.expectedAmount ?? null,
+        receivedAmount: item?.receivedAmount ?? null,
+        pendingAmount: item?.pendingAmount ?? null,
+        metadata: item?.metadata || null,
+        currency: (item?.assetCode || 'ARS').toUpperCase(),
+      }))
+    : [];
+  const currencyTotals = buildReceptionCurrencyTotals(items);
+
   return {
     id: plain._id ? plain._id.toString() : null,
+    receptionCode: plain.orderNumber || null,
     orderId: plain._id ? plain._id.toString() : null,
     orderNumber: plain.orderNumber,
     orderType: plain.type,
-    completedAt: plain.completedAt,
+    completedAt,
+    courierId,
+    courierName: plain.messenger || null,
+    courierPhone: plain.messengerPhone || null,
     courier: {
-      id: plain.assignedTo ? plain.assignedTo.toString() : null,
+      id: courierId,
       name: plain.messenger || null,
     },
     origin: plain.origin || null,
     destination: plain.destination || null,
+    originLabel: plain.origin || null,
+    destinationLabel: plain.destination || null,
     originContact: plain.clientSnapshot
       ? {
-          id: plain.clientSnapshot.id || null,
+          id:
+            plain.clientSnapshot.id ||
+            (plain.clientSnapshot._id ? plain.clientSnapshot._id.toString() : null),
           fullName: plain.clientSnapshot.fullName || plain.contactName || null,
+          shortName: plain.clientSnapshot.shortName || null,
+          contactType: plain.clientSnapshot.contactType || null,
+          status: plain.clientSnapshot.status || null,
+          email: plain.clientSnapshot.email || null,
         }
       : null,
     destinationContact: plain.contactName
       ? {
+          id: null,
           fullName: plain.contactName,
+          shortName: null,
+          contactType: null,
+          status: null,
+          email: null,
           phone: plain.contactPhone || null,
         }
       : null,
     operationId: plain.operationId ? plain.operationId.toString() : null,
     operationCode: plain.operationCode || null,
-    items: Array.isArray(plain.items)
-      ? plain.items.map((item) => ({
-          id: item?._id ? item._id.toString() : null,
-          assetCode: item?.assetCode,
-          assetType: item?.assetType,
-          expectedAmount: item?.expectedAmount ?? null,
-          receivedAmount: item?.receivedAmount ?? null,
-          pendingAmount: item?.pendingAmount ?? null,
-          metadata: item?.metadata || null,
-        }))
-      : [],
+    items,
+    currencyTotals,
     totalsByCurrency: totals.totalsByCurrency,
     totalAmount: totals.totalAmount,
     receptionStatus: plain.treasuryReceptionStatus || null,
@@ -2183,6 +2253,8 @@ const formatReception = (order, totalsOverride) => {
     ),
     evidences: Array.isArray(plain.evidences) ? plain.evidences : [],
     events: formatReceptionEvents(plain.treasuryReception?.events || []),
+    createdAt,
+    updatedAt,
   };
 };
 
@@ -2451,7 +2523,6 @@ const confirmTreasuryReception = async (receptionId, payload = {}, context = {})
     type: 'recepcion.confirmada',
     userId,
     userName: context.userName,
-    reason: payload.notes || null,
     notes: payload.notes || null,
     ip: context.ip,
     userAgent: context.userAgent,
@@ -2524,6 +2595,7 @@ const revertTreasuryReception = async (receptionId, payload = {}, context = {}) 
     userId,
     userName: context.userName,
     reason: String(payload.reason || '').trim() || null,
+    notes: payload.notes || null,
     ip: context.ip,
     userAgent: context.userAgent,
     totalsByCurrency: totals.totalsByCurrency,
@@ -2708,10 +2780,19 @@ const fetchOperationLink = async (operationPayload, { session } = {}) => {
     operationPayload.model ||
     operationPayload.source;
 
-  const normalizedType =
-    typeof typeInput === 'string' && typeInput.toLowerCase().includes('transfer')
-      ? 'TransferOperation'
-      : 'Transaction';
+  const normalizedType = (() => {
+    if (typeof typeInput !== 'string') {
+      return 'Transaction';
+    }
+    const lowered = typeInput.toLowerCase();
+    if (lowered.includes('currentaccount') || lowered.includes('current_account')) {
+      return 'CurrentAccountMovement';
+    }
+    if (lowered.includes('transfer')) {
+      return 'TransferOperation';
+    }
+    return 'Transaction';
+  })();
 
   const id =
     operationPayload.id || operationPayload.operationId || operationPayload.referenceId;
@@ -2720,7 +2801,12 @@ const fetchOperationLink = async (operationPayload, { session } = {}) => {
     throw new AppError('La operación asociada no es válida.', 400);
   }
 
-  const Model = normalizedType === 'TransferOperation' ? TransferOperation : Transaction;
+  let Model = Transaction;
+  if (normalizedType === 'TransferOperation') {
+    Model = TransferOperation;
+  } else if (normalizedType === 'CurrentAccountMovement') {
+    Model = CurrentAccountMovement;
+  }
   const document = await Model.findById(id).session(session || null);
   if (!document) {
     throw new AppError('La operación asociada no existe.', 404);
@@ -3625,24 +3711,39 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
         );
 
         if (!existing) {
-          const operationAmount =
-            operationLink.model === 'Transaction'
-              ? deriveTransactionAmountForCurrency(operationLink.document, movement.currency) ||
-                amount
-              : Number(operationLink.document.totalAmount || amount);
+          let operationAmount = amount;
+          let operationCode = null;
+          let operationType = null;
+
+          if (operationLink.model === 'Transaction') {
+            operationAmount =
+              deriveTransactionAmountForCurrency(operationLink.document, movement.currency) ||
+              amount;
+            operationCode = operationLink.document.operationCode || null;
+            operationType = operationLink.document.type || null;
+          } else if (operationLink.model === 'TransferOperation') {
+            operationAmount = Number(operationLink.document.totalAmount || amount);
+            operationCode = operationLink.document.operationCode || null;
+            operationType = operationLink.document.movementType || null;
+          } else if (operationLink.model === 'CurrentAccountMovement') {
+            operationAmount = Math.abs(Number(operationLink.document.amount || amount));
+            operationCode =
+              operationLink.document.operation?.code ||
+              operationLink.document.metadata?.operationCode ||
+              null;
+            operationType =
+              operationLink.document.operation?.type ||
+              operationLink.document.metadata?.operationType ||
+              operationLink.document.accountKey ||
+              null;
+          }
 
           movement.linkedOperations.push({
             id: operationLink.document._id,
             model: operationLink.model,
-            code:
-              operationLink.document.operationCode ||
-              operationLink.document.movementCode ||
-              null,
-            type:
-              operationLink.model === 'Transaction'
-                ? operationLink.document.type
-                : operationLink.document.movementType,
-            currency: movement.currency,
+            code: operationCode,
+            type: operationType,
+            currency: operationLink.document.currency || movement.currency,
             amount: roundAmount(operationAmount || amount),
             matchedAt: new Date(),
             matchedBy:
@@ -3682,6 +3783,41 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
               ? context.userId
               : operationLink.document.updatedBy || null;
           await operationLink.document.save({ session });
+        }
+
+        if (operationLink.model === 'CurrentAccountMovement') {
+          const contactId = operationLink.document.contact;
+          if (!movement.contact && contactId && mongoose.Types.ObjectId.isValid(contactId)) {
+            const contactFromLedger = await Client.findById(contactId).session(session);
+            if (contactFromLedger) {
+              movement.contact = contactFromLedger._id;
+              contactDoc = contactFromLedger;
+            }
+          }
+
+          if (!movement.metadata.settlementApplied && contactDoc) {
+            const settlementPayload = {
+              _id: movement._id,
+              movementType: balanceMovementType,
+              direction: movement.type,
+              currency: movement.currency,
+              totalAmount: amount,
+              distributionLines: [
+                {
+                  contact: contactDoc._id,
+                  amount,
+                },
+              ],
+              operationCode: movement.movementCode,
+            };
+
+            await applySettlement(settlementPayload, {
+              session,
+              userId: context.userId,
+            });
+
+            movement.metadata.settlementApplied = true;
+          }
         }
       }
 
@@ -3867,6 +4003,21 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
     updatedDocument,
     contactForResponse ? [contactForResponse] : []
   );
+
+  const movementDelta =
+    formattedMovement?.type === 'incoming'
+      ? -roundAmount(formattedMovement.amount || 0)
+      : roundAmount(formattedMovement?.amount || 0);
+
+  emitBalanceUpdated({
+    source: 'treasury_movement_cancelled',
+    movementId: formattedMovement?.id || null,
+    movementCode: formattedMovement?.movementCode || null,
+    balanceKey: formattedMovement?.balanceKey || null,
+    currency: formattedMovement?.currency || null,
+    delta: movementDelta,
+    emittedBy: context.userId || null,
+  });
 
   emitTreasuryMovementNotification(formattedMovement, {
     event: 'cancelled',
