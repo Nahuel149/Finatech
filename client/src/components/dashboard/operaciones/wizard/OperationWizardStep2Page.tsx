@@ -247,12 +247,25 @@ export const OperationWizardStep2Page: React.FC = () => {
 
   const operationLabel = useMemo(() => {
     if (operationType === 'buy') {
-      return `Compra ${draft?.outgoingAsset?.code ?? ''}`.trim();
+      return `Compra ${draft?.incomingAsset?.code ?? ''}`.trim();
     }
-    return `Venta ${draft?.incomingAsset?.code ?? ''}`.trim();
+    return `Venta ${draft?.outgoingAsset?.code ?? ''}`.trim();
   }, [draft?.incomingAsset?.code, draft?.outgoingAsset?.code, operationType]);
 
   const totalLabel = formatAmount(baseAmount);
+  const amountDetails = useMemo(
+    () => ([
+      {
+        label: `Recibe (${incomingCurrency})`,
+        value: formatCurrency(incomingAmount, incomingCurrency),
+      },
+      {
+        label: `Paga (${outgoingCurrency})`,
+        value: formatCurrency(outgoingAmount, outgoingCurrency),
+      },
+    ]),
+    [incomingAmount, incomingCurrency, outgoingAmount, outgoingCurrency],
+  );
 
   const progressMessage = !hasCompoundLines
     ? 'Ingresa los metodos de liquidacion con sus montos.'
@@ -566,7 +579,8 @@ export const OperationWizardStep2Page: React.FC = () => {
               <OperationSummary
                 clientName={clientName}
                 operationLabel={operationLabel}
-                  amountLabel={totalLabel}
+                amountLabel={totalLabel}
+                amountDetails={amountDetails}
                   onEdit={handleBack}
                 />
 

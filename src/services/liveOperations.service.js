@@ -244,6 +244,8 @@ const mapDraftToLive = ([draftId, payload]) => {
 };
 
 const listActiveOperations = async () => {
+  purgeDrafts();
+  const draftIds = new Set(Array.from(draftImpactsStore.keys()));
   const [transactions, transfers, treasuryMovs, logisticsOps] = await Promise.all([
     Transaction.find({ status: { $in: ACTIVE_STATES.transaction } }),
     TransferOperation.find({ status: { $in: ACTIVE_STATES.transfer } }),
@@ -252,7 +254,10 @@ const listActiveOperations = async () => {
   ]);
 
   const items = [
-    ...transactions.map(mapTransactionToLive).filter(Boolean),
+    ...transactions
+      .filter((tx) => !draftIds.has(tx._id.toString()))
+      .map(mapTransactionToLive)
+      .filter(Boolean),
     ...transfers.map(mapTransferOperationToLive).filter(Boolean),
     ...treasuryMovs.map(mapTreasuryMovementToLive).filter(Boolean),
     ...logisticsOps.map(mapLogisticsOperationToLive).filter(Boolean),

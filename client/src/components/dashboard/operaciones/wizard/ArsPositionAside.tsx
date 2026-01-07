@@ -48,13 +48,6 @@ const toArs = (amount: number, currency: string, rate?: number | null) => {
   return 0;
 };
 
-const formatRate = (value?: number | null) => {
-  if (!Number.isFinite(Number(value))) {
-    return '--';
-  }
-  return Number(value).toFixed(2);
-};
-
 const formatRateCurrency = (value?: number | null) => {
   if (!Number.isFinite(Number(value))) return '--';
   return `$${Number(value).toFixed(2)}`;
@@ -97,7 +90,18 @@ export const ArsPositionAside: React.FC<Props> = ({
     [balances],
   );
 
-  const effectiveRate = useMemo(() => liveRate?.rate ?? apr ?? null, [apr, liveRate?.rate]);
+  const marketRate = useMemo(
+    () => (Number.isFinite(Number(liveRate?.rate)) ? Number(liveRate?.rate) : null),
+    [liveRate?.rate],
+  );
+  const operationRate = useMemo(
+    () => (Number.isFinite(Number(apr)) ? Number(apr) : null),
+    [apr],
+  );
+  const effectiveRate = useMemo(
+    () => marketRate ?? operationRate ?? null,
+    [marketRate, operationRate],
+  );
 
   const deltaArs = useMemo(() => {
     const incomingArs = toArs(incomingAmount, incomingCurrency, effectiveRate);
@@ -181,8 +185,10 @@ export const ArsPositionAside: React.FC<Props> = ({
 
   const projectedArs = aggregated.cash + aggregated.transfers;
   const trend = deltaArs === 0 ? 'neutral' : deltaArs > 0 ? 'up' : 'down';
-  const buyRateDisplay = liveRate?.buyRate ?? liveRate?.rate ?? null;
-  const sellRateDisplay = liveRate?.sellRate ?? liveRate?.rate ?? null;
+  const buyRateDisplay = liveRate?.buyRate ?? marketRate ?? null;
+  const sellRateDisplay = liveRate?.sellRate ?? marketRate ?? null;
+  const operationMargin =
+    Number.isFinite(Number(currentMarginPercent)) ? Number(currentMarginPercent) : null;
 
   const currentMarginWeightArs = useMemo(() => {
     if (outgoingCurrency === 'ARS') {
@@ -234,9 +240,14 @@ export const ArsPositionAside: React.FC<Props> = ({
             />
             Tiempo real
           </span>
-          {effectiveRate && (
+          {marketRate != null && (
             <span className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
-              USD/ARS: {formatRate(effectiveRate)}
+              TC mercado: {formatRateCurrency(marketRate)}
+            </span>
+          )}
+          {operationRate != null && (
+            <span className="px-2 py-1 bg-green-50 rounded-full text-xs text-green-700">
+              TC operacion: {formatRateCurrency(operationRate)}
             </span>
           )}
           {liveStatus !== 'live' && (
@@ -254,6 +265,11 @@ export const ArsPositionAside: React.FC<Props> = ({
           {(buyRateDisplay || sellRateDisplay) && (
             <span className="px-2 py-1 bg-blue-50 rounded-full text-xs text-blue-700">
               TC compra {formatRateCurrency(buyRateDisplay)} / venta {formatRateCurrency(sellRateDisplay)}
+            </span>
+          )}
+          {operationMargin != null && (
+            <span className="px-2 py-1 bg-green-50 rounded-full text-xs text-green-700">
+              Margen operacion: {operationMargin.toFixed(2)}%
             </span>
           )}
           {combinedWeightedMargin != null && (
