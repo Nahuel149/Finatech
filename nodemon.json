@@ -1,6 +1,8 @@
 {
   "watch": ["src"],
   "ext": "js,json",
+  "delay": 1000,
+  "signal": "SIGTERM",
   "ignore": [
     "client/build",
     "client/node_modules",

@@ -3,6 +3,7 @@ const { body } = require('express-validator');
 const {
   createDraft,
   getDraft,
+  listDrafts,
   updateDraftData,
   updateSettlement,
   advanceDraftStep,
@@ -33,6 +34,8 @@ router.post(
   validateRequest,
   createDraft
 );
+
+router.get('/drafts', requireAuth, listDrafts);
 
 router.put(
   '/draft/:id',

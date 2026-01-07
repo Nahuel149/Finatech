@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ApiError,
   ClientSummary,
+  TransactionDraft,
   TransactionType,
   TransactionDraftPayload,
 } from '../../../../types';
@@ -28,6 +29,8 @@ import { NewClientModal } from '../../../clients/NewClientModal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { devLog } from '../../../../utils/devLogger';
+import { apiRequest, handleApiError } from '../../../../utils/api';
+import { Modal } from '../../../ui/Modal';
 
 const VALIDATION_ITEMS = [
   'TC dentro de limites establecidos',
@@ -119,6 +122,16 @@ const parseRateInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : Number.NaN;
 };
 
+const formatAmountInput = (value: number) => {
+  if (!Number.isFinite(value)) {
+    return '';
+  }
+  const clamped = clampToTwoDecimals(value);
+  return Number.isFinite(clamped) ? String(clamped) : '';
+};
+
+const parseAmountInput = (value: string) => parseRateInput(value);
+
 const normalizeRateInput = (value: string) => {
   const trimmed = value.trim();
   if (!trimmed) return '';
@@ -147,6 +160,28 @@ const normalizeRateInput = (value: string) => {
 
   return integerPart;
 };
+
+const normalizeAmountInput = (value: string) => normalizeRateInput(value);
+
+const formatDraftTimestamp = (value?: string | null) => {
+  if (!value) {
+    return 'Sin fecha';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Sin fecha';
+  }
+  return date.toLocaleString('es-AR', {
+    day: '2-digit',
+    month: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
+const getDraftTypeLabel = (type: TransactionType) => (type === 'sell' ? 'Venta' : 'Compra');
+
+const getDraftTypeParam = (type: TransactionType) => (type === 'sell' ? 'venta' : 'compra');
 
 const RATES_EPSILON = 1e-6;
 const ratesAreEqual = (first?: number | null, second?: number | null) => {
@@ -180,6 +215,8 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [clientId, setClientId] = useState<string>('');
   const [operationType, setOperationType] =
     useState<TransactionType>(initialOperationType);
+  const initialIncomingAmount = initialOperationType === 'buy' ? 150.0 : 125000.0;
+  const initialOutgoingAmount = initialOperationType === 'buy' ? 125000.0 : 150.0;
   const [incomingAssetCode, setIncomingAssetCode] = useState<string>(
     ASSET_DEFAULTS[initialOperationType].incoming,
   );
@@ -188,10 +225,14 @@ export const OperationWizardStep1Page: React.FC = () => {
   );
   const [apr, setApr] = useState<number>(833.5);
   const [marketApr, setMarketApr] = useState<number>(830.0);
-  const [incomingAmount, setIncomingAmount] = useState<number>(operationType === 'buy' ? 150.0 : 125000.0);
-  const [outgoingAmount, setOutgoingAmount] = useState<number>(operationType === 'buy' ? 125000.0 : 150.0);
+  const [incomingAmount, setIncomingAmount] = useState<number>(initialIncomingAmount);
+  const [incomingAmountInput, setIncomingAmountInput] = useState<string>(
+    formatAmountInput(initialIncomingAmount),
+  );
+  const [outgoingAmount, setOutgoingAmount] = useState<number>(initialOutgoingAmount);
   const [secondaryRate, setSecondaryRate] = useState<number>(0);
   const [secondaryMarketRate, setSecondaryMarketRate] = useState<number>(0);
+  const aprEditedRef = useRef(false);
   const secondaryRateEditedRef = useRef(false);
   const marketRateEditedRef = useRef(false);
   const [aprInput, setAprInput] = useState<string>(formatRateInput(apr));
@@ -204,7 +245,14 @@ export const OperationWizardStep1Page: React.FC = () => {
   const [isNewClientModalOpen, setIsNewClientModalOpen] = useState(false);
   const [editClientId, setEditClientId] = useState<string | null>(null);
   const [selectedClientSnapshot, setSelectedClientSnapshot] = useState<ClientSummary | null>(null);
+  const [drafts, setDrafts] = useState<TransactionDraft[]>([]);
+  const [draftsLoading, setDraftsLoading] = useState(false);
+  const [draftsLoaded, setDraftsLoaded] = useState(false);
+  const [draftsError, setDraftsError] = useState<string | null>(null);
+  const [draftsModalOpen, setDraftsModalOpen] = useState(false);
+  const [deletingDraftId, setDeletingDraftId] = useState<string | null>(null);
   const handleArsRateInputChange = useCallback((value: string) => {
+    aprEditedRef.current = true;
     const normalized = normalizeRateInput(value);
     setAprInput(normalized);
     setApr(parseRateInput(normalized));
@@ -227,6 +275,11 @@ export const OperationWizardStep1Page: React.FC = () => {
     setSecondaryMarketRateInput(normalized);
     setSecondaryMarketRate(parseRateInput(normalized));
   }, []);
+  const handleIncomingAmountInputChange = useCallback((value: string) => {
+    const normalized = normalizeAmountInput(value);
+    setIncomingAmountInput(normalized);
+    setIncomingAmount(parseAmountInput(normalized));
+  }, []);
 
   const {
     clients,
@@ -248,7 +301,78 @@ export const OperationWizardStep1Page: React.FC = () => {
     error: draftError,
     saveDraft,
   } = useTransactionDraft(draftId);
-  
+
+  const fetchDrafts = useCallback(async () => {
+    setDraftsLoading(true);
+    setDraftsError(null);
+    try {
+      const response = await apiRequest<{ items: TransactionDraft[] }>(
+        '/api/transactions/drafts?limit=20',
+        { method: 'GET' }
+      );
+      const items = Array.isArray(response.items) ? response.items : [];
+      const filtered = draftId ? items.filter((item) => item.id !== draftId) : items;
+      setDrafts(filtered);
+    } catch (error) {
+      const apiError = handleApiError(error);
+      setDraftsError(apiError.message || 'No se pudieron cargar los borradores.');
+    } finally {
+      setDraftsLoading(false);
+      setDraftsLoaded(true);
+    }
+  }, [draftId]);
+
+  useEffect(() => {
+    fetchDrafts();
+  }, [fetchDrafts]);
+
+  const handleOpenDrafts = useCallback(() => {
+    setDraftsModalOpen(true);
+    if (!draftsLoaded && !draftsLoading) {
+      fetchDrafts();
+    }
+  }, [draftsLoaded, draftsLoading, fetchDrafts]);
+
+  const handleSelectDraft = useCallback(
+    (selectedDraft: TransactionDraft) => {
+      setDraftsModalOpen(false);
+      const typeParam = getDraftTypeParam(selectedDraft.type);
+      navigate(`/dashboard/operaciones/nueva?draftId=${selectedDraft.id}&tipo=${typeParam}`);
+    },
+    [navigate],
+  );
+
+  const handleDeleteDraft = useCallback(
+    async (selectedDraft: TransactionDraft) => {
+      if (deletingDraftId) {
+        return;
+      }
+      const clientLabel =
+        selectedDraft.client?.shortName ||
+        selectedDraft.client?.fullName ||
+        'este borrador';
+      const confirmDelete = window.confirm(`¿Eliminar ${clientLabel}?`);
+      if (!confirmDelete) {
+        return;
+      }
+      setDeletingDraftId(selectedDraft.id);
+      setDraftsError(null);
+      try {
+        await apiRequest(`/api/transactions/${selectedDraft.id}/void`, {
+          method: 'POST',
+          body: { reason: 'Borrador eliminado desde el listado.' },
+        });
+        setDrafts((prev) => prev.filter((item) => item.id !== selectedDraft.id));
+      } catch (error) {
+        const apiError = handleApiError(error);
+        setDraftsError(apiError.message || 'No se pudo eliminar el borrador.');
+      } finally {
+        setDeletingDraftId(null);
+      }
+    },
+    [deletingDraftId],
+  );
+
 
   
   const { permissions } = useUserPermissions();
@@ -304,7 +428,13 @@ const canEditMarketRate = useMemo(
       setMarketApr(resolvedRate);
       setMarketAprInput(formatRateInput(resolvedRate));
     }
-  }, [autoMarketRate, latestMarketRate, marketApr, resolveMarketRateForType]);
+
+    // Keep operation rate aligned with market rate until the user edits it.
+    if (!aprEditedRef.current && !ratesAreEqual(apr, resolvedRate)) {
+      setApr(resolvedRate);
+      setAprInput(formatRateInput(resolvedRate));
+    }
+  }, [apr, autoMarketRate, latestMarketRate, marketApr, resolveMarketRateForType]);
   const hasMarketRate = useMemo(() => {
     const resolvedRate = resolveMarketRateForType(latestMarketRate || undefined);
     return Number.isFinite(resolvedRate ?? Number.NaN);
@@ -355,6 +485,7 @@ const canEditMarketRate = useMemo(
     if (draftApr !== apr) {
       setApr(draftApr);
       setAprInput(formatRateInput(draftApr));
+      aprEditedRef.current = Number.isFinite(draftApr);
     }
     if (!ratesAreEqual(draftMarketApr, marketApr)) {
       setMarketApr(draftMarketApr);
@@ -365,6 +496,7 @@ const canEditMarketRate = useMemo(
     }
     if (draftIncomingAmount !== incomingAmount) {
       setIncomingAmount(draftIncomingAmount);
+      setIncomingAmountInput(formatAmountInput(draftIncomingAmount));
     }
       const metadata = parseNotes(draft.notes);
       if (metadata) {
@@ -477,6 +609,7 @@ const canEditMarketRate = useMemo(
       setOutgoingAssetCode(ASSET_DEFAULTS.sell.outgoing);
       // Reset amounts for sell operation
       setIncomingAmount(125000.0); // ARS amount
+      setIncomingAmountInput(formatAmountInput(125000.0));
       setOutgoingAmount(150.0); // USD amount
     } else if (presetType === 'compra') {
       setOperationType('buy');
@@ -484,6 +617,7 @@ const canEditMarketRate = useMemo(
       setOutgoingAssetCode(ASSET_DEFAULTS.buy.outgoing);
       // Reset amounts for buy operation
       setIncomingAmount(150.0); // USD amount
+      setIncomingAmountInput(formatAmountInput(150.0));
       setOutgoingAmount(125000.0); // ARS amount
     }
   }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
@@ -886,10 +1020,11 @@ const canEditMarketRate = useMemo(
     setIsExecuting(true);
     try {
       await executeSave(false);
+      await fetchDrafts();
     } finally {
       setIsExecuting(false);
     }
-  }, [executeSave, isExecuting, validateForm]);
+  }, [executeSave, fetchDrafts, isExecuting, validateForm]);
   
   const handleContinue = useCallback(async () => {
     if (isExecuting) return;
@@ -910,6 +1045,7 @@ const canEditMarketRate = useMemo(
   const handleCancel = useCallback(() => navigate('/dashboard'), [navigate]);
 
   const busy = draftLoading || saving || isExecuting;
+  const draftsAvailable = draftsLoaded && drafts.length > 0;
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -1016,8 +1152,8 @@ const canEditMarketRate = useMemo(
                 disablePrimaryRates={!isUsdPair && showSecondaryRates}
               />
               <AmountSection
-                enterAmount={incomingAmount}
-                onEnterAmountChange={setIncomingAmount}
+                enterAmount={incomingAmountInput}
+                onEnterAmountChange={handleIncomingAmountInputChange}
                 exitAmount={outgoingAmount}
                 enterLabel={amountLabels.enterLabel}
                 exitLabel={amountLabels.exitLabel}
@@ -1038,10 +1174,86 @@ const canEditMarketRate = useMemo(
             onSaveDraft={handleSaveDraft}
             onCancel={handleCancel}
             onContinue={handleContinue}
+            onViewDrafts={handleOpenDrafts}
             saving={busy}
             disableContinue={busy}
             disableSave={busy}
+            viewDraftsDisabled={!draftsAvailable || busy}
+            viewDraftsLoading={draftsLoading}
           />
+
+          <Modal
+            isOpen={draftsModalOpen}
+            onClose={() => setDraftsModalOpen(false)}
+            title="Borradores guardados"
+            size="lg"
+          >
+            {draftsLoading && (
+              <div className="flex items-center text-sm text-gray-500">
+                <i className="fa-solid fa-circle-notch mr-2 animate-spin" />
+                Cargando borradores...
+              </div>
+            )}
+            {!draftsLoading && draftsError && (
+              <div className="text-sm text-danger">{draftsError}</div>
+            )}
+            {!draftsLoading && !draftsError && drafts.length === 0 && (
+              <div className="text-sm text-gray-500">No hay borradores disponibles.</div>
+            )}
+            {!draftsLoading && !draftsError && drafts.length > 0 && (
+              <div className="space-y-3">
+                {drafts.map((draftItem) => {
+                  const clientLabel =
+                    draftItem.client?.shortName ||
+                    draftItem.client?.fullName ||
+                    'Cliente sin nombre';
+                  const typeLabel = getDraftTypeLabel(draftItem.type);
+                  const stepLabel = `Paso ${draftItem.currentStep || 1}`;
+                  const statusLabel = draftItem.status === 'pending' ? 'Pendiente' : 'Borrador';
+                  const isDeleting = deletingDraftId === draftItem.id;
+                  return (
+                    <div
+                      key={draftItem.id}
+                      className="flex items-center justify-between border border-gray-200 rounded-lg hover:border-primary hover:bg-blue-50 transition-colors focus-within:border-primary"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSelectDraft(draftItem)}
+                        className="flex-1 text-left px-4 py-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                          <div>
+                            <div className="text-sm font-semibold text-text-primary">{clientLabel}</div>
+                            <div className="text-xs text-gray-500">
+                              {typeLabel} · {stepLabel} · {statusLabel}
+                            </div>
+                          </div>
+                          <div className="text-xs text-gray-500">
+                            {formatDraftTimestamp(draftItem.updatedAt)}
+                          </div>
+                        </div>
+                      </button>
+                      <div className="pr-3">
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDraft(draftItem)}
+                          disabled={isDeleting}
+                          className="h-8 w-8 flex items-center justify-center rounded-full border border-gray-200 text-gray-500 hover:text-danger hover:border-danger transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                          title="Eliminar borrador"
+                        >
+                          {isDeleting ? (
+                            <i className="fa-solid fa-circle-notch animate-spin" />
+                          ) : (
+                            <i className="fa-solid fa-trash" />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Modal>
         </section>
       </main>
 

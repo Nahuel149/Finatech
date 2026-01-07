@@ -8,6 +8,7 @@ const {
   updateTransactionSettlement,
   advanceTransactionStep,
   finalizeTransaction,
+  listTransactionDrafts,
   voidTransaction,
 } = require('../services/transaction.service');
 
@@ -50,6 +51,31 @@ const getDraft = async (req, res, next) => {
     }
     const payload = await buildWizardDraftResponse(transaction);
     res.json(payload);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const listDrafts = async (req, res, next) => {
+  try {
+    const userId = req.user?._id || req.user?.id;
+    if (!userId) {
+      throw new AppError('Autenticación requerida', 401);
+    }
+
+    const permissions = Array.isArray(req.user?.permissions)
+      ? req.user.permissions.map((perm) => (typeof perm === 'string' ? perm.toLowerCase() : perm))
+      : [];
+    const canViewAll = permissions.some((perm) => ['manage-operations', 'manage-treasury'].includes(perm));
+
+    const { limit } = req.query;
+    const items = await listTransactionDrafts({
+      userId,
+      bypassOwnership: canViewAll,
+      limit: limit ? Number(limit) : undefined,
+    });
+
+    res.json({ items });
   } catch (error) {
     next(error);
   }
@@ -131,6 +157,11 @@ const voidDraft = async (req, res, next) => {
     const context = {
       userId: req.user?._id || req.user?.id || null,
     };
+    const permissions = Array.isArray(req.user?.permissions)
+      ? req.user.permissions.map((perm) => (typeof perm === 'string' ? perm.toLowerCase() : perm))
+      : [];
+    const canViewAll = permissions.some((perm) => ['manage-operations', 'manage-treasury'].includes(perm));
+    context.bypassOwnership = canViewAll;
     const transaction = await voidTransaction(id, reason, context);
     const payload = await buildWizardDraftResponse(transaction);
     res.json(payload);
@@ -142,6 +173,7 @@ const voidDraft = async (req, res, next) => {
 module.exports = {
   createDraft,
   getDraft,
+  listDrafts,
   updateDraftData,
   updateSettlement,
   advanceDraftStep,

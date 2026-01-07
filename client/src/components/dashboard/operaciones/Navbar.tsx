@@ -304,6 +304,12 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     navigate('/dashboard/perfil', { replace: false });
   };
 
+  const handleHardRefresh = () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('_refresh', Date.now().toString());
+    window.location.replace(url.toString());
+  };
+
   return (
     <>
       {/* Mobile header */}
@@ -327,6 +333,15 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 onClick={openSearchOnMobile}
               >
                 <i className="fa-solid fa-search text-lg" />
+              </button>
+              <button
+                type="button"
+                className="inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
+                aria-label="Recargar"
+                title="Recargar"
+                onClick={handleHardRefresh}
+              >
+                <i className="fa-solid fa-rotate-right text-lg" />
               </button>
               <div ref={mobileNotificationsRef} className="relative">
                 <button
@@ -551,6 +566,15 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             </div>
 
             <div id="navbar-right" className="flex items-center space-x-4">
+              <button
+                type="button"
+                className="relative p-2 text-text-primary hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
+                aria-label="Recargar"
+                title="Recargar"
+                onClick={handleHardRefresh}
+              >
+                <i className="fa-solid fa-rotate-right text-lg" />
+              </button>
               <div ref={desktopNotificationsRef} className="relative">
                 <button
                   type="button"

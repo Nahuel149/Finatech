@@ -11,6 +11,9 @@ interface Props {
   backLabel?: string;
   continueLabel?: string;
   extraActions?: React.ReactNode;
+  onViewDrafts?: () => void;
+  viewDraftsDisabled?: boolean;
+  viewDraftsLoading?: boolean;
 }
 
 export const WizardActions: React.FC<Props> = ({
@@ -24,6 +27,9 @@ export const WizardActions: React.FC<Props> = ({
   backLabel = 'Atrás',
   continueLabel = 'Continuar',
   extraActions,
+  onViewDrafts,
+  viewDraftsDisabled = false,
+  viewDraftsLoading = false,
 }) => (
   <div
     id="step-1-actions"
@@ -52,6 +58,27 @@ export const WizardActions: React.FC<Props> = ({
           <i className="fa-solid fa-floppy-disk mr-2" />
           Guardar borrador
         </button>
+        {onViewDrafts && (
+          <button
+            type="button"
+            onClick={onViewDrafts}
+            className="h-12 px-6 text-sm font-medium bg-white border border-gray-300 text-gray-700 rounded-lg shadow-sm hover:bg-gray-50 hover:border-primary hover:text-primary transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto flex-1"
+            disabled={saving || viewDraftsDisabled}
+            title="Abrir borradores guardados"
+          >
+            {viewDraftsLoading ? (
+              <>
+                Cargando
+                <i className="fa-solid fa-circle-notch ml-2 animate-spin" />
+              </>
+            ) : (
+              <>
+                <i className="fa-solid fa-folder-open mr-2" />
+                Ver borradores
+              </>
+            )}
+          </button>
+        )}
         <button
           type="button"
           onClick={onCancel}

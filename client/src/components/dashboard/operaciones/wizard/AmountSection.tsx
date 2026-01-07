@@ -1,8 +1,8 @@
 import React from 'react';
 
 interface Props {
-  enterAmount: number;
-  onEnterAmountChange: (value: number) => void;
+  enterAmount: string;
+  onEnterAmountChange: (value: string) => void;
   exitAmount: number;
   enterLabel: string;
   exitLabel: string;
@@ -33,12 +33,8 @@ export const AmountSection: React.FC<Props> = ({
           <input
             type="text"
             inputMode="decimal"
-            value={numberToInputValue(enterAmount)}
-            onChange={(event) => {
-              const next = event.target.value.replace(',', '.');
-              const parsed = parseFloat(next);
-              onEnterAmountChange(Number.isFinite(parsed) ? parseFloat(parsed.toFixed(2)) : NaN);
-            }}
+            value={enterAmount}
+            onChange={(event) => onEnterAmountChange(event.target.value)}
             onFocus={handleFocus}
             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
             disabled={disabled}

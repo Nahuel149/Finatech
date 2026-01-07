@@ -916,6 +916,7 @@ const voidTransaction = async (id, reason = '', context = {}) => {
   }
 
   const userId = context.userId;
+  const bypassOwnership = Boolean(context.bypassOwnership);
   if (!userId) {
     throw new Error('User ID is required to void');
   }
@@ -926,7 +927,8 @@ const voidTransaction = async (id, reason = '', context = {}) => {
 
   try {
     await session.withTransaction(async () => {
-      const transaction = await Transaction.findOne({ _id: id, user: userId }).session(session);
+      const query = bypassOwnership ? { _id: id } : { _id: id, user: userId };
+      const transaction = await Transaction.findOne(query).session(session);
       if (!transaction) {
         throw new Error('Transaction not found');
       }
@@ -1010,12 +1012,40 @@ const voidTransaction = async (id, reason = '', context = {}) => {
   return formatted;
 };
 
+const listTransactionDrafts = async ({ userId, bypassOwnership = false, limit = 20 } = {}) => {
+  if (!bypassOwnership && !userId) {
+    throw new Error('User ID is required to list drafts');
+  }
+
+  const sanitizedLimit = Math.min(Math.max(Number(limit) || 20, 1), 50);
+  const query = {
+    status: { $in: ['draft', 'pending'] },
+  };
+
+  if (!bypassOwnership) {
+    query.user = userId;
+  }
+
+  const transactions = await Transaction.find(query)
+    .sort({ updatedAt: -1 })
+    .limit(sanitizedLimit)
+    .lean();
+
+  const formatted = transactions.map((transaction) => formatTransaction(transaction));
+  const enriched = await Promise.all(
+    formatted.map((transaction) => buildWizardDraftResponse(transaction))
+  );
+
+  return enriched.filter(Boolean);
+};
+
 module.exports = {
   calculateMarginPercentage,
   createTransactionDraft,
   getTransactionDraft,
   buildWizardDraftResponse,
   updateTransactionDraft,
+  listTransactionDrafts,
   updateTransactionSettlement,
   advanceTransactionStep,
   finalizeTransaction,
