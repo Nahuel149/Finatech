@@ -710,7 +710,7 @@ const getGlobalBalancesOverview = async (query = {}) => {
     {
       $addFields: {
         overviewAccountKey: {
-          $ifNull: ['$counterpart.key', { $ifNull: ['$accountKey', 'general'] }],
+          $ifNull: ['$accountKey', 'general'],
         },
       },
     },

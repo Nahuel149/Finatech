@@ -100,39 +100,6 @@ const mapSettlementMethodToMovementType = (method) => {
 
 const SUPPORTED_TREASURY_CURRENCIES = new Set(['ARS', 'USD']);
 
-const resolveReconciliationCurrency = (transaction) => {
-  const normalizedType = String(transaction?.type || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
-  const incoming = transaction?.incomingAsset?.code
-    ? String(transaction.incomingAsset.code).toUpperCase()
-    : null;
-  const outgoing = transaction?.outgoingAsset?.code
-    ? String(transaction.outgoingAsset.code).toUpperCase()
-    : null;
-
-  if (normalizedType === 'sell') {
-    if (outgoing && outgoing !== 'ARS') {
-      return outgoing;
-    }
-    if (incoming && incoming !== 'ARS') {
-      return incoming;
-    }
-  } else {
-    if (incoming && incoming !== 'ARS') {
-      return incoming;
-    }
-    if (outgoing && outgoing !== 'ARS') {
-      return outgoing;
-    }
-  }
-  if (incoming) {
-    return incoming;
-  }
-  if (outgoing) {
-    return outgoing;
-  }
-  return 'ARS';
-};
-
 const mapMovementTypeToMedium = (movementType) => {
   if (movementType === 'cash') {
     return 'cash';
@@ -157,8 +124,6 @@ const buildPlannedTreasuryMovements = (transaction) => {
   const incomingAmount = roundAmount(transaction.incomingAmount);
   const outgoingAmount = roundAmount(transaction.outgoingAmount);
   const movementAt = transaction.completedAt ? new Date(transaction.completedAt) : new Date();
-  const reconciliationCurrency = resolveReconciliationCurrency(transaction);
-
   const movements = [];
 
   const pushMovement = (movement) => {
@@ -168,7 +133,7 @@ const buildPlannedTreasuryMovements = (transaction) => {
     movements.push({
       ...movement,
       movementAt,
-      autoCompensate: movement.currency !== reconciliationCurrency,
+      autoCompensate: false,
     });
   };
 

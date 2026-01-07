@@ -6,7 +6,6 @@ import {
   GlobalBalancesFilters,
   FilterValues,
 } from './GlobalBalancesFilters';
-import { GlobalBalancesSummaryCards } from './GlobalBalancesSummaryCards';
 import { GlobalBalancesTable } from './GlobalBalancesTable';
 import {
   TreasuryBalanceState,
@@ -387,14 +386,6 @@ export const GlobalBalancesPage: React.FC = () => {
           onClearFilters={handleClearFilters}
           onToggleAdvanced={() => setShowAdvancedFilters((prev) => !prev)}
           onApplyAdvanced={handleApplyAdvanced}
-        />
-
-        <GlobalBalancesSummaryCards
-          cards={overview.summaryCards}
-          loading={loading}
-          onSelectCard={overview.summaryCards.length ? handleSelectAccount : undefined}
-          activeAccountKey={filters.accountKey || null}
-          onRefresh={refresh}
         />
 
         <RecentOperationsTable variant="compact" limit={5} />
