@@ -63,15 +63,9 @@ const listDrafts = async (req, res, next) => {
       throw new AppError('Autenticación requerida', 401);
     }
 
-    const permissions = Array.isArray(req.user?.permissions)
-      ? req.user.permissions.map((perm) => (typeof perm === 'string' ? perm.toLowerCase() : perm))
-      : [];
-    const canViewAll = permissions.some((perm) => ['manage-operations', 'manage-treasury'].includes(perm));
-
     const { limit } = req.query;
     const items = await listTransactionDrafts({
       userId,
-      bypassOwnership: canViewAll,
       limit: limit ? Number(limit) : undefined,
     });
 
