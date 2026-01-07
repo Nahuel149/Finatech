@@ -27,7 +27,7 @@ export const OperationSummary: React.FC<OperationSummaryProps> = ({
           </div>
           <div className="border-t border-gray-200 pt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <div className="text-sm text-gray-600">Operaci?n</div>
+              <div className="text-sm text-gray-600">Operacion</div>
               <div className="font-medium text-text-primary text-base">{operationLabel}</div>
             </div>
             {hasDetails

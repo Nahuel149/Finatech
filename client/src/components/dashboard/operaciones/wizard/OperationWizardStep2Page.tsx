@@ -623,11 +623,13 @@ export const OperationWizardStep2Page: React.FC = () => {
               </div>
 
               <ArsPositionAside
+                draftId={draft?.id ?? null}
                 incomingAmount={incomingAmount}
                 outgoingAmount={outgoingAmount}
                 incomingCurrency={incomingCurrency}
                 outgoingCurrency={outgoingCurrency}
                 apr={draft?.apr ?? null}
+                marketApr={draft?.marketApr ?? null}
                 currentMarginPercent={draft?.marginPercentage ?? null}
                 settlementMode={settlementMode}
                 simpleMethod={simpleMethod}

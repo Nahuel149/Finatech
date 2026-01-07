@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   useDashboardBalances,
-  useLatestMarketRate,
   useLiveOperations,
 } from '../../../../hooks';
 import { CompoundComputed, CompoundLine } from './CompoundSettlementForm';
@@ -12,7 +11,9 @@ interface Props {
   outgoingAmount: number;
   incomingCurrency: string;
   outgoingCurrency: string;
+  draftId?: string | null;
   apr?: number | null;
+  marketApr?: number | null;
   currentMarginPercent?: number | null;
   settlementMode: 'simple' | 'compound';
   simpleMethod: string;
@@ -41,13 +42,6 @@ const formatUsd = (value: number) =>
       })
     : '$0.00';
 
-const toArs = (amount: number, currency: string, rate?: number | null) => {
-  if (!Number.isFinite(amount)) return 0;
-  if (currency === 'ARS') return amount;
-  if (currency === 'USD' && Number.isFinite(rate)) return amount * (rate as number);
-  return 0;
-};
-
 const formatRateCurrency = (value?: number | null) => {
   if (!Number.isFinite(Number(value))) return '--';
   return `$${Number(value).toFixed(2)}`;
@@ -58,7 +52,9 @@ export const ArsPositionAside: React.FC<Props> = ({
   outgoingAmount,
   incomingCurrency,
   outgoingCurrency,
+  draftId = null,
   apr = null,
+  marketApr = null,
   currentMarginPercent = null,
   settlementMode,
   simpleMethod,
@@ -69,13 +65,8 @@ export const ArsPositionAside: React.FC<Props> = ({
   operationType,
 }) => {
   const { balances, loading, error } = useDashboardBalances({ pollInterval: 15000 });
-  const { totals: liveTotals, weightedMarginPercent, status: liveStatus, error: liveError } =
+  const { items: liveItems, totals: liveTotals, status: liveStatus, error: liveError } =
     useLiveOperations();
-  const { data: liveRate } = useLatestMarketRate({
-    baseAsset: 'USD',
-    quoteAsset: 'ARS',
-    enabled: true,
-  });
 
   const currentCash = useMemo(
     () => balances.find((balance) => balance.id === 'cash')?.amount || 0,
@@ -91,24 +82,13 @@ export const ArsPositionAside: React.FC<Props> = ({
   );
 
   const marketRate = useMemo(
-    () => (Number.isFinite(Number(liveRate?.rate)) ? Number(liveRate?.rate) : null),
-    [liveRate?.rate],
+    () => (Number.isFinite(Number(marketApr)) ? Number(marketApr) : null),
+    [marketApr],
   );
   const operationRate = useMemo(
     () => (Number.isFinite(Number(apr)) ? Number(apr) : null),
     [apr],
   );
-  const effectiveRate = useMemo(
-    () => marketRate ?? operationRate ?? null,
-    [marketRate, operationRate],
-  );
-
-  const deltaArs = useMemo(() => {
-    const incomingArs = toArs(incomingAmount, incomingCurrency, effectiveRate);
-    const outgoingArs = toArs(outgoingAmount, outgoingCurrency, effectiveRate);
-    return incomingArs - outgoingArs;
-  }, [effectiveRate, incomingAmount, incomingCurrency, outgoingAmount, outgoingCurrency]);
-
   const currentImpacts = useMemo(() => {
     const impacts = { cash: 0, transfers: 0, usd: 0 };
     const incomingIsUsd = incomingCurrency === 'USD';
@@ -164,19 +144,40 @@ export const ArsPositionAside: React.FC<Props> = ({
     simpleMethod,
   ]);
 
+  const hasLiveDraftImpact = useMemo(() => {
+    if (!draftId) {
+      return false;
+    }
+    const key = `draft-${draftId}`;
+    return liveItems.some((item) => item.id === key);
+  }, [draftId, liveItems]);
+
+  const effectiveImpacts = useMemo(
+    () =>
+      hasLiveDraftImpact
+        ? { cash: 0, transfers: 0, usd: 0 }
+        : currentImpacts,
+    [currentImpacts, hasLiveDraftImpact],
+  );
+
+  const deltaArs = useMemo(
+    () => effectiveImpacts.cash + effectiveImpacts.transfers,
+    [effectiveImpacts.cash, effectiveImpacts.transfers],
+  );
+
   const aggregated = useMemo(
     () => ({
-      cash: currentCash + (liveTotals.cash || 0) + currentImpacts.cash,
-      transfers: currentTransfers + (liveTotals.transfers || 0) + currentImpacts.transfers,
-      usd: currentUsd + (liveTotals.usd || 0) + currentImpacts.usd,
+      cash: currentCash + (liveTotals.cash || 0) + effectiveImpacts.cash,
+      transfers: currentTransfers + (liveTotals.transfers || 0) + effectiveImpacts.transfers,
+      usd: currentUsd + (liveTotals.usd || 0) + effectiveImpacts.usd,
     }),
     [
       currentCash,
-      currentImpacts.cash,
-      currentImpacts.transfers,
-      currentImpacts.usd,
       currentTransfers,
       currentUsd,
+      effectiveImpacts.cash,
+      effectiveImpacts.transfers,
+      effectiveImpacts.usd,
       liveTotals.cash,
       liveTotals.transfers,
       liveTotals.usd,
@@ -185,44 +186,8 @@ export const ArsPositionAside: React.FC<Props> = ({
 
   const projectedArs = aggregated.cash + aggregated.transfers;
   const trend = deltaArs === 0 ? 'neutral' : deltaArs > 0 ? 'up' : 'down';
-  const buyRateDisplay = liveRate?.buyRate ?? marketRate ?? null;
-  const sellRateDisplay = liveRate?.sellRate ?? marketRate ?? null;
   const operationMargin =
     Number.isFinite(Number(currentMarginPercent)) ? Number(currentMarginPercent) : null;
-
-  const currentMarginWeightArs = useMemo(() => {
-    if (outgoingCurrency === 'ARS') {
-      return Math.abs(outgoingAmount);
-    }
-    if (incomingCurrency === 'ARS') {
-      return Math.abs(incomingAmount);
-    }
-    return 0;
-  }, [incomingAmount, incomingCurrency, outgoingAmount, outgoingCurrency]);
-
-  const combinedWeightedMargin = useMemo(() => {
-    const liveMargin = weightedMarginPercent;
-    const currentMargin = Number.isFinite(currentMarginPercent || 0) ? currentMarginPercent : null;
-    const currentWeight = currentMargin && currentMarginWeightArs ? currentMarginWeightArs : 0;
-
-    if (currentMargin == null || currentWeight === 0) {
-      return liveMargin;
-    }
-
-    if (liveMargin == null) {
-      return currentMargin;
-    }
-
-    // Approximate combination: assume liveMargin applies to liveTotals.transfers (ARS scope)
-    const liveWeightApprox = Math.abs(liveTotals.transfers || 0);
-    const totalWeight = liveWeightApprox + currentWeight;
-    if (totalWeight === 0) {
-      return null;
-    }
-    const combined =
-      ((liveMargin || 0) * liveWeightApprox + currentMargin * currentWeight) / totalWeight;
-    return Number(combined.toFixed(2));
-  }, [currentMarginPercent, currentMarginWeightArs, liveTotals.transfers, weightedMarginPercent]);
 
   return (
     <aside className="w-full lg:w-80 flex-shrink-0">
@@ -262,19 +227,9 @@ export const ArsPositionAside: React.FC<Props> = ({
               Modo degradado
             </span>
           )}
-          {(buyRateDisplay || sellRateDisplay) && (
-            <span className="px-2 py-1 bg-blue-50 rounded-full text-xs text-blue-700">
-              TC compra {formatRateCurrency(buyRateDisplay)} / venta {formatRateCurrency(sellRateDisplay)}
-            </span>
-          )}
           {operationMargin != null && (
             <span className="px-2 py-1 bg-green-50 rounded-full text-xs text-green-700">
               Margen operacion: {operationMargin.toFixed(2)}%
-            </span>
-          )}
-          {combinedWeightedMargin != null && (
-            <span className="px-2 py-1 bg-blue-50 rounded-full text-xs text-blue-700">
-              Margen ponderado: {combinedWeightedMargin.toFixed(2)}%
             </span>
           )}
         </div>
