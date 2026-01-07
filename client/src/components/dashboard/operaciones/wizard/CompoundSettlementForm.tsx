@@ -12,6 +12,39 @@ export interface CompoundComputed {
   amount: number;
 }
 
+const normalizeNumericInput = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+
+  const cleaned = trimmed.replace(/[^\d.,]/g, '');
+  const firstSeparatorMatch = cleaned.match(/[.,]/);
+  if (!firstSeparatorMatch) {
+    return cleaned;
+  }
+
+  const firstSeparatorIndex = cleaned.indexOf(firstSeparatorMatch[0]);
+  const integerPart = cleaned.slice(0, firstSeparatorIndex).replace(/[.,]/g, '');
+  const decimalsRaw = cleaned.slice(firstSeparatorIndex + 1).replace(/[.,]/g, '');
+  const decimals = decimalsRaw.slice(0, 2);
+  const hasTrailingSeparator = firstSeparatorIndex === cleaned.length - 1;
+
+  if (hasTrailingSeparator) {
+    return `${integerPart}${firstSeparatorMatch[0]}`;
+  }
+
+  if (decimals) {
+    return `${integerPart}${firstSeparatorMatch[0]}${decimals}`;
+  }
+
+  return integerPart;
+};
+
+const parseNumericInput = (value: string) => {
+  const normalized = value.replace(',', '.').trim();
+  const parsed = Number.parseFloat(normalized);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
 interface Props {
   lines: CompoundLine[];
   computed: Record<string, CompoundComputed>;
@@ -89,15 +122,14 @@ export const CompoundSettlementForm: React.FC<Props> = ({
 
                 <div className="md:col-span-4">
                   <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={line.value === null ? '' : line.value}
+                    type="text"
+                    inputMode="decimal"
+                    value={line.value === null ? '' : String(line.value)}
                     disabled={disabled}
                     onChange={(event) => {
-                      const rawValue = event.target.value;
+                      const normalized = normalizeNumericInput(event.target.value);
                       onLineChange(line.id, {
-                        value: rawValue === '' ? null : Number(rawValue),
+                        value: normalized === '' ? null : parseNumericInput(normalized),
                       });
                     }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors text-sm placeholder:text-gray-400"

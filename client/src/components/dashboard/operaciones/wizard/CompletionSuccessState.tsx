@@ -1,6 +1,6 @@
 import React from 'react';
 
-// Pequeño componente auxiliar para el resumen
+// Pequeno componente auxiliar para el resumen
 const SummaryItem: React.FC<{ label: string; children: React.ReactNode }> = ({
   label,
   children,
@@ -37,7 +37,7 @@ interface Props {
 
 const formatRate = (value?: number | null) => {
   if (!Number.isFinite(Number(value))) {
-    return '—';
+    return '--';
   }
   return Number(value).toFixed(2);
 };
@@ -83,10 +83,10 @@ export const CompletionSuccessState: React.FC<Props> = ({
         <i className="fa-solid fa-check text-white text-3xl" />
       </div>
       <h1 className="text-3xl font-bold text-text-primary mb-3">
-        Operación registrada con éxito
+        Operacion registrada con exito
       </h1>
       <p className="text-lg text-gray-600 mb-6">
-        La operación ha sido guardada correctamente en el sistema.
+        La operacion ha sido guardada correctamente en el sistema.
       </p>
       <div className="inline-flex items-center px-6 py-3 bg-primary bg-opacity-10 rounded-full">
         <i className="fa-solid fa-hashtag text-primary mr-2"></i>
@@ -98,7 +98,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
     <div id="brief-summary" className="p-8">
       <h3 className="text-lg font-semibold text-text-primary mb-6 flex items-center">
         <i className="fa-solid fa-file-invoice mr-2 text-primary"></i>
-        Resumen de la operación
+        Resumen de la operacion
       </h3>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
@@ -110,7 +110,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
             )}
           </SummaryItem>
 
-          <SummaryItem label="Tipo de operación">
+          <SummaryItem label="Tipo de operacion">
             <div className="flex items-center">
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${
@@ -129,7 +129,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
             </div>
           </SummaryItem>
 
-          <SummaryItem label="Tipo de liquidación">
+          <SummaryItem label="Tipo de liquidacion">
             <div className="flex items-center">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800">
                 <i
@@ -177,7 +177,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
             className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium w-full sm:w-auto"
           >
             <i className="fa-solid fa-building-columns mr-2" />
-            Ir a carga de tesorer��a
+            Ir a carga de tesoreria
           </button>
         )}
         <button
@@ -185,7 +185,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
           className="px-8 py-3 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors font-medium w-full sm:w-auto"
         >
           <i className="fa-solid fa-eye mr-2" />
-          Ver detalle de operación
+          Ver detalle de operacion
         </button>
         <button
           onClick={onBackToOperations}
@@ -199,7 +199,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
           className="px-6 py-3 text-primary hover:text-blue-700 transition-colors font-medium w-full sm:w-auto"
         >
           <i className="fa-solid fa-plus mr-2" />
-          Nueva operación
+          Nueva operacion
         </button>
       </div>
     </div>
@@ -214,7 +214,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
             disabled={!canVoid}
           >
             <i className="fa-solid fa-ban mr-2" />
-            Anular operación
+            Anular operacion
           </button>
         )}
         <button
@@ -229,7 +229,7 @@ export const CompletionSuccessState: React.FC<Props> = ({
           className="flex items-center px-4 py-2 text-gray-600 hover:text-text-primary transition-colors"
         >
           <i className="fa-solid fa-copy mr-2" />
-          Duplicar operación
+          Duplicar operacion
         </button>
       </div>
     </div>

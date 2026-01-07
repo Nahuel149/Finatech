@@ -236,10 +236,18 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, applyMovementDefaults, isEditMode, movement]);
 
+  const isEventInside = useCallback((event: MouseEvent, container: HTMLDivElement | null) => {
+    if (!container) return false;
+    const target = event.target as Node;
+    if (container.contains(target)) return true;
+    const path = event.composedPath?.() ?? [];
+    return path.includes(container);
+  }, []);
+
   useEffect(() => {
     if (!contactDropdownVisible) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (contactInputRef.current && !contactInputRef.current.contains(event.target as Node)) {
+      if (!isEventInside(event, contactInputRef.current)) {
         setContactDropdownVisible(false);
       }
     };
@@ -247,12 +255,12 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [contactDropdownVisible]);
+  }, [contactDropdownVisible, isEventInside]);
 
   useEffect(() => {
     if (!operationInfoVisible && !operationDropdownVisible) return;
     const handleClickOutside = (event: MouseEvent) => {
-      if (operationInputRef.current && !operationInputRef.current.contains(event.target as Node)) {
+      if (!isEventInside(event, operationInputRef.current)) {
         setOperationInfoVisible(false);
         setOperationDropdownVisible(false);
       }
@@ -261,7 +269,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [operationInfoVisible, operationDropdownVisible]);
+  }, [operationInfoVisible, operationDropdownVisible, isEventInside]);
 
   useEffect(() => {
     if (form.currency === '') {
@@ -1055,7 +1063,11 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
             <div className="space-y-6">
               <div className="bg-gray-50 rounded-lg p-6">
                 <h3 className="text-lg font-semibold text-text-primary mb-4">Asociaciones</h3>
-                <div className="mb-6" ref={contactInputRef}>
+                <div
+                  className="mb-6"
+                  ref={contactInputRef}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
                   <label htmlFor="contact" className="block text-sm font-medium text-gray-700 mb-2">
                     Contacto vinculado
                   </label>
@@ -1096,9 +1108,13 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                   </div>
                 </div>
 
-                <div className="mb-6" ref={operationInputRef}>
+                <div
+                  className="mb-6"
+                  ref={operationInputRef}
+                  onMouseDown={(event) => event.stopPropagation()}
+                >
                   <label htmlFor="operation" className="block text-sm font-medium text-gray-700 mb-2">
-                    Operación asociada
+                    Operacion asociada
                   </label>
                   <div className="relative">
                     <input
@@ -1106,7 +1122,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                       id="operation"
                       name="operation"
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Buscar operaci¢n por ID (#FT-000123)..."
+                      placeholder="Buscar operacion por ID (#FT-000123)..."
                       value={operationInput}
                       onChange={handleOperationInputChange}
                       onFocus={() => {
@@ -1124,7 +1140,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-1">
-                    Opcional - Si se selecciona, autocompletará moneda y monto sugerido
+                    Opcional - Si se selecciona, autocompletara moneda y monto sugerido
                   </p>
                   {renderOperationSuggestions()}
                   {operationInfoVisible && operationInfo}
