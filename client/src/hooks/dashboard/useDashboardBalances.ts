@@ -3,8 +3,6 @@ import {
   apiRequest,
   handleApiError,
   subscribeDashboardBalanceRefresh,
-  ensureDashboardBalanceStream,
-  stopDashboardBalanceStream,
 } from '../../utils';
 import { ApiError, DashboardBalancesResponse, TreasuryBalance } from '../../types';
 
@@ -97,8 +95,6 @@ const start = (pollInterval: number = DEFAULT_POLL_INTERVAL_MS) => {
     return;
   }
 
-  ensureDashboardBalanceStream();
-
   // Update current poll interval if it has changed
   if (currentPollInterval !== pollInterval) {
     currentPollInterval = pollInterval;
@@ -156,7 +152,6 @@ const stop = () => {
     refreshUnsubscribe = null;
   }
 
-  stopDashboardBalanceStream();
 };
 
 const subscribe = (listener: () => void, pollInterval: number = DEFAULT_POLL_INTERVAL_MS) => {

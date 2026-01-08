@@ -67,6 +67,7 @@ export const ArsPositionAside: React.FC<Props> = ({
   const { balances, loading, error } = useDashboardBalances({ pollInterval: 60000 });
   const { items: liveItems, totals: liveTotals, status: liveStatus, error: liveError } =
     useLiveOperations();
+  const isLive = liveStatus === 'live' || liveStatus === 'idle';
 
   const currentCash = useMemo(
     () => balances.find((balance) => balance.id === 'cash')?.amount || 0,
@@ -205,11 +206,7 @@ export const ArsPositionAside: React.FC<Props> = ({
           <span className="flex items-center gap-1">
             <span
               className={`h-2 w-2 rounded-full ${
-                liveStatus === 'live'
-                  ? 'bg-green-500 animate-pulse'
-                  : liveStatus === 'polling'
-                  ? 'bg-yellow-500'
-                  : 'bg-red-500'
+                isLive ? 'bg-green-500' : 'bg-red-500'
               }`}
             />
             Tiempo real
@@ -224,14 +221,12 @@ export const ArsPositionAside: React.FC<Props> = ({
               TC operacion: {formatRateCurrency(operationRate)}
             </span>
           )}
-          {liveStatus !== 'live' && (
+          {!isLive && (
             <span
               className={`px-2 py-1 rounded-full text-xs ${
-                liveStatus === 'polling'
-                  ? 'bg-yellow-50 text-yellow-700 border border-yellow-200'
-                  : 'bg-red-50 text-red-700 border border-red-200'
+                'bg-red-50 text-red-700 border border-red-200'
               }`}
-              title="Mostrando datos en modo degradado (polling)"
+              title="Mostrando datos en modo degradado"
             >
               Modo degradado
             </span>
