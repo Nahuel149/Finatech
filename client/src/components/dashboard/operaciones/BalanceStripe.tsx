@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances, useUserPermissions } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
-import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
 
 const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
@@ -46,16 +45,6 @@ export const BalanceStripe: React.FC = () => {
     const remaining = visibleBalances.filter((balance) => !priority.includes(balance.id));
     return [...prioritized, ...remaining];
   }, [visibleBalances]);
-
-  useEffect(() => {
-    if (!canViewBalances) {
-      return undefined;
-    }
-    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      refresh().catch(() => {});
-    });
-    return unsubscribe;
-  }, [canViewBalances, refresh]);
 
   const handleBalanceClick = () => {
     navigate('/dashboard/tesoreria/saldos');

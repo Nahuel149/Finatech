@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const app = require('./app');
 const { connectDatabase } = require('./config/database');
 const { seedLogisticsOperations } = require('./utils/seedLogisticsOperations');
+const { logger } = require('./utils/logger');
 
 const PORT = process.env.PORT || 4000;
 let server;
@@ -23,18 +24,18 @@ const shutdown = async (signal, exitCode = 0) => {
     return;
   }
   isShuttingDown = true;
-  console.log(`[SERVER] Received ${signal}. Shutting down...`);
+  logger.info('server_shutdown', { signal });
 
   try {
     await closeServer();
   } catch (error) {
-    console.error('[SERVER] Error closing HTTP server', error);
+    logger.error('server_close_error', { message: error.message });
   }
 
   try {
     await mongoose.connection.close(false);
   } catch (error) {
-    console.error('[SERVER] Error closing MongoDB connection', error);
+    logger.error('mongodb_close_error', { message: error.message });
   }
 
   if (signal === 'SIGUSR2') {
@@ -51,10 +52,10 @@ const shutdown = async (signal, exitCode = 0) => {
     await seedLogisticsOperations();
     server = http.createServer(app);
     server.listen(PORT, () => {
-      console.log(`Server listening on port ${PORT}`);
+      logger.info('server_listening', { port: PORT });
     });
   } catch (error) {
-    console.error('Failed to start server', error);
+    logger.error('server_start_failed', { message: error.message });
     process.exit(1);
   }
 })();

@@ -14,6 +14,7 @@ const {
   getOrderTimeline,
   listMessengerOptions,
 } = require('../services/logisticsOrder.service');
+const { logger } = require('../utils/logger');
 
 const buildContext = (req) => ({
   userId: req.user?._id || req.user?.id || null,
@@ -62,15 +63,12 @@ const getLogisticsOrder = async (req, res, next) => {
 const getMyLogisticsOrders = async (req, res, next) => {
   try {
     const context = buildContext(req);
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[LOGISTICS] getMyOrders query', req.query);
-    }
+    logger.debug('logistics_orders_query', { query: req.query });
     const payload = await listAssignedOrders(context.userId, req.query || {});
-    if (process.env.NODE_ENV !== 'production') {
-      // eslint-disable-next-line no-console
-      console.log('[LOGISTICS] listAssignedOrders', context.userId, 'count', payload.orders?.length || 0);
-    }
+    logger.debug('logistics_orders_listed', {
+      userId: context.userId ? String(context.userId) : null,
+      count: payload.orders?.length || 0,
+    });
     res.json(payload);
   } catch (error) {
     next(error);

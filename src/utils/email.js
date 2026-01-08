@@ -1,4 +1,5 @@
 const nodemailer = require('nodemailer');
+const { logger } = require('./logger');
 
 let cachedTransport = null;
 
@@ -96,10 +97,10 @@ const sendEmail = async ({ to, subject, html, text, from: explicitFrom }) => {
     return;
   }
 
-  // eslint-disable-next-line no-console
-  console.log('----- Email Log (delivery disabled) -----');
-  // eslint-disable-next-line no-console
-  console.log({ to: recipients, subject, text, html });
+  logger.debug('email_log_disabled', {
+    recipientCount: recipients.length,
+    subject,
+  });
 };
 
 const verifySmtpConnection = async () => {

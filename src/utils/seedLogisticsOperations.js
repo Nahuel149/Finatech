@@ -1,4 +1,5 @@
 const LogisticsOperation = require('../models/LogisticsOperation');
+const { logger } = require('./logger');
 
 const buildTimeline = (steps) =>
   steps.map((step) => ({
@@ -299,7 +300,7 @@ const seedLogisticsOperations = async () => {
   ];
 
   await LogisticsOperation.insertMany(sampleOperations);
-  console.log('Seeded logistics operations');
+  logger.info('logistics_seeded');
 };
 
 module.exports = { seedLogisticsOperations };

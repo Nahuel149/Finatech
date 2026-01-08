@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Notification = require('../models/Notification');
+const { logger } = require('../utils/logger');
 
 const ALLOWED_SEVERITIES = new Set(['info', 'success', 'warning', 'error']);
 const DEFAULT_DEDUPE_WINDOW_MS = 2 * 60 * 1000; // 2 minutes
@@ -122,7 +123,7 @@ const emitNotification = async ({
     return created.toObject ? created.toObject() : created;
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.warn('No se pudo emitir la notificación', error);
+    logger.warn('notification_emit_failed', { message: error.message });
     return null;
   }
 };

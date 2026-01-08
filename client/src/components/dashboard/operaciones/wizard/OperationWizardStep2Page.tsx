@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   ApiError,
@@ -462,6 +462,8 @@ export const OperationWizardStep2Page: React.FC = () => {
     }
   }, [draft?.id]);
 
+  const publishDebounceRef = useRef<number | null>(null);
+
   useEffect(() => {
     if (!draft?.id) return undefined;
     if (baseAmount <= 0) return undefined;
@@ -500,11 +502,15 @@ export const OperationWizardStep2Page: React.FC = () => {
       });
     }
 
-    publishDraftImpact(impacts);
+    if (publishDebounceRef.current) {
+      window.clearTimeout(publishDebounceRef.current);
+    }
 
-    return () => {
-      removeDraftImpact();
-    };
+    publishDebounceRef.current = window.setTimeout(() => {
+      publishDraftImpact(impacts);
+    }, 400);
+
+    return undefined;
   }, [
     baseAmount,
     compoundLines,
@@ -516,10 +522,24 @@ export const OperationWizardStep2Page: React.FC = () => {
     outgoingAmount,
     outgoingCurrency,
     publishDraftImpact,
-    removeDraftImpact,
     settlementMode,
     simpleMethod,
   ]);
+
+  useEffect(() => {
+    return () => {
+      if (publishDebounceRef.current) {
+        window.clearTimeout(publishDebounceRef.current);
+        publishDebounceRef.current = null;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      removeDraftImpact();
+    };
+  }, [removeDraftImpact]);
 
   const busy = draftLoading || saving;
   const isReady = Boolean(draft);

@@ -29,7 +29,7 @@ export const useDashboardOperations = (options: UseDashboardOperationsOptions = 
 
   useEffect(() => {
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      execute().catch(() => {});
+      execute({ silent: true }).catch(() => {});
     });
     return unsubscribe;
   }, [execute]);

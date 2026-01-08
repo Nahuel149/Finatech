@@ -21,6 +21,7 @@ const {
 const { validateRequest } = require('../middleware/validateRequest');
 const { authLimiter } = require('../middleware/rateLimiter');
 const { requireAuth } = require('../middleware/requireAuth');
+const { logger } = require('../utils/logger');
 
 const router = Router();
 
@@ -201,7 +202,7 @@ router.post('/reset', authLimiter, ...resetPasswordValidators, validateRequest, 
 
 // Test CSRF-protected endpoint
 router.post('/test-csrf', (req, res) => {
-  console.log('[ROUTE] test-csrf route reached');
+  logger.debug('test_csrf_route');
   res.json({ status: 'ok', message: 'CSRF protection working', body: req.body });
 });
 

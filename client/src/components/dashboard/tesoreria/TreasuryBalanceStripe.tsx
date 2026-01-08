@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances } from '../../../hooks';
 import { TreasuryBalance } from '../../../types';
-import { subscribeDashboardBalanceRefresh } from '../../../utils';
 import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
 
 interface Props {
@@ -37,13 +36,6 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
     [balances]
   );
   const [showTooltip, setShowTooltip] = useState(false);
-
-  useEffect(() => {
-    const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      refresh().catch(() => {});
-    });
-    return unsubscribe;
-  }, [refresh]);
 
   const handleBalanceClick = () => {
     navigate('/dashboard/tesoreria/saldos');

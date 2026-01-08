@@ -113,7 +113,7 @@ export const OperationDetailPage: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      fetchDraft().catch(() => {});
+      fetchDraft({ silent: true }).catch(() => {});
     });
     return unsubscribe;
   }, [fetchDraft]);

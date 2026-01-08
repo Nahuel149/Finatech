@@ -124,7 +124,7 @@ export const useGlobalBalancesOverview = (filters: GlobalBalancesFilters) => {
 
   useEffect(() => {
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      execute().catch(() => {});
+      execute({ silent: true }).catch(() => {});
     });
     return unsubscribe;
   }, [execute]);

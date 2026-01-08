@@ -156,7 +156,7 @@ export const useContactBalanceDetail = (
       return () => {};
     }
     const unsubscribe = subscribeDashboardBalanceRefresh(() => {
-      execute().catch(() => {});
+      execute({ silent: true }).catch(() => {});
     });
     return unsubscribe;
   }, [autoFetch, endpoint, execute]);

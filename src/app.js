@@ -21,6 +21,7 @@ const liveOperationsRoutes = require('./routes/liveOperations.routes');
 const { requestLogger } = require('./middleware/requestLogger');
 const { errorHandler } = require('./middleware/errorHandler');
 const { ensureCsrfCookie, csrfProtect } = require('./middleware/csrf');
+const { logger } = require('./utils/logger');
 
 const app = express();
 const clientBuildPath = path.join(process.cwd(), 'client', 'build');
@@ -55,14 +56,14 @@ app.get('/api/config', (_req, res) => {
 });
 
 app.get('/api/csrf-token', (req, res) => {
-  console.log('[CSRF] Token requested from', req.headers.origin || req.hostname);
+  logger.debug('csrf_token_requested', { origin: req.headers.origin || req.hostname });
   res.json({ csrfToken: res.locals.csrfToken || null });
 });
 
 // Apply CSRF protection to all API routes
-console.log('[APP] Applying CSRF protection to /api routes');
+logger.debug('csrf_apply', { scope: '/api' });
 app.use('/api', (req, res, next) => {
-  console.log(`[APP] CSRF middleware called for ${req.method} ${req.path}`);
+  logger.debug('csrf_middleware', { method: req.method, path: req.path });
   return csrfProtect()(req, res, next);
 });
 
@@ -100,7 +101,7 @@ if (fs.existsSync(clientIndexPath)) {
     res.sendFile(clientIndexPath);
   });
 } else {
-  console.warn('[APP] client build not found - SPA routes will return 404');
+  logger.warn('client_build_missing');
 }
 
 app.use(errorHandler);

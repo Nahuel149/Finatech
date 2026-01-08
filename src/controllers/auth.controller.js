@@ -16,6 +16,7 @@ const {
 const { deleteSessionByToken, getSessionDurationMs } = require('../services/session.service');
 const { attachAuthCookie, clearAuthCookie, COOKIE_NAME } = require('../utils/authCookie');
 const { dedupePermissions } = require('../utils/permissions');
+const { logger } = require('../utils/logger');
 
 const SALT_ROUNDS = Number(process.env.PASSWORD_SALT_ROUNDS || 12);
 
@@ -290,7 +291,7 @@ const logout = async (req, res, next) => {
       setImmediate(() => {
         deleteSessionByToken(sessionToken).catch((error) => {
           // eslint-disable-next-line no-console
-          console.error('Failed to delete session on logout', error);
+          logger.error('logout_session_delete_failed', { message: error.message });
         });
       });
     }

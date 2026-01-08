@@ -4,6 +4,7 @@ const User = require('../models/User');
 const TwoFactorChallenge = require('../models/TwoFactorChallenge');
 const AppError = require('../utils/AppError');
 const { sendEmail } = require('../utils/email');
+const { logger } = require('../utils/logger');
 const { generateRandomToken, hashToken } = require('../utils/token');
 const { logSecurityEvent } = require('./securityLog.service');
 const { createSession, deleteSessionsByUser } = require('./session.service');
@@ -244,7 +245,7 @@ const createTwoFactorChallenge = async ({ user, rememberMe, context }) => {
 
   sendTwoFactorCodeEmail(user, code).catch((err) => {
     // eslint-disable-next-line no-console
-    console.error('Failed to send 2FA code email', err);
+    logger.error('send_2fa_email_failed', { message: err.message });
   });
 
   return { challengeToken: plainToken, expiresAt };
@@ -339,7 +340,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
       await sendVerificationEmail(user, plainToken);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Failed to send verification email on registration', error);
+      logger.error('send_verification_email_failed', { message: error.message });
       await logSecurityEvent({
         user: user._id,
         email: normalizedEmail,
@@ -464,7 +465,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
     await sendVerificationEmail(user, plainToken);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Failed to send verification email', error);
+    logger.error('send_verification_email_failed', { message: error.message });
     await logSecurityEvent({
       user: user._id,
       email: normalizedEmail,
@@ -684,7 +685,7 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
       if (!alreadyLocked) {
         sendAccountLockedEmail(user).catch((err) => {
           // eslint-disable-next-line no-console
-          console.error('Failed to send account locked email', err);
+          logger.error('send_account_locked_email_failed', { message: err.message });
         });
       }
       await logSecurityEvent({
@@ -926,7 +927,7 @@ const resendVerificationEmail = async ({ email }, context = {}) => {
     await sendVerificationEmail(user, plainToken);
   } catch (error) {
     // eslint-disable-next-line no-console
-    console.error('Failed to resend verification email', error);
+    logger.error('resend_verification_email_failed', { message: error.message });
     throw new AppError('No se pudo reenviar el email de verificación.', 502, {
       code: 'VERIFICATION_EMAIL_FAILED',
     });
@@ -968,7 +969,7 @@ const requestPasswordReset = async ({ email }, context = {}) => {
       // Do not leak transport errors to clients or allow account enumeration.
       // Log the failure for observability and continue returning generic success.
       // eslint-disable-next-line no-console
-      console.error('Failed to send password reset email', error);
+      logger.error('send_password_reset_email_failed', { message: error.message });
       await logSecurityEvent({
         user: user._id,
         email: normalizedEmail,

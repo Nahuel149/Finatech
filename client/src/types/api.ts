@@ -32,6 +32,8 @@ export interface RequestConfig {
   body?: any;
   credentials?: RequestCredentials;
   signal?: AbortSignal | null;
+  // UseApi-only hint to avoid toggling loading state on background refreshes.
+  silent?: boolean;
 }
 
 export interface UseApiOptions {

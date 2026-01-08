@@ -64,7 +64,7 @@ export const ArsPositionAside: React.FC<Props> = ({
   baseCurrency,
   operationType,
 }) => {
-  const { balances, loading, error } = useDashboardBalances({ pollInterval: 15000 });
+  const { balances, loading, error } = useDashboardBalances({ pollInterval: 60000 });
   const { items: liveItems, totals: liveTotals, status: liveStatus, error: liveError } =
     useLiveOperations();
 
@@ -153,18 +153,21 @@ export const ArsPositionAside: React.FC<Props> = ({
     return item?.impacts || null;
   }, [draftId, liveItems]);
 
-  const effectiveImpacts = useMemo(
-    () =>
-      liveDraftImpacts
-        ? { cash: 0, transfers: 0, usd: 0 }
-        : currentImpacts,
-    [currentImpacts, liveDraftImpacts],
+  const displayImpacts = useMemo(
+    () => currentImpacts,
+    [currentImpacts],
   );
 
-  const displayImpacts = useMemo(
-    () => liveDraftImpacts || effectiveImpacts,
-    [effectiveImpacts, liveDraftImpacts],
-  );
+  const liveTotalsAdjusted = useMemo(() => {
+    if (!liveDraftImpacts) {
+      return liveTotals;
+    }
+    return {
+      cash: (liveTotals.cash || 0) - (liveDraftImpacts.cash || 0),
+      transfers: (liveTotals.transfers || 0) - (liveDraftImpacts.transfers || 0),
+      usd: (liveTotals.usd || 0) - (liveDraftImpacts.usd || 0),
+    };
+  }, [liveDraftImpacts, liveTotals]);
 
   const deltaArs = useMemo(
     () => displayImpacts.cash + displayImpacts.transfers,
@@ -173,20 +176,20 @@ export const ArsPositionAside: React.FC<Props> = ({
 
   const aggregated = useMemo(
     () => ({
-      cash: currentCash + (liveTotals.cash || 0) + effectiveImpacts.cash,
-      transfers: currentTransfers + (liveTotals.transfers || 0) + effectiveImpacts.transfers,
-      usd: currentUsd + (liveTotals.usd || 0) + effectiveImpacts.usd,
+      cash: currentCash + (liveTotalsAdjusted.cash || 0) + displayImpacts.cash,
+      transfers: currentTransfers + (liveTotalsAdjusted.transfers || 0) + displayImpacts.transfers,
+      usd: currentUsd + (liveTotalsAdjusted.usd || 0) + displayImpacts.usd,
     }),
     [
       currentCash,
       currentTransfers,
       currentUsd,
-      effectiveImpacts.cash,
-      effectiveImpacts.transfers,
-      effectiveImpacts.usd,
-      liveTotals.cash,
-      liveTotals.transfers,
-      liveTotals.usd,
+      displayImpacts.cash,
+      displayImpacts.transfers,
+      displayImpacts.usd,
+      liveTotalsAdjusted.cash,
+      liveTotalsAdjusted.transfers,
+      liveTotalsAdjusted.usd,
     ],
   );
 
@@ -245,7 +248,7 @@ export const ArsPositionAside: React.FC<Props> = ({
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide text-gray-500">Efectivo (ARS)</p>
               <span className="text-xs text-gray-500">
-                Live: {formatArs(currentCash + (liveTotals.cash || 0))}
+                Live: {formatArs(currentCash + (liveTotalsAdjusted.cash || 0))}
               </span>
             </div>
             <p className="text-lg font-semibold text-text-primary">{formatArs(aggregated.cash)}</p>
@@ -254,7 +257,7 @@ export const ArsPositionAside: React.FC<Props> = ({
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide text-gray-500">Transferencias (ARS)</p>
               <span className="text-xs text-gray-500">
-                Live: {formatArs(currentTransfers + (liveTotals.transfers || 0))}
+                Live: {formatArs(currentTransfers + (liveTotalsAdjusted.transfers || 0))}
               </span>
             </div>
             <p className="text-lg font-semibold text-text-primary">{formatArs(aggregated.transfers)}</p>
@@ -263,7 +266,7 @@ export const ArsPositionAside: React.FC<Props> = ({
             <div className="flex items-center justify-between">
               <p className="text-xs uppercase tracking-wide text-gray-500">Caja (USD)</p>
               <span className="text-xs text-gray-500">
-                Live: {formatUsd(currentUsd + (liveTotals.usd || 0))}
+                Live: {formatUsd(currentUsd + (liveTotalsAdjusted.usd || 0))}
               </span>
             </div>
             <p className="text-lg font-semibold text-text-primary">{formatUsd(aggregated.usd)}</p>

@@ -2,6 +2,8 @@ const Transaction = require('../models/Transaction');
 const TransferOperation = require('../models/TransferOperation');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const LogisticsOperation = require('../models/LogisticsOperation');
+const { logger } = require('../utils/logger');
+const { roundAmount } = require('./currentAccount.service');
 
 // In-memory draft impacts (Step 2 drafts) with TTL
 const draftImpactsStore = new Map(); // draftId -> { impacts, marginPercent, marginWeightArs, updatedAt, expiresAt }
@@ -28,15 +30,81 @@ const signFromDirection = (direction) => {
   return 0;
 };
 
+const stripDiacritics = (value = '') =>
+  String(value)
+    .normalize('NFD')
+    .replace(/[^\w\s.-]/g, '')
+    .replace(/[\u0300-\u036f]/g, '');
+
+const mapSettlementMethodToBucket = (method) => {
+  const normalized = stripDiacritics(method).toLowerCase();
+  if (normalized.includes('efectivo') || normalized.includes('cash')) {
+    return BUCKETS.CASH;
+  }
+  return BUCKETS.TRANSFERS;
+};
+
+const resolveSettlementSlices = (transaction, totalAmount) => {
+  const safeTotal = roundAmount(totalAmount);
+  if (!Number.isFinite(safeTotal) || safeTotal <= 0) {
+    return [];
+  }
+
+  const settlement = transaction?.settlement || null;
+  const fallbackMethod = settlement?.simpleMethod || 'Transferencia';
+
+  const buildSlice = (method, amount) => ({
+    bucket: mapSettlementMethodToBucket(method),
+    amount: roundAmount(amount),
+  });
+
+  if (!settlement || settlement.mode !== 'compound') {
+    return [buildSlice(fallbackMethod, safeTotal)];
+  }
+
+  const lines = Array.isArray(settlement.lines) ? settlement.lines : [];
+  if (!lines.length) {
+    return [buildSlice(fallbackMethod, safeTotal)];
+  }
+
+  const amounts = lines.map((line) => {
+    const baseValue = Number(line.value);
+    if (!Number.isFinite(baseValue) || baseValue <= 0) {
+      return 0;
+    }
+
+    const allocationType = line.allocationType === 'amount' ? 'amount' : 'percentage';
+    if (allocationType === 'amount') {
+      return roundAmount(baseValue);
+    }
+
+    const percentage = Number(line.computedPercentage ?? baseValue);
+    if (!Number.isFinite(percentage) || percentage <= 0) {
+      return 0;
+    }
+    return roundAmount((percentage / 100) * safeTotal);
+  });
+
+  const assignedTotal = roundAmount(amounts.reduce((sum, value) => sum + value, 0));
+  const difference = roundAmount(safeTotal - assignedTotal);
+
+  if (amounts.length && Math.abs(difference) > 0) {
+    const lastIndex = amounts.length - 1;
+    amounts[lastIndex] = roundAmount(amounts[lastIndex] + difference);
+  }
+
+  return lines
+    .map((line, index) => buildSlice(line.method, amounts[index] || 0))
+    .filter((slice) => Number.isFinite(slice.amount) && slice.amount > 0);
+};
+
 const mapTransactionToLive = (tx) => {
   if (!tx) return null;
-  const type = String(tx.type || '').toLowerCase() === 'sell' ? 'sell' : 'buy';
   const marginPercent = Number(tx.marginPercentage) || 0;
   const outgoingAmount = Number(tx.outgoingAmount) || 0;
   const incomingAmount = Number(tx.incomingAmount) || 0;
-
-  // For wizard operations we assume ARS leg goes to transfers bucket.
-  const arsBucket = BUCKETS.TRANSFERS;
+  const incomingCurrency = String(tx.incomingAsset?.code || '').toUpperCase();
+  const outgoingCurrency = String(tx.outgoingAsset?.code || '').toUpperCase();
 
   const impacts = {
     [BUCKETS.CASH]: 0,
@@ -44,17 +112,35 @@ const mapTransactionToLive = (tx) => {
     [BUCKETS.USD]: 0,
   };
 
-  if (type === 'buy') {
-    // ARS outgoing, USD incoming
-    impacts[arsBucket] -= outgoingAmount;
+  if (incomingCurrency === 'USD') {
     impacts[BUCKETS.USD] += incomingAmount;
-  } else {
-    // sell: ARS incoming, USD outgoing
-    impacts[arsBucket] += incomingAmount;
+  }
+  if (outgoingCurrency === 'USD') {
     impacts[BUCKETS.USD] -= outgoingAmount;
   }
 
-  const marginWeightArs = Math.abs(type === 'buy' ? outgoingAmount : incomingAmount);
+  let arsAmount = 0;
+  let arsDirection = 0;
+  if (incomingCurrency === 'ARS') {
+    arsAmount = incomingAmount;
+    arsDirection = 1;
+  } else if (outgoingCurrency === 'ARS') {
+    arsAmount = outgoingAmount;
+    arsDirection = -1;
+  }
+
+  if (arsAmount) {
+    const slices = resolveSettlementSlices(tx, arsAmount);
+    if (!slices.length) {
+      impacts[BUCKETS.TRANSFERS] += arsDirection * arsAmount;
+    } else {
+      slices.forEach((slice) => {
+        impacts[slice.bucket] += arsDirection * slice.amount;
+      });
+    }
+  }
+
+  const marginWeightArs = Math.abs(arsAmount || 0);
 
   return {
     id: tx._id.toString(),
@@ -212,6 +298,16 @@ const purgeDrafts = () => {
 const upsertDraftImpact = ({ draftId, impacts, marginPercent = null, marginWeightArs = 0 }) => {
   if (!draftId || !impacts) return;
   purgeDrafts();
+  logger.debug('live_ops_draft_upsert', {
+    draftId: String(draftId),
+    impacts: {
+      cash: Number(impacts.cash) || 0,
+      transfers: Number(impacts.transfers) || 0,
+      usd: Number(impacts.usd) || 0,
+    },
+    marginPercent,
+    marginWeightArs,
+  });
   draftImpactsStore.set(String(draftId), {
     impacts: {
       cash: Number(impacts.cash) || 0,
@@ -227,6 +323,7 @@ const upsertDraftImpact = ({ draftId, impacts, marginPercent = null, marginWeigh
 
 const removeDraftImpact = (draftId) => {
   if (!draftId) return;
+  logger.debug('live_ops_draft_remove', { draftId: String(draftId) });
   draftImpactsStore.delete(String(draftId));
 };
 
@@ -265,6 +362,17 @@ const listActiveOperations = async () => {
   ];
 
   const { totals, weightedMarginPercent } = buildTotals(items);
+  logger.debug('live_ops_snapshot', {
+    counts: {
+      drafts: draftIds.size,
+      transactions: transactions.length,
+      transfers: transfers.length,
+      treasury: treasuryMovs.length,
+      logistics: logisticsOps.length,
+      items: items.length,
+    },
+    totals,
+  });
 
   return {
     items,

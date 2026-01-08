@@ -13,15 +13,20 @@ export const useTransactionDraft = (draftId?: string | null) => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
 
-  const fetchDraft = useCallback(async () => {
+  const fetchDraft = useCallback(async (options: { silent?: boolean } = {}) => {
+    const { silent = false } = options;
     if (!draftId) {
       setDraft(null);
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
       return;
     }
 
-    setLoading(true);
-    setError(null);
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
       const response = await apiRequest<TransactionDraft>(`/api/transactions/${draftId}`, {
@@ -32,7 +37,9 @@ export const useTransactionDraft = (draftId?: string | null) => {
       const apiErr = handleApiError(err);
       setError(apiErr);
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, [draftId]);
 

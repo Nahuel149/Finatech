@@ -1,4 +1,5 @@
 const { geocodeAddress } = require('./locationiq.service');
+const { logger } = require('../utils/logger');
 
 const STATIC_ADDRESSES = [
   {
@@ -135,8 +136,7 @@ const getAddressPredictions = async (input) => {
       return locationIqResult;
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('LocationIQ autocomplete failed, falling back to Google/static', error.message);
+    logger.warn('locationiq_autocomplete_failed', { message: error.message });
   }
 
   const googleResult = await callPlacesApi(input.trim());

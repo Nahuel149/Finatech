@@ -4,6 +4,7 @@ const Transaction = require('../models/Transaction');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const TransferOperation = require('../models/TransferOperation');
 const { ensureContactBalance } = require('./currentAccount.service');
+const { logger } = require('../utils/logger');
 
 const MOCK_SAMPLE_CUITS = [
   '20-12345678-9',
@@ -226,7 +227,10 @@ const createClient = async (payload) => {
     ]);
   } catch (balanceError) {
     // eslint-disable-next-line no-console
-    console.error(`Failed to initialize balances for new client ${document._id}`, balanceError);
+    logger.error('client_balance_init_failed', {
+      clientId: document?._id ? document._id.toString() : null,
+      message: balanceError.message,
+    });
   }
 
   return formatClient(document.toObject());

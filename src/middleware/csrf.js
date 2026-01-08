@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const { logger } = require('../utils/logger');
 
 const CSRF_COOKIE_NAME = 'finatech_csrf';
 const CSRF_COOKIE_EXPIRY = 2 * 60 * 60 * 1000; // 2 hours in milliseconds
@@ -57,28 +58,30 @@ function csrfProtect(options = {}) {
   const { cookieName = CSRF_COOKIE_NAME, excludedPaths = DEFAULT_EXCLUDED_PATHS } = options;
   
   return function(req, res, next) {
-    console.log(`[CSRF] Processing ${req.method} ${req.path}`);
+    logger.debug('csrf_check', { method: req.method, path: req.path });
     
     // Skip CSRF protection for safe methods
     if (SAFE_METHODS.has(req.method)) {
-      console.log('[CSRF] Safe method, skipping');
+      logger.debug('csrf_skip_safe');
       return next();
     }
     // Skip CSRF protection for excluded paths
     const url = req.originalUrl || req.url;
     if (excludedPaths.some((path) => url.startsWith(path))) {
-      console.log(`[CSRF] Excluded path ${url}, skipping`);
+      logger.debug('csrf_skip_excluded', { path: url });
       return next();
     }
-    console.log('[CSRF] Checking tokens...');
+    logger.debug('csrf_tokens_check');
     const cookieToken = req.cookies?.[cookieName];
     const headerToken = req.get('X-CSRF-Token') || req.get('X-CSRF');
     
-    console.log(`[CSRF] Cookie token: ${cookieToken ? 'present' : 'missing'}`);
-    console.log(`[CSRF] Header token: ${headerToken ? 'present' : 'missing'}`);
+    logger.debug('csrf_token_presence', {
+      cookie: cookieToken ? 'present' : 'missing',
+      header: headerToken ? 'present' : 'missing',
+    });
 
     if (!cookieToken) {
-      console.log('[CSRF] Rejecting: no cookie token');
+      logger.warn('csrf_reject_missing_cookie');
       return res.status(403).json({ 
         error: 'CSRF token missing',
         message: 'CSRF token required in cookie' 
@@ -86,7 +89,7 @@ function csrfProtect(options = {}) {
     }
 
     if (!headerToken) {
-      console.log('[CSRF] Rejecting: no header token');
+      logger.warn('csrf_reject_missing_header');
       return res.status(403).json({ 
         error: 'CSRF token missing',
         message: 'CSRF token required in X-CSRF-Token header' 
@@ -94,14 +97,14 @@ function csrfProtect(options = {}) {
     }
 
     if (cookieToken !== headerToken) {
-      console.log('[CSRF] Rejecting: token mismatch');
+      logger.warn('csrf_reject_mismatch');
       return res.status(403).json({ 
         error: 'CSRF token mismatch',
         message: 'Invalid CSRF token' 
       });
     }
 
-    console.log('[CSRF] Tokens match, proceeding');
+    logger.debug('csrf_ok');
     next();
   };
 }

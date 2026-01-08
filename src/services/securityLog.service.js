@@ -1,4 +1,5 @@
 const SecurityLog = require('../models/SecurityLog');
+const { logger } = require('../utils/logger');
 
 const logSecurityEvent = async ({
   user,
@@ -22,8 +23,7 @@ const logSecurityEvent = async ({
       metadata,
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to log security event', error);
+    logger.error('security_log_failed', { message: error.message });
   }
 };
 

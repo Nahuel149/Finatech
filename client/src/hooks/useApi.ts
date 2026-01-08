@@ -19,12 +19,16 @@ export const useApi = <T = any>(
   endpointRef.current = endpoint;
 
   const execute = useCallback(async (config: Partial<RequestConfig> = {}): Promise<T> => {
-    setLoading(true);
-    setError(null);
+    const { silent = false, ...requestConfig } = config;
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
-      const response = await apiRequest<T>(endpointRef.current, config);
+      const response = await apiRequest<T>(endpointRef.current, requestConfig);
       setData(response);
+      setError(null);
       
       if (optionsRef.current.onSuccess) {
         optionsRef.current.onSuccess(response);
@@ -41,7 +45,9 @@ export const useApi = <T = any>(
       
       throw apiError;
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []); // No dependencies - function is completely stable
 

@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { logger } = require('../utils/logger');
 
 const connectDatabase = async () => {
   const { MONGODB_URI } = process.env;
@@ -16,7 +17,7 @@ const connectDatabase = async () => {
     socketTimeoutMS: Number(process.env.DB_SOCKET_TIMEOUT_MS) || 20000,
   });
 
-  console.log('MongoDB connected');
+  logger.info('mongodb_connected');
 };
 
 module.exports = { connectDatabase };
