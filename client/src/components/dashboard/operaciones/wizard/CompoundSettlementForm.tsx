@@ -84,6 +84,11 @@ export const CompoundSettlementForm: React.FC<Props> = ({
         {lines.map((line) => {
           const info = computed[line.id] || { percentage: 0, amount: 0 };
           const amountValue = Number.isFinite(info.amount) ? info.amount : 0;
+          const usedMethods = new Set(
+            lines
+              .filter((entry) => entry.id !== line.id && entry.method)
+              .map((entry) => entry.method),
+          );
 
           return (
             <div key={line.id} className="px-4 py-4">
@@ -97,7 +102,7 @@ export const CompoundSettlementForm: React.FC<Props> = ({
                   >
                     <option value="">Seleccionar...</option>
                     {methods.map((method) => (
-                      <option key={method} value={method}>
+                      <option key={method} value={method} disabled={usedMethods.has(method)}>
                         {method}
                       </option>
                     ))}

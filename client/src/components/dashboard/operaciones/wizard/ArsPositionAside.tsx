@@ -144,25 +144,31 @@ export const ArsPositionAside: React.FC<Props> = ({
     simpleMethod,
   ]);
 
-  const hasLiveDraftImpact = useMemo(() => {
+  const liveDraftImpacts = useMemo(() => {
     if (!draftId) {
-      return false;
+      return null;
     }
     const key = `draft-${draftId}`;
-    return liveItems.some((item) => item.id === key);
+    const item = liveItems.find((entry) => entry.id === key);
+    return item?.impacts || null;
   }, [draftId, liveItems]);
 
   const effectiveImpacts = useMemo(
     () =>
-      hasLiveDraftImpact
+      liveDraftImpacts
         ? { cash: 0, transfers: 0, usd: 0 }
         : currentImpacts,
-    [currentImpacts, hasLiveDraftImpact],
+    [currentImpacts, liveDraftImpacts],
+  );
+
+  const displayImpacts = useMemo(
+    () => liveDraftImpacts || effectiveImpacts,
+    [effectiveImpacts, liveDraftImpacts],
   );
 
   const deltaArs = useMemo(
-    () => effectiveImpacts.cash + effectiveImpacts.transfers,
-    [effectiveImpacts.cash, effectiveImpacts.transfers],
+    () => displayImpacts.cash + displayImpacts.transfers,
+    [displayImpacts.cash, displayImpacts.transfers],
   );
 
   const aggregated = useMemo(

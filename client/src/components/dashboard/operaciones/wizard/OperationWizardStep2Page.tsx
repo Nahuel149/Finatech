@@ -34,7 +34,7 @@ const WIZARD_STEPS = [
   { label: 'Resumen', description: 'Confirmar' },
 ];
 
-const SETTLEMENT_METHODS = ['Efectivo', 'Transferencia', 'Depósito en banco'];
+const SETTLEMENT_METHODS = ['Efectivo', 'Transferencia', 'Deposito en banco'];
 const DEFAULT_SIMPLE_METHOD = SETTLEMENT_METHODS[0];
 const createCompoundLine = (method: string = ''): CompoundLine => ({
   id: `line-${Math.random().toString(36).slice(2, 9)}`,
@@ -42,6 +42,14 @@ const createCompoundLine = (method: string = ''): CompoundLine => ({
   allocationType: 'amount',
   value: null,
 });
+const findNextMethod = (lines: CompoundLine[]) => {
+  const used = new Set(lines.map((line) => line.method).filter(Boolean));
+  return SETTLEMENT_METHODS.find((method) => !used.has(method)) || '';
+};
+const normalizeMethod = (method: string) => {
+  if (!method) return '';
+  return method.replace('Depósito', 'Deposito');
+};
 
 const formatCurrency = (value: number, currency?: string) => {
   if (!Number.isFinite(value)) {
@@ -129,7 +137,7 @@ export const OperationWizardStep2Page: React.FC = () => {
         setSettlementMode(newMode);
       }
       
-      const newMethod = draft.settlement?.simpleMethod || DEFAULT_SIMPLE_METHOD;
+      const newMethod = normalizeMethod(draft.settlement?.simpleMethod || DEFAULT_SIMPLE_METHOD);
       if (newMethod !== simpleMethod) {
         setSimpleMethod(newMethod);
       }
@@ -141,7 +149,7 @@ export const OperationWizardStep2Page: React.FC = () => {
             line.allocationType === 'percentage' ? 'percentage' : 'amount';
           return {
             id: `line-${index}-${Math.random().toString(36).slice(2, 7)}`,
-            method: line.method,
+            method: normalizeMethod(line.method),
             allocationType,
             value: Number.isFinite(numericValue) ? numericValue : null,
           };
@@ -287,7 +295,7 @@ export const OperationWizardStep2Page: React.FC = () => {
     (mode: SettlementMode) => {
       setSettlementMode(mode);
       if (mode === 'compound' && compoundLines.length === 0) {
-        setCompoundLines([createCompoundLine(SETTLEMENT_METHODS[0])]);
+        setCompoundLines([createCompoundLine(findNextMethod([]))]);
       }
       setFormError(null);
       setSuccessMessage(null);
@@ -314,7 +322,7 @@ export const OperationWizardStep2Page: React.FC = () => {
   }, []);
 
   const handleAddLine = useCallback(() => {
-    setCompoundLines((prev) => [...prev, createCompoundLine(SETTLEMENT_METHODS[0])]);
+    setCompoundLines((prev) => [...prev, createCompoundLine(findNextMethod(prev))]);
   }, []);
 
   const validateCompound = useCallback(() => {

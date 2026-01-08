@@ -1090,7 +1090,7 @@ const canEditMarketRate = useMemo(
           {busy && (
             <div className="absolute inset-0 bg-white bg-opacity-75 z-10 flex flex-col items-center justify-center rounded-lg">
               <LoadingSpinner size="lg" />
-              <span className="text-sm text-gray-600 mt-3">Guardando cambios?</span>
+              <span className="text-sm text-gray-600 mt-3">Guardando cambios</span>
             </div>
           )}
 
