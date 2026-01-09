@@ -175,7 +175,7 @@ export const GlobalBalancesPage: React.FC = () => {
 
   useEffect(() => {
     const interval = window.setInterval(() => {
-      refresh().catch(() => {});
+      refresh({ silent: true }).catch(() => {});
     }, 60000);
     return () => window.clearInterval(interval);
   }, [refresh]);

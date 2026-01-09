@@ -132,8 +132,8 @@ export const useTreasuryMovements = (options: UseTreasuryMovementsOptions = {}) 
     setItems(itemsWithSort);
   }, [data, sort]);
 
-  const refresh = useCallback(() => {
-    execute().catch(() => {});
+  const refresh = useCallback((config: { silent?: boolean } = {}) => {
+    execute(config).catch(() => {});
   }, [execute]);
 
   useEffect(() => {
@@ -142,7 +142,7 @@ export const useTreasuryMovements = (options: UseTreasuryMovementsOptions = {}) 
       clearInterval(autoRefreshRef.current);
     }
     autoRefreshRef.current = setInterval(() => {
-      refresh();
+      refresh({ silent: true });
     }, autoRefreshMs);
 
     return () => {

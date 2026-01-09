@@ -89,30 +89,28 @@ export const WizardActions: React.FC<Props> = ({
         </button>
       </div>
 
-      <button
-        type="button"
-        onClick={onContinue}
-        className="h-12 px-8 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed w-full lg:w-auto order-1 lg:order-2 shadow-sm"
-        disabled={saving || disableContinue}
-        title="Guardar los datos y continuar al siguiente paso"
-      >
-        {saving ? (
-          <>
-            Procesando
-            <i className="fa-solid fa-circle-notch ml-2 animate-spin" />
-          </>
-        ) : (
-          <>
-            {continueLabel}
-            <i className="fa-solid fa-arrow-right ml-2" />
-          </>
-        )}
-      </button>
-    </div>
-    {extraActions && (
-      <div className="flex flex-wrap gap-2 pt-2">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 order-1 lg:order-2 w-full lg:w-auto">
         {extraActions}
+        <button
+          type="button"
+          onClick={onContinue}
+          className="h-12 px-8 text-sm font-semibold bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center disabled:opacity-60 disabled:cursor-not-allowed w-full lg:w-auto shadow-sm"
+          disabled={saving || disableContinue}
+          title="Guardar los datos y continuar al siguiente paso"
+        >
+          {saving ? (
+            <>
+              Procesando
+              <i className="fa-solid fa-circle-notch ml-2 animate-spin" />
+            </>
+          ) : (
+            <>
+              {continueLabel}
+              <i className="fa-solid fa-arrow-right ml-2" />
+            </>
+          )}
+        </button>
       </div>
-    )}
+    </div>
   </div>
 );

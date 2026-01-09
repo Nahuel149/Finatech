@@ -17,7 +17,7 @@ const BUCKETS = {
 };
 
 const ACTIVE_STATES = {
-  transaction: ['draft', 'pending', 'registered'],
+  transaction: ['pending', 'registered'],
   transfer: ['pending', 'registered'],
   treasury: ['registered'],
   logistics: ['pendiente', 'en-curso'],
