@@ -36,6 +36,25 @@ const formatDate = (iso?: string | null) => {
   });
 };
 
+const formatCurrency = (amount: number, currency: string) => {
+  const locale = currency === 'USD' ? 'en-US' : 'es-AR';
+  return new Intl.NumberFormat(locale, {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(amount);
+};
+
+const formatRate = (value?: number | null) => {
+  if (!Number.isFinite(Number(value))) return null;
+  return new Intl.NumberFormat('es-AR', {
+    style: 'currency',
+    currency: 'ARS',
+    minimumFractionDigits: 2,
+  }).format(Number(value));
+};
+
+
 export const ReconciliationOperationsTable: React.FC<Props> = ({
   operations,
   selectedIds,
@@ -74,10 +93,18 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
           operations.map((operation) => {
             const badge = operationTypeBadge(operation);
             const isSelected = selectedIds.includes(operation.id);
-            const amount = new Intl.NumberFormat(
-              operation.currency === 'USD' ? 'en-US' : 'es-AR',
-              { style: 'currency', currency: operation.currency }
-            ).format(operation.amount);
+            const amount = formatCurrency(operation.amount, operation.currency);
+            const hasConversion =
+              Boolean(operation.originalCurrency) &&
+              operation.originalCurrency !== operation.currency;
+            const originalAmount = operation.originalAmount ?? operation.amount;
+            const originalCurrency = operation.originalCurrency || operation.currency;
+            const conversionRate = formatRate(operation.conversionRate);
+            const originalLabel = hasConversion
+              ? `${formatCurrency(originalAmount, originalCurrency)}${
+                  conversionRate ? ` (TC venta ${conversionRate})` : ''
+                }`
+              : null;
 
             return (
               <button
@@ -94,6 +121,7 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
                     type="checkbox"
                     className="rounded border-gray-300 text-primary focus:ring-primary"
                     checked={isSelected}
+                    onClick={(event) => event.stopPropagation()}
                     onChange={(event) => {
                       event.stopPropagation();
                       onToggle(operation.id);
@@ -107,12 +135,22 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
                   >
                     {badge.label}
                   </span>
-                  <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                    {operation.currency}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {hasConversion && (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                        Conv
+                      </span>
+                    )}
+                    <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                      {operation.currency}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-lg font-semibold text-text-primary mb-1">{amount}</div>
+                {hasConversion && (
+                  <div className="text-xs text-gray-500 mb-2">Orig: {originalLabel}</div>
+                )}
                 <div className="text-sm text-gray-600 mb-2">{operation.description || '—'}</div>
 
                 <div className="flex items-center justify-between text-xs text-gray-500">
@@ -172,10 +210,18 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
               {operations.map((operation) => {
                 const badge = operationTypeBadge(operation);
                 const isSelected = selectedIds.includes(operation.id);
-                const amount = new Intl.NumberFormat(
-                  operation.currency === 'USD' ? 'en-US' : 'es-AR',
-                  { style: 'currency', currency: operation.currency }
-                ).format(operation.amount);
+                const amount = formatCurrency(operation.amount, operation.currency);
+            const hasConversion =
+              Boolean(operation.originalCurrency) &&
+              operation.originalCurrency !== operation.currency;
+            const originalAmount = operation.originalAmount ?? operation.amount;
+            const originalCurrency = operation.originalCurrency || operation.currency;
+            const conversionRate = formatRate(operation.conversionRate);
+            const originalLabel = hasConversion
+              ? `${formatCurrency(originalAmount, originalCurrency)}${
+                  conversionRate ? ` (TC venta ${conversionRate})` : ''
+                }`
+              : null;
 
                 return (
                   <tr
@@ -184,12 +230,13 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
                     onClick={() => onToggle(operation.id)}
                   >
                     <td className="px-4 py-4">
-                      <input
-                        type="checkbox"
-                        className="rounded border-gray-300 text-primary focus:ring-primary"
-                        checked={isSelected}
-                        onChange={() => onToggle(operation.id)}
-                      />
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300 text-primary focus:ring-primary"
+                      checked={isSelected}
+                      onClick={(event) => event.stopPropagation()}
+                      onChange={() => onToggle(operation.id)}
+                    />
                     </td>
                     <td className="px-4 py-4 text-sm text-text-primary">
                       {formatDate(operation.confirmedAt)}
@@ -203,11 +250,23 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
                       {operation.description || '—'}
                     </td>
                     <td className="px-4 py-4">
-                      <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
-                        {operation.currency}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        {hasConversion && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-indigo-100 text-indigo-700">
+                            Conv
+                          </span>
+                        )}
+                        <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                          {operation.currency}
+                        </span>
+                      </div>
                     </td>
-                    <td className="px-4 py-4 text-sm font-medium text-text-primary">{amount}</td>
+                    <td className="px-4 py-4">
+                      <div className="text-sm font-medium text-text-primary">{amount}</div>
+                      {hasConversion && (
+                        <div className="text-xs text-gray-500">Orig: {originalLabel}</div>
+                      )}
+                    </td>
                     <td className="px-4 py-4 text-sm text-primary font-medium">
                       {operation.code || '—'}
                     </td>

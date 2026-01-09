@@ -9,6 +9,9 @@ interface ReconciliationSuggestionDTO {
   code: string | null;
   amount: number;
   currency: string;
+  originalAmount?: number | null;
+  originalCurrency?: string | null;
+  conversionRate?: number | null;
   contactName: string | null;
   movementType: string | null;
   status: string | null;
@@ -26,6 +29,9 @@ const normalizeSuggestion = (item: ReconciliationSuggestionDTO): OperationSugges
   model: item.model || 'CurrentAccountMovement',
   amount: item.amount,
   currency: item.currency,
+  originalAmount: item.originalAmount ?? null,
+  originalCurrency: item.originalCurrency ?? null,
+  conversionRate: item.conversionRate ?? null,
   movementType: item.movementType,
   status: item.status,
   confirmedAt: item.confirmedAt || null,

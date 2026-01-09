@@ -251,9 +251,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
         setContactDropdownVisible(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [contactDropdownVisible, isEventInside]);
 
@@ -265,9 +265,9 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
         setOperationDropdownVisible(false);
       }
     };
-    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
   }, [operationInfoVisible, operationDropdownVisible, isEventInside]);
 

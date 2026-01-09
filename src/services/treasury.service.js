@@ -5,6 +5,7 @@ const LogisticsOrder = require('../models/LogisticsOrder');
 const Client = require('../models/Client');
 const Transaction = require('../models/Transaction');
 const TransferOperation = require('../models/TransferOperation');
+const { getLatestMarketRate } = require('./marketRate.service');
 const AppError = require('../utils/AppError');
 const CurrentAccountMovement = require('../models/CurrentAccountMovement');
 const {
@@ -167,6 +168,53 @@ const DEFAULT_RECEPTIONS_LIMIT = 25;
 const MOVEMENT_MEDIUMS = ['cash', 'transfer', 'deposit'];
 const MOVEMENT_TYPES = ['incoming', 'outgoing'];
 const SUPPORTED_CURRENCIES = ['ARS', 'USD'];
+
+const normalizeCurrencyCode = (value) => String(value || '').toUpperCase();
+
+const resolveUsdSellRate = async () => {
+  try {
+    const rate = await getLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+    const numeric = Number(rate?.sellRate || rate?.rate || null);
+    return Number.isFinite(numeric) && numeric > 0 ? numeric : null;
+  } catch (error) {
+    return null;
+  }
+};
+
+const convertAmountToCurrency = (amount, fromCurrency, toCurrency, usdSellRate) => {
+  if (!Number.isFinite(amount)) {
+    return null;
+  }
+  const source = normalizeCurrencyCode(fromCurrency);
+  const target = normalizeCurrencyCode(toCurrency);
+  if (!source || !target) {
+    return null;
+  }
+  if (source === target) {
+    return amount;
+  }
+  if (!usdSellRate || !Number.isFinite(usdSellRate) || usdSellRate <= 0) {
+    return null;
+  }
+  if (source === 'USD' && target === 'ARS') {
+    return amount * usdSellRate;
+  }
+  if (source === 'ARS' && target === 'USD') {
+    return amount / usdSellRate;
+  }
+  return null;
+};
+
+const buildCurrencyCandidates = (currency) => {
+  const normalized = normalizeCurrencyCode(currency);
+  if (normalized === 'ARS') {
+    return ['ARS', 'USD'];
+  }
+  if (normalized === 'USD') {
+    return ['USD', 'ARS'];
+  }
+  return normalized ? [normalized] : [];
+};
 
 const getBalanceConfig = (key) => {
   if (!key) {
@@ -4040,14 +4088,16 @@ const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) 
     throw new AppError('El movimiento indicado no existe.', 404);
   }
 
+  const movementCurrency = normalizeCurrencyCode(movement.currency || 'ARS');
+  const currencyCandidates = buildCurrencyCandidates(movementCurrency);
   const query = {
     ledger: 'contact',
-    currency: movement.currency,
     stage: 'registration',
   };
-
-  if (movement.contact) {
-    query.contact = movement.contact;
+  if (currencyCandidates.length === 1) {
+    query.currency = currencyCandidates[0];
+  } else if (currencyCandidates.length > 1) {
+    query.currency = { $in: currencyCandidates };
   }
 
   const candidateMovements = await CurrentAccountMovement.find(query)
@@ -4094,87 +4144,115 @@ const suggestCompensationsForMovement = async (movementId, { limit = 10 } = {}) 
 
   const contactMap = new Map(contacts.map((contact) => [contact._id.toString(), contact]));
 
-  const suggestions = candidateMovements.map((entry) => {
-    const absoluteMovementAmount = Math.abs(Number(movement.amount) || 0);
-    const absoluteEntryAmount = Math.abs(Number(entry.amount) || 0);
-    const amountDifference = roundAmount(Math.abs(absoluteMovementAmount - absoluteEntryAmount));
-    const ratio =
-      absoluteMovementAmount > 0 ? amountDifference / absoluteMovementAmount : amountDifference;
+  const needsConversion = candidateMovements.some(
+    (entry) => normalizeCurrencyCode(entry.currency) !== movementCurrency
+  );
+  const usdSellRate = needsConversion ? await resolveUsdSellRate() : null;
 
-    const createdAt = entry.createdAt ? new Date(entry.createdAt) : null;
-    const movementDate = movement.movementAt ? new Date(movement.movementAt) : null;
-    const daysDifference =
-      createdAt && movementDate
-        ? Math.round(Math.abs(createdAt.getTime() - movementDate.getTime()) / (1000 * 60 * 60 * 24))
+  const suggestions = candidateMovements
+    .map((entry) => {
+      const entryCurrency = normalizeCurrencyCode(entry.currency || movementCurrency);
+      const convertedAmount = convertAmountToCurrency(
+        Number(entry.amount || 0),
+        entryCurrency,
+        movementCurrency,
+        usdSellRate
+      );
+      if (!Number.isFinite(convertedAmount)) {
+        return null;
+      }
+      const normalizedAmount = roundAmount(convertedAmount);
+
+      const absoluteMovementAmount = Math.abs(Number(movement.amount) || 0);
+      const absoluteEntryAmount = Math.abs(normalizedAmount);
+      const amountDifference = roundAmount(Math.abs(absoluteMovementAmount - absoluteEntryAmount));
+      const ratio =
+        absoluteMovementAmount > 0 ? amountDifference / absoluteMovementAmount : amountDifference;
+
+      const createdAt = entry.createdAt ? new Date(entry.createdAt) : null;
+      const movementDate = movement.movementAt ? new Date(movement.movementAt) : null;
+      const daysDifference =
+        createdAt && movementDate
+          ? Math.round(
+              Math.abs(createdAt.getTime() - movementDate.getTime()) / (1000 * 60 * 60 * 24)
+            )
+          : null;
+
+      const transaction = entry.operation?.source === 'transaction'
+        ? transactionMap.get(entry.operation.id?.toString())
         : null;
 
-    const transaction = entry.operation?.source === 'transaction'
-      ? transactionMap.get(entry.operation.id?.toString())
-      : null;
+      const contactDoc = entry.contact ? contactMap.get(entry.contact.toString()) : null;
 
-    const contactDoc = entry.contact ? contactMap.get(entry.contact.toString()) : null;
+      const score =
+        1 /
+        (1 +
+          amountDifference +
+          (movement.contact &&
+          entry.contact &&
+          movement.contact.toString() === entry.contact.toString()
+            ? 0
+            : 0.5) +
+          (daysDifference || 0) * 0.1);
 
-    const score =
-      1 /
-      (1 +
-        amountDifference +
-        (movement.contact && entry.contact && movement.contact.toString() === entry.contact.toString() ? 0 : 0.5) +
-        (daysDifference || 0) * 0.1);
+      const fallbackOperationDescriptor = {
+        id: entry._id.toString(),
+        model: 'CurrentAccountMovement',
+        code: entry.operation?.code || entry.metadata?.operationCode || null,
+        movementType: entry.operation?.type || entry.metadata?.operationType || null,
+        status: entry.operation?.status || entry.metadata?.status || entry.stage || null,
+        confirmedAt: null,
+      };
 
-    const fallbackOperationDescriptor = {
-      id: entry._id.toString(),
-      model: 'CurrentAccountMovement',
-      code: entry.operation?.code || entry.metadata?.operationCode || null,
-      movementType: entry.operation?.type || entry.metadata?.operationType || null,
-      status: entry.operation?.status || entry.metadata?.status || entry.stage || null,
-      confirmedAt: null,
-    };
+      const operationDescriptor = transaction
+        ? {
+            id: transaction._id.toString(),
+            model: 'Transaction',
+            code: transaction.operationCode || null,
+            movementType: transaction.type || null,
+            status: transaction.status || null,
+            confirmedAt: transaction.completedAt ? transaction.completedAt.toISOString() : null,
+          }
+        : entry.operation?.id && entry.operation?.model
+        ? {
+            id: entry.operation.id.toString(),
+            model: entry.operation.model,
+            code: entry.operation.code || null,
+            movementType: entry.operation.type || null,
+            status: entry.operation.status || null,
+            confirmedAt: null,
+          }
+        : fallbackOperationDescriptor;
 
-    const operationDescriptor = transaction
-      ? {
-          id: transaction._id.toString(),
-          model: 'Transaction',
-          code: transaction.operationCode || null,
-          movementType: transaction.type || null,
-          status: transaction.status || null,
-          confirmedAt: transaction.completedAt ? transaction.completedAt.toISOString() : null,
-        }
-      : entry.operation?.id && entry.operation?.model
-      ? {
-          id: entry.operation.id.toString(),
-          model: entry.operation.model,
-          code: entry.operation.code || null,
-          movementType: entry.operation.type || null,
-          status: entry.operation.status || null,
-          confirmedAt: null,
-        }
-      : fallbackOperationDescriptor;
-
-    return {
-      suggestionId: entry._id.toString(),
-      currentAccountMovementId: entry._id.toString(),
-      operationId: operationDescriptor.id || null,
-      model: operationDescriptor.model || null,
-      code: operationDescriptor.code || null,
-      amount: roundAmount(entry.amount),
-      currency: entry.currency || movement.currency,
-      contactName: contactDoc ? contactDoc.fullName || contactDoc.shortName || null : null,
-      movementType: operationDescriptor.movementType || null,
-      status: operationDescriptor.status || null,
-      confirmedAt: operationDescriptor.confirmedAt || null,
-      match: {
-        amountDifference,
-        ratio: Number(ratio.toFixed(4)),
-        daysDifference,
-        sameContact:
-          !!movement.contact &&
-          !!entry.contact &&
-          movement.contact.toString() === entry.contact.toString(),
-        sameCurrency: movement.currency === entry.currency,
-      },
-      score: Number(score.toFixed(4)),
-    };
-  });
+      return {
+        suggestionId: entry._id.toString(),
+        currentAccountMovementId: entry._id.toString(),
+        operationId: operationDescriptor.id || null,
+        model: operationDescriptor.model || null,
+        code: operationDescriptor.code || null,
+        amount: normalizedAmount,
+        currency: movementCurrency || entry.currency || 'ARS',
+        originalAmount: roundAmount(Number(entry.amount || 0)),
+        originalCurrency: entryCurrency || movementCurrency || entry.currency || 'ARS',
+        conversionRate: entryCurrency !== movementCurrency ? usdSellRate : null,
+        contactName: contactDoc ? contactDoc.fullName || contactDoc.shortName || null : null,
+        movementType: operationDescriptor.movementType || null,
+        status: operationDescriptor.status || null,
+        confirmedAt: operationDescriptor.confirmedAt || null,
+        match: {
+          amountDifference,
+          ratio: Number(ratio.toFixed(4)),
+          daysDifference,
+          sameContact:
+            !!movement.contact &&
+            !!entry.contact &&
+            movement.contact.toString() === entry.contact.toString(),
+        sameCurrency: movementCurrency === entryCurrency,
+        },
+        score: Number(score.toFixed(4)),
+      };
+    })
+    .filter(Boolean);
 
   return {
     movement: formatTreasuryMovement(movement, contacts),

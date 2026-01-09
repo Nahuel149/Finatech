@@ -55,7 +55,7 @@ export const ReconciliationMovementsPanel: React.FC<Props> = ({
   }, [movements, filter]);
 
   return (
-    <div id="movements-panel" className="w-full min-h-0 bg-gray-50 border border-gray-200 lg:border-l lg:border-t-0 rounded-lg lg:rounded-none flex flex-col slide-in-right">
+    <div id="movements-panel" className="w-full h-full min-h-0 bg-gray-50 border border-gray-200 lg:border-l lg:border-t-0 rounded-lg lg:rounded-none flex flex-col overflow-hidden slide-in-right">
       <div className="p-6 border-b border-gray-200">
         <h3 className="text-lg font-semibold text-text-primary mb-4">Movimientos disponibles</h3>
         <select
@@ -78,13 +78,20 @@ export const ReconciliationMovementsPanel: React.FC<Props> = ({
           const badge = movementTypeBadge(movement);
           const isSelected = selectedMovementId === movement.id;
           return (
-            <button
+            <div
               key={movement.id}
-              type="button"
-              className={`movement-card bg-white border-2 rounded-lg p-4 w-full text-left ${
+              role="button"
+              tabIndex={0}
+              className={`movement-card bg-white border-2 rounded-lg p-4 w-full text-left cursor-pointer ${
                 isSelected ? 'border-primary bg-blue-50 movement-card selected' : 'border-gray-200'
               }`}
               onClick={() => onSelect(movement)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                  event.preventDefault();
+                  onSelect(movement);
+                }
+              }}
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center">
@@ -102,7 +109,11 @@ export const ReconciliationMovementsPanel: React.FC<Props> = ({
                   type="checkbox"
                   className="rounded border-gray-300 text-primary focus:ring-primary"
                   checked={isSelected}
-                  readOnly
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect(movement);
+                  }}
+                  onChange={() => {}}
                 />
               </div>
 
@@ -121,7 +132,7 @@ export const ReconciliationMovementsPanel: React.FC<Props> = ({
                 </span>
                 <div className="text-xs text-gray-500">{movement.movementCode || movement.id}</div>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

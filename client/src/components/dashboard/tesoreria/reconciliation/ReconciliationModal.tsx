@@ -1,12 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  useTreasuryBalances,
   useTreasuryMovements,
   useReconciliationSuggestions,
   useCompensateTreasuryMovement,
   useUserPermissions,
 } from '../../../../hooks';
-import { ApiError, TreasuryMovement, OperationSuggestion, TreasuryBalance } from '../../../../types';
+import { ApiError, TreasuryMovement, OperationSuggestion } from '../../../../types';
 import { ReconciliationFilters, ReconciliationFiltersState } from './ReconciliationFilters';
 import { ReconciliationOperationsTable } from './ReconciliationOperationsTable';
 import { ReconciliationMovementsPanel } from './ReconciliationMovementsPanel';
@@ -37,7 +36,6 @@ const formatCurrency = (amount: number, currency: string) =>
   }).format(amount);
 
 export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToast, onSuccess }) => {
-  const { balances } = useTreasuryBalances();
   const {
     items: pendingMovements,
     refresh: refreshPendingMovements,
@@ -106,7 +104,8 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
 
   const filteredOperations = useMemo(() => {
     const byFilters = suggestions.filter((operation) => {
-      if (filters.currency && operation.currency !== filters.currency) {
+      const operationCurrency = operation.originalCurrency || operation.currency;
+      if (filters.currency && operationCurrency !== filters.currency) {
         return false;
       }
       if (filters.contact && !(`${operation.description || ''}`.toLowerCase().includes(filters.contact.toLowerCase()))) {
@@ -217,32 +216,6 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
     });
   };
 
-  const balanceCards = useMemo(() => {
-    if (!balances || !balances.length) {
-      return [];
-    }
-    const priority = ['cash', 'transfers', 'usd'];
-    const byId = new Map(balances.map((balance) => [balance.id, balance]));
-    return priority
-      .map((key) => byId.get(key))
-      .filter(Boolean)
-      .slice(0, 3) as TreasuryBalance[];
-  }, [balances]);
-
-  const primaryBalanceCard = useMemo(() => {
-    if (!balanceCards.length) {
-      return null;
-    }
-    return balanceCards.find((card) => card.id === 'usd') || balanceCards[0];
-  }, [balanceCards]);
-
-  const secondaryBalanceCards = useMemo(() => {
-    if (!balanceCards.length || !primaryBalanceCard) {
-      return [];
-    }
-    return balanceCards.filter((card) => card.id !== primaryBalanceCard.id);
-  }, [balanceCards, primaryBalanceCard]);
-
   if (!open) {
     return null;
   }
@@ -274,68 +247,6 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
             </div>
           </div>
 
-          {primaryBalanceCard && (
-            <div className="px-6 py-4 border-b border-gray-200 bg-white lg:hidden">
-              <div className="bg-gray-50 rounded-2xl px-5 py-4 shadow-sm">
-                <div className="text-sm font-medium text-text-primary uppercase tracking-wide mb-1">
-                  {primaryBalanceCard.label}
-                </div>
-                <div className="text-3xl font-bold text-text-primary mb-1">
-                  {formatCurrency(primaryBalanceCard.amount, primaryBalanceCard.currency)}
-                </div>
-                <div className="text-xs text-gray-500">
-                  Actualizado{' '}
-                  {new Date(primaryBalanceCard.updatedAt).toLocaleTimeString('es-AR', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {!!secondaryBalanceCards.length && (
-            <div className="px-6 pb-4 border-b border-gray-200 bg-white lg:hidden">
-              <div className="flex flex-col gap-3">
-                {secondaryBalanceCards.map((card) => (
-                  <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-2xl px-4 py-3 shadow-sm">
-                    <div className="text-sm font-medium text-text-primary">{card.label}</div>
-                    <div className="text-2xl font-bold text-text-primary">
-                      {formatCurrency(card.amount, card.currency)}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      Actualizado{' '}
-                      {new Date(card.updatedAt).toLocaleTimeString('es-AR', {
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div className="hidden lg:block px-6 py-4 border-b border-gray-200 bg-white overflow-x-auto">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 min-w-[280px]">
-              {balanceCards.map((card) => (
-                <div key={`${card.id}-${card.currency}`} className="bg-gray-50 rounded-lg px-4 py-3">
-                  <div className="text-sm font-medium text-text-primary">{card.label}</div>
-                  <div className="text-2xl font-bold text-text-primary">
-                    {formatCurrency(card.amount, card.currency)}
-                  </div>
-                  <div className="text-xs text-gray-500">
-                    Actualizado{' '}
-                    {new Date(card.updatedAt).toLocaleTimeString('es-AR', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="flex-1 flex min-h-0 overflow-hidden">
             <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
               <ReconciliationFilters
@@ -355,7 +266,7 @@ export const ReconciliationModal: React.FC<Props> = ({ open, onClose, onShowToas
                   />
                 </div>
 
-                <div className="w-full lg:w-[420px] flex-shrink-0 min-h-0 order-1 lg:order-2">
+                <div className="w-full lg:w-[420px] flex-shrink-0 min-h-0 h-full order-1 lg:order-2">
                   <ReconciliationMovementsPanel
                     movements={pendingMovements}
                     selectedMovementId={activeMovement?.id || null}

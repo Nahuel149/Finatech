@@ -136,6 +136,9 @@ export interface OperationSuggestion {
   model: string;
   amount: number;
   currency: string;
+  originalAmount?: number | null;
+  originalCurrency?: string | null;
+  conversionRate?: number | null;
   movementType?: string | null;
   direction?: string | null;
   medium?: string | null;
