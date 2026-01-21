@@ -1,17 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import {
-  LogisticsOrder,
-  LogisticsOrderBalance,
-  LogisticsOrderOperationContext,
-  LogisticsOrderOperationAssets,
-  LogisticsOrderStatus,
-  LogisticsAddressOption,
-} from '../../../../types';
+import { LogisticsOrder, LogisticsOrderBalance, LogisticsOrderOperationContext, LogisticsOrderOperationAssets, LogisticsOrderStatus, LogisticsAddressOption } from '../../../../types/logistics';
 import { Modal } from '../../../ui/Modal';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
-import { useCreateOrUpdateLogisticsOrder } from '../../../../hooks/dashboard';
-import { useUserPermissions } from '../../../../hooks';
+import { useCreateOrUpdateLogisticsOrder } from '../../../../hooks/dashboard/useLogisticsOrders';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
 import { OrderWizardStep1 } from './OrderWizardStep1';
 import { OrderWizardStep2 } from './OrderWizardStep2';
 import { OrderWizardSummary } from './OrderWizardSummary';

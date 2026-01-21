@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert } from '../../../ui';
-import { useCreateTransfer } from '../../../../hooks/dashboard';
+import { Alert } from '../../../ui/Alert';
+import { useCreateTransfer } from '../../../../hooks/dashboard/useCreateTransfer';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { useTransferPesos } from './TransferPesosContext';

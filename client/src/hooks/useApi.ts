@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react';
-import { UseApiState, UseApiOptions, RequestConfig, ApiError } from '../types';
-import { apiRequest, handleApiError } from '../utils';
+import { UseApiState, UseApiOptions, RequestConfig } from '../types/api';
+import { ApiError } from '../types/auth';
+import { apiRequest, handleApiError } from '../utils/api';
 
 export const useApi = <T = any>(
   endpoint: string,

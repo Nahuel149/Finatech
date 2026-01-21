@@ -1,20 +1,14 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  ApiError,
-  ClientSummary,
-  CreateTreasuryMovementPayload,
-  OperationSuggestion,
-  TreasuryMovement,
-} from '../../../../types';
-import {
-  useClientSearch,
-  useCreateTreasuryMovement,
-  useOperationSearch,
-  useRecentClients,
-  useUpdateTreasuryMovement,
-  useUserPermissions,
-} from '../../../../hooks';
-import { Alert } from '../../../ui';
+import { ApiError } from '../../../../types/auth';
+import { ClientSummary } from '../../../../types/client';
+import { CreateTreasuryMovementPayload, OperationSuggestion, TreasuryMovement } from '../../../../types/treasury';
+import { useClientSearch } from '../../../../hooks/dashboard/useClientSearch';
+import { useCreateTreasuryMovement } from '../../../../hooks/dashboard/useCreateTreasuryMovement';
+import { useOperationSearch } from '../../../../hooks/dashboard/useOperationSearch';
+import { useRecentClients } from '../../../../hooks/dashboard/useRecentClients';
+import { useUpdateTreasuryMovement } from '../../../../hooks/dashboard/useUpdateTreasuryMovement';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
+import { Alert } from '../../../ui/Alert';
 import { NewClientModal } from '../../../clients/NewClientModal';
 import { MovementTypeSelector } from './MovementTypeSelector';
 import { AttachmentItem, AttachmentList } from './AttachmentList';

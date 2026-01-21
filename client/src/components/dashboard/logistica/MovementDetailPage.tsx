@@ -7,9 +7,10 @@ import CompletionConfirmationModal from './CompletionConfirmationModal';
 import { IncidentRegistrationModal } from './IncidentRegistrationModal';
 import { Footer } from '../operaciones/Footer';
 import { Alert } from '../../ui/Alert';
-import { ApiError, LogisticsOperationRecord } from '../../../types';
+import { ApiError } from '../../../types/auth';
+import { LogisticsOperationRecord } from '../../../types/logistics';
 import { api, handleApiError } from '../../../utils/api';
-import { useLogisticsOperationDetail } from '../../../hooks/dashboard';
+import { useLogisticsOperationDetail } from '../../../hooks/dashboard/useLogisticsOperations';
 
 interface MovementDetailPageProps {
   movementId?: string;

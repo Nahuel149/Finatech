@@ -1,18 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { api, handleApiError } from '../../utils';
-import {
-  ApiError,
-  DEFAULT_LOGISTICS_FILTERS,
-  LogisticsAttachment,
-  LogisticsFilters,
-  LogisticsMetrics,
-  LogisticsOperation,
-  LogisticsOperationRecord,
-  LogisticsOperationsResponse,
-  LogisticsTimelineEntry,
-  OperationStatus,
-  OperationType,
-} from '../../types';
+import { api, handleApiError } from '../../utils/api';
+import { ApiError } from '../../types/auth';
+import { DEFAULT_LOGISTICS_FILTERS, LogisticsAttachment, LogisticsFilters, LogisticsMetrics, LogisticsOperation, LogisticsOperationRecord, LogisticsOperationsResponse, LogisticsTimelineEntry, OperationStatus, OperationType } from '../../types/logistics';
 
 type PaginationState = {
   page: number;

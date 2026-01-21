@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { LogisticsOrderOperationContext, LogisticsAddressOption } from '../../../../types';
+import { LogisticsOrderOperationContext, LogisticsAddressOption } from '../../../../types/logistics';
 import { LogisticsOrderFormState, FormFieldErrors, MessengerOption } from './types';
 
 interface OrderWizardStep1Props {

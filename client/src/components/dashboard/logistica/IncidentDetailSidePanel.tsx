@@ -4,7 +4,7 @@ import { IncidentSummarySection } from './IncidentSummarySection';
 import { IncidentTimelineSection } from './IncidentTimelineSection';
 import { IncidentItemsSection } from './IncidentItemsSection';
 import { IncidentDocumentsSection } from './IncidentDocumentsSection';
-import { LogisticsIncident } from '../../../types';
+import { LogisticsIncident } from '../../../types/logistics';
 
 interface IncidentDetailSidePanelProps {
   isOpen: boolean;

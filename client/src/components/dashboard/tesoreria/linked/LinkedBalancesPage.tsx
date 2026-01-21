@@ -1,17 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import {
-  ApiError,
-  TreasuryLinkedBalanceSummaryEntry,
-  TreasuryMovement,
-} from '../../../../types';
-import {
-  useLinkedBalanceDetail,
-  useLinkedTreasuryBalances,
-} from '../../../../hooks';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryLinkedBalanceSummaryEntry, TreasuryMovement } from '../../../../types/treasury';
+import { useLinkedBalanceDetail } from '../../../../hooks/dashboard/useLinkedBalanceDetail';
+import { useLinkedTreasuryBalances } from '../../../../hooks/dashboard/useLinkedTreasuryBalances';
 import { TreasuryNavbar } from '../TreasuryNavbar';
 import { TreasuryBalanceStripe } from '../TreasuryBalanceStripe';
-import { Alert } from '../../../ui';
+import { Alert } from '../../../ui/Alert';
 import { LinkedBalancesSummarySection } from './LinkedBalancesSummarySection';
 import { LinkedBalancesMovementsSection } from './LinkedBalancesMovementsSection';
 import { LinkedBalancesAccountingSection } from './LinkedBalancesAccountingSection';

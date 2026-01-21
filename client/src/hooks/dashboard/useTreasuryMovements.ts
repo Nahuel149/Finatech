@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ApiError, TreasuryMovement, TreasuryMovementsResponse } from '../../types';
+import { ApiError } from '../../types/auth';
+import { TreasuryMovement, TreasuryMovementsResponse } from '../../types/treasury';
 import { useApi } from '../useApi';
 
 export type TreasuryMovementsSortOption =
@@ -121,15 +122,9 @@ export const useTreasuryMovements = (options: UseTreasuryMovementsOptions = {}) 
   useEffect(() => {
     execute().catch(() => {});
   }, [endpoint, execute]);
-  const [items, setItems] = useState<TreasuryMovement[]>([]);
-
-  // The previous effect that depended only on `execute` is no longer necessary and
-  // has been merged into the effect above to ensure fresh data is fetched when
-  // any parameter affecting the `endpoint` changes.
-  useEffect(() => {
-    if (!data) return;
-    const itemsWithSort = sortItemsLocally(data.items ?? [], sort);
-    setItems(itemsWithSort);
+  const items = useMemo(() => {
+    const normalized = data?.items ?? [];
+    return sortItemsLocally(normalized, sort);
   }, [data, sort]);
 
   const refresh = useCallback((config: { silent?: boolean } = {}) => {

@@ -1,5 +1,5 @@
 import React from 'react';
-import { TransactionType } from '../../../../types';
+import { TransactionType } from '../../../../types/transaction';
 
 interface Props {
   value: TransactionType;

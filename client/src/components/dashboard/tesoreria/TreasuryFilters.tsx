@@ -1,7 +1,8 @@
 import React, { useMemo } from 'react';
-import { ApiError, ClientSummary } from '../../../types';
-import { Alert } from '../../ui';
-import { TreasuryMovementsFilters } from '../../../hooks';
+import { ApiError } from '../../../types/auth';
+import { ClientSummary } from '../../../types/client';
+import { Alert } from '../../ui/Alert';
+import { TreasuryMovementsFilters } from '../../../hooks/dashboard/useTreasuryMovements';
 
 interface Props {
   values: TreasuryMovementsFilters;

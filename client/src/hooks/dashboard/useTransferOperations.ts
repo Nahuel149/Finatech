@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useApi } from '../useApi';
-import { ListTransfersResponse, TransferOperation } from '../../types';
+import { ListTransfersResponse, TransferOperation } from '../../types/transfer';
 
 export interface UseTransferOperationsOptions {
   limit?: number;

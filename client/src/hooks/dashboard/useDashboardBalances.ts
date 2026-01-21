@@ -1,10 +1,8 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import {
-  apiRequest,
-  handleApiError,
-  subscribeDashboardBalanceRefresh,
-} from '../../utils';
-import { ApiError, DashboardBalancesResponse, TreasuryBalance } from '../../types';
+import { apiRequest, handleApiError } from '../../utils/api';
+import { subscribeDashboardBalanceRefresh } from '../../utils/balanceEvents';
+import { ApiError } from '../../types/auth';
+import { DashboardBalancesResponse, TreasuryBalance } from '../../types/dashboard';
 
 export interface UseDashboardBalancesOptions {
   enabled?: boolean;

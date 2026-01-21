@@ -1,7 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TransferOperation } from '../../../../types';
-import { useCurrentUser } from '../../../../hooks';
+import { TransferOperation } from '../../../../types/transfer';
+import { useCurrentUser } from '../../../../hooks/useCurrentUser';
 import {
   AccountingSummaryEntry,
   formatCurrency,

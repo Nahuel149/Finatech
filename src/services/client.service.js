@@ -240,22 +240,44 @@ const getRecentClients = async ({ limit = 8 } = {}) => {
   const sanitizedLimit = Math.min(Math.max(Number(limit) || 8, 1), 30);
   const recentById = new Map();
 
-  const recentMovements = await TreasuryMovement.aggregate([
-    { $match: { contact: { $ne: null } } },
-    { $sort: { movementAt: -1, createdAt: -1 } },
-    {
-      $project: {
-        contact: 1,
-        lastUsedAt: { $ifNull: ['$movementAt', '$createdAt'] },
+  const baseFilter = {
+    status: 'active',
+    cuit: { $nin: MOCK_SAMPLE_CUITS },
+  };
+
+  const [recentMovements, recentTransfers, latestClients] = await Promise.all([
+    TreasuryMovement.aggregate([
+      { $match: { contact: { $ne: null } } },
+      { $sort: { movementAt: -1, createdAt: -1 } },
+      {
+        $project: {
+          contact: 1,
+          lastUsedAt: { $ifNull: ['$movementAt', '$createdAt'] },
+        },
       },
-    },
-    {
-      $group: {
-        _id: '$contact',
-        lastUsedAt: { $first: '$lastUsedAt' },
+      {
+        $group: {
+          _id: '$contact',
+          lastUsedAt: { $first: '$lastUsedAt' },
+        },
       },
-    },
-    { $limit: sanitizedLimit * 3 },
+      { $limit: sanitizedLimit * 3 },
+    ]),
+    TransferOperation.aggregate([
+      { $unwind: '$distributionLines' },
+      { $sort: { createdAt: -1 } },
+      {
+        $group: {
+          _id: '$distributionLines.contact',
+          lastUsedAt: { $first: '$createdAt' },
+        },
+      },
+      { $limit: sanitizedLimit * 3 },
+    ]),
+    Client.find(baseFilter)
+      .sort({ createdAt: -1 })
+      .limit(sanitizedLimit * 2)
+      .lean(),
   ]);
 
   recentMovements.forEach((entry) => {
@@ -263,18 +285,6 @@ const getRecentClients = async ({ limit = 8 } = {}) => {
       recentById.set(entry._id.toString(), new Date(entry.lastUsedAt || Date.now()));
     }
   });
-
-  const recentTransfers = await TransferOperation.aggregate([
-    { $unwind: '$distributionLines' },
-    { $sort: { createdAt: -1 } },
-    {
-      $group: {
-        _id: '$distributionLines.contact',
-        lastUsedAt: { $first: '$createdAt' },
-      },
-    },
-    { $limit: sanitizedLimit * 3 },
-  ]);
 
   recentTransfers.forEach((entry) => {
     if (entry?._id && mongoose.Types.ObjectId.isValid(entry._id)) {
@@ -286,16 +296,6 @@ const getRecentClients = async ({ limit = 8 } = {}) => {
       }
     }
   });
-
-  const baseFilter = {
-    status: 'active',
-    cuit: { $nin: MOCK_SAMPLE_CUITS },
-  };
-
-  const latestClients = await Client.find(baseFilter)
-    .sort({ createdAt: -1 })
-    .limit(sanitizedLimit * 2)
-    .lean();
 
   latestClients.forEach((client) => {
     const id = client?._id?.toString();

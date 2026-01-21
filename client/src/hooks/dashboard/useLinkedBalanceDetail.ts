@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
-import { TreasuryLinkedBalanceDetailResponse } from '../../types';
+import { TreasuryLinkedBalanceDetailResponse } from '../../types/treasury';
 
 export interface LinkedBalanceDetailParams {
   dateFrom?: string | null;

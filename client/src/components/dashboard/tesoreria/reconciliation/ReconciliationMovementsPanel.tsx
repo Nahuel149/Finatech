@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { TreasuryMovement } from '../../../../types';
+import { TreasuryMovement } from '../../../../types/treasury';
 
 interface Props {
   movements: TreasuryMovement[];

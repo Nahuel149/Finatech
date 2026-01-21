@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { api, handleApiError } from '../utils';
-import { ApiError, ProfileResponse, UserProfile } from '../types';
+import { api, handleApiError } from '../utils/api';
+import { ApiError, ProfileResponse, UserProfile } from '../types/auth';
 
 let cachedUser: UserProfile | null = null;
 let cachedError: ApiError | null = null;

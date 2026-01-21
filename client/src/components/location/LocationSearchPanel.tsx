@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useConfig, useGeolocation } from '../../hooks';
-import { LocationSearchResult, SelectedLocation } from '../../types';
+import { useConfig } from '../../hooks/useConfig';
+import { useGeolocation } from '../../hooks/useGeolocation';
+import { LocationSearchResult, SelectedLocation } from '../../types/location';
 import { LocationMap } from './LocationMap';
 import { Alert } from '../ui/Alert';
 import { LoadingSpinner } from '../ui/LoadingSpinner';

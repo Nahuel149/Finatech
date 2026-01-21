@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogisticsIncidentItem } from '../../../types';
+import { LogisticsIncidentItem } from '../../../types/logistics';
 
 interface IncidentItemsSectionProps {
   items: LogisticsIncidentItem[];

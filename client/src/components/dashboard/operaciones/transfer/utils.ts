@@ -1,4 +1,4 @@
-import { TransferOperation } from '../../../../types';
+import { TransferOperation } from '../../../../types/transfer';
 
 export const formatCurrency = (amount: number, currency: string = 'ARS') =>
   new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'es-AR', {

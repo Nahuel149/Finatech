@@ -4,7 +4,7 @@ import {
   ArrowDownTrayIcon,
   EyeIcon 
 } from '../../icons/HeroiconsOutline';
-import { LogisticsIncidentDocument } from '../../../types';
+import { LogisticsIncidentDocument } from '../../../types/logistics';
 import { devLog } from '../../../utils/devLogger';
 
 interface IncidentDocumentsSectionProps {

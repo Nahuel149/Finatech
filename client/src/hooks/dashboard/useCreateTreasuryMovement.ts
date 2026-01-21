@@ -1,10 +1,7 @@
 import { useCallback } from 'react';
 import { useApi } from '../useApi';
-import {
-  ApiError,
-  CreateTreasuryMovementPayload,
-  CreateTreasuryMovementResponse,
-} from '../../types';
+import { ApiError } from '../../types/auth';
+import { CreateTreasuryMovementPayload, CreateTreasuryMovementResponse } from '../../types/treasury';
 
 export const useCreateTreasuryMovement = () => {
   const { execute, loading, error, reset } = useApi<CreateTreasuryMovementResponse>(

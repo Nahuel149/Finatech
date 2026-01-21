@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { LogisticsOrderBalance, LogisticsOrderItemMetadata } from '../../../../types';
+import { LogisticsOrderBalance, LogisticsOrderItemMetadata } from '../../../../types/logistics';
 import { FormItemErrors, LogisticsOrderFormItem } from './types';
 import { formatCurrency } from '../../operaciones/transfer/utils';
 

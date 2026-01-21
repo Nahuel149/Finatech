@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { Footer } from '../operaciones/Footer';
-import { Alert } from '../../ui';
-import { useCurrentUser, primeCurrentUser } from '../../../hooks';
-import { api, handleApiError } from '../../../utils';
+import { Alert } from '../../ui/Alert';
+import { useCurrentUser, primeCurrentUser } from '../../../hooks/useCurrentUser';
+import { api, handleApiError } from '../../../utils/api';
 
 type BannerType = 'success' | 'info' | 'warning' | 'error';
 

@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { ApiError, ClientSummary } from '../types';
+import { ApiError } from '../types/auth';
+import { ClientSummary } from '../types/client';
 import { apiRequest, handleApiError } from '../utils/api';
 
 export interface CreateClientPayload {

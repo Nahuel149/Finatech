@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
-import { apiRequest, handleApiError } from '../../utils';
-import { ApiError, TreasuryMovement, OperationSuggestion } from '../../types';
+import { apiRequest, handleApiError } from '../../utils/api';
+import { ApiError } from '../../types/auth';
+import { TreasuryMovement, OperationSuggestion } from '../../types/treasury';
 
 interface ReconciliationSuggestionDTO {
   suggestionId: string;

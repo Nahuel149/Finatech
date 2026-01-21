@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { apiRequest, handleApiError } from '../../utils/api';
-import { ClientSummary, ListClientsResponse, ApiError } from '../../types';
+import { ApiError } from '../../types/auth';
+import { ClientSummary, ListClientsResponse } from '../../types/client';
 
 export const useClientSearch = (initialQuery = '') => {
   const [query, setQuery] = useState(initialQuery);

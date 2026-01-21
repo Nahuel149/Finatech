@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useClientSearch, useCreateTransfer } from '../../../hooks';
-import { CreateTransferResponse, MovementDirection, MovementMethod } from '../../../types';
-import { Button } from '../../shared/design-system';
+import { useClientSearch } from '../../../hooks/dashboard/useClientSearch';
+import { useCreateTransfer } from '../../../hooks/dashboard/useCreateTransfer';
+import { CreateTransferResponse, MovementDirection, MovementMethod } from '../../../types/transfer';
+import { Button } from '../../shared/design-system/Button';
 
 interface Props {
   open: boolean;

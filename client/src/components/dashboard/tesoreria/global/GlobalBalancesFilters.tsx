@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  TreasuryGlobalBalancesFilters,
-  TreasuryBalanceState,
-} from '../../../../types';
+import { TreasuryGlobalBalancesFilters, TreasuryBalanceState } from '../../../../types/treasury';
 
 export interface FilterValues {
   currency: string;

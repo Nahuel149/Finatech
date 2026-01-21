@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import { Button } from '../../shared/design-system';
-import { useDashboardOperations } from '../../../hooks';
-import { DashboardOperationRow } from '../../../types';
+import { Button } from '../../shared/design-system/Button';
+import { useDashboardOperations } from '../../../hooks/dashboard/useDashboardOperations';
+import { DashboardOperationRow } from '../../../types/dashboard';
 
 interface OperationsReportPanelProps {
   open: boolean;

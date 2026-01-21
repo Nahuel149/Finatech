@@ -1,10 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  LogisticsItemsHandoverPayload,
-  LogisticsOrder,
-  LogisticsOrderItem,
-  LogisticsPartialCompletionPayload,
-} from '../../../types';
+import { LogisticsItemsHandoverPayload, LogisticsOrder, LogisticsOrderItem, LogisticsPartialCompletionPayload } from '../../../types/logistics';
 import { Alert } from '../../ui/Alert';
 import { formatCurrency } from '../operaciones/transfer/utils';
 

@@ -1,6 +1,7 @@
 import React from 'react';
-import { ApiError, TreasuryContactBalanceOperation } from '../../../../types';
-import { Alert } from '../../../ui';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryContactBalanceOperation } from '../../../../types/treasury';
+import { Alert } from '../../../ui/Alert';
 
 interface PaginationInfo {
   page: number;
@@ -42,6 +43,11 @@ const formatAmount = (amount: number, currency: string, direction: 'incoming' | 
     minimumFractionDigits: 2,
   }).format(Math.abs(amount));
   return `${direction === 'incoming' ? '+' : '-'}${formatted}`;
+};
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '700px',
 };
 
 const statusClasses = (statusKey: string) => {
@@ -134,7 +140,7 @@ export const ContactOperationsTable: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={listVisibilityStyle}>
         <table id="operations-table" className="w-full">
           <thead className="bg-gray-50 sticky top-0">
             <tr>

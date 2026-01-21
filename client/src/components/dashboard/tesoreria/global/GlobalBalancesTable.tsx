@@ -1,6 +1,7 @@
 import React from 'react';
-import { ApiError, TreasuryGlobalBalanceRow } from '../../../../types';
-import { Alert } from '../../../ui';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryGlobalBalanceRow } from '../../../../types/treasury';
+import { Alert } from '../../../ui/Alert';
 
 interface PaginationInfo {
   page: number;
@@ -41,6 +42,11 @@ const variationMeta = (direction: string) => {
     default:
       return { icon: 'fa-minus', className: 'text-neutral-amount', prefix: '' };
   }
+};
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '800px',
 };
 
 const formatCurrency = (amount: number, currency: string) => {
@@ -139,7 +145,7 @@ export const GlobalBalancesTable: React.FC<Props> = ({
         </div>
       )}
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={listVisibilityStyle}>
         <table id="balance-table" className="w-full min-w-[800px]">
           <thead className="bg-gray-50 sticky top-0">
             <tr>

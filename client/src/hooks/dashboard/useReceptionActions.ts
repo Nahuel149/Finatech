@@ -1,17 +1,8 @@
 import { useCallback, useState } from 'react';
-import {
-  ApiError,
-  ConfirmTreasuryReceptionPayload,
-  OmitTreasuryReceptionPayload,
-  RevertTreasuryReceptionPayload,
-  TreasuryReception,
-} from '../../types';
-import {
-  handleApiError,
-  confirmTreasuryReception as confirmReceptionApi,
-  omitTreasuryReception as omitReceptionApi,
-  revertTreasuryReception as revertReceptionApi,
-} from '../../utils';
+import { ApiError } from '../../types/auth';
+import { ConfirmTreasuryReceptionPayload, OmitTreasuryReceptionPayload, RevertTreasuryReceptionPayload, TreasuryReception } from '../../types/treasuryReceptions';
+import { handleApiError } from '../../utils/api';
+import { confirmTreasuryReception as confirmReceptionApi, omitTreasuryReception as omitReceptionApi, revertTreasuryReception as revertReceptionApi } from '../../utils/treasuryReceptionsApi';
 
 export type ReceptionActionType = 'confirm' | 'omit' | 'revert';
 

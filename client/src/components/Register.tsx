@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth, useConfig } from '../hooks';
-import { RegisterResponse } from '../types';
+import { useAuth } from '../hooks/useAuth';
+import { useConfig } from '../hooks/useConfig';
+import { RegisterResponse } from '../types/auth';
 import { validateRegistrationForm, hasFormErrors } from '../utils/validation';
 
 interface RegisterFormData {

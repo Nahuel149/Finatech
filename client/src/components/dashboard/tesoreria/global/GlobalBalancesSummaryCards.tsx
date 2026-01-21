@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreasuryGlobalBalanceSummaryCard } from '../../../../types';
+import { TreasuryGlobalBalanceSummaryCard } from '../../../../types/treasury';
 
 interface Props {
   cards: TreasuryGlobalBalanceSummaryCard[];

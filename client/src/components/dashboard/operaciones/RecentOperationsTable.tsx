@@ -1,8 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardOperations } from '../../../hooks';
-import { DashboardOperationRow } from '../../../types';
-import { Button } from '../../shared/design-system';
+import { useDashboardOperations } from '../../../hooks/dashboard/useDashboardOperations';
+import { DashboardOperationRow } from '../../../types/dashboard';
+import { Button } from '../../shared/design-system/Button';
 
 interface Props {
   search?: string;
@@ -34,6 +34,155 @@ const filterBySearch = (rows: DashboardOperationRow[], query: string) => {
   });
 };
 
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '700px',
+};
+
+type RecentOperationRowProps = {
+  row: DashboardOperationRow;
+  showActionsColumn: boolean;
+  onViewDetail: (row: DashboardOperationRow) => void;
+  onEditOperation: (row: DashboardOperationRow) => void;
+};
+
+const RecentOperationRow = React.memo(
+  ({ row, showActionsColumn, onViewDetail, onEditOperation }: RecentOperationRowProps) => (
+    <tr className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{row.dateLabel}</td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="flex items-center">
+          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+            <span className="text-blue-600 text-sm font-medium">{row.clientInitials}</span>
+          </div>
+          <div>
+            <div className="text-sm font-medium text-text-primary">{row.clientName}</div>
+            <div className="text-sm text-gray-500">{row.clientIdentifier}</div>
+          </div>
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={row.typeClassName}>{row.typeLabel}</span>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
+        <div>
+          <span className="text-gray-500 mr-1">Entra:</span>
+          {row.receivesText}
+        </div>
+        <div>
+          <span className="text-gray-500 mr-1">Sale:</span>
+          {row.paysText}
+        </div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{row.rateLabel}</td>
+      <td className={`px-6 py-4 whitespace-nowrap text-sm ${row.marginClassName}`}>
+        {row.marginLabel}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <span className={row.statusClassName}>{row.statusLabel}</span>
+      </td>
+      {showActionsColumn && (
+        <td className="px-6 py-4 whitespace-nowrap text-sm">
+          <div className="flex items-center space-x-3">
+            <button
+              type="button"
+              className="text-primary hover:underline"
+              onClick={() => onViewDetail(row)}
+              disabled={!row.detailPath}
+            >
+              Ver detalle
+            </button>
+            <button
+              type="button"
+              className={`text-gray-500 hover:underline ${
+                row.isEditable && row.editPath ? 'text-primary' : 'cursor-not-allowed'
+              }`}
+              onClick={() => onEditOperation(row)}
+              disabled={!row.isEditable || !row.editPath}
+            >
+              Editar
+            </button>
+          </div>
+        </td>
+      )}
+    </tr>
+  )
+);
+
+type RecentOperationCardProps = {
+  row: DashboardOperationRow;
+  avatarClass: string;
+  showActionsColumn: boolean;
+  onViewDetail: (row: DashboardOperationRow) => void;
+  onEditOperation: (row: DashboardOperationRow) => void;
+};
+
+const RecentOperationCard = React.memo(
+  ({ row, avatarClass, showActionsColumn, onViewDetail, onEditOperation }: RecentOperationCardProps) => (
+    <div className="border border-gray-200 rounded-xl p-4 mx-4 mb-4 shadow-sm bg-white">
+      <div className="flex items-start justify-between mb-3">
+        <div className="flex items-center space-x-3">
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${avatarClass}`}>
+            {row.clientInitials}
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-text-primary">{row.clientName}</div>
+            <div className="text-xs text-gray-500">{row.dateLabel}</div>
+          </div>
+        </div>
+        <span className={`${row.typeClassName} text-xs px-2 py-1 rounded-full leading-tight`}>
+          {row.typeLabel}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-text-primary mb-3">
+        <div>
+          <div className="text-xs text-gray-500">Entra</div>
+          <div className="font-medium">{row.receivesText}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">Sale</div>
+          <div className="font-medium">{row.paysText}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">TC Efectivo</div>
+          <div className="font-medium">{row.rateLabel}</div>
+        </div>
+        <div>
+          <div className="text-xs text-gray-500">Margen</div>
+          <div className={`font-medium ${row.marginClassName}`}>{row.marginLabel}</div>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <span className={`${row.statusClassName} px-2 py-1 rounded-full text-xs`}>{row.statusLabel}</span>
+        <div className="flex items-center space-x-4 text-sm">
+          <button
+            type="button"
+            className="text-primary hover:underline"
+            onClick={() => onViewDetail(row)}
+            disabled={!row.detailPath}
+          >
+            Ver
+          </button>
+          {showActionsColumn && (
+            <button
+              type="button"
+              className={`hover:underline ${
+                row.isEditable && row.editPath ? 'text-primary' : 'text-gray-400 cursor-not-allowed'
+              }`}
+              onClick={() => onEditOperation(row)}
+              disabled={!row.isEditable || !row.editPath}
+            >
+              Editar
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+);
+
 export const RecentOperationsTable: React.FC<Props> = ({
   search = '',
   limit: initialLimit = 10,
@@ -43,6 +192,7 @@ export const RecentOperationsTable: React.FC<Props> = ({
   const historyPageSize = 15;
   const [historyMode, setHistoryMode] = useState(false);
   const [page, setPage] = useState(1);
+  const [, startTransition] = useTransition();
 
   const pageSize = historyMode ? historyPageSize : initialLimit;
   const currentPage = historyMode ? page : 1;
@@ -105,19 +255,39 @@ export const RecentOperationsTable: React.FC<Props> = ({
     return avatarPalette[code % avatarPalette.length];
   };
 
-  const handleViewDetail = (row: DashboardOperationRow) => {
+  const handleViewDetail = useCallback((row: DashboardOperationRow) => {
     if (!row.detailPath) {
       return;
     }
     navigate(row.detailPath);
-  };
+  }, [navigate]);
 
-  const handleEditOperation = (row: DashboardOperationRow) => {
+  const handleEditOperation = useCallback((row: DashboardOperationRow) => {
     if (!row.isEditable || !row.editPath) {
       return;
     }
     navigate(row.editPath);
-  };
+  }, [navigate]);
+
+  const handleClientFilterChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = event.target.value;
+      startTransition(() => {
+        setClientFilter(value);
+      });
+    },
+    [startTransition]
+  );
+
+  const handleTypeFilterChange = useCallback(
+    (event: React.ChangeEvent<HTMLSelectElement>) => {
+      const value = event.target.value;
+      startTransition(() => {
+        setTypeFilter(value);
+      });
+    },
+    [startTransition]
+  );
 
   const handleViewHistory = () => {
     setHistoryMode((prev) => !prev);
@@ -160,7 +330,7 @@ export const RecentOperationsTable: React.FC<Props> = ({
               <div className="relative">
                 <select
                   value={clientFilter}
-                  onChange={(event) => setClientFilter(event.target.value)}
+                  onChange={handleClientFilterChange}
                   className="appearance-none bg-white border border-gray-300 rounded-lg h-10 px-3 pr-9 text-sm font-medium text-text-primary focus:ring-2 focus:ring-primary focus:border-primary w-full lg:w-auto shadow-sm"
                 >
                   <option value="all">Todos los clientes</option>
@@ -178,7 +348,7 @@ export const RecentOperationsTable: React.FC<Props> = ({
               <div className="relative">
                 <select
                   value={typeFilter}
-                  onChange={(event) => setTypeFilter(event.target.value)}
+                  onChange={handleTypeFilterChange}
                   className="appearance-none bg-white border border-gray-300 rounded-lg h-10 px-3 pr-9 text-sm font-medium text-text-primary focus:ring-2 focus:ring-primary focus:border-primary w-full lg:w-auto shadow-sm"
                 >
                   <option value="all">Todos los tipos</option>
@@ -195,7 +365,7 @@ export const RecentOperationsTable: React.FC<Props> = ({
         </div>
 
         {/* Desktop Table View */}
-        <div className="hidden lg:block overflow-x-auto">
+        <div className="hidden lg:block overflow-x-auto" style={listVisibilityStyle}>
           <table className="w-full">
             <thead className="bg-gray-50">
               <tr>
@@ -301,71 +471,20 @@ export const RecentOperationsTable: React.FC<Props> = ({
               {!loading &&
                 !error &&
                 filteredRows.map((row) => (
-                  <tr key={row.id ?? row.createdAt} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{row.dateLabel}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center mr-3">
-                          <span className="text-blue-600 text-sm font-medium">{row.clientInitials}</span>
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium text-text-primary">{row.clientName}</div>
-                          <div className="text-sm text-gray-500">{row.clientIdentifier}</div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={row.typeClassName}>{row.typeLabel}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">
-                      <div>
-                        <span className="text-gray-500 mr-1">Entra:</span>
-                        {row.receivesText}
-                      </div>
-                      <div>
-                        <span className="text-gray-500 mr-1">Sale:</span>
-                        {row.paysText}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-text-primary">{row.rateLabel}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${row.marginClassName}`}>
-                      {row.marginLabel}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={row.statusClassName}>{row.statusLabel}</span>
-                    </td>
-                    {showActionsColumn && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex items-center space-x-3">
-                          <button
-                            type="button"
-                            className="text-primary hover:underline"
-                            onClick={() => handleViewDetail(row)}
-                            disabled={!row.detailPath}
-                          >
-                            Ver detalle
-                          </button>
-                          <button
-                            type="button"
-                            className={`text-gray-500 hover:underline ${
-                              row.isEditable && row.editPath ? 'text-primary' : 'cursor-not-allowed'
-                            }`}
-                            onClick={() => handleEditOperation(row)}
-                            disabled={!row.isEditable || !row.editPath}
-                          >
-                            Editar
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
+                  <RecentOperationRow
+                    key={row.id ?? row.createdAt}
+                    row={row}
+                    showActionsColumn={showActionsColumn}
+                    onViewDetail={handleViewDetail}
+                    onEditOperation={handleEditOperation}
+                  />
                 ))}
             </tbody>
           </table>
         </div>
 
         {/* Mobile Card View */}
-        <div className="lg:hidden">
+        <div className="lg:hidden" style={listVisibilityStyle}>
           {loading && (
             <div className="p-4 space-y-3">
               {Array.from({ length: 3 }).map((_, index) => (
@@ -404,74 +523,14 @@ export const RecentOperationsTable: React.FC<Props> = ({
           {!loading &&
             !error &&
             filteredRows.map((row) => (
-              <div
+              <RecentOperationCard
                 key={row.id ?? row.createdAt}
-                className="border border-gray-200 rounded-xl p-4 mx-4 mb-4 shadow-sm bg-white"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold ${getAvatarClass(
-                        row.clientName
-                      )}`}
-                    >
-                      {row.clientInitials}
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-text-primary">{row.clientName}</div>
-                      <div className="text-xs text-gray-500">{row.dateLabel}</div>
-                    </div>
-                  </div>
-                  <span className={`${row.typeClassName} text-xs px-2 py-1 rounded-full leading-tight`}>
-                    {row.typeLabel}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm text-text-primary mb-3">
-                  <div>
-                    <div className="text-xs text-gray-500">Entra</div>
-                    <div className="font-medium">{row.receivesText}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Sale</div>
-                    <div className="font-medium">{row.paysText}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">TC Efectivo</div>
-                    <div className="font-medium">{row.rateLabel}</div>
-                  </div>
-                  <div>
-                    <div className="text-xs text-gray-500">Margen</div>
-                    <div className={`font-medium ${row.marginClassName}`}>{row.marginLabel}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className={`${row.statusClassName} px-2 py-1 rounded-full text-xs`}>{row.statusLabel}</span>
-                  <div className="flex items-center space-x-4 text-sm">
-                    <button
-                      type="button"
-                      className="text-primary hover:underline"
-                      onClick={() => handleViewDetail(row)}
-                      disabled={!row.detailPath}
-                    >
-                      Ver
-                    </button>
-                    {showActionsColumn && (
-                      <button
-                        type="button"
-                        className={`hover:underline ${
-                          row.isEditable && row.editPath ? 'text-primary' : 'text-gray-400 cursor-not-allowed'
-                        }`}
-                        onClick={() => handleEditOperation(row)}
-                        disabled={!row.isEditable || !row.editPath}
-                      >
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
+                row={row}
+                avatarClass={getAvatarClass(row.clientName)}
+                showActionsColumn={showActionsColumn}
+                onViewDetail={handleViewDetail}
+                onEditOperation={handleEditOperation}
+              />
             ))}
         </div>
 

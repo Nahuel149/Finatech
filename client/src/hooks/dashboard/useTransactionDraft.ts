@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import {
-  ApiError,
-  TransactionDraft,
-  TransactionDraftPayload,
-  TransactionSettlementPayload,
-} from '../../types';
+import { ApiError } from '../../types/auth';
+import { TransactionDraft, TransactionDraftPayload, TransactionSettlementPayload } from '../../types/transaction';
 import { apiRequest, handleApiError } from '../../utils/api';
 
 export const useTransactionDraft = (draftId?: string | null) => {

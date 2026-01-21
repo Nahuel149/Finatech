@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { MapContainer, Marker, Popup, TileLayer } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { SelectedLocation } from '../../types';
+import { SelectedLocation } from '../../types/location';
 
 // Fix Leaflet default icon paths when bundled with CRA
 delete (L.Icon.Default as any).prototype._getIconUrl;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ApiError, ClientSummary, ListClientsResponse } from '../../types';
+import { ApiError } from '../../types/auth';
+import { ClientSummary, ListClientsResponse } from '../../types/client';
 import { apiRequest, handleApiError } from '../../utils/api';
 
 export const useClientsList = (limit = 25) => {

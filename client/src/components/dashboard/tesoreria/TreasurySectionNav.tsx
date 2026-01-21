@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useUserPermissions } from '../../../hooks';
+import { useUserPermissions } from '../../../hooks/useUserPermissions';
 
 interface NavItem {
   key: 'movimientos' | 'saldos' | 'saldos-vinculados' | 'recepciones';

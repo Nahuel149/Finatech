@@ -6,7 +6,7 @@ import {
   XCircleIcon,
   ClockIcon 
 } from '../../icons/HeroiconsOutline';
-import { LogisticsIncidentHistoryEntry } from '../../../types';
+import { LogisticsIncidentHistoryEntry } from '../../../types/logistics';
 
 interface IncidentTimelineSectionProps {
   history: LogisticsIncidentHistoryEntry[];

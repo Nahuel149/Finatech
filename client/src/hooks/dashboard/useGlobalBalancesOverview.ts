@@ -1,10 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
-import {
-  TreasuryGlobalBalancesOverviewResponse,
-  TreasuryBalanceState,
-} from '../../types';
-import { subscribeDashboardBalanceRefresh } from '../../utils';
+import { TreasuryGlobalBalancesOverviewResponse, TreasuryBalanceState } from '../../types/treasury';
+import { subscribeDashboardBalanceRefresh } from '../../utils/balanceEvents';
 
 export interface GlobalBalancesFilters {
   currency?: string;

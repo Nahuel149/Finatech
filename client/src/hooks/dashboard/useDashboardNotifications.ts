@@ -1,6 +1,7 @@
 import { useCallback, useSyncExternalStore } from 'react';
-import { api, apiRequest, handleApiError } from '../../utils';
-import { ApiError, DashboardNotification, DashboardNotificationsResponse } from '../../types';
+import { api, apiRequest, handleApiError } from '../../utils/api';
+import { ApiError } from '../../types/auth';
+import { DashboardNotification, DashboardNotificationsResponse } from '../../types/dashboard';
 
 interface NotificationsState {
   notifications: DashboardNotification[];

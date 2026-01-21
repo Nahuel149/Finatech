@@ -1,16 +1,14 @@
-import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useState, useTransition } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import {
-  useContactBalanceDetail,
-  ContactBalanceDetailFilters,
-} from '../../../../hooks';
+import { useContactBalanceDetail, ContactBalanceDetailFilters } from '../../../../hooks/dashboard/useContactBalanceDetail';
 import { TreasuryBalanceStripe } from '../TreasuryBalanceStripe';
 import { TreasuryNavbar } from '../TreasuryNavbar';
 import { ContactSummaryCard } from './ContactSummaryCard';
 import { ContactFilters, ContactFilterValues } from './ContactFilters';
 import { ContactOperationsTable } from './ContactOperationsTable';
-import { Alert } from '../../../ui';
-import { ClientSummary, TreasuryContactBalanceOperation } from '../../../../types';
+import { Alert } from '../../../ui/Alert';
+import { ClientSummary } from '../../../../types/client';
+import { TreasuryContactBalanceOperation } from '../../../../types/treasury';
 import { NewClientModal } from '../../../clients/NewClientModal';
 import { Footer } from '../../operaciones/Footer';
 
@@ -128,6 +126,7 @@ export const ContactBalanceDetailPage: React.FC = () => {
   );
   const [globalSearch, setGlobalSearch] = useState(filters.search);
   const [createContactOpen, setCreateContactOpen] = useState(false);
+  const [, startTransition] = useTransition();
 
   const apiFilters: ContactBalanceDetailFilters = {
     currency: filters.currency || null,
@@ -186,11 +185,13 @@ export const ContactBalanceDetailPage: React.FC = () => {
   };
 
   const handleFiltersChange = (updates: Partial<ContactFilterValues>) => {
-    setFilters((prev) => ({
-      ...prev,
-      ...updates,
-    }));
-    setPage(1);
+    startTransition(() => {
+      setFilters((prev) => ({
+        ...prev,
+        ...updates,
+      }));
+      setPage(1);
+    });
   };
 
   const handleRemoveFilter = (key: keyof ContactFilterValues) => {
@@ -220,19 +221,22 @@ export const ContactBalanceDetailPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
-    setFilters(DEFAULT_FILTER_VALUES);
-    setPage(1);
     setGlobalSearch('');
+    handleFiltersChange(DEFAULT_FILTER_VALUES);
     setToast({ type: 'info', message: 'Filtros limpiados correctamente.' });
   };
 
   const handlePageChange = (nextPage: number) => {
-    setPage(nextPage);
+    startTransition(() => {
+      setPage(nextPage);
+    });
   };
 
   const handleSortChange = (value: string) => {
-    setSortValue(value);
-    setPage(1);
+    startTransition(() => {
+      setSortValue(value);
+      setPage(1);
+    });
   };
 
   const handleGlobalSearchChange = (value: string) => {

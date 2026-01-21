@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { apiRequest, handleApiError } from '../../utils/api';
-import { ApiError } from '../../types';
-import { CreateTransferPayload, CreateTransferResponse } from '../../types';
+import { ApiError } from '../../types/auth';
+import { CreateTransferPayload, CreateTransferResponse } from '../../types/transfer';
 
 export const useCreateTransfer = () => {
   const [data, setData] = useState<CreateTransferResponse | null>(null);

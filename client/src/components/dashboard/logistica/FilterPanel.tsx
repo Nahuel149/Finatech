@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { XMarkIcon, MagnifyingGlassIcon } from '../../icons/HeroiconsOutline';
-import { DEFAULT_LOGISTICS_FILTERS, LogisticsFilters, LogisticsOperation } from '../../../types';
+import { DEFAULT_LOGISTICS_FILTERS, LogisticsFilters, LogisticsOperation } from '../../../types/logistics';
 
 interface FilterPanelProps {
   isOpen: boolean;

@@ -1,9 +1,4 @@
-import {
-  LogisticsOrderItemMetadata,
-  LogisticsOrderItemType,
-  LogisticsOrderStatus,
-  LogisticsOrderType,
-} from '../../../../types';
+import { LogisticsOrderItemMetadata, LogisticsOrderItemType, LogisticsOrderStatus, LogisticsOrderType } from '../../../../types/logistics';
 
 export interface LogisticsOrderFormItem {
   id: string;

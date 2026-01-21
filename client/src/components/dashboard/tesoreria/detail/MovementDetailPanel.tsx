@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo } from 'react';
-import { ApiError, TreasuryMovement, TreasuryMovementOperationLink } from '../../../../types';
-import { useTreasuryMovement, useClientDetail } from '../../../../hooks';
-import { Alert } from '../../../ui';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryMovement, TreasuryMovementOperationLink } from '../../../../types/treasury';
+import { useTreasuryMovement } from '../../../../hooks/dashboard/useTreasuryMovement';
+import { useClientDetail } from '../../../../hooks/useClientDetail';
+import { Alert } from '../../../ui/Alert';
 import { MovementSummaryCard } from './MovementSummaryCard';
 import { ContactInfoCard } from './ContactInfoCard';
 import { LinkedOperationCard } from './LinkedOperationCard';

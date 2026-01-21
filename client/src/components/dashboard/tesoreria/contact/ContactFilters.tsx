@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreasuryContactBalanceFilterOptions } from '../../../../types';
+import { TreasuryContactBalanceFilterOptions } from '../../../../types/treasury';
 
 export interface ContactFilterValues {
   operationType: string;

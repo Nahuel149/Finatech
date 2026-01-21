@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { api, handleApiError } from '../../utils/api';
-import { ApiError, LogisticsIncident } from '../../types';
+import { ApiError } from '../../types/auth';
+import { LogisticsIncident } from '../../types/logistics';
 
 export const useLogisticsIncidentDetail = (incidentId?: string) => {
   const [incident, setIncident] = useState<LogisticsIncident | null>(null);

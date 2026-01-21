@@ -1,11 +1,5 @@
 import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
-import {
-  MovementDirection,
-  MovementMethod,
-  MovementType,
-  TransferDistributionLineInput,
-  TransferOperation,
-} from '../../../../types';
+import { MovementDirection, MovementMethod, MovementType, TransferDistributionLineInput, TransferOperation } from '../../../../types/transfer';
 
 export interface TransferDraftLine {
   id: string;

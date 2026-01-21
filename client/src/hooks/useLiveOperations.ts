@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { LiveOperationsResponse, LiveOperationImpacts } from '../types';
-import { apiRequest } from '../utils';
+import { LiveOperationsResponse, LiveOperationImpacts } from '../types/dashboard';
+import { apiRequest } from '../utils/api';
 
 type ConnectionStatus = 'idle' | 'live' | 'polling' | 'error';
 

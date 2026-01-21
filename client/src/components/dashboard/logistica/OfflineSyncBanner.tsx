@@ -1,5 +1,6 @@
 import React from 'react';
-import { ApiError, LogisticsOfflineAction } from '../../../types';
+import { ApiError } from '../../../types/auth';
+import { LogisticsOfflineAction } from '../../../types/logistics';
 
 interface OfflineSyncBannerProps {
   pendingActions: LogisticsOfflineAction[];

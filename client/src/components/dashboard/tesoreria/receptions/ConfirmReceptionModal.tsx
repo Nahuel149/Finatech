@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ConfirmTreasuryReceptionPayload, TreasuryReception } from '../../../../types';
-import { Modal } from '../../../ui';
+import { ConfirmTreasuryReceptionPayload, TreasuryReception } from '../../../../types/treasuryReceptions';
+import { Modal } from '../../../ui/Modal';
 import { formatCurrency } from '../../operaciones/transfer/utils';
 import { ensureCurrencyTotals } from './receptionUtils';
 

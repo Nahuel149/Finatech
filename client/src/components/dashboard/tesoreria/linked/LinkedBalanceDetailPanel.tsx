@@ -1,5 +1,6 @@
 import React, { ChangeEvent, useMemo } from 'react';
-import { ApiError, TreasuryLinkedBalanceDetailResponse, TreasuryMovement } from '../../../../types';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryLinkedBalanceDetailResponse, TreasuryMovement } from '../../../../types/treasury';
 
 interface PanelFilters {
   dateFrom: string | null;

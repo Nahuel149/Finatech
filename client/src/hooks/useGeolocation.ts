@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
-import { ApiError, LocationSearchPayload, LocationSearchResult } from '../types';
+import { ApiError } from '../types/auth';
+import { LocationSearchPayload, LocationSearchResult } from '../types/location';
 import { apiRequest, handleApiError } from '../utils/api';
 
 interface SearchOptions {

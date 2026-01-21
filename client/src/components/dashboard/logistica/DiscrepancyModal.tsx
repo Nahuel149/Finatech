@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ApiError, LogisticsDiscrepancyPayload } from '../../../types';
+import { ApiError } from '../../../types/auth';
+import { LogisticsDiscrepancyPayload } from '../../../types/logistics';
 import { Modal } from '../../ui/Modal';
 import { Alert } from '../../ui/Alert';
 

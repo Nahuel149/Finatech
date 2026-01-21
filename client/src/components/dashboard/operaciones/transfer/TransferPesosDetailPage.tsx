@@ -1,16 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Alert } from '../../../ui';
+import { Alert } from '../../../ui/Alert';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { apiRequest, handleApiError } from '../../../../utils/api';
-import { useLogisticsOrdersByOperation } from '../../../../hooks/dashboard';
-import {
-  ApiError,
-  LogisticsOrder,
-  LogisticsOrderStatus,
-  TransferOperation,
-} from '../../../../types';
+import { useLogisticsOrdersByOperation } from '../../../../hooks/dashboard/useLogisticsOrders';
+import { ApiError } from '../../../../types/auth';
+import { LogisticsOrder, LogisticsOrderStatus } from '../../../../types/logistics';
+import { TransferOperation } from '../../../../types/transfer';
 import {
   buildAccountingEntries,
   formatCurrency,
@@ -18,7 +15,7 @@ import {
 } from './utils';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
 import { LinkedLogisticsOrdersSection } from '../logistics/LinkedLogisticsOrdersSection';
-import { LogisticsOrderWizard } from '../../logistica/order-wizard';
+import { LogisticsOrderWizard } from '../../logistica/order-wizard/LogisticsOrderWizard';
 
 const MOVEMENT_TYPE_TEXT: Record<string, string> = {
   transfer: 'Transferencia bancaria',

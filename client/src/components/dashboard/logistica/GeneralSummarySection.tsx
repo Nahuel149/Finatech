@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogisticsMetrics } from '../../../types';
+import { LogisticsMetrics } from '../../../types/logistics';
 
 interface GeneralSummarySectionProps {
   metrics: LogisticsMetrics | null;

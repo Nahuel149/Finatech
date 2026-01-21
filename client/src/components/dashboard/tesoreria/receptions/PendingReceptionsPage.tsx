@@ -1,12 +1,8 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useTransition } from 'react';
 import { useLocation } from 'react-router-dom';
-import {
-  DEFAULT_PENDING_RECEPTIONS_FILTERS,
-  PendingReceptionFilters,
-  usePendingReceptions,
-  useReceptionActions,
-  useUserPermissions,
-} from '../../../../hooks';
+import { DEFAULT_PENDING_RECEPTIONS_FILTERS, PendingReceptionFilters, usePendingReceptions } from '../../../../hooks/dashboard/usePendingReceptions';
+import { useReceptionActions } from '../../../../hooks/dashboard/useReceptionActions';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
 import { TreasuryNavbar } from '../TreasuryNavbar';
 import { TreasuryBalanceStripe } from '../TreasuryBalanceStripe';
 import { PendingReceptionsFilters } from './PendingReceptionsFilters';
@@ -15,15 +11,10 @@ import { ReceptionDetailPanel } from './ReceptionDetailPanel';
 import { ConfirmReceptionModal } from './ConfirmReceptionModal';
 import { OmitReceptionModal } from './OmitReceptionModal';
 import { RevertReceptionModal } from './RevertReceptionModal';
-import { Alert } from '../../../ui';
-import {
-  TreasuryReception,
-  ConfirmTreasuryReceptionPayload,
-  OmitTreasuryReceptionPayload,
-  RevertTreasuryReceptionPayload,
-} from '../../../../types';
+import { Alert } from '../../../ui/Alert';
+import { TreasuryReception, ConfirmTreasuryReceptionPayload, OmitTreasuryReceptionPayload, RevertTreasuryReceptionPayload } from '../../../../types/treasuryReceptions';
 import { Footer } from '../../operaciones/Footer';
-import { emitDashboardBalanceRefresh } from '../../../../utils';
+import { emitDashboardBalanceRefresh } from '../../../../utils/balanceEvents';
 import { TreasurySectionNav } from '../TreasurySectionNav';
 
 interface ToastState {
@@ -61,6 +52,7 @@ export const PendingReceptionsPage: React.FC = () => {
   const [omitModalOpen, setOmitModalOpen] = useState(false);
   const [revertModalOpen, setRevertModalOpen] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [, startTransition] = useTransition();
 
   useEffect(() => {
     setDraftFilters(filters);
@@ -91,7 +83,9 @@ export const PendingReceptionsPage: React.FC = () => {
     const orderId = params.get('orderId');
     if (orderId) {
       setDraftFilters((prev) => ({ ...prev, operation: orderId }));
-      applyFilters({ ...filters, operation: orderId });
+      startTransition(() => {
+        applyFilters({ ...filters, operation: orderId });
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.search]);
@@ -117,18 +111,30 @@ export const PendingReceptionsPage: React.FC = () => {
   };
 
   const handleApplyFilters = () => {
-    applyFilters(draftFilters);
+    startTransition(() => {
+      applyFilters(draftFilters);
+    });
   };
 
   const handleClearFilters = () => {
     setDraftFilters(DEFAULT_PENDING_RECEPTIONS_FILTERS);
-    clearFilters();
+    startTransition(() => {
+      clearFilters();
+    });
   };
 
   const handleGlobalSearchChange = (value: string) => {
     setGlobalSearch(value);
     setDraftFilters((prev) => ({ ...prev, search: value }));
-    applyFilters({ ...filters, search: value });
+    startTransition(() => {
+      applyFilters({ ...filters, search: value });
+    });
+  };
+
+  const handlePageChange = (nextPage: number) => {
+    startTransition(() => {
+      goToPage(nextPage);
+    });
   };
 
   const handleSelectReception = (reception: TreasuryReception) => {
@@ -205,7 +211,7 @@ export const PendingReceptionsPage: React.FC = () => {
           error={error}
           onRetry={refresh}
           pagination={pagination}
-          onPageChange={goToPage}
+          onPageChange={handlePageChange}
           onSelect={handleSelectReception}
           selectedId={selectedReception?.id || null}
         />

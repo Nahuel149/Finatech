@@ -1,12 +1,12 @@
 import React from 'react';
-import {
-  ApiError,
-  TreasuryMovement,
-  TreasuryMovementsTotals,
-} from '../../../types';
-import {
-  TreasuryMovementsSortOption,
-} from '../../../hooks';
+import { ApiError } from '../../../types/auth';
+import { TreasuryMovement, TreasuryMovementsTotals } from '../../../types/treasury';
+import { TreasuryMovementsSortOption } from '../../../hooks/dashboard/useTreasuryMovements';
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '800px',
+};
 
 interface Props {
   items: TreasuryMovement[];
@@ -159,6 +159,217 @@ const linkedOperationCode = (movement: TreasuryMovement) => {
   return operation?.code ? `#${operation.code}` : '—';
 };
 
+const TreasuryMovementCard = React.memo(
+  ({
+    movement,
+    onViewDetail,
+    onView,
+    onEdit,
+    onCancel,
+  }: {
+    movement: TreasuryMovement;
+    onViewDetail: (movement: TreasuryMovement) => void;
+    onView: (movement: TreasuryMovement) => void;
+    onEdit: (movement: TreasuryMovement) => void;
+    onCancel: (movement: TreasuryMovement) => void;
+  }) => {
+    const dateInfo = formatDate(movement.movementAt);
+    const isCancelled = movement.status === 'cancelled';
+    const isEditable = movement.status === 'registered';
+    const statusCls = statusBadgeClass(movement.status);
+    const currencyCls = currencyBadgeClass(movement.currency);
+
+    return (
+      <div
+        className="movement-card bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
+        onClick={() => onViewDetail(movement)}
+      >
+        <div className="flex items-start justify-between mb-2">
+          <div>
+            <div className="text-sm font-medium text-text-primary">{dateInfo.date}</div>
+            <div className="text-xs text-gray-500">{dateInfo.time}</div>
+          </div>
+          <div className={`text-lg font-semibold ${amountClass(movement)}`}>{formatAmount(movement)}</div>
+        </div>
+
+        <div className="flex flex-wrap gap-2 mb-2">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currencyCls}`}>
+            {movement.currency || 'ƒ?"'}
+          </span>
+          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+            <i className={`fa-solid ${typeIcon(movement.type)} mr-1`} />
+            {typeLabel(movement.type)} ¶ú {mediumLabel(movement.medium)}
+          </span>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCls}`}>
+            {statusLabel(movement.status)}
+          </span>
+        </div>
+
+        <div className="text-sm text-text-primary mb-2">
+          <div className="font-medium">{movement.contact?.fullName || movement.contact?.shortName || 'ƒ?"'}</div>
+          <div className="text-xs text-gray-600 capitalize">Origen: {movement.source || 'ƒ?"'}</div>
+          <div className="text-xs text-primary">{linkedOperationCode(movement)}</div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              onView(movement);
+            }}
+            className="mobile-button-small text-primary hover:text-blue-700 text-sm"
+            aria-label="Ver movimiento"
+          >
+            <i className="fa-solid fa-eye" />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (isEditable) onEdit(movement);
+            }}
+            className={`mobile-button-small text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
+            aria-label="Editar movimiento"
+            disabled={!isEditable}
+          >
+            <i className="fa-solid fa-edit" />
+          </button>
+          <button
+            type="button"
+            onClick={(event) => {
+              event.stopPropagation();
+              if (!isCancelled) onCancel(movement);
+            }}
+            className={`mobile-button-small text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-danger hover:text-red-700'}`}
+            aria-label="Anular movimiento"
+            disabled={isCancelled}
+          >
+            <i className="fa-solid fa-ban" />
+          </button>
+        </div>
+      </div>
+    );
+  }
+);
+
+const TreasuryMovementRow = React.memo(
+  ({
+    movement,
+    onViewDetail,
+    onView,
+    onEdit,
+    onCancel,
+  }: {
+    movement: TreasuryMovement;
+    onViewDetail: (movement: TreasuryMovement) => void;
+    onView: (movement: TreasuryMovement) => void;
+    onEdit: (movement: TreasuryMovement) => void;
+    onCancel: (movement: TreasuryMovement) => void;
+  }) => {
+    const dateInfo = formatDate(movement.movementAt);
+    const isCancelled = movement.status === 'cancelled';
+    const isEditable = movement.status === 'registered';
+    const statusCls = statusBadgeClass(movement.status);
+
+    return (
+      <tr
+        className="table-row cursor-pointer fade-in"
+        onClick={() => onViewDetail(movement)}
+      >
+        <td className="px-6 py-4 whitespace-nowrap">
+          <div className="text-sm font-medium text-text-primary">{dateInfo.date}</div>
+          <div className="text-xs text-gray-500">{dateInfo.time}</div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <div className="flex items-center justify-center">
+            <i className={`fa-solid ${typeIcon(movement.type)} mr-2`} />
+            <span className="text-sm text-text-primary">{typeLabel(movement.type)}</span>
+          </div>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <span className="text-sm text-text-primary">{mediumLabel(movement.medium)}</span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currencyBadgeClass(
+              movement.currency
+            )}`}
+          >
+            {movement.currency || 'ƒ?"'}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-right">
+          <span className={`text-lg font-semibold ${amountClass(movement)}`}>
+            {formatAmount(movement)}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <span className="text-sm text-text-primary">
+            {movement.contact?.fullName || movement.contact?.shortName || 'ƒ?"'}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap">
+          <span className="text-sm text-gray-600 capitalize">
+            {movement.source || 'ƒ?"'}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <span className="text-sm font-mono text-primary">{linkedOperationCode(movement)}</span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCls}`}>
+            {statusLabel(movement.status)}
+          </span>
+        </td>
+        <td className="px-6 py-4 whitespace-nowrap text-center">
+          <div className="flex items-center justify-center space-x-2">
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                onView(movement);
+              }}
+              className="text-primary hover:text-blue-700 text-sm"
+              aria-label="Ver movimiento"
+            >
+              <i className="fa-solid fa-eye" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (isEditable) {
+                  onEdit(movement);
+                }
+              }}
+              className={`text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
+              aria-label="Editar movimiento"
+              disabled={!isEditable}
+            >
+              <i className="fa-solid fa-edit" />
+            </button>
+            <button
+              type="button"
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!isCancelled) {
+                  onCancel(movement);
+                }
+              }}
+              className={`text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-danger hover:text-red-700'}`}
+              aria-label="Anular movimiento"
+              disabled={isCancelled}
+            >
+              <i className="fa-solid fa-ban" />
+            </button>
+          </div>
+        </td>
+      </tr>
+    );
+  }
+);
+
 export const TreasuryMovementsTable: React.FC<Props> = ({
   items,
   loading,
@@ -234,7 +445,7 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
       </div>
 
       {/* Mobile Card Layout */}
-      <div className="md:hidden px-4 py-4">
+      <div className="md:hidden px-4 py-4" style={listVisibilityStyle}>
         {loading ? (
           <div className="bg-white rounded-lg border border-gray-200 p-6 text-center text-sm text-gray-500">
             Cargando movimientos…
@@ -256,92 +467,22 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
           </div>
         ) : (
           <div className="space-y-3">
-            {items.map((movement) => {
-              const dateInfo = formatDate(movement.movementAt);
-              const isCancelled = movement.status === 'cancelled';
-              const isEditable = movement.status === 'registered';
-              const statusCls = statusBadgeClass(movement.status);
-              const currencyCls = currencyBadgeClass(movement.currency);
-
-              return (
-                <div
-                  key={movementCode(movement)}
-                  className="movement-card bg-white rounded-lg border border-gray-200 p-4 hover:shadow-md transition-shadow"
-                  onClick={() => onViewDetail(movement)}
-                >
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="text-sm font-medium text-text-primary">{dateInfo.date}</div>
-                      <div className="text-xs text-gray-500">{dateInfo.time}</div>
-                    </div>
-                    <div className={`text-lg font-semibold ${amountClass(movement)}`}>{formatAmount(movement)}</div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currencyCls}`}>
-                      {movement.currency || '—'}
-                    </span>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                      <i className={`fa-solid ${typeIcon(movement.type)} mr-1`} />
-                      {typeLabel(movement.type)} · {mediumLabel(movement.medium)}
-                    </span>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCls}`}>
-                      {statusLabel(movement.status)}
-                    </span>
-                  </div>
-
-                  <div className="text-sm text-text-primary mb-2">
-                    <div className="font-medium">{movement.contact?.fullName || movement.contact?.shortName || '—'}</div>
-                    <div className="text-xs text-gray-500 capitalize">Origen: {movement.source || '—'}</div>
-                    <div className="text-xs text-primary">{linkedOperationCode(movement)}</div>
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3">
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onView(movement);
-                      }}
-                      className="mobile-button-small text-primary hover:text-blue-700 text-sm"
-                      aria-label="Ver movimiento"
-                    >
-                      <i className="fa-solid fa-eye" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (isEditable) onEdit(movement);
-                      }}
-                      className={`mobile-button-small text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
-                      aria-label="Editar movimiento"
-                      disabled={!isEditable}
-                    >
-                      <i className="fa-solid fa-edit" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        if (!isCancelled) onCancel(movement);
-                      }}
-                      className={`mobile-button-small text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-danger hover:text-red-700'}`}
-                      aria-label="Anular movimiento"
-                      disabled={isCancelled}
-                    >
-                      <i className="fa-solid fa-ban" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
+            {items.map((movement) => (
+              <TreasuryMovementCard
+                key={movementCode(movement)}
+                movement={movement}
+                onViewDetail={onViewDetail}
+                onView={onView}
+                onEdit={onEdit}
+                onCancel={onCancel}
+              />
+            ))}
           </div>
         )}
       </div>
 
       {/* Desktop Table Layout */}
-      <div className="hidden md:block overflow-x-auto">
+      <div className="hidden md:block overflow-x-auto" style={listVisibilityStyle}>
         <table id="movements-table" className="w-full">
           <thead className="bg-gray-50">
             <tr>
@@ -382,110 +523,16 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
 
             {!loading &&
               !error &&
-              items.map((movement) => {
-                const dateInfo = formatDate(movement.movementAt);
-                const isCancelled = movement.status === 'cancelled';
-                const isEditable = movement.status === 'registered';
-                const statusCls = statusBadgeClass(movement.status);
-
-                return (
-                  <tr
-                    key={movementCode(movement)}
-                    className="table-row cursor-pointer fade-in"
-                    onClick={() => onViewDetail(movement)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-text-primary">{dateInfo.date}</div>
-                      <div className="text-xs text-gray-500">{dateInfo.time}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center">
-                        <i className={`fa-solid ${typeIcon(movement.type)} mr-2`} />
-                        <span className="text-sm text-text-primary">{typeLabel(movement.type)}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm text-text-primary">{mediumLabel(movement.medium)}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${currencyBadgeClass(
-                          movement.currency
-                        )}`}
-                      >
-                        {movement.currency || '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right">
-                      <span className={`text-lg font-semibold ${amountClass(movement)}`}>
-                        {formatAmount(movement)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-text-primary">
-                        {movement.contact?.fullName || movement.contact?.shortName || '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600 capitalize">
-                        {movement.source || '—'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className="text-sm font-mono text-primary">{linkedOperationCode(movement)}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusCls}`}>
-                        {statusLabel(movement.status)}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onView(movement);
-                          }}
-                          className="text-primary hover:text-blue-700 text-sm"
-                          aria-label="Ver movimiento"
-                        >
-                          <i className="fa-solid fa-eye" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (isEditable) {
-                              onEdit(movement);
-                            }
-                          }}
-                          className={`text-sm ${isEditable ? 'text-gray-600 hover:text-gray-800' : 'text-gray-400 cursor-not-allowed'}`}
-                          aria-label="Editar movimiento"
-                          disabled={!isEditable}
-                        >
-                          <i className="fa-solid fa-edit" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            if (!isCancelled) {
-                              onCancel(movement);
-                            }
-                          }}
-                          className={`text-sm ${isCancelled ? 'text-gray-400 cursor-not-allowed' : 'text-danger hover:text-red-700'}`}
-                          aria-label="Anular movimiento"
-                          disabled={isCancelled}
-                        >
-                          <i className="fa-solid fa-ban" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-
+              items.map((movement) => (
+                <TreasuryMovementRow
+                  key={movementCode(movement)}
+                  movement={movement}
+                  onViewDetail={onViewDetail}
+                  onView={onView}
+                  onEdit={onEdit}
+                  onCancel={onCancel}
+                />
+              ))}
             {!loading && !error && !items.length && (
               <tr>
                 <td className="px-6 py-6 text-center text-sm text-gray-500" colSpan={9}>

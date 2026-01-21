@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Button } from '../../shared/design-system';
-import { useUserPermissions } from '../../../hooks';
+import { Button } from '../../shared/design-system/Button';
+import { useUserPermissions } from '../../../hooks/useUserPermissions';
 
 interface Props {
   onRegisterMovement: () => void;

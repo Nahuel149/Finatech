@@ -4323,11 +4323,6 @@ const listOperationSuggestions = async ({ search = '', contactId = null, limit =
     }
   );
 
-  const transferResults = await TransferOperation.aggregate(transferPipeline);
-  const transferSuggestions = transferResults
-    .map((operation) => normalizeTransferToSuggestion(operation))
-    .filter(Boolean);
-
   const movementMatch = {
     status: 'registered',
   };
@@ -4344,26 +4339,6 @@ const listOperationSuggestions = async ({ search = '', contactId = null, limit =
       { currency: regex },
     ];
   }
-
-  const movementResults = await TreasuryMovement.find(movementMatch)
-    .sort({ movementAt: -1 })
-    .limit(sanitizedLimit)
-    .select({
-      movementCode: 1,
-      amount: 1,
-      currency: 1,
-      type: 1,
-      medium: 1,
-      status: 1,
-      reference: 1,
-      description: 1,
-      movementAt: 1,
-    })
-    .lean();
-
-  const movementSuggestions = movementResults
-    .map((movement) => normalizeTreasuryMovementToSuggestion(movement))
-    .filter(Boolean);
 
   const transactionMatch = {
     status: { $in: ['pending', 'registered', 'completed'] },
@@ -4389,23 +4364,49 @@ const listOperationSuggestions = async ({ search = '', contactId = null, limit =
     transactionMatch.$or = txFilters;
   }
 
-  const transactionResults = await Transaction.find(transactionMatch)
-    .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 })
-    .limit(sanitizedLimit)
-    .select({
-      operationCode: 1,
-      type: 1,
-      status: 1,
-      incomingAsset: 1,
-      outgoingAsset: 1,
-      incomingAmount: 1,
-      outgoingAmount: 1,
-      notes: 1,
-      completedAt: 1,
-      createdAt: 1,
-      client: 1,
-    })
-    .lean();
+  const [transferResults, movementResults, transactionResults] = await Promise.all([
+    TransferOperation.aggregate(transferPipeline),
+    TreasuryMovement.find(movementMatch)
+      .sort({ movementAt: -1 })
+      .limit(sanitizedLimit)
+      .select({
+        movementCode: 1,
+        amount: 1,
+        currency: 1,
+        type: 1,
+        medium: 1,
+        status: 1,
+        reference: 1,
+        description: 1,
+        movementAt: 1,
+      })
+      .lean(),
+    Transaction.find(transactionMatch)
+      .sort({ completedAt: -1, updatedAt: -1, createdAt: -1 })
+      .limit(sanitizedLimit)
+      .select({
+        operationCode: 1,
+        type: 1,
+        status: 1,
+        incomingAsset: 1,
+        outgoingAsset: 1,
+        incomingAmount: 1,
+        outgoingAmount: 1,
+        notes: 1,
+        completedAt: 1,
+        createdAt: 1,
+        client: 1,
+      })
+      .lean(),
+  ]);
+
+  const transferSuggestions = transferResults
+    .map((operation) => normalizeTransferToSuggestion(operation))
+    .filter(Boolean);
+
+  const movementSuggestions = movementResults
+    .map((movement) => normalizeTreasuryMovementToSuggestion(movement))
+    .filter(Boolean);
 
   const transactionSuggestions = transactionResults
     .map((tx) => normalizeTransactionToSuggestion(tx))

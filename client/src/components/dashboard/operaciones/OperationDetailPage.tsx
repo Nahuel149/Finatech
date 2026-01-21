@@ -5,12 +5,14 @@ import { BalanceStripe } from './BalanceStripe';
 import { DashboardFooter } from './Footer';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { Alert } from '../../ui/Alert';
-import { useTransactionDraft, useLogisticsOrdersByOperation } from '../../../hooks/dashboard';
-import { subscribeDashboardBalanceRefresh } from '../../../utils';
+import { useLogisticsOrdersByOperation } from '../../../hooks/dashboard/useLogisticsOrders';
+import { useTransactionDraft } from '../../../hooks/dashboard/useTransactionDraft';
+import { subscribeDashboardBalanceRefresh } from '../../../utils/balanceEvents';
 import { formatCurrency, formatDateTime } from './transfer/utils';
-import { LogisticsOrder, LogisticsOrderStatus, TransactionAccountingEntry } from '../../../types';
+import { LogisticsOrder, LogisticsOrderStatus } from '../../../types/logistics';
+import { TransactionAccountingEntry } from '../../../types/transaction';
 import { LinkedLogisticsOrdersSection } from './logistics/LinkedLogisticsOrdersSection';
-import { LogisticsOrderWizard } from '../logistica/order-wizard';
+import { LogisticsOrderWizard } from '../logistica/order-wizard/LogisticsOrderWizard';
 
 type StatusTone = {
   label: string;

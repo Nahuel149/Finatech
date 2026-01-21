@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useApi } from '../useApi';
-import { TreasuryBalancesResponse } from '../../types';
+import { TreasuryBalancesResponse } from '../../types/treasury';
 
 export const useTreasuryBalances = () => {
   const api = useApi<TreasuryBalancesResponse>('/api/treasury/balances');

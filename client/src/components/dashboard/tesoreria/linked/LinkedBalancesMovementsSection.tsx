@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreasuryLinkedBalanceSummaryEntry, TreasuryMovement } from '../../../../types';
+import { TreasuryLinkedBalanceSummaryEntry, TreasuryMovement } from '../../../../types/treasury';
 
 interface Props {
   balances: TreasuryLinkedBalanceSummaryEntry[];
@@ -44,6 +44,11 @@ const mediumLabel = (medium?: string | null) => {
     default:
       return medium || '—';
   }
+};
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '700px',
 };
 
 const statusBadge = (status?: string | null) => {
@@ -157,7 +162,7 @@ export const LinkedBalancesMovementsSection: React.FC<Props> = ({
       {loading && <MovementsSkeleton />}
 
       {!loading && activeBalance && (
-        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+        <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" style={listVisibilityStyle}>
           {/* Desktop/Tablet Table */}
           <table className="w-full hidden md:table">
             <thead className="bg-gray-50 border-b border-gray-200">

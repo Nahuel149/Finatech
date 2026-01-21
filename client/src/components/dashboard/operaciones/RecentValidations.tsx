@@ -1,7 +1,7 @@
 import React, { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardNotifications } from '../../../hooks';
-import { DashboardNotification } from '../../../types';
+import { useDashboardNotifications } from '../../../hooks/dashboard/useDashboardNotifications';
+import { DashboardNotification } from '../../../types/dashboard';
 
 const timeAgo = (iso?: string) => {
   if (!iso) return '';
@@ -27,6 +27,52 @@ const severityStyles = (severity?: string) => {
       return { box: 'bg-blue-100', icon: 'fa-info-circle', color: 'text-blue-600' };
   }
 };
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '600px',
+};
+
+type RecentValidationRowProps = {
+  notification: DashboardNotification;
+  onAction: (notification: DashboardNotification) => void;
+};
+
+const RecentValidationRow = React.memo(({ notification, onAction }: RecentValidationRowProps) => {
+  const styles = severityStyles(notification.severity);
+  const actionLabel = notification.actionLabel || 'Ver detalle';
+  const actionUrl = notification.actionUrl || '/dashboard/notificaciones';
+
+  return (
+    <div className="px-4 py-5 lg:p-6 flex items-start">
+      <div
+        className={`w-8 h-8 lg:w-10 lg:h-10 ${styles.box} rounded-lg flex items-center justify-center mr-3 lg:mr-4 mt-1`}
+      >
+        <i className={`fa-solid ${styles.icon} ${styles.color} text-sm lg:text-base`}></i>
+      </div>
+      <div className="flex-1">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="font-medium text-text-primary text-sm lg:text-base mb-1">{notification.title}</h3>
+            {(notification.description || notification.message) && (
+              <p className="text-gray-600 text-sm">{notification.description || notification.message}</p>
+            )}
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-500 lg:text-sm">{timeAgo(notification.createdAt)}</div>
+            <button
+              type="button"
+              onClick={() => onAction({ ...notification, actionUrl, actionLabel })}
+              className="text-primary text-sm hover:underline"
+            >
+              {actionLabel}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export const RecentValidations: React.FC = () => {
   const { notifications, loading, error, refresh } = useDashboardNotifications();
@@ -73,7 +119,7 @@ export const RecentValidations: React.FC = () => {
             </button>
           </div>
         </div>
-        <div className="divide-y divide-gray-200">
+        <div className="divide-y divide-gray-200" style={listVisibilityStyle}>
           {loading && (
             <>
               {[0, 1, 2].map((i) => (
@@ -89,42 +135,13 @@ export const RecentValidations: React.FC = () => {
           )}
 
           {!loading && !error &&
-            notifications.map((n: DashboardNotification) => {
-              const s = severityStyles(n.severity);
-              const actionLabel = n.actionLabel || 'Ver detalle';
-              const actionUrl = n.actionUrl || '/dashboard/notificaciones';
-              return (
-                <div key={n.id} className="px-4 py-5 lg:p-6 flex items-start">
-                  <div
-                    className={`w-8 h-8 lg:w-10 lg:h-10 ${s.box} rounded-lg flex items-center justify-center mr-3 lg:mr-4 mt-1`}
-                  >
-                    <i className={`fa-solid ${s.icon} ${s.color} text-sm lg:text-base`}></i>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium text-text-primary text-sm lg:text-base mb-1">{n.title}</h3>
-                        {(n.description || n.message) && (
-                          <p className="text-gray-600 text-sm">
-                            {n.description || n.message}
-                          </p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <div className="text-xs text-gray-500 lg:text-sm">{timeAgo(n.createdAt)}</div>
-                        <button
-                          type="button"
-                          onClick={() => handleNotificationAction({ ...n, actionUrl, actionLabel })}
-                          className="text-primary text-sm hover:underline"
-                        >
-                          {actionLabel}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            notifications.map((notification: DashboardNotification) => (
+              <RecentValidationRow
+                key={notification.id}
+                notification={notification}
+                onAction={handleNotificationAction}
+              />
+            ))}
 
           {!loading && error && (
             <div className="px-4 py-5 lg:p-6 flex items-center">

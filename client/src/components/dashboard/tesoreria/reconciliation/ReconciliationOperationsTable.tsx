@@ -1,5 +1,5 @@
 import React from 'react';
-import { OperationSuggestion } from '../../../../types';
+import { OperationSuggestion } from '../../../../types/treasury';
 
 interface Props {
   operations: OperationSuggestion[];
@@ -43,6 +43,11 @@ const formatCurrency = (amount: number, currency: string) => {
     currency,
     minimumFractionDigits: 2,
   }).format(amount);
+};
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '600px',
 };
 
 const formatRate = (value?: number | null) => {
@@ -165,7 +170,7 @@ export const ReconciliationOperationsTable: React.FC<Props> = ({
       </div>
 
       <div className="hidden lg:flex lg:flex-col flex-1 min-h-0">
-        <div className="flex-1 min-h-0 overflow-y-auto">
+        <div className="flex-1 min-h-0 overflow-y-auto" style={listVisibilityStyle}>
           <table className="min-w-full">
             <thead className="bg-gray-50">
               <tr>

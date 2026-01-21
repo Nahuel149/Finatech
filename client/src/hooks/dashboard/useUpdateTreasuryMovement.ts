@@ -1,10 +1,7 @@
 import { useCallback, useState } from 'react';
-import { apiRequest, handleApiError } from '../../utils';
-import {
-  ApiError,
-  UpdateTreasuryMovementPayload,
-  UpdateTreasuryMovementResponse,
-} from '../../types';
+import { apiRequest, handleApiError } from '../../utils/api';
+import { ApiError } from '../../types/auth';
+import { UpdateTreasuryMovementPayload, UpdateTreasuryMovementResponse } from '../../types/treasury';
 
 export const useUpdateTreasuryMovement = () => {
   const [loading, setLoading] = useState(false);

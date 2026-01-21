@@ -1,11 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  ApiError,
-  TreasuryReception,
-  TreasuryReceptionStatus,
-  TreasuryReceptionsResponse,
-} from '../../types';
-import { handleApiError, getPendingTreasuryReceptions } from '../../utils';
+import { ApiError } from '../../types/auth';
+import { TreasuryReception, TreasuryReceptionStatus, TreasuryReceptionsResponse } from '../../types/treasuryReceptions';
+import { handleApiError } from '../../utils/api';
+import { getPendingTreasuryReceptions } from '../../utils/treasuryReceptionsApi';
 
 export interface PendingReceptionFilters {
   status: '' | TreasuryReceptionStatus;

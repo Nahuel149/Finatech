@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { PendingReceptionFilters } from '../../../../hooks';
+import { PendingReceptionFilters } from '../../../../hooks/dashboard/usePendingReceptions';
 
 interface Props {
   values: PendingReceptionFilters;

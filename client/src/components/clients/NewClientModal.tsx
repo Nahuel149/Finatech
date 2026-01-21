@@ -1,6 +1,6 @@
 import React, { FormEvent, useCallback, useEffect, useMemo, useState } from 'react';
-import { ClientSummary } from '../../types';
-import { apiRequest, handleApiError } from '../../utils';
+import { ClientSummary } from '../../types/client';
+import { apiRequest, handleApiError } from '../../utils/api';
 import { Alert } from '../ui/Alert';
 
 export type ClientType = 'client' | 'provider';

@@ -1,4 +1,4 @@
-import { TreasuryReception } from '../../../../types';
+import { TreasuryReception } from '../../../../types/treasuryReceptions';
 
 export const receptionStatusLabel = (status: string) => {
   switch (status) {

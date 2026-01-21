@@ -1,11 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  useTreasuryMovements,
-  useReconciliationSuggestions,
-  useCompensateTreasuryMovement,
-  useUserPermissions,
-} from '../../../../hooks';
-import { ApiError, TreasuryMovement, OperationSuggestion } from '../../../../types';
+import { useCompensateTreasuryMovement } from '../../../../hooks/dashboard/useCompensateTreasuryMovement';
+import { useReconciliationSuggestions } from '../../../../hooks/dashboard/useReconciliationSuggestions';
+import { useTreasuryMovements } from '../../../../hooks/dashboard/useTreasuryMovements';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryMovement, OperationSuggestion } from '../../../../types/treasury';
 import { ReconciliationFilters, ReconciliationFiltersState } from './ReconciliationFilters';
 import { ReconciliationOperationsTable } from './ReconciliationOperationsTable';
 import { ReconciliationMovementsPanel } from './ReconciliationMovementsPanel';

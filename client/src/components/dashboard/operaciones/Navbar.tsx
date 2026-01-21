@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import {
-  NotificationItem,
-  NotificationLevel,
-  useNotifications,
-  useAuth,
-  useCurrentUser,
-} from '../../../hooks';
-import { ApiError } from '../../../types';
+import { useAuth } from '../../../hooks/useAuth';
+import { useCurrentUser } from '../../../hooks/useCurrentUser';
+import { NotificationItem, NotificationLevel, useNotifications } from '../../../hooks/useNotifications';
+import { ApiError } from '../../../types/auth';
 
 interface Props {
   search: string;

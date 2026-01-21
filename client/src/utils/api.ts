@@ -1,15 +1,18 @@
-import {
-  ApiError,
-  LogisticsDiscrepancyPayload,
-  LogisticsItemsHandoverPayload,
-  LogisticsOperationUpdatePayload,
-  LogisticsOrderPayload,
-  LogisticsPartialCompletionPayload,
-  RequestConfig,
-} from '../types';
+import { RequestConfig } from '../types/api';
+import { ApiError } from '../types/auth';
+import { LogisticsDiscrepancyPayload, LogisticsItemsHandoverPayload, LogisticsOperationUpdatePayload, LogisticsOrderPayload, LogisticsPartialCompletionPayload } from '../types/logistics';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || '';
 const CSRF_COOKIE_NAME = 'finatech_csrf';
+const DEDUPE_INTERVAL_MS = 1500;
+
+type CachedResponse = {
+  timestamp: number;
+  data: unknown;
+};
+
+const inflightRequests = new Map<string, Promise<unknown>>();
+const responseCache = new Map<string, CachedResponse>();
 
 export const buildApiUrl = (path: string) => {
   if (!API_BASE_URL) {
@@ -207,6 +210,20 @@ export const apiRequest = async <T = any>(
 
   const url = buildApiUrl(endpoint);
   const method = config.method || 'GET';
+  const shouldDedupe = method === 'GET' && !config.signal;
+  const dedupeKey = shouldDedupe ? `${method}:${url}` : '';
+
+  if (shouldDedupe) {
+    const cached = responseCache.get(dedupeKey);
+    if (cached && Date.now() - cached.timestamp < DEDUPE_INTERVAL_MS) {
+      return cached.data as T;
+    }
+
+    const inflight = inflightRequests.get(dedupeKey);
+    if (inflight) {
+      return inflight as Promise<T>;
+    }
+  }
   const credentials = config.credentials || 'include';
   const isFormData = typeof FormData !== 'undefined' && config.body instanceof FormData;
   let preparedBody: BodyInit | null | undefined;
@@ -266,14 +283,30 @@ export const apiRequest = async <T = any>(
     return (data ?? ({} as T)) as T;
   };
 
-  try {
-    return await executeRequest();
-  } catch (error) {
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw createApiError({ message: 'Network error occurred', code: 'NETWORK_ERROR' });
+  const requestPromise = executeRequest()
+    .then((data) => {
+      if (shouldDedupe) {
+        responseCache.set(dedupeKey, { timestamp: Date.now(), data });
+      }
+      return data as T;
+    })
+    .catch((error) => {
+      if (error instanceof Error) {
+        throw error;
+      }
+      throw createApiError({ message: 'Network error occurred', code: 'NETWORK_ERROR' });
+    })
+    .finally(() => {
+      if (shouldDedupe) {
+        inflightRequests.delete(dedupeKey);
+      }
+    });
+
+  if (shouldDedupe) {
+    inflightRequests.set(dedupeKey, requestPromise);
   }
+
+  return requestPromise;
 };
 
 // Specific API methods

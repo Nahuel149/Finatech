@@ -1066,11 +1066,13 @@ const loadOperation = async (operationId) => {
   if (!mongoose.Types.ObjectId.isValid(operationId)) {
     throw new AppError('La operación indicada es inválida.', 404);
   }
-  const transaction = await Transaction.findById(operationId).lean();
+  const [transaction, transfer] = await Promise.all([
+    Transaction.findById(operationId).lean(),
+    TransferOperation.findById(operationId).lean(),
+  ]);
   if (transaction) {
     return { operation: transaction, model: 'Transaction' };
   }
-  const transfer = await TransferOperation.findById(operationId).lean();
   if (transfer) {
     return { operation: transfer, model: 'TransferOperation' };
   }
@@ -1096,10 +1098,12 @@ const loadOperationByModel = async (operationId, operationModel) => {
 };
 
 const listByOperation = async (operationId) => {
-  const { operation, model } = await loadOperation(operationId);
-  const orders = await LogisticsOrder.find({ operationId })
-    .sort({ createdAt: -1 })
-    .lean();
+  const [{ operation, model }, orders] = await Promise.all([
+    loadOperation(operationId),
+    LogisticsOrder.find({ operationId })
+      .sort({ createdAt: -1 })
+      .lean(),
+  ]);
 
   const snapshot =
     model === 'TransferOperation' ? buildTransferOperationSnapshot(operation) : buildOperationSnapshot(operation);

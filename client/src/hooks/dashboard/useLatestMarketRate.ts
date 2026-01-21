@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, useRef } from 'react';
-import { ApiError } from '../../types';
+import { ApiError } from '../../types/auth';
 import { apiRequest, handleApiError } from '../../utils/api';
 
 export interface MarketRateOverride {

@@ -1,5 +1,6 @@
 import React from 'react';
-import { ApiError, TreasuryReception } from '../../../../types';
+import { ApiError } from '../../../../types/auth';
+import { TreasuryReception } from '../../../../types/treasuryReceptions';
 import { formatCurrency, formatDateTime } from '../../operaciones/transfer/utils';
 import {
   ensureCurrencyTotals,
@@ -28,6 +29,11 @@ const typeBadgeClass = (type?: string) => {
   if (type === 'RETIRO') return 'bg-emerald-100 text-emerald-800';
   if (type === 'ENTREGA') return 'bg-amber-100 text-amber-900';
   return 'bg-gray-100 text-gray-700';
+};
+
+const listVisibilityStyle: React.CSSProperties = {
+  contentVisibility: 'auto',
+  containIntrinsicSize: '700px',
 };
 
 const ContactSummary: React.FC<{ reception: TreasuryReception }> = ({ reception }) => {
@@ -218,7 +224,7 @@ export const PendingReceptionsTable: React.FC<Props> = ({
         </div>
       </header>
 
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto" style={listVisibilityStyle}>
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
             <tr>

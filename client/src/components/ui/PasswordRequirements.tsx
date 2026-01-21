@@ -1,5 +1,5 @@
 import React from 'react';
-import { PasswordRequirements as PasswordReqs } from '../../types';
+import { PasswordRequirements as PasswordReqs } from '../../types/auth';
 
 interface PasswordRequirementsProps {
   requirements: PasswordReqs;

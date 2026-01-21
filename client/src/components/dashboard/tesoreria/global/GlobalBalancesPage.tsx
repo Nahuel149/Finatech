@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { TreasuryNavbar } from '../TreasuryNavbar';
 import { TreasuryBalanceStripe } from '../TreasuryBalanceStripe';
@@ -8,12 +8,8 @@ import {
 } from './GlobalBalancesFilters';
 import { GlobalBalancesSummaryCards } from './GlobalBalancesSummaryCards';
 import { GlobalBalancesTable } from './GlobalBalancesTable';
-import {
-  TreasuryBalanceState,
-  TreasuryGlobalBalanceRow,
-  TreasuryGlobalBalancesOverviewResponse,
-} from '../../../../types';
-import { useGlobalBalancesOverview } from '../../../../hooks';
+import { TreasuryBalanceState, TreasuryGlobalBalanceRow, TreasuryGlobalBalancesOverviewResponse } from '../../../../types/treasury';
+import { useGlobalBalancesOverview } from '../../../../hooks/dashboard/useGlobalBalancesOverview';
 import { Footer } from '../../operaciones/Footer';
 import { RecentOperationsTable } from '../../operaciones/RecentOperationsTable';
 
@@ -153,6 +149,7 @@ export const GlobalBalancesPage: React.FC = () => {
   const [toast, setToast] = useState<ToastState | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
   const location = useLocation();
+  const [, startTransition] = useTransition();
 
   const { data, loading, error, refresh } = useGlobalBalancesOverview(filters);
   const overview = data ?? DEFAULT_OVERVIEW;
@@ -203,16 +200,18 @@ export const GlobalBalancesPage: React.FC = () => {
   const handleFiltersChange = (
     updates: Partial<FilterState> | ((previous: FilterState) => Partial<FilterState>)
   ) => {
-    setFilters((prev) => {
-      const patch = typeof updates === 'function' ? updates(prev) : updates;
-      const next: FilterState = {
-        ...prev,
-        ...patch,
-      };
-      if (!('page' in patch)) {
-        next.page = 1;
-      }
-      return next;
+    startTransition(() => {
+      setFilters((prev) => {
+        const patch = typeof updates === 'function' ? updates(prev) : updates;
+        const next: FilterState = {
+          ...prev,
+          ...patch,
+        };
+        if (!('page' in patch)) {
+          next.page = 1;
+        }
+        return next;
+      });
     });
   };
 
@@ -234,10 +233,12 @@ export const GlobalBalancesPage: React.FC = () => {
   };
 
   const handleClearFilters = () => {
-    setFilters({
-      ...DEFAULT_FILTER_STATE,
-      sortBy: filters.sortBy,
-      sortDirection: filters.sortDirection,
+    startTransition(() => {
+      setFilters({
+        ...DEFAULT_FILTER_STATE,
+        sortBy: filters.sortBy,
+        sortDirection: filters.sortDirection,
+      });
     });
     showToast({
       type: 'success',

@@ -1,15 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  ClientSummary,
-  MovementDirection,
-  MovementMethod,
-  MovementType,
-} from '../../../../types';
+import { ClientSummary } from '../../../../types/client';
+import { MovementDirection, MovementMethod, MovementType } from '../../../../types/transfer';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
-import { useClientSearch } from '../../../../hooks/dashboard';
-import { Alert } from '../../../ui';
+import { useClientSearch } from '../../../../hooks/dashboard/useClientSearch';
+import { Alert } from '../../../ui/Alert';
 import { useTransferPesos } from './TransferPesosContext';
 import { formatCurrency } from './utils';
 import { NewClientModal } from '../../../clients/NewClientModal';

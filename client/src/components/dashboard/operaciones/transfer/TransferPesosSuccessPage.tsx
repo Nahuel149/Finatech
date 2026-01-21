@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { useTransferPesos } from './TransferPesosContext';
-import { emitDashboardBalanceRefresh } from '../../../../utils';
+import { emitDashboardBalanceRefresh } from '../../../../utils/balanceEvents';
 import { TransferAccountingPanel } from './TransferAccountingPanel';
 import { buildAccountingEntries } from './utils';
 

@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AdminPermissionDefinition, AdminUser } from '../../types';
-import { api } from '../../utils';
+import { AdminPermissionDefinition, AdminUser } from '../../types/admin';
+import { api } from '../../utils/api';
 import { useCurrentUser } from '../../hooks/useCurrentUser';
 import { useAuth } from '../../hooks/useAuth';
 import { Alert } from '../ui/Alert';

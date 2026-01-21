@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ApiError } from '../types';
-import { api, handleApiError } from '../utils';
+import { ApiError } from '../types/auth';
+import { api, handleApiError } from '../utils/api';
 
 interface UseUserPermissionsOptions {
   enabled?: boolean;

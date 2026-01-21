@@ -1,10 +1,4 @@
-import {
-  ConfirmTreasuryReceptionPayload,
-  OmitTreasuryReceptionPayload,
-  RevertTreasuryReceptionPayload,
-  TreasuryReception,
-  TreasuryReceptionsResponse,
-} from '../types';
+import { ConfirmTreasuryReceptionPayload, OmitTreasuryReceptionPayload, RevertTreasuryReceptionPayload, TreasuryReception, TreasuryReceptionsResponse } from '../types/treasuryReceptions';
 import { apiRequest } from './api';
 
 const buildQueryString = (params?: Record<string, unknown>) => {

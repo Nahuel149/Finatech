@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogisticsIncident } from '../../../types';
+import { LogisticsIncident } from '../../../types/logistics';
 
 interface ResolvedIncidentSummarySectionProps {
   incident: LogisticsIncident;

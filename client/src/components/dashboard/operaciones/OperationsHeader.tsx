@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../shared/design-system';
+import { Button } from '../../shared/design-system/Button';
 
 interface Props {
   onTransferPesos: () => void;

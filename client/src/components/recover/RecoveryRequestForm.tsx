@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
-import { ApiError } from '../../types';
+import { ApiError } from '../../types/auth';
 
 const isValidEmail = (email: string): boolean => {
   return /\S+@\S+\.\S+/.test(email);

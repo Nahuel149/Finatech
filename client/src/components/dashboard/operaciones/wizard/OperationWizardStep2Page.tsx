@@ -1,14 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  ApiError,
-  TransactionType,
-  TransactionSettlementPayload,
-} from '../../../../types';
-import {
-  useClientsList,
-  useTransactionDraft,
-} from '../../../../hooks/dashboard';
+import { ApiError } from '../../../../types/auth';
+import { TransactionType, TransactionSettlementPayload } from '../../../../types/transaction';
+import { useClientsList } from '../../../../hooks/dashboard/useClientsList';
+import { useTransactionDraft } from '../../../../hooks/dashboard/useTransactionDraft';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';
@@ -26,7 +21,7 @@ import { WizardActions } from './WizardActions';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 import { ArsPositionAside } from './ArsPositionAside';
-import { api } from '../../../../utils';
+import { api } from '../../../../utils/api';
 
 const WIZARD_STEPS = [
   { label: 'Datos', description: 'Información' },

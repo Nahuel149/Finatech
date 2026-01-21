@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardBalances } from '../../../hooks';
-import { Button } from '../../shared/design-system';
+import { useDashboardBalances } from '../../../hooks/dashboard/useDashboardBalances';
+import { Button } from '../../shared/design-system/Button';
 
 interface Props {
   canView: boolean;

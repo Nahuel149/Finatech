@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogisticsOrderBalance, LogisticsOrderOperationContext } from '../../../../types';
+import { LogisticsOrderBalance, LogisticsOrderOperationContext } from '../../../../types/logistics';
 import { LogisticsOrderFormState } from './types';
 import { formatCurrency, formatDateTime } from '../../operaciones/transfer/utils';
 

@@ -1,22 +1,22 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { Suspense, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { Footer } from '../operaciones/Footer';
-import { Alert } from '../../ui';
+import { Alert } from '../../ui/Alert';
 import { FilterPanel } from './FilterPanel';
 import { OperationDetailPanel } from './OperationDetailPanel';
 import { LogisticsOperationsSection } from './LogisticsOperationsSection';
 import { TreasuryIntegrationSection } from './TreasuryIntegrationSection';
 import { GeneralSummarySection } from './GeneralSummarySection';
-import NewMovementModal from './NewMovementModal';
 import { LogisticsFilters, LogisticsOperation, LogisticsOperationUpdatePayload } from '../../../types/logistics';
-import { useLogisticsOperations } from '../../../hooks';
-import { api, handleApiError } from '../../../utils';
-import { Button } from '../../shared/design-system';
-import { ApiError } from '../../../types';
+import { useLogisticsOperations } from '../../../hooks/dashboard/useLogisticsOperations';
+import { api, handleApiError } from '../../../utils/api';
+import { Button } from '../../shared/design-system/Button';
+import { ApiError } from '../../../types/auth';
 import { MyLogisticsOrdersPage } from './MyLogisticsOrdersPage';
-import EditLogisticsOperationModal from './EditLogisticsOperationModal';
-import BulkEditLogisticsOperationsModal from './BulkEditLogisticsOperationsModal';
-import BulkStateChangeModal from './BulkStateChangeModal';
+const NewMovementModal = React.lazy(() => import('./NewMovementModal'));
+const EditLogisticsOperationModal = React.lazy(() => import('./EditLogisticsOperationModal'));
+const BulkEditLogisticsOperationsModal = React.lazy(() => import('./BulkEditLogisticsOperationsModal'));
+const BulkStateChangeModal = React.lazy(() => import('./BulkStateChangeModal'));
 import { BalanceStripe } from '../operaciones/BalanceStripe';
 
 type ToastState = {
@@ -43,6 +43,7 @@ export const LogisticaPanel: React.FC = () => {
   } | null>(null);
   const [bulkStateSaving, setBulkStateSaving] = useState(false);
   const [bulkStateError, setBulkStateError] = useState<ApiError | null>(null);
+  const [, startTransition] = useTransition();
 
   const {
     operations,
@@ -57,13 +58,23 @@ export const LogisticaPanel: React.FC = () => {
     responsibles,
     pagination,
   } = useLogisticsOperations();
+  const [searchInput, setSearchInput] = useState(filters.search);
+  const searchDebounceRef = useRef<number | null>(null);
 
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
   const [activeView, setActiveView] = useState<'overview' | 'my-orders'>('my-orders');
 
+  const selectedOperationIdSet = useMemo(
+    () => new Set(selectedOperations),
+    [selectedOperations]
+  );
+  const operationsIdSet = useMemo(
+    () => new Set(operations.map((operation) => operation.id)),
+    [operations]
+  );
   const selectedOperationsData = useMemo(
-    () => operations.filter((operation) => selectedOperations.includes(operation.id)),
-    [operations, selectedOperations]
+    () => operations.filter((operation) => selectedOperationIdSet.has(operation.id)),
+    [operations, selectedOperationIdSet]
   );
 
   useEffect(() => {
@@ -75,7 +86,7 @@ export const LogisticaPanel: React.FC = () => {
 
 
   const handleSearchChange = (value: string) => {
-    updateFilters({ search: value });
+    setSearchInput(value);
   };
 
   const handleFilterToggle = () => {
@@ -299,13 +310,17 @@ export const LogisticaPanel: React.FC = () => {
   };
 
   const handleApplyFilters = (nextFilters: LogisticsFilters) => {
-    updateFilters(() => nextFilters);
+    startTransition(() => {
+      updateFilters(() => nextFilters);
+    });
     setToast({ type: 'success', message: 'Filtros aplicados correctamente.' });
     setFilterOpen(false);
   };
 
   const handleClearFilters = () => {
-    resetFilters();
+    startTransition(() => {
+      resetFilters();
+    });
     setToast({ type: 'info', message: 'Filtros limpiados.' });
   };
 
@@ -318,10 +333,32 @@ export const LogisticaPanel: React.FC = () => {
   };
 
   useEffect(() => {
-    setSelectedOperations((prev) =>
-      prev.filter((operationId) => operations.some((operation) => operation.id === operationId))
-    );
-  }, [operations]);
+    setSelectedOperations((prev) => {
+      const next = prev.filter((operationId) => operationsIdSet.has(operationId));
+      return next.length === prev.length ? prev : next;
+    });
+  }, [operationsIdSet]);
+
+  useEffect(() => {
+    setSearchInput((prev) => (prev === filters.search ? prev : filters.search));
+  }, [filters.search]);
+
+  useEffect(() => {
+    if (searchInput === filters.search) {
+      return;
+    }
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = window.setTimeout(() => {
+      updateFilters({ search: searchInput });
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [filters.search, searchInput, updateFilters]);
 
   useEffect(() => {
     if (isBulkEditModalOpen && !selectedOperationsData.length) {
@@ -345,7 +382,7 @@ export const LogisticaPanel: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
-      <DashboardNavbar search={filters.search} onSearchChange={handleSearchChange} />
+      <DashboardNavbar search={searchInput} onSearchChange={handleSearchChange} />
       <BalanceStripe />
 
       <main
@@ -436,32 +473,34 @@ export const LogisticaPanel: React.FC = () => {
         operations={operations}
       />
 
-      <BulkEditLogisticsOperationsModal
-        isOpen={isBulkEditModalOpen}
-        operations={selectedOperationsData}
-        saving={bulkEditSaving}
-        errorMessage={bulkEditError?.message}
-        onClose={() => {
-          setIsBulkEditModalOpen(false);
-          setBulkEditError(null);
-        }}
-        onSubmit={handleSubmitBulkEdit}
-      />
-
-      {bulkStateContext && (
-        <BulkStateChangeModal
-          isOpen
-          action={bulkStateContext.action}
-          operations={bulkStateContext.operations}
-          loading={bulkStateSaving}
-          errorMessage={bulkStateError?.message}
+      <Suspense fallback={null}>
+        <BulkEditLogisticsOperationsModal
+          isOpen={isBulkEditModalOpen}
+          operations={selectedOperationsData}
+          saving={bulkEditSaving}
+          errorMessage={bulkEditError?.message}
           onClose={() => {
-            setBulkStateContext(null);
-            setBulkStateError(null);
+            setIsBulkEditModalOpen(false);
+            setBulkEditError(null);
           }}
-          onConfirm={handleConfirmBulkStateChange}
+          onSubmit={handleSubmitBulkEdit}
         />
-      )}
+
+        {bulkStateContext && (
+          <BulkStateChangeModal
+            isOpen
+            action={bulkStateContext.action}
+            operations={bulkStateContext.operations}
+            loading={bulkStateSaving}
+            errorMessage={bulkStateError?.message}
+            onClose={() => {
+              setBulkStateContext(null);
+              setBulkStateError(null);
+            }}
+            onConfirm={handleConfirmBulkStateChange}
+          />
+        )}
+      </Suspense>
 
       <OperationDetailPanel
         isOpen={detailOpen}
@@ -474,16 +513,18 @@ export const LogisticaPanel: React.FC = () => {
         pendingAction={pendingAction}
       />
 
-      <NewMovementModal isOpen={isNewMovementModalOpen} onClose={handleCloseNewMovementModal} />
+      <Suspense fallback={null}>
+        <NewMovementModal isOpen={isNewMovementModalOpen} onClose={handleCloseNewMovementModal} />
 
-      <EditLogisticsOperationModal
-        isOpen={isEditModalOpen}
-        operation={selectedOperation}
-        saving={savingEdit}
-        errorMessage={editError?.message}
-        onClose={handleCloseEditModal}
-        onSubmit={handleSubmitEditOperation}
-      />
+        <EditLogisticsOperationModal
+          isOpen={isEditModalOpen}
+          operation={selectedOperation}
+          saving={savingEdit}
+          errorMessage={editError?.message}
+          onClose={handleCloseEditModal}
+          onSubmit={handleSubmitEditOperation}
+        />
+      </Suspense>
 
       {toast && (
         <div className="fixed top-4 right-4 z-50 max-w-sm w-full">

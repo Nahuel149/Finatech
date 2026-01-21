@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
-import { TreasuryContactBalanceDetailResponse } from '../../types';
-import { subscribeDashboardBalanceRefresh } from '../../utils';
+import { TreasuryContactBalanceDetailResponse } from '../../types/treasury';
+import { subscribeDashboardBalanceRefresh } from '../../utils/balanceEvents';
 
 export interface ContactBalanceDetailFilters {
   currency?: string | null;

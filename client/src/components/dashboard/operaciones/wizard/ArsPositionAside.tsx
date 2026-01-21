@@ -1,10 +1,8 @@
 import React, { useMemo } from 'react';
-import {
-  useDashboardBalances,
-  useLiveOperations,
-} from '../../../../hooks';
+import { useDashboardBalances } from '../../../../hooks/dashboard/useDashboardBalances';
+import { useLiveOperations } from '../../../../hooks/useLiveOperations';
 import { CompoundComputed, CompoundLine } from './CompoundSettlementForm';
-import { TransactionType } from '../../../../types';
+import { TransactionType } from '../../../../types/transaction';
 
 interface Props {
   incomingAmount: number;

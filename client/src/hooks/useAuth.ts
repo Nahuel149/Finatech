@@ -1,21 +1,6 @@
 import { useState, useCallback } from 'react';
-import { 
-  LoginFormData, 
-  RegisterFormData, 
-  TwoFactorFormData,
-  PasswordRecoveryFormData,
-  PasswordResetFormData,
-  LoginResponse, 
-  RegisterResponse, 
-  TwoFactorResponse,
-  GoogleAuthResponse,
-  PasswordRecoveryResponse,
-  PasswordResetResponse,
-  LoadingState,
-  ApiError,
-  UserProfile,
-} from '../types';
-import { api, handleApiError } from '../utils';
+import { LoginFormData, RegisterFormData, TwoFactorFormData, PasswordRecoveryFormData, PasswordResetFormData, LoginResponse, RegisterResponse, TwoFactorResponse, GoogleAuthResponse, PasswordRecoveryResponse, PasswordResetResponse, LoadingState, ApiError, UserProfile } from '../types/auth';
+import { api, handleApiError } from '../utils/api';
 import { primeCurrentUser } from './useCurrentUser';
 
 export const useAuth = () => {

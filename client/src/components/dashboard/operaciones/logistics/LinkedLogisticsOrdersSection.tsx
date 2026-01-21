@@ -2,11 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '../../../ui/Alert';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
-import {
-  ApiError,
-  LogisticsOrder,
-  LogisticsOrderBalance,
-} from '../../../../types';
+import { ApiError } from '../../../../types/auth';
+import { LogisticsOrder, LogisticsOrderBalance } from '../../../../types/logistics';
 import { formatCurrency, formatDateTime } from '../transfer/utils';
 
 type LinkedLogisticsOrdersSectionProps = {

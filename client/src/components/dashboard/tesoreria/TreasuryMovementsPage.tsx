@@ -1,22 +1,24 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  useClientsList,
-  useTreasuryMovements,
-  TreasuryMovementsFilters,
-  TreasuryMovementsSortOption,
-  useCancelTreasuryMovement,
-} from '../../../hooks';
-import { Alert } from '../../ui';
+import { useCancelTreasuryMovement } from '../../../hooks/dashboard/useCancelTreasuryMovement';
+import { useClientsList } from '../../../hooks/dashboard/useClientsList';
+import { useTreasuryMovements, TreasuryMovementsFilters, TreasuryMovementsSortOption } from '../../../hooks/dashboard/useTreasuryMovements';
+import { Alert } from '../../ui/Alert';
 import { TreasuryNavbar } from './TreasuryNavbar';
 import { TreasuryBalanceStripe } from './TreasuryBalanceStripe';
 import { TreasuryHeader } from './TreasuryHeader';
 import { TreasuryFilters } from './TreasuryFilters';
 import { TreasuryMovementsTable } from './TreasuryMovementsTable';
-import { ApiError, ClientSummary, TreasuryMovement } from '../../../types';
-import { RegisterMovementModal } from './register';
-import { MovementDetailPanel } from './detail';
-import { ReconciliationModal } from './reconciliation';
+import { ApiError } from '../../../types/auth';
+import { ClientSummary } from '../../../types/client';
+import { TreasuryMovement } from '../../../types/treasury';
+const RegisterMovementModal = React.lazy(() =>
+  import('./register/RegisterMovementModal').then((module) => ({ default: module.RegisterMovementModal }))
+);
+import { MovementDetailPanel } from './detail/MovementDetailPanel';
+const ReconciliationModal = React.lazy(() =>
+  import('./reconciliation/ReconciliationModal').then((module) => ({ default: module.ReconciliationModal }))
+);
 import { Footer } from '../operaciones/Footer';
 
 type ToastState = {
@@ -38,6 +40,16 @@ const EMPTY_FILTERS: TreasuryMovementsFilters = {
 const movementIdentifier = (movement: TreasuryMovement) =>
   movement.movementCode || movement.reference || movement.id || 'movimiento';
 
+const areFiltersEqual = (left: TreasuryMovementsFilters, right: TreasuryMovementsFilters) =>
+  left.dateFrom === right.dateFrom &&
+  left.dateTo === right.dateTo &&
+  left.type === right.type &&
+  left.medium === right.medium &&
+  left.currency === right.currency &&
+  left.status === right.status &&
+  left.contactId === right.contactId &&
+  left.search === right.search;
+
 export const TreasuryMovementsPage: React.FC = () => {
   const [draftFilters, setDraftFilters] = useState<TreasuryMovementsFilters>(EMPTY_FILTERS);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -48,6 +60,9 @@ export const TreasuryMovementsPage: React.FC = () => {
   const [editMovement, setEditMovement] = useState<TreasuryMovement | null>(null);
   const [reconciliationOpen, setReconciliationOpen] = useState(false);
   const [detailRefreshToken, setDetailRefreshToken] = useState(0);
+  const searchUpdateSourceRef = useRef<'navbar' | 'filters' | null>(null);
+  const searchDebounceRef = useRef<number | null>(null);
+  const [, startTransition] = useTransition();
   const navigate = useNavigate();
   const location = useLocation();
   const { movementId: movementIdParam } = useParams<{ movementId?: string }>();
@@ -83,13 +98,35 @@ export const TreasuryMovementsPage: React.FC = () => {
   } = useCancelTreasuryMovement();
 
   useEffect(() => {
-    setDraftFilters(filters);
-    setGlobalSearch(filters.search);
+    setDraftFilters((prev) => (areFiltersEqual(prev, filters) ? prev : filters));
+    setGlobalSearch((prev) => (prev === filters.search ? prev : filters.search));
   }, [filters]);
 
-  const showToast = (nextToast: ToastState) => {
+  const showToast = useCallback((nextToast: ToastState) => {
     setToast(nextToast);
-  };
+  }, []);
+
+  useEffect(() => {
+    if (searchUpdateSourceRef.current !== 'navbar') {
+      return;
+    }
+    if (globalSearch === filters.search) {
+      searchUpdateSourceRef.current = null;
+      return;
+    }
+    if (searchDebounceRef.current) {
+      window.clearTimeout(searchDebounceRef.current);
+    }
+    searchDebounceRef.current = window.setTimeout(() => {
+      applyFilters({ search: globalSearch });
+      searchUpdateSourceRef.current = null;
+    }, 300);
+    return () => {
+      if (searchDebounceRef.current) {
+        window.clearTimeout(searchDebounceRef.current);
+      }
+    };
+  }, [applyFilters, filters.search, globalSearch]);
 
   useEffect(() => {
     if (!toast) return;
@@ -101,82 +138,98 @@ export const TreasuryMovementsPage: React.FC = () => {
     field: K,
     value: TreasuryMovementsFilters[K]
   ) => {
-    setDraftFilters((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setDraftFilters((prev) => {
+      if (prev[field] === value) {
+        return prev;
+      }
+      return {
+        ...prev,
+        [field]: value,
+      };
+    });
     if (field === 'search') {
-      setGlobalSearch(String(value));
+      searchUpdateSourceRef.current = 'filters';
+      const nextSearch = String(value);
+      setGlobalSearch((prev) => (prev === nextSearch ? prev : nextSearch));
     }
   };
 
-  const handleApplyFilters = () => {
-    applyFilters(draftFilters);
+  const handleApplyFilters = useCallback(() => {
+    searchUpdateSourceRef.current = null;
+    startTransition(() => {
+      applyFilters(draftFilters);
+    });
     showToast({
       type: 'success',
       message: 'Filtros aplicados correctamente.',
     });
-  };
+  }, [applyFilters, draftFilters, showToast, startTransition]);
 
-  const handleClearFilters = () => {
+  const handleClearFilters = useCallback(() => {
+    searchUpdateSourceRef.current = null;
     setDraftFilters(EMPTY_FILTERS);
     setGlobalSearch('');
-    clearFilters();
+    startTransition(() => {
+      clearFilters();
+    });
     showToast({
       type: 'info',
       message: 'Filtros limpiados.',
     });
-  };
+  }, [clearFilters, showToast, startTransition]);
 
-  const handleGlobalSearchChange = (value: string) => {
+  const handleGlobalSearchChange = useCallback((value: string) => {
+    if (value === globalSearch) {
+      return;
+    }
+    searchUpdateSourceRef.current = 'navbar';
     setGlobalSearch(value);
     setDraftFilters((prev) => ({
       ...prev,
       search: value,
     }));
-    applyFilters({ search: value });
-  };
+  }, [globalSearch]);
 
-  const handleRegisterMovement = () => {
+  const handleRegisterMovement = useCallback(() => {
     setRegisterOpen(true);
     setEditMovement(null);
     setPrefillOperation(null);
     setPrefillContact(null);
-  };
+  }, [showToast]);
 
-  const handleOpenConciliation = () => {
+  const handleOpenConciliation = useCallback(() => {
     setReconciliationOpen(true);
-  };
+  }, []);
 
-  const handleSelectBalanceStripe = (balanceId: string) => {
+  const handleSelectBalanceStripe = useCallback((balanceId: string) => {
     navigate(`/dashboard/tesoreria/saldos?account=${balanceId}`);
-  };
+  }, [navigate]);
 
-  const handleOpenSettings = () => {
+  const handleOpenSettings = useCallback(() => {
     showToast({
       type: 'info',
       message: 'Configuración de Tesorería disponible próximamente.',
     });
-  };
+  }, []);
 
-  const handleOpenMovementDetail = (movement: TreasuryMovement) => {
+  const handleOpenMovementDetail = useCallback((movement: TreasuryMovement) => {
     if (!movement.id) return;
     navigate(`/dashboard/tesoreria/movimientos/${movement.id}`);
-  };
+  }, [navigate]);
 
-  const handleViewDetail = (movement: TreasuryMovement) => {
+  const handleViewDetail = useCallback((movement: TreasuryMovement) => {
     handleOpenMovementDetail(movement);
-  };
+  }, [handleOpenMovementDetail]);
 
-  const handleView = (movement: TreasuryMovement) => {
+  const handleView = useCallback((movement: TreasuryMovement) => {
     handleOpenMovementDetail(movement);
-  };
+  }, [handleOpenMovementDetail]);
 
   const handleEdit = (movement: TreasuryMovement) => {
     handleEditMovement(movement);
   };
 
-  const handleCancelMovement = async (movement: TreasuryMovement) => {
+  const handleCancelMovement = useCallback(async (movement: TreasuryMovement) => {
     if (!movement.id) return;
 
     // eslint-disable-next-line no-alert
@@ -207,30 +260,30 @@ export const TreasuryMovementsPage: React.FC = () => {
         message: apiErr.message || 'No pudimos anular el movimiento.',
       });
     }
-  };
+  }, [cancelMovement, detailMovementId, refresh, showToast]);
 
-  const handlePageChange = (pageNumber: number) => {
+  const handlePageChange = useCallback((pageNumber: number) => {
     if (pageNumber < 1 || pageNumber > pagination.totalPages) return;
     goToPage(pageNumber);
-  };
+  }, [goToPage, pagination.totalPages]);
 
-  const handleSortChange = (nextSort: TreasuryMovementsSortOption) => {
+  const handleSortChange = useCallback((nextSort: TreasuryMovementsSortOption) => {
     updateSort(nextSort);
-  };
+  }, [updateSort]);
 
-  const handleRegisterSuccess = (movement: TreasuryMovement) => {
+  const handleRegisterSuccess = useCallback((movement: TreasuryMovement) => {
     refresh();
     if (detailMovementId && movement?.id === detailMovementId) {
       setDetailRefreshToken((prev) => prev + 1);
     }
-  };
+  }, [detailMovementId, refresh]);
 
-  const handleCloseMovementDetail = () => {
+  const handleCloseMovementDetail = useCallback(() => {
     resetCancel();
     navigate('/dashboard/tesoreria', { replace: true });
-  };
+  }, [navigate, resetCancel]);
 
-  const handleEditMovement = (movement: TreasuryMovement) => {
+  const handleEditMovement = useCallback((movement: TreasuryMovement) => {
     if (movement.status !== 'registered') {
       showToast({
         type: 'warning',
@@ -245,7 +298,7 @@ export const TreasuryMovementsPage: React.FC = () => {
     if (detailMovementId) {
       handleCloseMovementDetail();
     }
-  };
+  }, [detailMovementId, handleCloseMovementDetail, showToast]);
 
   useEffect(() => {
     const state = location.state as
@@ -313,21 +366,23 @@ export const TreasuryMovementsPage: React.FC = () => {
         />
       </main>
 
-      <RegisterMovementModal
-        open={registerOpen || Boolean(editMovement)}
-        prefillOperation={editMovement ? null : prefillOperation}
-        prefillContact={editMovement ? null : prefillContact}
-        mode={editMovement ? 'edit' : 'create'}
-        movement={editMovement}
-        onClose={() => {
-          setRegisterOpen(false);
-          setEditMovement(null);
-          setPrefillOperation(null);
-          setPrefillContact(null);
-        }}
-        onSuccess={handleRegisterSuccess}
-        onShowToast={showToast}
-      />
+      <Suspense fallback={null}>
+        <RegisterMovementModal
+          open={registerOpen || Boolean(editMovement)}
+          prefillOperation={editMovement ? null : prefillOperation}
+          prefillContact={editMovement ? null : prefillContact}
+          mode={editMovement ? 'edit' : 'create'}
+          movement={editMovement}
+          onClose={() => {
+            setRegisterOpen(false);
+            setEditMovement(null);
+            setPrefillOperation(null);
+            setPrefillContact(null);
+          }}
+          onSuccess={handleRegisterSuccess}
+          onShowToast={showToast}
+        />
+      </Suspense>
 
       <MovementDetailPanel
         open={Boolean(detailMovementId)}
@@ -341,15 +396,17 @@ export const TreasuryMovementsPage: React.FC = () => {
         onShowToast={showToast}
       />
 
-      <ReconciliationModal
-        open={reconciliationOpen}
-        onClose={() => setReconciliationOpen(false)}
-        onShowToast={showToast}
-        onSuccess={() => {
-          refresh();
-          setDetailRefreshToken((prev) => prev + 1);
-        }}
-      />
+      <Suspense fallback={null}>
+        <ReconciliationModal
+          open={reconciliationOpen}
+          onClose={() => setReconciliationOpen(false)}
+          onShowToast={showToast}
+          onSuccess={() => {
+            refresh();
+            setDetailRefreshToken((prev) => prev + 1);
+          }}
+        />
+      </Suspense>
 
       {toast && (
         <div className="fixed top-4 right-4 z-[60] w-full max-w-sm">

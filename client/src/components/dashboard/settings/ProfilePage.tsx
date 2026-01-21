@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { Footer } from '../operaciones/Footer';
-import { Alert } from '../../ui';
-import { useCurrentUser } from '../../../hooks';
+import { Alert } from '../../ui/Alert';
+import { useCurrentUser } from '../../../hooks/useCurrentUser';
 
 const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'view-balances': 'Consultar saldos y resúmenes generales.',

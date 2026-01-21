@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
-import { ConfigResponse, ApiError } from '../types';
-import { api, handleApiError } from '../utils';
+import { ConfigResponse, ApiError } from '../types/auth';
+import { api, handleApiError } from '../utils/api';
 
 export const useConfig = () => {
   const [config, setConfig] = useState<ConfigResponse | null>(null);

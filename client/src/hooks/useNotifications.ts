@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useDashboardNotifications } from './dashboard';
+import { useDashboardNotifications } from './dashboard/useDashboardNotifications';
 
 export type NotificationLevel = 'info' | 'warning' | 'success' | 'error';
 

@@ -4,7 +4,7 @@ import { ResolvedIncidentResolutionSection } from './ResolvedIncidentResolutionS
 import { IncidentItemsSection } from './IncidentItemsSection';
 import { IncidentDocumentsSection } from './IncidentDocumentsSection';
 import { ResolvedIncidentTimelineSection } from './ResolvedIncidentTimelineSection';
-import { LogisticsIncident } from '../../../types';
+import { LogisticsIncident } from '../../../types/logistics';
 
 interface ResolvedIncidentDetailSidePanelProps {
   incident: LogisticsIncident;

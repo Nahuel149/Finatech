@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { DashboardNavbar } from '../operaciones/Navbar';
 import { BalanceStripe } from '../operaciones/BalanceStripe';
-import { useLogisticsIncidentDetail } from '../../../hooks/dashboard';
+import { useLogisticsIncidentDetail } from '../../../hooks/dashboard/useLogisticsIncidents';
 import { Alert } from '../../ui/Alert';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
 import { ResolvedIncidentDetailSidePanel } from './ResolvedIncidentDetailSidePanel';

@@ -8,8 +8,9 @@ import { LogisticsRecentMovementsSection } from './LogisticsRecentMovementsSecti
 import { LogisticsActiveIncidentsSection } from './LogisticsActiveIncidentsSection';
 import { LogisticsQuickActionsSection } from './LogisticsQuickActionsSection';
 import { Footer } from '../operaciones/Footer';
-import { useLogisticsIncidents, useLogisticsOperations } from '../../../hooks';
-import { LogisticsIncident, LogisticsOperation, OperationStatus, OperationType } from '../../../types';
+import { useLogisticsIncidents } from '../../../hooks/dashboard/useLogisticsIncidents';
+import { useLogisticsOperations } from '../../../hooks/dashboard/useLogisticsOperations';
+import { LogisticsIncident, LogisticsOperation, OperationStatus, OperationType } from '../../../types/logistics';
 import { Alert } from '../../ui/Alert';
 
 interface MovementData {

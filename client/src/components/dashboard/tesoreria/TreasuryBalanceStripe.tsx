@@ -1,8 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDashboardBalances } from '../../../hooks';
-import { TreasuryBalance } from '../../../types';
-import { BalanceCard, BalanceCardData, BalanceCardSkeleton, StatusType } from '../../shared/design-system';
+import { useDashboardBalances } from '../../../hooks/dashboard/useDashboardBalances';
+import { TreasuryBalance } from '../../../types/dashboard';
+import { BalanceCard, BalanceCardData } from '../../shared/design-system/BalanceCard';
+import { BalanceCardSkeleton } from '../../shared/design-system/LoadingSkeleton';
+import { StatusType } from '../../shared/design-system/StatusIndicator';
 
 interface Props {
   onSelectBalance?: (balanceId: string) => void;

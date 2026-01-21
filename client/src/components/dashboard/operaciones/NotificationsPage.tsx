@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useTransition } from 'react';
 import { DashboardNavbar } from './Navbar';
 import { BalanceStripe } from './BalanceStripe';
 import { DashboardFooter } from './Footer';
-import { NotificationItem, useNotifications } from '../../../hooks';
+import { NotificationItem, useNotifications } from '../../../hooks/useNotifications';
 
 const formatRelativeTime = (isoDate: string) => {
   const now = Date.now();
@@ -38,7 +38,9 @@ const levelBadgeClass = (level: NotificationItem['level']) => {
 };
 
 export const NotificationsPage: React.FC = () => {
+  const [searchInput, setSearchInput] = useState('');
   const [search, setSearch] = useState('');
+  const [, startTransition] = useTransition();
   const {
     allNotifications,
     unreadCount,
@@ -63,6 +65,13 @@ export const NotificationsPage: React.FC = () => {
 
   const unreadOnly = filteredNotifications.filter((notification) => !notification.read);
   const readNotifications = filteredNotifications.filter((notification) => notification.read);
+
+  const handleSearchChange = (value: string) => {
+    setSearchInput(value);
+    startTransition(() => {
+      setSearch(value);
+    });
+  };
 
   const renderNotificationCard = (notification: NotificationItem) => (
     <div
@@ -122,7 +131,7 @@ export const NotificationsPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardNavbar search={search} onSearchChange={setSearch} />
+      <DashboardNavbar search={searchInput} onSearchChange={handleSearchChange} />
       <BalanceStripe />
 
       <main

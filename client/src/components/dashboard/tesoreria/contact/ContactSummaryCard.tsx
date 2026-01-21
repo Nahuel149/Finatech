@@ -1,8 +1,5 @@
 import React from 'react';
-import {
-  TreasuryContactBalanceSummary,
-  TreasuryContactCurrencyTotals,
-} from '../../../../types';
+import { TreasuryContactBalanceSummary, TreasuryContactCurrencyTotals } from '../../../../types/treasury';
 
 interface Props {
   contact: {

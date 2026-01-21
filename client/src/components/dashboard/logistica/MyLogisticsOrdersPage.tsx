@@ -2,13 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert } from '../../ui/Alert';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
-import {
-  ApiError,
-  LogisticsOrder,
-  LogisticsOrderStatus,
-  LogisticsOrderType,
-} from '../../../types';
-import { useLogisticsOrderActions, useMyLogisticsOrders } from '../../../hooks/dashboard';
+import { ApiError } from '../../../types/auth';
+import { LogisticsOrder, LogisticsOrderStatus, LogisticsOrderType } from '../../../types/logistics';
+import { useLogisticsOrderActions, useMyLogisticsOrders } from '../../../hooks/dashboard/useLogisticsOrders';
 import { formatDateTime } from '../operaciones/transfer/utils';
 import { OfflineSyncBanner } from './OfflineSyncBanner';
 

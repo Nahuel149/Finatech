@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreasuryLinkedBalanceSummaryEntry } from '../../../../types';
+import { TreasuryLinkedBalanceSummaryEntry } from '../../../../types/treasury';
 
 interface Props {
   balances: TreasuryLinkedBalanceSummaryEntry[];

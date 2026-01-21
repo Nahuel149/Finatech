@@ -1,7 +1,9 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { ApiError, LogisticsEvidence, TreasuryReception } from '../../../../types';
-import { Alert } from '../../../ui';
+import { ApiError } from '../../../../types/auth';
+import { LogisticsEvidence } from '../../../../types/logistics';
+import { TreasuryReception } from '../../../../types/treasuryReceptions';
+import { Alert } from '../../../ui/Alert';
 import { formatCurrency, formatDateTime } from '../../operaciones/transfer/utils';
 import {
   describeAssetType,

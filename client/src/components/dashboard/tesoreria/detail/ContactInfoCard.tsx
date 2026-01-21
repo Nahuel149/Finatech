@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClientSummary } from '../../../../types';
+import { ClientSummary } from '../../../../types/client';
 
 interface ContactInfoCardProps {
   contact: {

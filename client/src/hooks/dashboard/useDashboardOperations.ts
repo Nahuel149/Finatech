@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
-import { DashboardRecentOperationsResponse } from '../../types';
-import { subscribeDashboardBalanceRefresh } from '../../utils';
+import { DashboardRecentOperationsResponse } from '../../types/dashboard';
+import { subscribeDashboardBalanceRefresh } from '../../utils/balanceEvents';
 
 interface UseDashboardOperationsOptions {
   limit?: number;

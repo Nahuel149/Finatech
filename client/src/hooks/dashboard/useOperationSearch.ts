@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ApiError, OperationSuggestion } from '../../types';
+import { ApiError } from '../../types/auth';
+import { OperationSuggestion } from '../../types/treasury';
 import { apiRequest, handleApiError } from '../../utils/api';
 
 interface UseOperationSearchOptions {

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../hooks/useApi';
-import { ApiError } from '../../types';
+import { ApiError } from '../../types/auth';
 
 const isValidPassword = (value: string): boolean => {
   const hasMinLength = value.length >= 8;

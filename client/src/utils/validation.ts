@@ -1,4 +1,4 @@
-import { PasswordRequirements, FormErrors } from '../types';
+import { PasswordRequirements, FormErrors } from '../types/auth';
 
 // Email validation
 export const validateEmail = (email: string): boolean => {

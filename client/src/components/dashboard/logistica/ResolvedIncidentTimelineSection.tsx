@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogisticsIncidentHistoryEntry } from '../../../types';
+import { LogisticsIncidentHistoryEntry } from '../../../types/logistics';
 
 interface ResolvedIncidentTimelineSectionProps {
   changeHistory: LogisticsIncidentHistoryEntry[];

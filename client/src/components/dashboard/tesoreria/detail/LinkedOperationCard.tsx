@@ -1,5 +1,5 @@
 import React from 'react';
-import { TreasuryMovementOperationLink } from '../../../../types';
+import { TreasuryMovementOperationLink } from '../../../../types/treasury';
 
 interface LinkedOperationCardProps {
   operation: TreasuryMovementOperationLink | null;

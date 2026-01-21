@@ -4,16 +4,11 @@
  */
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  ApiError,
-  ClientSummary,
-  TransactionType,
-  TransactionDraftPayload,
-} from '../../../../types';
-import {
-  useClientsList,
-  useTransactionDraft,
-} from '../../../../hooks/dashboard';
+import { ApiError } from '../../../../types/auth';
+import { ClientSummary } from '../../../../types/client';
+import { TransactionType, TransactionDraftPayload } from '../../../../types/transaction';
+import { useClientsList } from '../../../../hooks/dashboard/useClientsList';
+import { useTransactionDraft } from '../../../../hooks/dashboard/useTransactionDraft';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';
@@ -26,7 +21,7 @@ import { devLog } from '../../../../utils/devLogger';
 import { CompletionSuccessState } from './CompletionSuccessState';
 import { CancelOperationModal } from './CancelOperationModal';
 import { VoidOperationModal } from './VoidOperationModal';
-import { emitDashboardBalanceRefresh } from '../../../../utils';
+import { emitDashboardBalanceRefresh } from '../../../../utils/balanceEvents';
 import { WizardCompleteSummary } from './WizardCompleteSummary';
 
 const WIZARD_STEPS = [

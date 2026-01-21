@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from 'react';
 import { useApi } from '../useApi';
-import { ApiError, TreasuryMovement } from '../../types';
+import { ApiError } from '../../types/auth';
+import { TreasuryMovement } from '../../types/treasury';
 
 interface MovementDetailResponse {
   movement: TreasuryMovement;

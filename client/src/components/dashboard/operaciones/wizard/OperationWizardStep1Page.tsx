@@ -1,18 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  ApiError,
-  ClientSummary,
-  TransactionDraft,
-  TransactionType,
-  TransactionDraftPayload,
-} from '../../../../types';
-import {
-  useClientsList,
-  useTransactionDraft,
-  useLatestMarketRate,
-} from '../../../../hooks/dashboard';
-import { useUserPermissions, useClientDetail } from '../../../../hooks';
+import { ApiError } from '../../../../types/auth';
+import { ClientSummary } from '../../../../types/client';
+import { TransactionDraft, TransactionType, TransactionDraftPayload } from '../../../../types/transaction';
+import { useClientsList } from '../../../../hooks/dashboard/useClientsList';
+import { useLatestMarketRate } from '../../../../hooks/dashboard/useLatestMarketRate';
+import { useTransactionDraft } from '../../../../hooks/dashboard/useTransactionDraft';
+import { useClientDetail } from '../../../../hooks/useClientDetail';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
 import { DashboardNavbar } from '../Navbar';
 import { BalanceStripe } from '../BalanceStripe';
 import { DashboardFooter } from '../Footer';

@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { api } from '../utils';
+import { api } from '../utils/api';
 
 const DEFAULT_KEEP_ALIVE_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 

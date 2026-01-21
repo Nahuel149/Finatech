@@ -1,5 +1,5 @@
 import React, { FormEvent, useEffect, useMemo, useState } from 'react';
-import { LogisticsOperation, LogisticsOperationUpdatePayload, OperationType } from '../../../types';
+import { LogisticsOperation, LogisticsOperationUpdatePayload, OperationType } from '../../../types/logistics';
 import { Alert } from '../../ui/Alert';
 import { XMarkIcon } from '../../icons/HeroiconsOutline';
 

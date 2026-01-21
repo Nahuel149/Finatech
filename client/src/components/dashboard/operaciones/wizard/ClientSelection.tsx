@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ClientSummary } from '../../../../types';
+import { ClientSummary } from '../../../../types/client';
 import { LoadingSpinner } from '../../../ui/LoadingSpinner';
 
 interface Props {

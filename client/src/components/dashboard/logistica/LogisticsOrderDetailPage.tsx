@@ -5,15 +5,8 @@ import { BalanceStripe } from '../operaciones/BalanceStripe';
 import { DashboardFooter } from '../operaciones/Footer';
 import { Alert } from '../../ui/Alert';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
-import { useLogisticsOrderActions, useLogisticsOrderDetail } from '../../../hooks/dashboard';
-import {
-  LogisticsDiscrepancyPayload,
-  LogisticsEvidence,
-  LogisticsEvidenceUploadPayload,
-  LogisticsItemsHandoverPayload,
-  LogisticsOrder,
-  LogisticsPartialCompletionPayload,
-} from '../../../types';
+import { useLogisticsOrderActions, useLogisticsOrderDetail } from '../../../hooks/dashboard/useLogisticsOrders';
+import { LogisticsDiscrepancyPayload, LogisticsEvidence, LogisticsEvidenceUploadPayload, LogisticsItemsHandoverPayload, LogisticsOrder, LogisticsPartialCompletionPayload } from '../../../types/logistics';
 import { formatCurrency, formatDateTime } from '../operaciones/transfer/utils';
 import { HandoverWizard } from './HandoverWizard';
 import { DiscrepancyModal } from './DiscrepancyModal';

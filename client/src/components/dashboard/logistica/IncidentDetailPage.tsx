@@ -5,9 +5,9 @@ import { BalanceStripe } from '../operaciones/BalanceStripe';
 import { IncidentDetailSidePanel } from './IncidentDetailSidePanel';
 import { Alert } from '../../ui/Alert';
 import { LoadingSpinner } from '../../ui/LoadingSpinner';
-import { useLogisticsIncidentDetail } from '../../../hooks/dashboard';
+import { useLogisticsIncidentDetail } from '../../../hooks/dashboard/useLogisticsIncidents';
 import { api, handleApiError } from '../../../utils/api';
-import { ApiError } from '../../../types';
+import { ApiError } from '../../../types/auth';
 
 export const IncidentDetailPage: React.FC = () => {
   const { incidentId } = useParams<{ incidentId: string }>();

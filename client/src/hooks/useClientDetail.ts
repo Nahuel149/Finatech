@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useApi } from './useApi';
-import { ApiError, ClientSummary } from '../types';
+import { ApiError } from '../types/auth';
+import { ClientSummary } from '../types/client';
 
 export const useClientDetail = (clientId?: string | null) => {
   const endpoint = clientId ? `/api/clients/${clientId}` : '';

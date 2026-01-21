@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { RevertTreasuryReceptionPayload, TreasuryReception } from '../../../../types';
-import { Modal } from '../../../ui';
+import { RevertTreasuryReceptionPayload, TreasuryReception } from '../../../../types/treasuryReceptions';
+import { Modal } from '../../../ui/Modal';
 
 interface Props {
   open: boolean;
