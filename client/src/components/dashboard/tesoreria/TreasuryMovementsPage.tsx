@@ -9,17 +9,17 @@ import { TreasuryBalanceStripe } from './TreasuryBalanceStripe';
 import { TreasuryHeader } from './TreasuryHeader';
 import { TreasuryFilters } from './TreasuryFilters';
 import { TreasuryMovementsTable } from './TreasuryMovementsTable';
+import { MovementDetailPanel } from './detail/MovementDetailPanel';
+import { Footer } from '../operaciones/Footer';
 import { ApiError } from '../../../types/auth';
 import { ClientSummary } from '../../../types/client';
 import { TreasuryMovement } from '../../../types/treasury';
 const RegisterMovementModal = React.lazy(() =>
   import('./register/RegisterMovementModal').then((module) => ({ default: module.RegisterMovementModal }))
 );
-import { MovementDetailPanel } from './detail/MovementDetailPanel';
 const ReconciliationModal = React.lazy(() =>
   import('./reconciliation/ReconciliationModal').then((module) => ({ default: module.ReconciliationModal }))
 );
-import { Footer } from '../operaciones/Footer';
 
 type ToastState = {
   type: 'success' | 'error' | 'warning' | 'info';
@@ -195,7 +195,7 @@ export const TreasuryMovementsPage: React.FC = () => {
     setEditMovement(null);
     setPrefillOperation(null);
     setPrefillContact(null);
-  }, [showToast]);
+  }, []);
 
   const handleOpenConciliation = useCallback(() => {
     setReconciliationOpen(true);
@@ -210,7 +210,7 @@ export const TreasuryMovementsPage: React.FC = () => {
       type: 'info',
       message: 'Configuración de Tesorería disponible próximamente.',
     });
-  }, []);
+  }, [showToast]);
 
   const handleOpenMovementDetail = useCallback((movement: TreasuryMovement) => {
     if (!movement.id) return;

@@ -1,5 +1,6 @@
 import React, { Suspense, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { DashboardNavbar } from '../operaciones/Navbar';
+import { BalanceStripe } from '../operaciones/BalanceStripe';
 import { Footer } from '../operaciones/Footer';
 import { Alert } from '../../ui/Alert';
 import { FilterPanel } from './FilterPanel';
@@ -17,7 +18,6 @@ const NewMovementModal = React.lazy(() => import('./NewMovementModal'));
 const EditLogisticsOperationModal = React.lazy(() => import('./EditLogisticsOperationModal'));
 const BulkEditLogisticsOperationsModal = React.lazy(() => import('./BulkEditLogisticsOperationsModal'));
 const BulkStateChangeModal = React.lazy(() => import('./BulkStateChangeModal'));
-import { BalanceStripe } from '../operaciones/BalanceStripe';
 
 type ToastState = {
   type: 'success' | 'info' | 'error';
