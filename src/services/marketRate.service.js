@@ -72,8 +72,45 @@ const getLatestMarketRate = async ({ baseAsset, quoteAsset }) => {
 };
 
 const normalizeNumber = (value) => {
-  if (!value && value !== 0) return null;
-  const cleaned = String(value).replace(/\./g, '').replace(',', '.');
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? value : null;
+  }
+
+  let cleaned = String(value).trim();
+  if (!cleaned) return null;
+
+  // Keep digits and separators, drop currency symbols/spaces.
+  cleaned = cleaned.replace(/[^\d,.-]/g, '');
+  if (!cleaned) return null;
+
+  const hasDot = cleaned.includes('.');
+  const hasComma = cleaned.includes(',');
+
+  if (hasDot && hasComma) {
+    // Assume dot as thousands separator and comma as decimal separator.
+    cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  } else if (hasComma) {
+    const parts = cleaned.split(',');
+    if (parts.length > 2) {
+      // Multiple commas -> treat as thousands separators.
+      cleaned = cleaned.replace(/,/g, '');
+    } else {
+      cleaned = cleaned.replace(',', '.');
+    }
+  } else if (hasDot) {
+    const parts = cleaned.split('.');
+    if (parts.length > 2) {
+      cleaned = cleaned.replace(/\./g, '');
+    } else if (parts.length === 2) {
+      const decimalPart = parts[1];
+      if (decimalPart.length === 3 && /^\d+$/.test(decimalPart)) {
+        // Likely thousands separator (e.g. 1.234)
+        cleaned = parts[0] + decimalPart;
+      }
+    }
+  }
+
   const parsed = Number.parseFloat(cleaned);
   return Number.isFinite(parsed) ? parsed : null;
 };

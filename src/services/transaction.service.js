@@ -56,20 +56,26 @@ const validateAssetDirection = (type, incomingAsset, outgoingAsset) => {
   const incomingCode = String(incomingAsset?.code || '').trim().toUpperCase();
   const outgoingCode = String(outgoingAsset?.code || '').trim().toUpperCase();
 
-  if (normalizedType !== 'buy') {
-    return;
-  }
-
   if (!incomingCode || !outgoingCode) {
     throw new Error('Asset codes are required');
   }
 
-  if (incomingCode === 'ARS') {
-    throw new Error('Una operaci��n de compra debe recibir un activo distinto de ARS.');
+  if (normalizedType === 'buy') {
+    if (incomingCode === 'ARS') {
+      throw new Error('Una operacion de compra debe recibir un activo distinto de ARS.');
+    }
+    if (outgoingCode !== 'ARS') {
+      throw new Error('Una operacion de compra debe pagar en ARS.');
+    }
+    return;
   }
 
-  if (outgoingCode !== 'ARS') {
-    throw new Error('Una operaci��n de compra debe pagar en ARS.');
+  if (incomingCode !== 'ARS') {
+    throw new Error('Una operacion de venta debe recibir ARS.');
+  }
+
+  if (outgoingCode === 'ARS') {
+    throw new Error('Una operacion de venta debe entregar un activo distinto de ARS.');
   }
 };
 
@@ -1022,3 +1028,4 @@ module.exports = {
   },
   voidTransaction,
 };
+

@@ -13,7 +13,11 @@ const {
   validatePasswordResetToken,
   resetPassword,
 } = require('../services/auth.service');
-const { deleteSessionByToken, getSessionDurationMs } = require('../services/session.service');
+const {
+  deleteSessionByToken,
+  deleteSessionsByUser,
+  getSessionDurationMs,
+} = require('../services/session.service');
 const { attachAuthCookie, clearAuthCookie, COOKIE_NAME } = require('../utils/authCookie');
 const { dedupePermissions } = require('../utils/permissions');
 const { logger } = require('../utils/logger');
@@ -268,6 +272,9 @@ const changePassword = async (req, res, next) => {
 
     user.passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
     await user.save();
+
+    await deleteSessionsByUser(user._id);
+    clearAuthCookie(res);
 
     res.json({ success: true, profile: buildProfile(user) });
   } catch (error) {

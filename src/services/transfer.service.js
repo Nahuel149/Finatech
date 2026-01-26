@@ -6,6 +6,7 @@ const {
   adjustTreasuryBalanceForMovement,
   normalizeBalanceKey,
   registerTreasuryMovement,
+  emitTreasuryMovementSideEffects,
 } = require('./treasury.service');
 const { emitNotification } = require('./notifications.service');
 const { createTransferOperationEvents } = require('./treasuryEvent.service');
@@ -248,6 +249,46 @@ const registerTransferOperation = async (payload, context = {}) => {
       });
 
       eventDocuments = await createTransferOperationEvents(operationDocument, { session });
+
+      const treasuryPayload = {
+        type: direction === 'incoming' ? 'incoming' : 'outgoing',
+        medium: movementType === 'cash' ? 'cash' : 'transfer',
+        currency: 'ARS',
+        amount: totalAmount,
+        movementAt:
+          operationPayload?.confirmedAt ||
+          operationPayload?.createdAt ||
+          new Date().toISOString(),
+        operation: {
+          id: operationPayload?._id,
+          model: 'TransferOperation',
+        },
+        metadata: {
+          ...(payload?.metadata || {}),
+          source: 'transfer_operation',
+          distributionLines: normalizedLines.map((line) => ({
+            contact: line.contact.toString(),
+            method: line.method,
+            amount: roundAmount(line.amount),
+            amountArs: roundAmount(line.amountArs),
+          })),
+        },
+      };
+
+      if (normalizedLines.length === 1) {
+        treasuryPayload.contactId = normalizedLines[0].contact.toString();
+      }
+
+      const treasuryContext = {
+        userId: context.userId,
+        skipBalanceAdjustments: true,
+        skipSettlement: true,
+        skipBalanceEvent: true,
+        session,
+        deferSideEffects: true,
+      };
+
+      treasuryMovementResult = await registerTreasuryMovement(treasuryPayload, treasuryContext);
     });
   } finally {
     session.endSession();
@@ -255,43 +296,9 @@ const registerTransferOperation = async (payload, context = {}) => {
 
   const formattedOperation = formatTransferOperation(operationDocument, contacts);
 
-  const treasuryPayload = {
-    type: direction === 'incoming' ? 'incoming' : 'outgoing',
-    medium: movementType === 'cash' ? 'cash' : 'transfer',
-    currency: 'ARS',
-    amount: totalAmount,
-    movementAt:
-      operationDocument?.confirmedAt ||
-      operationDocument?.createdAt ||
-      new Date().toISOString(),
-    operation: {
-      id: operationDocument?._id,
-      model: 'TransferOperation',
-    },
-    metadata: {
-      ...(payload?.metadata || {}),
-      source: 'transfer_operation',
-      distributionLines: normalizedLines.map((line) => ({
-        contact: line.contact.toString(),
-        method: line.method,
-        amount: roundAmount(line.amount),
-        amountArs: roundAmount(line.amountArs),
-      })),
-    },
-  };
-
-  if (normalizedLines.length === 1) {
-    treasuryPayload.contactId = normalizedLines[0].contact.toString();
+  if (treasuryMovementResult?.sideEffects) {
+    emitTreasuryMovementSideEffects(treasuryMovementResult.sideEffects);
   }
-
-  const treasuryContext = {
-    userId: context.userId,
-    skipBalanceAdjustments: true,
-    skipSettlement: true,
-    skipBalanceEvent: true,
-  };
-
-  treasuryMovementResult = await registerTreasuryMovement(treasuryPayload, treasuryContext);
 
   emitBalanceUpdated({
     source: 'transfer_operation',

@@ -94,7 +94,7 @@ export const ResolvedIncidentSummarySection: React.FC<ResolvedIncidentSummarySec
           
           <div>
             <label className="block text-sm font-medium text-gray-500">Tiempo de resolución</label>
-            <p className="mt-1 text-sm text-gray-900 font-medium text-green-600">
+            <p className="mt-1 text-sm font-medium text-green-600">
               {incident.resolutionDate ? calculateResolutionTime(incident.reportDate, incident.resolutionDate) : '—'}
             </p>
           </div>
