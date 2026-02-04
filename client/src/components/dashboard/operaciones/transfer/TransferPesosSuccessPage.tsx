@@ -59,7 +59,7 @@ export const TransferPesosSuccessPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-24 max-w-2xl mx-auto">
+      <main className="pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-24 max-w-2xl mx-auto">
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-8 text-center">
           <div className="mb-6">
             <div className="w-16 h-16 bg-success rounded-full flex items-center justify-center mx-auto mb-4">

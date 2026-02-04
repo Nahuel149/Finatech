@@ -3,7 +3,17 @@ import { apiRequest, handleApiError } from '../../utils/api';
 import { ApiError } from '../../types/auth';
 import { ClientSummary, ListClientsResponse } from '../../types/client';
 
-export const useClientSearch = (initialQuery = '') => {
+type ClientSearchOptions = {
+  includeRecentOnEmpty?: boolean;
+  recentLimit?: number;
+  searchLimit?: number;
+};
+
+export const useClientSearch = (
+  initialQuery = '',
+  options: ClientSearchOptions = {}
+) => {
+  const { includeRecentOnEmpty = true, recentLimit = 8, searchLimit = 10 } = options;
   const [query, setQuery] = useState(initialQuery);
   const [items, setItems] = useState<ClientSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -11,18 +21,22 @@ export const useClientSearch = (initialQuery = '') => {
 
   useEffect(() => {
     const q = query.trim();
-    if (!q) {
+    if (!q && !includeRecentOnEmpty) {
       setItems([]);
       setError(null);
       setLoading(false);
       return;
     }
+
     setLoading(true);
     setError(null);
     const controller = new AbortController();
     const timeout = setTimeout(async () => {
       try {
-        const res = await apiRequest<ListClientsResponse>(`/api/clients?q=${encodeURIComponent(q)}`, {
+        const endpoint = q
+          ? `/api/clients?q=${encodeURIComponent(q)}&limit=${encodeURIComponent(searchLimit)}`
+          : `/api/clients/recent?limit=${encodeURIComponent(recentLimit)}`;
+        const res = await apiRequest<ListClientsResponse>(endpoint, {
           method: 'GET',
           signal: controller.signal as any,
         } as any);
@@ -39,7 +53,7 @@ export const useClientSearch = (initialQuery = '') => {
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [query]);
+  }, [query, includeRecentOnEmpty, recentLimit]);
 
   const suggestions = useMemo(() => items, [items]);
 

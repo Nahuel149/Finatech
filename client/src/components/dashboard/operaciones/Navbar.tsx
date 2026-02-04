@@ -1,9 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+﻿import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
 import { useCurrentUser } from '../../../hooks/useCurrentUser';
 import { NotificationItem, NotificationLevel, useNotifications } from '../../../hooks/useNotifications';
+import { useClientSearch, useOperationSuggestions } from '../../../hooks/dashboard';
 import { ApiError } from '../../../types/auth';
+import { ClientSummary } from '../../../types/client';
+import { OperationSuggestion } from '../../../types/treasury';
 
 interface Props {
   search: string;
@@ -18,8 +21,8 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Operaciones', path: '/dashboard', icon: 'fa-exchange-alt' },
-  { label: 'Tesorería', path: '/dashboard/tesoreria', icon: 'fa-vault' },
-  { label: 'Logística', path: '/dashboard/logistica', icon: 'fa-truck' },
+  { label: 'Tesoreria', path: '/dashboard/tesoreria', icon: 'fa-vault' },
+  { label: 'Logistica', path: '/dashboard/logistica', icon: 'fa-truck' },
 ];
 
 const notificationLevelColor: Record<NotificationLevel, string> = {
@@ -39,8 +42,8 @@ const formatRelativeTime = (isoDate: string) => {
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `Hace ${hours} h`;
   const days = Math.floor(hours / 24);
-  if (days === 1) return 'Hace 1 día';
-  if (days < 7) return `Hace ${days} días`;
+  if (days === 1) return 'Hace 1 dia';
+  if (days < 7) return `Hace ${days} dias`;
   return new Date(isoDate).toLocaleDateString('es-AR', {
     day: '2-digit',
     month: 'short',
@@ -86,14 +89,14 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
           }}
           className="text-xs font-medium text-primary hover:text-blue-700"
         >
-          Marcar todas como leídas
+          Marcar todas como leidas
         </button>
       )}
     </div>
     <div className="max-h-80 overflow-y-auto">
       {loading ? (
         <div className="px-4 py-8 text-center text-sm text-gray-500">
-          Cargando notificaciones…
+          Cargando notificaciones...
         </div>
       ) : error ? (
         <div className="px-4 py-8 text-center text-sm text-danger">
@@ -101,7 +104,7 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
         </div>
       ) : notifications.length === 0 ? (
         <div className="px-4 py-8 text-center text-sm text-gray-500">
-          No tenés notificaciones pendientes.
+          No tenes notificaciones pendientes.
         </div>
       ) : (
         notifications.map((notification) => (
@@ -149,6 +152,77 @@ const NotificationsDropdown: React.FC<NotificationsDropdownProps> = ({
   </div>
 );
 
+type SearchSuggestionItem =
+  | {
+      type: 'client';
+      id: string;
+      label: string;
+      subLabel: string | null;
+      client: ClientSummary;
+    }
+  | {
+      type: 'operation';
+      id: string;
+      label: string;
+      subLabel: string | null;
+      operation: OperationSuggestion;
+    };
+
+interface SearchSuggestionsDropdownProps {
+  open: boolean;
+  loading: boolean;
+  items: SearchSuggestionItem[];
+  onSelect: (item: SearchSuggestionItem) => void;
+  className?: string;
+}
+
+const SearchSuggestionsDropdown: React.FC<SearchSuggestionsDropdownProps> = ({
+  open,
+  loading,
+  items,
+  onSelect,
+  className = '',
+}) => {
+  if (!open) return null;
+
+  return (
+    <div
+      className={`absolute left-0 right-0 mt-2 rounded-lg border border-gray-200 bg-white shadow-lg z-50 ${className}`}
+    >
+      {loading && (
+        <div className="px-4 py-3 text-sm text-gray-500">Buscando...</div>
+      )}
+      {!loading && items.length === 0 && (
+        <div className="px-4 py-3 text-sm text-gray-500">Sin resultados.</div>
+      )}
+      {!loading && items.length > 0 && (
+        <div className="max-h-72 overflow-y-auto">
+          {items.map((item) => (
+            <button
+              key={`${item.type}-${item.id}`}
+              type="button"
+              onClick={() => onSelect(item)}
+              className="w-full px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-sm font-medium text-text-primary">{item.label}</div>
+                  {item.subLabel && (
+                    <div className="text-xs text-gray-500 mt-1">{item.subLabel}</div>
+                  )}
+                </div>
+                <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] font-semibold uppercase text-gray-500">
+                  {item.type === 'client' ? 'Cliente' : 'Operacion'}
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -157,8 +231,11 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
   const mobileSearchInputRef = useRef<HTMLInputElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
   const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const searchContainerRef = useRef<HTMLDivElement>(null);
+  const mobileSearchContainerRef = useRef<HTMLDivElement>(null);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accountMenuOpen, setAccountMenuOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const desktopNotificationsRef = useRef<HTMLDivElement>(null);
   const mobileNotificationsRef = useRef<HTMLDivElement>(null);
   const accountMenuRef = useRef<HTMLDivElement>(null);
@@ -172,8 +249,24 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     loading: notificationsLoading,
     error: notificationsError,
   } = useNotifications();
-  const displayName = user?.fullName?.trim() || (userLoading ? 'Cargando perfil…' : 'Usuario FinaTech');
-  const secondaryText = user?.email || (userLoading ? 'Sincronizando…' : 'Sin correo configurado');
+  const trimmedSearch = search.trim();
+  const {
+    suggestions: clientSuggestions,
+    loading: clientSearching,
+    setQuery: setClientQuery,
+  } = useClientSearch('', {
+    includeRecentOnEmpty: false,
+    searchLimit: 5,
+  });
+  const { suggestions: operationSuggestions, loading: operationSearching } = useOperationSuggestions(trimmedSearch, {
+    limit: 5,
+  });
+  const displayName = user?.fullName?.trim() || (userLoading ? 'Cargando perfil...' : 'Usuario FinaTech');
+  const secondaryText = user?.email || (userLoading ? 'Sincronizando...' : 'Sin correo configurado');
+
+  useEffect(() => {
+    setClientQuery(trimmedSearch);
+  }, [setClientQuery, trimmedSearch]);
 
   const activePath = useMemo(() => {
     const normalizedPath = location.pathname.startsWith('/dashboard/tesoreria/saldos')
@@ -207,6 +300,16 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       if (!isInsideNotifications) {
         setNotificationsOpen(false);
       }
+      const searchContainers = [
+        searchContainerRef.current,
+        mobileSearchContainerRef.current,
+      ];
+      const isInsideSearch = searchContainers.some(
+        (container) => container && container.contains(target)
+      );
+      if (!isInsideSearch) {
+        setSearchOpen(false);
+      }
       if (accountMenuRef.current && !accountMenuRef.current.contains(target)) {
         setAccountMenuOpen(false);
       }
@@ -230,6 +333,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
       if (event.key === 'Escape') {
         setNotificationsOpen(false);
         setAccountMenuOpen(false);
+        setSearchOpen(false);
       }
     };
     document.addEventListener('keydown', handleKeyDown);
@@ -240,6 +344,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     setNotificationsOpen(false);
     setAccountMenuOpen(false);
     setMobileProfileOpen(false);
+    setSearchOpen(false);
   }, [location.pathname]);
 
   const handleOpenNotifications = () => {
@@ -267,7 +372,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     try {
       await logout();
     } catch (error) {
-      console.error('Error al cerrar sesión', error);
+      console.error('Error al cerrar sesion', error);
     } finally {
       navigate('/login', { replace: true });
     }
@@ -300,11 +405,78 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     navigate('/dashboard/perfil', { replace: false });
   };
 
-  const handleHardRefresh = () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('_refresh', Date.now().toString());
-    window.location.replace(url.toString());
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const value = event.target.value;
+    onSearchChange(value);
+    if (value.trim()) {
+      setSearchOpen(true);
+    } else {
+      setSearchOpen(false);
+    }
   };
+
+  const handleSearchFocus = () => {
+    if (search.trim()) {
+      setSearchOpen(true);
+    }
+  };
+
+  const handleSearchSelect = (item: SearchSuggestionItem) => {
+    setSearchOpen(false);
+    setMobileMenuOpen(false);
+    setMobileProfileOpen(false);
+    if (item.type === 'client') {
+      navigate(`/dashboard/tesoreria/saldos/contacto/${item.id}`);
+      return;
+    }
+
+    const operation = item.operation;
+    if (operation.model === 'TransferOperation') {
+      navigate(`/dashboard/operaciones/transfer-pesos/detalle/${operation.id}`);
+      return;
+    }
+    if (operation.model === 'TreasuryMovement') {
+      navigate(`/dashboard/tesoreria/movimientos/${operation.id}`);
+      return;
+    }
+    navigate(`/dashboard/operaciones/detalle/${operation.id}`);
+  };
+
+  const formatSuggestionAmount = (amount: number, currency: string) =>
+    new Intl.NumberFormat(currency === 'USD' ? 'en-US' : 'es-AR', {
+      style: 'currency',
+      currency: currency || 'ARS',
+      minimumFractionDigits: 2,
+    }).format(Number.isFinite(amount) ? amount : 0);
+
+  const combinedSuggestions = useMemo<SearchSuggestionItem[]>(() => {
+    const clientItems: SearchSuggestionItem[] = clientSuggestions.map((client) => ({
+      type: 'client',
+      id: client.id,
+      label: client.fullName,
+      subLabel: client.cuit ? `CUIT ${client.cuit}` : client.contactType || null,
+      client,
+    }));
+
+    const operationItems: SearchSuggestionItem[] = operationSuggestions.map((operation) => {
+      const label = operation.code || 'Operacion sin codigo';
+      const description = operation.description || operation.status || null;
+      const amount = formatSuggestionAmount(operation.amount, operation.currency);
+      const subLabel = [description, `${amount}`].filter(Boolean).join(' - ');
+      return {
+        type: 'operation',
+        id: operation.id,
+        label,
+        subLabel: subLabel || null,
+        operation,
+      };
+    });
+
+    return [...clientItems, ...operationItems].slice(0, 5);
+  }, [clientSuggestions, operationSuggestions]);
+
+  const searchLoading = (clientSearching || operationSearching) && trimmedSearch.length > 0;
+  const showSearchDropdown = searchOpen && trimmedSearch.length > 0;
 
   return (
     <>
@@ -329,15 +501,6 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 onClick={openSearchOnMobile}
               >
                 <i className="fa-solid fa-search text-lg" />
-              </button>
-              <button
-                type="button"
-                className="inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
-                aria-label="Recargar"
-                title="Recargar"
-                onClick={handleHardRefresh}
-              >
-                <i className="fa-solid fa-rotate-right text-lg" />
               </button>
               <div ref={mobileNotificationsRef} className="relative">
                 <button
@@ -371,7 +534,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                 type="button"
                 onClick={() => setMobileMenuOpen((prev) => !prev)}
                 className="inline-flex h-10 w-10 items-center justify-center text-text-primary hover:text-primary transition-colors rounded-lg hover:bg-gray-100"
-                aria-label={mobileMenuOpen ? 'Cerrar menú' : 'Abrir menú'}
+                aria-label={mobileMenuOpen ? 'Cerrar menu' : 'Abrir menu'}
                 ref={mobileMenuButtonRef}
               >
                 <i className={`fa-solid ${mobileMenuOpen ? 'fa-xmark' : 'fa-bars'} text-lg`} />
@@ -426,7 +589,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   onClick={handleOpenSettings}
                 >
                   <i className="fa-solid fa-sliders mr-2" />
-                  Configuración
+                  Configuracion
                 </button>
                 <button
                   type="button"
@@ -434,31 +597,39 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   onClick={handleLogout}
                 >
                   <i className="fa-solid fa-right-from-bracket mr-2" />
-                  Cerrar sesión
+                  Cerrar sesion
                 </button>
               </div>
             )}
           </div>
 
           <div className="mb-6">
-            <div className="relative">
+            <div className="relative" ref={mobileSearchContainerRef}>
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <i className="fa-solid fa-search text-gray-400 text-sm" />
               </div>
               <input
                 type="text"
                 value={search}
-                onChange={(event) => onSearchChange(event.target.value)}
+                onChange={handleSearchChange}
+                onFocus={handleSearchFocus}
                 className="w-full pl-12 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-primary/20 focus:border-primary text-sm bg-gray-50"
                 placeholder="Buscar operaciones, clientes..."
                 ref={mobileSearchInputRef}
+              />
+              <SearchSuggestionsDropdown
+                open={showSearchDropdown}
+                loading={searchLoading}
+                items={combinedSuggestions}
+                onSelect={handleSearchSelect}
+                className="w-full"
               />
             </div>
           </div>
 
           <div className="space-y-2">
             <div className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 px-3">
-              Navegación
+              Navegacion
             </div>
             {NAV_ITEMS.map((item) => {
               const isActive = item.path === activePath;
@@ -544,7 +715,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                   })}
                 </div>
 
-                <div id="global-search" className="flex-1 max-w-md">
+                <div id="global-search" className="flex-1 max-w-md" ref={searchContainerRef}>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <i className="fa-solid fa-search text-gray-400" />
@@ -552,9 +723,16 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                     <input
                       type="text"
                       value={search}
-                      onChange={(event) => onSearchChange(event.target.value)}
+                      onChange={handleSearchChange}
+                      onFocus={handleSearchFocus}
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
-                      placeholder="Buscar cliente u operación…"
+                      placeholder="Buscar cliente u operacion..."
+                    />
+                    <SearchSuggestionsDropdown
+                      open={showSearchDropdown}
+                      loading={searchLoading}
+                      items={combinedSuggestions}
+                      onSelect={handleSearchSelect}
                     />
                   </div>
                 </div>
@@ -562,15 +740,6 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
             </div>
 
             <div id="navbar-right" className="flex items-center space-x-4">
-              <button
-                type="button"
-                className="relative p-2 text-text-primary hover:text-primary transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 rounded-md"
-                aria-label="Recargar"
-                title="Recargar"
-                onClick={handleHardRefresh}
-              >
-                <i className="fa-solid fa-rotate-right text-lg" />
-              </button>
               <div ref={desktopNotificationsRef} className="relative">
                 <button
                   type="button"
@@ -637,7 +806,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                         onClick={handleOpenSettings}
                       >
                         <i className="fa-solid fa-sliders mr-3 text-text-primary" />
-                        Configuración
+                        Configuracion
                       </button>
                     </div>
                     <div className="border-t border-gray-200 py-1">
@@ -647,7 +816,7 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
                         onClick={handleLogout}
                       >
                         <i className="fa-solid fa-right-from-bracket mr-3" />
-                        Cerrar sesión
+                        Cerrar sesion
                       </button>
                     </div>
                   </div>
@@ -660,3 +829,4 @@ export const DashboardNavbar: React.FC<Props> = ({ search, onSearchChange }) => 
     </>
   );
 };
+

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ClientSummary } from '../../../../types/client';
 import { MovementDirection, MovementMethod, MovementType } from '../../../../types/transfer';
@@ -135,9 +135,20 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   onRemove,
   onRequestNewClient,
 }) => {
-  const { setQuery, suggestions, loading } = useClientSearch();
+  const { setQuery, suggestions, loading } = useClientSearch('', {
+    includeRecentOnEmpty: true,
+    recentLimit: 5,
+    searchLimit: 5,
+  });
   const [searchValue, setSearchValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const visibleSuggestions = suggestions.slice(0, 5);
+  const contactTypeLabel =
+    contactType === 'client'
+      ? 'cliente'
+      : contactType === 'provider'
+      ? 'proveedor'
+      : contactType || 'Sin tipo';
 
   useEffect(() => {
     const term = searchValue.trim();
@@ -163,8 +174,7 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   };
 
   const handleAmountInput = (value: string) => {
-    const normalized = value.replace(/,/g, '.');
-    const parsed = parseFloat(normalized);
+    const parsed = sanitizeAmountInput(value);
     onAmountChange(Number.isFinite(parsed) ? parsed : 0);
   };
 
@@ -175,8 +185,8 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
           <div className="flex items-start justify-between">
             <div>
               <div className="font-semibold text-text-primary">{contactName}</div>
-              <div className="text-xs text-gray-500 capitalize">
-                {contactType || 'Sin tipo'}
+              <div className="text-xs text-gray-500">
+                {contactTypeLabel}
                 {cuit ? ` · ${cuit}` : ''}
               </div>
             </div>
@@ -203,9 +213,9 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
               {loading && (
                 <i className="fa-solid fa-circle-notch animate-spin absolute right-3 top-3 text-gray-400" />
               )}
-              {showSuggestions && (suggestions.length > 0 || loading) && (
-                <div className="absolute left-0 right-0 z-20 mt-1 max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg">
-                  {suggestions.map((client) => (
+              {showSuggestions && (visibleSuggestions.length > 0 || loading) && (
+                <div className="absolute left-0 right-0 z-20 mt-1 rounded-lg border border-gray-200 bg-white shadow-lg">
+                  {visibleSuggestions.map((client) => (
                     <button
                       type="button"
                       key={client.id}
@@ -218,7 +228,7 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
                       )}
                     </button>
                   ))}
-                  {!loading && suggestions.length === 0 && (
+                  {!loading && visibleSuggestions.length === 0 && (
                     <div className="px-3 py-2 text-sm text-gray-500">
                       Sin resultados. Creá un contacto nuevo.
                     </div>
@@ -252,12 +262,12 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
       </td>
       <td className="px-4 py-4 align-top">
         <input
-          type="number"
-          value={Number.isFinite(amount) ? amount : 0}
+          type="text"
+          value={Number.isFinite(amount) && amount > 0 ? amount : ''}
           onChange={(event) => handleAmountInput(event.target.value)}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
-          step="0.01"
-          min="0"
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
+          inputMode="decimal"
+          placeholder="0,00"
         />
       </td>
       <td className="px-4 py-4 align-top text-right">
@@ -294,8 +304,11 @@ export const TransferPesosBuilderPage: React.FC = () => {
   const [amountFocused, setAmountFocused] = useState<boolean>(false);
   const [step, setStep] = useState<BuilderStep>('config');
   const [toast, setToast] = useState<ToastState | null>(null);
+  const [showDistributionNudge, setShowDistributionNudge] = useState(false);
   const [clientModalLineId, setClientModalLineId] = useState<string | null>(null);
   const [amountError, setAmountError] = useState<string | null>(null);
+  const amountSectionRef = useRef<HTMLElement | null>(null);
+  const distributionSectionRef = useRef<HTMLElement | null>(null);
   const {
     data: usdMarketRate,
     loading: rateLoading,
@@ -303,6 +316,16 @@ export const TransferPesosBuilderPage: React.FC = () => {
     refresh: refreshRate,
   } = useLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
   const usdToArsRate = usdMarketRate?.rate && usdMarketRate.rate > 0 ? usdMarketRate.rate : null;
+
+  const scrollToSection = (ref: React.RefObject<HTMLElement>) => {
+    if (!ref.current) return;
+    const offset = window.innerWidth >= 1024 ? 220 : 280;
+    const top = ref.current.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({
+      top: Math.max(top, 0),
+      behavior: 'smooth',
+    });
+  };
 
   const goToStep = useCallback(
     (nextStep: BuilderStep) => {
@@ -527,6 +550,9 @@ export const TransferPesosBuilderPage: React.FC = () => {
   const handleAmountContinue = () => {
     if (validateAmountValue()) {
       goToStep('distribution');
+      setShowDistributionNudge(true);
+      window.setTimeout(() => setShowDistributionNudge(false), 2200);
+      window.setTimeout(() => scrollToSection(distributionSectionRef), 120);
     }
   };
 
@@ -535,6 +561,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
       return;
     }
     goToStep('amount');
+    window.setTimeout(() => scrollToSection(amountSectionRef), 120);
   };
 
   const handleAddLine = () => {
@@ -651,7 +678,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-32 max-w-5xl mx-auto">
+      <main className="pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-32 max-w-5xl mx-auto">
         {/* Header */}
         <header className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -794,6 +821,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
         {/* Step 2 */}
         <section
+          ref={amountSectionRef}
           className={`bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 ${
             currentStepIndex >= 2 ? 'block' : 'hidden'
           }`}
@@ -852,10 +880,23 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
         {/* Step 3 */}
         <section
+          ref={distributionSectionRef}
           className={`bg-white rounded-lg border border-gray-200 shadow-sm p-8 mb-8 ${
             currentStepIndex >= 3 ? 'block' : 'hidden'
           }`}
         >
+          <div
+            className={`transition-all duration-200 ${
+              showDistributionNudge ? 'max-h-20 opacity-100 mb-4' : 'max-h-0 opacity-0 mb-0'
+            } overflow-hidden`}
+          >
+            <div className="rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+              <div className="flex items-center gap-2">
+                <i className="fa-solid fa-circle-info" />
+                <span>Listo. Completá la distribución por contactos abajo.</span>
+              </div>
+            </div>
+          </div>
           <div className="flex items-center mb-6">
             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center mr-3">
               <span className="text-white font-semibold text-sm">3</span>
@@ -1030,7 +1071,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
                         maximumFractionDigits: 4,
                       })
                     : rateLoading
-                    ? 'Obteniendo…'
+                    ? 'Obteniendo...'
                     : 'Sin datos'}
                 </span>
               )}
@@ -1053,13 +1094,13 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
       {/* Footer */}
       <footer className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-40">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between max-w-4xl mx-auto">
-            <div className="flex items-center space-x-4">
+        <div className="px-4 sm:px-6 py-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 gap-3 sm:flex sm:items-center sm:space-x-4">
               <button
                 type="button"
                 onClick={handleCancel}
-                className="flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-6 py-3 text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm text-gray-600 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <i className="fa-solid fa-arrow-left" />
                 Cancelar
@@ -1067,7 +1108,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleSaveDraft}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                className="flex h-12 w-full items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
               >
                 <i className="fa-solid fa-save mr-2" />
                 Guardar borrador
@@ -1076,7 +1117,7 @@ export const TransferPesosBuilderPage: React.FC = () => {
             <button
               type="button"
               onClick={handleOpenConfirm}
-              className={`px-8 py-3 rounded-lg font-medium transition-colors ${
+              className={`h-12 w-full whitespace-nowrap sm:w-auto sm:min-w-[240px] rounded-lg px-4 py-3 text-sm font-medium transition-colors ${
                 canConfirmDistribution
                   ? 'bg-primary text-white hover:bg-blue-700'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -1107,3 +1148,12 @@ export const TransferPesosBuilderPage: React.FC = () => {
     </div>
   );
 };
+
+
+
+
+
+
+
+
+

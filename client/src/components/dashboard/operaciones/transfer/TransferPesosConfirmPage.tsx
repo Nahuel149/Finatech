@@ -83,6 +83,10 @@ export const TransferPesosConfirmPage: React.FC = () => {
   }, [baseValid, navigate]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, []);
+
+  useEffect(() => {
     if (!toast) return;
     const timer = window.setTimeout(() => setToast(null), 3200);
     return () => window.clearTimeout(timer);
@@ -157,7 +161,7 @@ export const TransferPesosConfirmPage: React.FC = () => {
       <DashboardNavbar search="" onSearchChange={() => {}} />
       <BalanceStripe />
 
-      <main className="pt-[550px] lg:pt-[250px] px-4 lg:px-6 pb-24 max-w-4xl mx-auto">
+      <main className="pt-[420px] lg:pt-[250px] px-4 lg:px-6 pb-24 max-w-4xl mx-auto">
         {/* SECTION: Header and Breadcrumbs */}
         <section className="mb-8">
           {/* Breadcrumbs */}
