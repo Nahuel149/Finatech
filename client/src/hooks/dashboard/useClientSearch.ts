@@ -53,7 +53,7 @@ export const useClientSearch = (
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [query, includeRecentOnEmpty, recentLimit]);
+  }, [query, includeRecentOnEmpty, recentLimit, searchLimit]);
 
   const suggestions = useMemo(() => items, [items]);
 
