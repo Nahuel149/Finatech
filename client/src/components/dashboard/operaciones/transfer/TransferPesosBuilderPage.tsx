@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ClientSummary } from '../../../../types/client';
 import { MovementDirection, MovementMethod, MovementType } from '../../../../types/transfer';
