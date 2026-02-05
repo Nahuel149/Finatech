@@ -671,6 +671,7 @@ export const OperationWizardStep2Page: React.FC = () => {
                 baseAmount={baseAmount}
                 baseCurrency={baseCurrency}
                 operationType={operationType}
+                includeLiveTotals={false}
               />
 
               {draftPublishWarning && (

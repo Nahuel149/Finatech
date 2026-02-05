@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useDashboardBalances } from '../../../../hooks/dashboard/useDashboardBalances';
 import { useLiveOperations } from '../../../../hooks/useLiveOperations';
 import { CompoundComputed, CompoundLine } from './CompoundSettlementForm';
@@ -20,6 +20,7 @@ interface Props {
   baseAmount: number;
   baseCurrency: string;
   operationType: TransactionType;
+  includeLiveTotals?: boolean;
 }
 
 const formatArs = (value: number) =>
@@ -61,11 +62,17 @@ export const ArsPositionAside: React.FC<Props> = ({
   baseAmount,
   baseCurrency,
   operationType,
+  includeLiveTotals = true,
 }) => {
   const { balances, loading, error } = useDashboardBalances({ pollInterval: 60000 });
   const { items: liveItems, totals: liveTotals, status: liveStatus, error: liveError } =
     useLiveOperations();
   const isLive = liveStatus === 'live' || liveStatus === 'idle';
+  const [showLiveTotals, setShowLiveTotals] = useState(includeLiveTotals);
+
+  useEffect(() => {
+    setShowLiveTotals(includeLiveTotals);
+  }, [includeLiveTotals]);
 
   const currentCash = useMemo(
     () => balances.find((balance) => balance.id === 'cash')?.amount || 0,
@@ -162,6 +169,9 @@ export const ArsPositionAside: React.FC<Props> = ({
   );
 
   const liveTotalsAdjusted = useMemo(() => {
+    if (!showLiveTotals) {
+      return { cash: 0, transfers: 0, usd: 0 };
+    }
     if (!liveSelfImpacts) {
       return liveTotals;
     }
@@ -170,7 +180,7 @@ export const ArsPositionAside: React.FC<Props> = ({
       transfers: (liveTotals.transfers || 0) - (liveSelfImpacts.transfers || 0),
       usd: (liveTotals.usd || 0) - (liveSelfImpacts.usd || 0),
     };
-  }, [liveSelfImpacts, liveTotals]);
+  }, [showLiveTotals, liveSelfImpacts, liveTotals]);
 
   const deltaArs = useMemo(
     () => displayImpacts.cash + displayImpacts.transfers,
@@ -204,7 +214,7 @@ export const ArsPositionAside: React.FC<Props> = ({
   return (
     <aside className="w-full lg:w-80 flex-shrink-0">
       <div className="sticky top-28 space-y-4">
-        <div className="flex flex-wrap items-center gap-2 text-sm text-gray-600">
+        <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
           <span className="flex items-center gap-1">
             <span
               className={`h-2 w-2 rounded-full ${
@@ -213,6 +223,15 @@ export const ArsPositionAside: React.FC<Props> = ({
             />
             Tiempo real
           </span>
+          <label className="flex items-center gap-2 text-xs text-gray-600">
+            <input
+              type="checkbox"
+              className="h-4 w-4 text-primary"
+              checked={showLiveTotals}
+              onChange={(event) => setShowLiveTotals(event.target.checked)}
+            />
+            Totales en vivo
+          </label>
           {marketRate != null && (
             <span className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-700">
               TC mercado: {formatRateCurrency(marketRate)}

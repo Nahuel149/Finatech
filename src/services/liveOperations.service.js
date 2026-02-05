@@ -8,6 +8,7 @@ const { roundAmount } = require('./currentAccount.service');
 // In-memory draft impacts (Step 2 drafts) with TTL
 const draftImpactsStore = new Map(); // draftId -> { impacts, marginPercent, marginWeightArs, updatedAt, expiresAt }
 const DRAFT_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const LIVE_WINDOW_MS = DRAFT_TTL_MS; // only include recent "running" ops
 
 // Buckets mapped to UI cards
 const BUCKETS = {
@@ -295,6 +296,13 @@ const purgeDrafts = () => {
   }
 };
 
+const recentActivityFilter = () => {
+  const since = new Date(Date.now() - LIVE_WINDOW_MS);
+  return {
+    $or: [{ updatedAt: { $gte: since } }, { createdAt: { $gte: since } }],
+  };
+};
+
 const upsertDraftImpact = ({ draftId, impacts, marginPercent = null, marginWeightArs = 0 }) => {
   if (!draftId || !impacts) return;
   purgeDrafts();
@@ -343,21 +351,12 @@ const mapDraftToLive = ([draftId, payload]) => {
 const listActiveOperations = async () => {
   purgeDrafts();
   const draftIds = new Set(Array.from(draftImpactsStore.keys()));
-  const [transactions, transfers, treasuryMovs, logisticsOps] = await Promise.all([
-    Transaction.find({ status: { $in: ACTIVE_STATES.transaction } }),
-    TransferOperation.find({ status: { $in: ACTIVE_STATES.transfer } }),
-    TreasuryMovement.find({ status: { $in: ACTIVE_STATES.treasury } }),
-    LogisticsOperation.find({ state: { $in: ACTIVE_STATES.logistics } }),
-  ]);
+  const transactions = [];
+  const transfers = [];
+  const treasuryMovs = [];
+  const logisticsOps = [];
 
   const items = [
-    ...transactions
-      .filter((tx) => !draftIds.has(tx._id.toString()))
-      .map(mapTransactionToLive)
-      .filter(Boolean),
-    ...transfers.map(mapTransferOperationToLive).filter(Boolean),
-    ...treasuryMovs.map(mapTreasuryMovementToLive).filter(Boolean),
-    ...logisticsOps.map(mapLogisticsOperationToLive).filter(Boolean),
     ...Array.from(draftImpactsStore.entries()).map(mapDraftToLive).filter(Boolean),
   ];
 
