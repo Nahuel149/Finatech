@@ -273,7 +273,8 @@ export const OperationWizardStep1Page: React.FC = () => {
   const handleIncomingAmountInputChange = useCallback((value: string) => {
     const normalized = normalizeAmountInput(value);
     setIncomingAmountInput(normalized);
-    setIncomingAmount(parseAmountInput(normalized));
+    const parsed = parseAmountInput(normalized);
+    setIncomingAmount(Number.isFinite(parsed) ? clampToTwoDecimals(parsed) : parsed);
   }, []);
 
   const {
@@ -585,7 +586,7 @@ const canEditMarketRate = useMemo(
       }
     }
 
-    setOutgoingAmount(Number.isFinite(computed) ? computed : 0);
+    setOutgoingAmount(Number.isFinite(computed) ? clampToTwoDecimals(computed) : 0);
   }, [
     apr,
     incomingAmount,
@@ -603,17 +604,17 @@ const canEditMarketRate = useMemo(
       setIncomingAssetCode(ASSET_DEFAULTS.sell.incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS.sell.outgoing);
       // Reset amounts for sell operation
-      setIncomingAmount(125000.0); // ARS amount
+      setIncomingAmount(clampToTwoDecimals(125000.0)); // ARS amount
       setIncomingAmountInput(formatAmountInput(125000.0));
-      setOutgoingAmount(150.0); // USD amount
+      setOutgoingAmount(clampToTwoDecimals(150.0)); // USD amount
     } else if (presetType === 'compra') {
       setOperationType('buy');
       setIncomingAssetCode(ASSET_DEFAULTS.buy.incoming);
       setOutgoingAssetCode(ASSET_DEFAULTS.buy.outgoing);
       // Reset amounts for buy operation
-      setIncomingAmount(150.0); // USD amount
+      setIncomingAmount(clampToTwoDecimals(150.0)); // USD amount
       setIncomingAmountInput(formatAmountInput(150.0));
-      setOutgoingAmount(125000.0); // ARS amount
+      setOutgoingAmount(clampToTwoDecimals(125000.0)); // ARS amount
     }
   }, [presetType, setOperationType, setIncomingAssetCode, setOutgoingAssetCode, setIncomingAmount, setOutgoingAmount]);
 

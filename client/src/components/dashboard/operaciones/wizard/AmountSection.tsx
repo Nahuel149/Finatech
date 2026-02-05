@@ -9,7 +9,13 @@ interface Props {
   disabled?: boolean;
 }
 
-const numberToInputValue = (value: number) => (Number.isNaN(value) ? '' : value);
+const numberToInputValue = (value: number) => {
+  if (!Number.isFinite(value)) return '';
+  return value.toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+};
 
 export const AmountSection: React.FC<Props> = ({
   enterAmount,

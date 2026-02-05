@@ -436,8 +436,10 @@ export const OperationWizardStep2Page: React.FC = () => {
           impacts,
           marginPercent: draft?.marginPercentage ?? null,
           marginWeightArs:
-            baseCurrency === 'ARS'
-              ? Math.abs(operationType === 'buy' ? outgoingAmount : incomingAmount)
+            incomingCurrency === 'ARS'
+              ? Math.abs(incomingAmount)
+              : outgoingCurrency === 'ARS'
+              ? Math.abs(outgoingAmount)
               : 0,
         });
         setDraftPublishWarning(null);
@@ -445,7 +447,7 @@ export const OperationWizardStep2Page: React.FC = () => {
         setDraftPublishWarning('No pudimos publicar el impacto en vivo. Se mostrará al guardar.');
       }
     },
-    [baseCurrency, draft?.id, draft?.marginPercentage, incomingAmount, operationType, outgoingAmount]
+    [draft?.id, draft?.marginPercentage, incomingAmount, incomingCurrency, outgoingAmount, outgoingCurrency]
   );
 
   const removeDraftImpact = useCallback(async () => {
@@ -464,7 +466,14 @@ export const OperationWizardStep2Page: React.FC = () => {
     if (baseAmount <= 0) return undefined;
 
     const impacts = { cash: 0, transfers: 0, usd: 0 };
-    const arsDirection = operationType === 'buy' ? -1 : 1;
+    const arsAmount =
+      incomingCurrency === 'ARS'
+        ? incomingAmount
+        : outgoingCurrency === 'ARS'
+        ? outgoingAmount
+        : 0;
+    const arsDirection =
+      incomingCurrency === 'ARS' ? 1 : outgoingCurrency === 'ARS' ? -1 : 0;
 
     // USD leg
     if (incomingCurrency === 'USD') {
@@ -485,16 +494,18 @@ export const OperationWizardStep2Page: React.FC = () => {
       }
     };
 
-    if (settlementMode === 'simple') {
-      pushToBucket(simpleMethod, arsDirection * baseAmount);
-    } else {
-      compoundLines.forEach((line) => {
-        const info = computedLines[line.id];
-        const rawValue =
-          info && Number.isFinite(info.amount) ? info.amount : Number(line.value) || 0;
-        if (!rawValue) return;
-        pushToBucket(line.method, arsDirection * rawValue);
-      });
+    if (Number.isFinite(arsAmount) && arsAmount > 0 && arsDirection !== 0) {
+      if (settlementMode === 'simple') {
+        pushToBucket(simpleMethod, arsDirection * arsAmount);
+      } else {
+        compoundLines.forEach((line) => {
+          const info = computedLines[line.id];
+          const rawValue =
+            info && Number.isFinite(info.amount) ? info.amount : Number(line.value) || 0;
+          if (!rawValue) return;
+          pushToBucket(line.method, arsDirection * rawValue);
+        });
+      }
     }
 
     if (publishDebounceRef.current) {
@@ -513,7 +524,6 @@ export const OperationWizardStep2Page: React.FC = () => {
     draft?.id,
     incomingAmount,
     incomingCurrency,
-    operationType,
     outgoingAmount,
     outgoingCurrency,
     publishDraftImpact,

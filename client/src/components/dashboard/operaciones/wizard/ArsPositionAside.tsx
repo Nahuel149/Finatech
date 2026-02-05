@@ -92,7 +92,6 @@ export const ArsPositionAside: React.FC<Props> = ({
     const impacts = { cash: 0, transfers: 0, usd: 0 };
     const incomingIsUsd = incomingCurrency === 'USD';
     const outgoingIsUsd = outgoingCurrency === 'USD';
-    const arsDirection = operationType === 'buy' ? -1 : 1;
 
     // USD leg always impact USD caja directly
     if (incomingIsUsd) {
@@ -103,8 +102,16 @@ export const ArsPositionAside: React.FC<Props> = ({
     }
 
     // ARS leg: distribute by settlement method (efectivo vs transferencia/deposito)
-    const baseIsArs = baseCurrency === 'ARS' && Number.isFinite(baseAmount) && baseAmount > 0;
-    if (baseIsArs) {
+    const arsAmount =
+      incomingCurrency === 'ARS'
+        ? incomingAmount
+        : outgoingCurrency === 'ARS'
+        ? outgoingAmount
+        : 0;
+    const arsDirection =
+      incomingCurrency === 'ARS' ? 1 : outgoingCurrency === 'ARS' ? -1 : 0;
+
+    if (Number.isFinite(arsAmount) && arsAmount > 0 && arsDirection !== 0) {
       const pushToBucket = (method: string, amount: number) => {
         const normalized = (method || '').toLowerCase();
         const isCash = normalized.includes('efectivo');
@@ -116,7 +123,7 @@ export const ArsPositionAside: React.FC<Props> = ({
       };
 
       if (settlementMode === 'simple') {
-        pushToBucket(simpleMethod, arsDirection * baseAmount);
+        pushToBucket(simpleMethod, arsDirection * arsAmount);
       } else {
         compoundLines.forEach((line) => {
           const info = computedLines[line.id];
@@ -130,25 +137,22 @@ export const ArsPositionAside: React.FC<Props> = ({
 
     return impacts;
   }, [
-    baseAmount,
-    baseCurrency,
     compoundLines,
     computedLines,
     incomingAmount,
     incomingCurrency,
-    operationType,
     outgoingAmount,
     outgoingCurrency,
     settlementMode,
     simpleMethod,
   ]);
 
-  const liveDraftImpacts = useMemo(() => {
+  const liveSelfImpacts = useMemo(() => {
     if (!draftId) {
       return null;
     }
     const key = `draft-${draftId}`;
-    const item = liveItems.find((entry) => entry.id === key);
+    const item = liveItems.find((entry) => entry.id === key || entry.id === draftId);
     return item?.impacts || null;
   }, [draftId, liveItems]);
 
@@ -158,15 +162,15 @@ export const ArsPositionAside: React.FC<Props> = ({
   );
 
   const liveTotalsAdjusted = useMemo(() => {
-    if (!liveDraftImpacts) {
+    if (!liveSelfImpacts) {
       return liveTotals;
     }
     return {
-      cash: (liveTotals.cash || 0) - (liveDraftImpacts.cash || 0),
-      transfers: (liveTotals.transfers || 0) - (liveDraftImpacts.transfers || 0),
-      usd: (liveTotals.usd || 0) - (liveDraftImpacts.usd || 0),
+      cash: (liveTotals.cash || 0) - (liveSelfImpacts.cash || 0),
+      transfers: (liveTotals.transfers || 0) - (liveSelfImpacts.transfers || 0),
+      usd: (liveTotals.usd || 0) - (liveSelfImpacts.usd || 0),
     };
-  }, [liveDraftImpacts, liveTotals]);
+  }, [liveSelfImpacts, liveTotals]);
 
   const deltaArs = useMemo(
     () => displayImpacts.cash + displayImpacts.transfers,
