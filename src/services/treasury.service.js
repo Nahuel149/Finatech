@@ -1,4 +1,4 @@
-const mongoose = require('mongoose');
+﻿const mongoose = require('mongoose');
 const TreasuryBalance = require('../models/TreasuryBalance');
 const TreasuryMovement = require('../models/TreasuryMovement');
 const LogisticsOrder = require('../models/LogisticsOrder');
@@ -120,7 +120,7 @@ const BALANCE_METADATA = {
     status: 'warning',
   },
   courier_in_transit: {
-    label: 'Fondos en tránsito',
+    label: 'Fondos en trÃ¡nsito',
     status: 'warning',
   },
 };
@@ -308,6 +308,8 @@ const computeVariationForBalance = async (key, { days = DEFAULT_VARIATION_WINDOW
   const currentWindowStart = new Date(now.getTime() - windowDays * MS_IN_DAY);
   const previousWindowStart = new Date(currentWindowStart.getTime() - windowDays * MS_IN_DAY);
 
+  const previousWindowEnd = new Date(currentWindowStart.getTime() - 1);
+
   const [currentTotals, previousTotals] = await Promise.all([
     fetchMovementTotalsForBalance(key, {
       dateFrom: currentWindowStart.toISOString(),
@@ -315,7 +317,7 @@ const computeVariationForBalance = async (key, { days = DEFAULT_VARIATION_WINDOW
     }),
     fetchMovementTotalsForBalance(key, {
       dateFrom: previousWindowStart.toISOString(),
-      dateTo: currentWindowStart.toISOString(),
+      dateTo: previousWindowEnd.toISOString(),
     }),
   ]);
 
@@ -326,7 +328,7 @@ const computeVariationForBalance = async (key, { days = DEFAULT_VARIATION_WINDOW
   if (Math.abs(previousNet) > 0) {
     variationPercentage = roundAmount(((currentNet - previousNet) / Math.abs(previousNet)) * 100);
   } else if (Math.abs(currentNet) > 0) {
-    variationPercentage = 100;
+    variationPercentage = currentNet > 0 ? 100 : -100;
   } else {
     variationPercentage = 0;
   }
@@ -602,7 +604,7 @@ const computeVariationPercentage = (currentValue = 0, previousValue = 0) => {
     if (current === 0) {
       return 0;
     }
-    return 100;
+    return current > 0 ? 100 : -100;
   }
 
   const raw = ((current - previous) / Math.abs(previous)) * 100;
@@ -1283,7 +1285,7 @@ const buildContactFilterOptions = (operationTypes = [], currencies = [], stages 
 
 const getContactBalanceDetail = async (contactIdInput, query = {}) => {
   if (!mongoose.Types.ObjectId.isValid(contactIdInput)) {
-    throw new AppError('El contacto indicado no es válido.', 400, {
+    throw new AppError('El contacto indicado no es vÃ¡lido.', 400, {
       code: 'INVALID_CONTACT_ID',
     });
   }
@@ -1505,7 +1507,7 @@ const getContactBalanceDetail = async (contactIdInput, query = {}) => {
       direction: isIncoming ? 'incoming' : 'outgoing',
       operation: {
         id: operationId,
-        type: operation.operation?.type || operation.metadata?.operationType || 'Operación',
+        type: operation.operation?.type || operation.metadata?.operationType || 'OperaciÃ³n',
         code: operation.operation?.code || null,
         source: operation.operation?.source || null,
       },
@@ -1692,7 +1694,7 @@ const getLinkedBalanceDetail = async (keyInput, options = {}) => {
   const sanitizedPage = Math.max(Number(page) || 1, 1);
 
   if (contactId && !mongoose.Types.ObjectId.isValid(contactId)) {
-    throw new AppError('El contacto indicado no es válido.', 400);
+    throw new AppError('El contacto indicado no es vÃ¡lido.', 400);
   }
 
   const match = buildMovementMatch(config.id, { dateFrom, dateTo, type, contactId });
@@ -2129,7 +2131,7 @@ const toObjectId = (value) =>
 const ensureActionUser = (context = {}) => {
   const userId = context.userId || context.user?._id || context.user?.id;
   if (!userId) {
-    throw new AppError('Autenticación requerida.', 401);
+    throw new AppError('AutenticaciÃ³n requerida.', 401);
   }
   return userId;
 };
@@ -2580,11 +2582,11 @@ const listTreasuryReceptions = async (options = {}) => {
 
 const loadReceptionOrder = async (receptionId) => {
   if (!mongoose.Types.ObjectId.isValid(receptionId)) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   const order = await LogisticsOrder.findById(receptionId);
   if (!order) {
-    throw new AppError('Orden logística no encontrada.', 404);
+    throw new AppError('Orden logÃ­stica no encontrada.', 404);
   }
   return order;
 };
@@ -2594,12 +2596,12 @@ const confirmTreasuryReception = async (receptionId, payload = {}, context = {})
   const order = await loadReceptionOrder(receptionId);
 
   if (order.treasuryReceptionStatus !== 'pending') {
-    throw new AppError('La recepción ya fue gestionada.', 409);
+    throw new AppError('La recepciÃ³n ya fue gestionada.', 409);
   }
 
   const totals = computeReceptionTotals(order);
   if (!totals.totalAmount) {
-    throw new AppError('No hay valores para impactar en Tesorería.', 422);
+    throw new AppError('No hay valores para impactar en TesorerÃ­a.', 422);
   }
 
   await applyReceptionBalances(order, totals, { userId }, { reverse: false });
@@ -2628,12 +2630,12 @@ const omitTreasuryReception = async (receptionId, payload = {}, context = {}) =>
   const userId = ensureActionUser(context);
   const reason = String(payload.reason || '').trim();
   if (!reason) {
-    throw new AppError('Indicá el motivo de la omisión.', 422);
+    throw new AppError('IndicÃ¡ el motivo de la omisiÃ³n.', 422);
   }
 
   const order = await loadReceptionOrder(receptionId);
   if (order.treasuryReceptionStatus !== 'pending') {
-    throw new AppError('La recepción ya fue gestionada.', 409);
+    throw new AppError('La recepciÃ³n ya fue gestionada.', 409);
   }
 
   const totals = computeReceptionTotals(order);
@@ -2665,7 +2667,7 @@ const revertTreasuryReception = async (receptionId, payload = {}, context = {}) 
   const order = await loadReceptionOrder(receptionId);
 
   if (!['confirmed', 'omitted'].includes(order.treasuryReceptionStatus)) {
-    throw new AppError('Sólo podés revertir recepciones confirmadas u omitidas.', 409);
+    throw new AppError('SÃ³lo podÃ©s revertir recepciones confirmadas u omitidas.', 409);
   }
 
   const totals = computeReceptionTotals(order);
@@ -2886,7 +2888,7 @@ const fetchOperationLink = async (operationPayload, { session } = {}) => {
     operationPayload.id || operationPayload.operationId || operationPayload.referenceId;
 
   if (!id || !mongoose.Types.ObjectId.isValid(id)) {
-    throw new AppError('La operación asociada no es válida.', 400);
+    throw new AppError('La operaciÃ³n asociada no es vÃ¡lida.', 400);
   }
 
   let Model = Transaction;
@@ -2897,7 +2899,7 @@ const fetchOperationLink = async (operationPayload, { session } = {}) => {
   }
   const document = await Model.findById(id).session(session || null);
   if (!document) {
-    throw new AppError('La operación asociada no existe.', 404);
+    throw new AppError('La operaciÃ³n asociada no existe.', 404);
   }
 
   return {
@@ -2907,14 +2909,15 @@ const fetchOperationLink = async (operationPayload, { session } = {}) => {
 };
 
 const validateAndNormalizeMovementPayload = async (payload = {}, { session } = {}) => {
-  const type = MOVEMENT_TYPES.includes(payload.type) ? payload.type : 'incoming';
+  const typeInput = typeof payload.type === 'string' ? payload.type.toLowerCase() : '';
+  const type = MOVEMENT_TYPES.includes(typeInput) ? typeInput : 'incoming';
   const medium =
     typeof payload.medium === 'string' && MOVEMENT_MEDIUMS.includes(payload.medium.toLowerCase())
       ? payload.medium.toLowerCase()
       : null;
 
   if (!medium) {
-    throw new AppError('Seleccioná un medio válido (efectivo, transferencia o depósito).', 400);
+    throw new AppError('SeleccionÃ¡ un medio vÃ¡lido (efectivo, transferencia o depÃ³sito).', 400);
   }
 
   const currency =
@@ -2922,18 +2925,18 @@ const validateAndNormalizeMovementPayload = async (payload = {}, { session } = {
       ? payload.currency.toUpperCase()
       : null;
   if (!currency) {
-    throw new AppError('Seleccioná una moneda válida (ARS o USD).', 400);
+    throw new AppError('SeleccionÃ¡ una moneda vÃ¡lida (ARS o USD).', 400);
   }
 
   const amount = roundAmount(payload.amount);
   if (!Number.isFinite(amount) || amount <= 0) {
-    throw new AppError('Ingresá un monto válido mayor a cero.', 400);
+    throw new AppError('IngresÃ¡ un monto vÃ¡lido mayor a cero.', 400);
   }
 
   const movementAtInput = payload.movementAt || payload.date || payload.datetime;
   const movementAt = movementAtInput ? new Date(movementAtInput) : new Date();
   if (Number.isNaN(movementAt.getTime())) {
-    throw new AppError('La fecha/hora del movimiento es inválida.', 400);
+    throw new AppError('La fecha/hora del movimiento es invÃ¡lida.', 400);
   }
 
   const contactIdCandidate =
@@ -2942,11 +2945,11 @@ const validateAndNormalizeMovementPayload = async (payload = {}, { session } = {
 
   if (contactIdCandidate) {
     if (!mongoose.Types.ObjectId.isValid(contactIdCandidate)) {
-      throw new AppError('El contacto asociado no es válido.', 400);
+      throw new AppError('El contacto asociado no es vÃ¡lido.', 400);
     }
     contactDoc = await Client.findById(contactIdCandidate).session(session || null);
     if (!contactDoc) {
-      throw new AppError('El contacto asociado no existe o no está disponible.', 404);
+      throw new AppError('El contacto asociado no existe o no estÃ¡ disponible.', 404);
     }
   }
 
@@ -3154,9 +3157,10 @@ const registerTreasuryMovement = async (payload = {}, context = {}) => {
         if (contactCandidate && mongoose.Types.ObjectId.isValid(contactCandidate)) {
           const contactDoc = await Client.findById(contactCandidate).session(session);
           if (contactDoc) {
-            // Map transaction type to treasury direction: buy -> incoming (ARS ingresa), sell -> outgoing (ARS egresa)
+            // Map transaction type to treasury direction (ARS ledger):
+            // buy USD -> ARS outgoing, sell USD -> ARS incoming
             const transactionType = normalized.operationLink.document.type;
-            const treasuryDirection = transactionType === 'buy' ? 'incoming' : 'outgoing';
+            const treasuryDirection = transactionType === 'buy' ? 'outgoing' : 'incoming';
 
             const settlementPayload = {
               _id: movement._id,
@@ -3264,7 +3268,7 @@ const sideEffects = {
 
 const updateTreasuryMovement = async (movementId, payload = {}, context = {}) => {
   if (!mongoose.Types.ObjectId.isValid(movementId)) {
-    throw new AppError('El identificador de movimiento es inv lido.', 400);
+    throw new AppError('El identificador de movimiento es inválido.', 400);
   }
 
   const session = await mongoose.startSession();
@@ -3290,7 +3294,7 @@ const updateTreasuryMovement = async (movementId, payload = {}, context = {}) =>
       }
 
       if (movement.status !== 'registered') {
-        throw new AppError('Solo pod‚s editar movimientos pendientes.', 409);
+        throw new AppError('Solo podés editar movimientos pendientes.', 409);
       }
 
       const mergedPayload = {
@@ -3686,7 +3690,7 @@ const listTreasuryMovements = async ({
 
 const getTreasuryMovementById = async (idOrCode) => {
   if (!idOrCode) {
-    throw new AppError('Debés indicar el movimiento a consultar.', 400);
+    throw new AppError('DebÃ©s indicar el movimiento a consultar.', 400);
   }
 
   let movement = null;
@@ -3729,16 +3733,16 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
       }
 
       if (movement.status === 'cancelled') {
-        throw new AppError('No podés compensar un movimiento anulado.', 409);
+        throw new AppError('No podÃ©s compensar un movimiento anulado.', 409);
       }
 
       if (movement.status === 'compensated' && !payload.force) {
-        throw new AppError('El movimiento ya está compensado.', 409);
+        throw new AppError('El movimiento ya estÃ¡ compensado.', 409);
       }
 
       const amount = payload.amount ? roundAmount(payload.amount) : roundAmount(movement.amount);
       if (!Number.isFinite(amount) || amount <= 0) {
-        throw new AppError('El monto a compensar es inválido.', 400);
+        throw new AppError('El monto a compensar es invÃ¡lido.', 400);
       }
 
       if (amount > roundAmount(movement.amount) && !payload.allowOverpay) {
@@ -3754,7 +3758,7 @@ const compensateTreasuryMovement = async (movementId, payload = {}, context = {}
 
       if (!contactDoc && payload.contactId) {
         if (!mongoose.Types.ObjectId.isValid(payload.contactId)) {
-          throw new AppError('El contacto indicado no es válido.', 400);
+          throw new AppError('El contacto indicado no es vÃ¡lido.', 400);
         }
         contactDoc = await Client.findById(payload.contactId).session(session);
         if (!contactDoc) {
@@ -3975,7 +3979,7 @@ const cancelTreasuryMovement = async (movementId, { reason } = {}, context = {})
       }
 
       if (movement.status === 'compensated') {
-        throw new AppError('No podés anular un movimiento compensado.', 409);
+        throw new AppError('No podÃ©s anular un movimiento compensado.', 409);
       }
 
       const balanceMovementType = resolveMovementBalanceType(movement.currency, movement.medium);
@@ -4497,3 +4501,4 @@ exports.omitTreasuryReception = omitTreasuryReception;
 exports.revertTreasuryReception = revertTreasuryReception;
 exports.reserveCourierTransitBalance = reserveCourierTransitBalance;
 exports.listOperationSuggestions = listOperationSuggestions;
+

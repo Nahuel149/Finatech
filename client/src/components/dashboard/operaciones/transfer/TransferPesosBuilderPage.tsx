@@ -105,6 +105,30 @@ const sanitizeAmountInput = (value: string) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const normalizeAmountInput = (value: string) => {
+  if (!value) return '';
+  let cleaned = value.replace(/[^\d.,]/g, '');
+
+  const lastComma = cleaned.lastIndexOf(',');
+  const lastDot = cleaned.lastIndexOf('.');
+  const hasSeparator = lastComma !== -1 || lastDot !== -1;
+
+  if (hasSeparator) {
+    const decimalIndex = Math.max(lastComma, lastDot);
+    const integerPart = cleaned
+      .slice(0, decimalIndex)
+      .replace(/[.,]/g, '');
+    const decimalPart = cleaned
+      .slice(decimalIndex + 1)
+      .replace(/[.,]/g, '')
+      .slice(0, 2);
+    const separator = cleaned[decimalIndex];
+    return decimalPart.length > 0 ? `${integerPart}${separator}${decimalPart}` : `${integerPart}${separator}`;
+  }
+
+  return cleaned;
+};
+
 interface DistributionRowProps {
   lineId: string;
   contactId: string | null;
@@ -142,6 +166,8 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   });
   const [searchValue, setSearchValue] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [amountInput, setAmountInput] = useState('');
+  const [amountFocused, setAmountFocused] = useState(false);
   const visibleSuggestions = suggestions.slice(0, 5);
   const contactTypeLabel =
     contactType === 'client'
@@ -149,6 +175,16 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
       : contactType === 'provider'
       ? 'proveedor'
       : contactType || 'Sin tipo';
+
+  const formatAmountDisplay = useCallback((value: number) => {
+    if (!Number.isFinite(value) || value <= 0) {
+      return '';
+    }
+    return value.toLocaleString('es-AR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, []);
 
   useEffect(() => {
     const term = searchValue.trim();
@@ -167,6 +203,11 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
     }
   }, [contactId, setQuery]);
 
+  useEffect(() => {
+    if (amountFocused) return;
+    setAmountInput(formatAmountDisplay(amount));
+  }, [amount, amountFocused, formatAmountDisplay]);
+
   const handleSelect = (client: ClientSummary) => {
     onContactSelect(client);
     setSearchValue('');
@@ -174,8 +215,21 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
   };
 
   const handleAmountInput = (value: string) => {
-    const parsed = sanitizeAmountInput(value);
+    const processed = normalizeAmountInput(value);
+    setAmountInput(processed);
+    const parsed = sanitizeAmountInput(processed);
     onAmountChange(Number.isFinite(parsed) ? parsed : 0);
+  };
+
+  const handleAmountBlur = () => {
+    setAmountFocused(false);
+    const parsed = sanitizeAmountInput(amountInput);
+    if (!Number.isFinite(parsed) || parsed <= 0) {
+      setAmountInput('');
+      onAmountChange(0);
+      return;
+    }
+    setAmountInput(formatAmountDisplay(parsed));
   };
 
   return (
@@ -263,8 +317,10 @@ const DistributionRow: React.FC<DistributionRowProps> = ({
       <td className="px-4 py-4 align-top">
         <input
           type="text"
-          value={Number.isFinite(amount) && amount > 0 ? amount : ''}
+          value={amountInput}
           onChange={(event) => handleAmountInput(event.target.value)}
+          onFocus={() => setAmountFocused(true)}
+          onBlur={handleAmountBlur}
           className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary"
           inputMode="decimal"
           placeholder="0,00"
@@ -463,40 +519,10 @@ export const TransferPesosBuilderPage: React.FC = () => {
 
   const handleAmountInputChange = (value: string) => {
     setAmountError(null);
-    
-    // Allow user to type naturally, but limit to reasonable input
-    let processedValue = value;
-    
-    // Remove any characters that aren't digits, comma, or dot
-    processedValue = processedValue.replace(/[^\d,.-]/g, '');
-    
-    // Prevent multiple decimal separators
-    const commaCount = (processedValue.match(/,/g) || []).length;
-    
-    // If user is typing and there are multiple decimal separators, keep only the last one
-    if (commaCount > 1) {
-      const lastCommaIndex = processedValue.lastIndexOf(',');
-      processedValue = processedValue.substring(0, lastCommaIndex).replace(/,/g, '') + processedValue.substring(lastCommaIndex);
-    }
-    
-    // Limit decimal places to 2
-    if (processedValue.includes(',')) {
-      const parts = processedValue.split(',');
-      if (parts[1] && parts[1].length > 2) {
-        processedValue = parts[0] + ',' + parts[1].substring(0, 2);
-      }
-    } else if (processedValue.includes('.') && !processedValue.includes(',')) {
-      const parts = processedValue.split('.');
-      // Only treat as decimal if it's the last dot and there are 1-2 digits after it
-      if (parts.length === 2 && parts[1].length <= 2 && !/\d{4,}/.test(parts[0])) {
-        if (parts[1].length > 2) {
-          processedValue = parts[0] + '.' + parts[1].substring(0, 2);
-        }
-      }
-    }
-    
+
+    const processedValue = normalizeAmountInput(value);
     setAmountInput(processedValue);
-    
+
     const numericValue = sanitizeAmountInput(processedValue);
     if (Number.isFinite(numericValue)) {
       setTotalAmount(numericValue);

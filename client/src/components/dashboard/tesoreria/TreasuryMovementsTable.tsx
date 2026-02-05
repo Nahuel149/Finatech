@@ -2,6 +2,7 @@ import React from 'react';
 import { ApiError } from '../../../types/auth';
 import { TreasuryMovement, TreasuryMovementsTotals } from '../../../types/treasury';
 import { TreasuryMovementsSortOption } from '../../../hooks/dashboard/useTreasuryMovements';
+import { useLatestMarketRate } from '../../../hooks/dashboard/useLatestMarketRate';
 
 const listVisibilityStyle: React.CSSProperties = {
   contentVisibility: 'auto',
@@ -117,6 +118,19 @@ const totalsSummary = (totals: Record<string, TreasuryMovementsTotals>) => {
   const entries = Object.entries(totals);
   if (!entries.length) return null;
 
+  const netParts = entries.map(([currency, total]) => {
+    const isNegative = total.net < 0;
+    const sign = isNegative ? '-' : '';
+    const value = `${sign}${currency === 'USD' ? 'USD ' : '$'}${Math.abs(total.net).toLocaleString(
+      'es-AR',
+      {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }
+    )}`;
+    return { value, isNegative, currency };
+  });
+
   return {
     incoming: entries
       .map(
@@ -136,19 +150,17 @@ const totalsSummary = (totals: Record<string, TreasuryMovementsTotals>) => {
           })}`
       )
       .join(' + '),
-    net: entries
-      .map(([currency, total]) => {
-        const sign = total.net >= 0 ? '' : '-';
-        return `${sign}${currency === 'USD' ? 'USD ' : '$'}${Math.abs(total.net).toLocaleString(
-          'es-AR',
-          {
-            minimumFractionDigits: 2,
-            maximumFractionDigits: 2,
-          }
-        )}`;
-      })
-      .join(' + '),
+    net: netParts.map((part) => part.value).join(' + '),
+    netParts,
   };
+};
+
+const formatArsAmount = (value: number) => {
+  const sign = value < 0 ? '-' : '';
+  return `${sign}$${Math.abs(value).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 };
 
 const movementCode = (movement: TreasuryMovement) =>
@@ -387,7 +399,33 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
 }) => {
   const from = Math.max(0, (pagination.page - 1) * pagination.limit) + (items.length ? 1 : 0);
   const to = Math.min(pagination.page * pagination.limit, pagination.totalItems);
+  const { data: usdMarketRate } = useLatestMarketRate({ baseAsset: 'USD', quoteAsset: 'ARS' });
+  const usdBuyRate =
+    usdMarketRate?.buyRate && usdMarketRate.buyRate > 0
+      ? usdMarketRate.buyRate
+      : usdMarketRate?.rate && usdMarketRate.rate > 0
+      ? usdMarketRate.rate
+      : null;
+
   const summary = totalsSummary(totals);
+  const netArs = React.useMemo(() => {
+    if (!usdBuyRate || !totals) {
+      return null;
+    }
+    const entries = Object.entries(totals);
+    if (!entries.length) return null;
+    let total = 0;
+    entries.forEach(([currency, totalEntry]) => {
+      const netValue = Number(totalEntry?.net || 0);
+      if (!Number.isFinite(netValue)) return;
+      if (currency === 'USD') {
+        total += netValue * usdBuyRate;
+      } else if (currency === 'ARS') {
+        total += netValue;
+      }
+    });
+    return Number.isFinite(total) ? total : null;
+  }, [totals, usdBuyRate]);
 
   const maxPageButtons = 5;
   const totalPages = Math.max(1, pagination.totalPages);
@@ -616,9 +654,27 @@ export const TreasuryMovementsTable: React.FC<Props> = ({
             </div>
             <div>
               <div className="text-sm text-gray-600 mb-1">Balance neto</div>
-              <div className={`text-2xl font-bold ${summary.net.startsWith('-') ? 'negative-amount' : 'positive-amount'}`}>
-                {summary.net}
+              <div className="text-2xl font-bold">
+                {summary.netParts.map((part, index) => (
+                  <span key={`${part.currency}-${index}`}>
+                    <span className={part.isNegative ? 'negative-amount' : 'positive-amount'}>
+                      {part.value}
+                    </span>
+                    {index < summary.netParts.length - 1 ? (
+                      <span className="positive-amount"> + </span>
+                    ) : null}
+                  </span>
+                ))}
               </div>
+              {netArs !== null && (
+                <div
+                  className={`mt-1 text-sm font-medium ${
+                    netArs < 0 ? 'negative-amount' : 'positive-amount'
+                  }`}
+                >
+                  {formatArsAmount(netArs)}
+                </div>
+              )}
             </div>
           </div>
         </div>
