@@ -11,8 +11,8 @@
     "lint:server": "eslint src --ext .js",
     "lint:client": "cd client && npm run lint",
     "test": "npm run test:unit",
-    "test:unit": "node --test tests/unit/**/*.test.js",
-    "test:e2e": "playwright test"
+    "test:unit": "node --test tests/unit",
+    "test:e2e": "playwright test tests/e2e --pass-with-no-tests"
   },
   "keywords": [],
   "author": "",

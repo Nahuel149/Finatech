@@ -169,10 +169,11 @@ export const OperationWizardStep3Page: React.FC = () => {
   const settlementCompletionTolerance =
     settlementBaseAmount > 0 ? Math.max(settlementBaseAmount * 0.0001, 0.01) : 0;
   const settlementIsComplete =
-    draft?.settlement?.mode === 'simple'
+    Boolean(draft?.settlement?.isComplete) ||
+    (draft?.settlement?.mode === 'simple'
       ? Boolean(draft?.settlement?.simpleMethod)
       : settlementBaseAmount > 0 &&
-        Math.abs(settlementAmountAllocated - settlementBaseAmount) <= settlementCompletionTolerance;
+        Math.abs(settlementAmountAllocated - settlementBaseAmount) <= settlementCompletionTolerance);
 
   const summaryClient = clientSummary ?? draft?.client ?? null;
 

@@ -4,9 +4,12 @@ const LogisticsOperation = require('../models/LogisticsOperation');
 const OPERATION_TYPE_MAP = {
   entrega: 'Entrega',
   transferencia: 'Transferencia',
+  'transferencia-interna': 'Transferencia',
+  transferenciainterna: 'Transferencia',
   retiro: 'Retiro',
   custodia: 'Custodia',
 };
+const OPERATION_STATES = ['pendiente', 'en-curso', 'completado', 'anulado'];
 
 const normalizeOperationType = (type) => {
   if (!type) {
@@ -14,6 +17,31 @@ const normalizeOperationType = (type) => {
   }
   const normalized = String(type).toLowerCase();
   return OPERATION_TYPE_MAP[normalized] || null;
+};
+
+const normalizeOperationState = (state) => {
+  if (state === undefined || state === null || state === '') {
+    return 'pendiente';
+  }
+
+  const normalized = String(state).trim().toLowerCase();
+  return OPERATION_STATES.includes(normalized) ? normalized : null;
+};
+
+const generateOperationCode = async () => {
+  const prefix = 'FT-LOG-';
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = `${prefix}${Math.floor(Math.random() * 1_000_000)
+      .toString()
+      .padStart(6, '0')}`;
+    // eslint-disable-next-line no-await-in-loop
+    const exists = await LogisticsOperation.exists({ operationCode: code });
+    if (!exists) {
+      return code;
+    }
+  }
+
+  return `${prefix}${Date.now()}`;
 };
 
 const buildQueryFromFilters = (filters = {}) => {
@@ -87,9 +115,22 @@ const buildRouteDescription = (operation) => {
     return operation.routeDescription;
   }
   if (operation.origin && operation.destination) {
-    return `${operation.origin} → ${operation.destination}`;
+    return `${operation.origin} -> ${operation.destination}`;
   }
   return operation.origin || operation.destination || '';
+};
+
+const serializeMetadata = (metadata) => {
+  if (!metadata) {
+    return null;
+  }
+  if (metadata instanceof Map) {
+    return Object.fromEntries(metadata.entries());
+  }
+  if (typeof metadata.toObject === 'function') {
+    return metadata.toObject();
+  }
+  return metadata;
 };
 
 const mapOperationToDto = (operation) => ({
@@ -106,6 +147,7 @@ const mapOperationToDto = (operation) => ({
   responsible: operation.responsibleName,
   attachments: operation.attachments ?? [],
   timeline: operation.timeline ?? [],
+  metadata: serializeMetadata(operation.metadata),
   archived: Boolean(operation.archived),
   createdAt: operation.createdAt,
   updatedAt: operation.updatedAt,
@@ -238,11 +280,81 @@ const getOperationById = async (idOrCode) => {
   return operation ? mapOperationToDto(operation) : null;
 };
 
-const createOperation = async (payload) => {
+const createOperation = async (payload = {}) => {
+  const normalizedType = normalizeOperationType(payload.type);
+  if (!normalizedType) {
+    const error = new Error('Tipo de operación inválido');
+    error.status = 400;
+    throw error;
+  }
+
+  const normalizedState = normalizeOperationState(payload.state);
+  if (!normalizedState) {
+    const error = new Error('Estado de operación inválido');
+    error.status = 400;
+    throw error;
+  }
+
+  const rawScheduledAt = payload.scheduledAt || payload.date || payload.datetime;
+  const scheduledAt = rawScheduledAt ? new Date(rawScheduledAt) : new Date();
+  if (Number.isNaN(scheduledAt.getTime())) {
+    const error = new Error('Fecha de operación inválida');
+    error.status = 400;
+    throw error;
+  }
+
+  const note = [payload.notes, payload.reference]
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .find(Boolean);
+
+  const metadata = note
+    ? new Map([['note', note]])
+    : payload.metadata instanceof Map
+    ? payload.metadata
+    : payload.metadata || undefined;
+
+  let amount;
+  if (payload.amount) {
+    const rawAmountValue =
+      payload.amount.value === null || typeof payload.amount.value === 'number'
+        ? payload.amount.value
+        : Number(payload.amount.value);
+    const parsedAmountValue =
+      rawAmountValue === null ? null : Number.isFinite(rawAmountValue) ? Number(rawAmountValue) : NaN;
+
+    if (Number.isNaN(parsedAmountValue)) {
+      const error = new Error('Monto de operación inválido');
+      error.status = 400;
+      throw error;
+    }
+
+    amount = {
+      value: parsedAmountValue,
+      currency: (payload.amount.currency || 'ARS').toUpperCase(),
+    };
+  }
+
+  const operationCode =
+    typeof payload.operationCode === 'string' && payload.operationCode.trim()
+      ? payload.operationCode.trim()
+      : await generateOperationCode();
+
   const operation = await LogisticsOperation.create({
-    ...payload,
-    scheduledAt: payload.scheduledAt || new Date(),
+    operationCode,
+    scheduledAt,
+    type: normalizedType,
+    state: normalizedState,
+    contactName: payload.contactName || payload.contact || '',
+    origin: payload.origin || '',
+    destination: payload.destination || '',
+    routeDescription: payload.routeDescription || payload.route || '',
+    responsibleName: payload.responsibleName || payload.responsible || '',
+    amount: amount || undefined,
+    attachments: Array.isArray(payload.attachments) ? payload.attachments : undefined,
+    timeline: Array.isArray(payload.timeline) ? payload.timeline : undefined,
+    metadata,
   });
+
   return mapOperationToDto(operation);
 };
 

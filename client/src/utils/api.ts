@@ -285,6 +285,10 @@ export const apiRequest = async <T = any>(
 
   const requestPromise = executeRequest()
     .then((data) => {
+      if (method !== 'GET') {
+        // A successful mutation can make cached GET data stale.
+        responseCache.clear();
+      }
       if (shouldDedupe) {
         responseCache.set(dedupeKey, { timestamp: Date.now(), data });
       }

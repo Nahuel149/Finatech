@@ -85,13 +85,13 @@ export const AssetSelection: React.FC<Props> = ({
         <label className="block text-sm font-medium text-text-primary mb-2">{enterLabel}</label>
         <button
           type="button"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white flex items-center justify-between"
+          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white flex items-center justify-between overflow-hidden"
           disabled={disabled}
           onClick={() => setEnterOpen(!enterOpen)}
         >
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 min-w-0">
             {selected && renderFlag(selected.code)}
-            <span className="text-sm text-text-primary">{selected?.label || 'Seleccionar'}</span>
+            <span className="text-sm text-text-primary truncate">{selected?.label || 'Seleccionar'}</span>
           </span>
           <i className={`fa-solid fa-chevron-${enterOpen ? 'up' : 'down'} text-gray-500 text-xs`} />
         </button>
@@ -124,13 +124,13 @@ export const AssetSelection: React.FC<Props> = ({
         <label className="block text-sm font-medium text-text-primary mb-2">{exitLabel}</label>
         <button
           type="button"
-          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white flex items-center justify-between"
+          className="w-full h-12 px-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent transition-colors bg-white flex items-center justify-between overflow-hidden"
           disabled={disabled}
           onClick={() => setExitOpen(!exitOpen)}
         >
-          <span className="flex items-center gap-2">
+          <span className="flex items-center gap-2 min-w-0">
             {selected && renderFlag(selected.code)}
-            <span className="text-sm text-text-primary">{selected?.label || 'Seleccionar'}</span>
+            <span className="text-sm text-text-primary truncate">{selected?.label || 'Seleccionar'}</span>
           </span>
           <i className={`fa-solid fa-chevron-${exitOpen ? 'up' : 'down'} text-gray-500 text-xs`} />
         </button>

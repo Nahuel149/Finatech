@@ -228,7 +228,7 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
       document.body.style.overflow = 'unset';
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, applyMovementDefaults, isEditMode, movement]);
+  }, [open, isEditMode, movement?.id]);
 
   const isEventInside = useCallback((event: MouseEvent, container: HTMLDivElement | null) => {
     if (!container) return false;
