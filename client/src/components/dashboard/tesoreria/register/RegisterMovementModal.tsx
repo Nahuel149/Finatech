@@ -8,6 +8,7 @@ import { useOperationSearch } from '../../../../hooks/dashboard/useOperationSear
 import { useRecentClients } from '../../../../hooks/dashboard/useRecentClients';
 import { useUpdateTreasuryMovement } from '../../../../hooks/dashboard/useUpdateTreasuryMovement';
 import { useUserPermissions } from '../../../../hooks/useUserPermissions';
+import { apiRequest } from '../../../../utils/api';
 import { Alert } from '../../../ui/Alert';
 import { NewClientModal } from '../../../clients/NewClientModal';
 import { MovementTypeSelector } from './MovementTypeSelector';
@@ -545,15 +546,15 @@ export const RegisterMovementModal: React.FC<RegisterMovementModalProps> = ({
 
     try {
       setUploadingAttachments(true);
-      const response = await fetch('/api/treasury/movements/attachments', {
+      const payload = await apiRequest<{ attachments?: Array<{
+        url?: string;
+        name?: string;
+        mimeType?: string;
+        size?: number;
+      }> }>('/api/treasury/movements/attachments', {
         method: 'POST',
         body: formData,
-        credentials: 'include',
       });
-      if (!response.ok) {
-        throw new Error('No se pudo subir el archivo.');
-      }
-      const payload = await response.json();
       const uploaded = Array.isArray(payload.attachments) ? payload.attachments : [];
       const mapped: AttachmentItem[] = uploaded.map((item: any) => ({
         id: `${item.url || item.name}-${Date.now()}-${Math.random().toString(36).slice(2)}`,

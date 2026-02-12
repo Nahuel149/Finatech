@@ -26,6 +26,7 @@ const { logger } = require('./utils/logger');
 const app = express();
 const clientBuildPath = path.join(process.cwd(), 'client', 'build');
 const clientIndexPath = path.join(clientBuildPath, 'index.html');
+const csrfProtectionEnabled = process.env.CSRF_PROTECTION_ENABLED !== 'false';
 
 app.set('trust proxy', 1);
 
@@ -33,7 +34,9 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.use(cookieParser());
-app.use(ensureCsrfCookie());
+if (csrfProtectionEnabled) {
+  app.use(ensureCsrfCookie());
+}
 app.use(requestLogger);
 
 // Test endpoint (no middleware)
@@ -61,11 +64,17 @@ app.get('/api/csrf-token', (req, res) => {
 });
 
 // Apply CSRF protection to all API routes
-logger.debug('csrf_apply', { scope: '/api' });
-app.use('/api', (req, res, next) => {
-  logger.debug('csrf_middleware', { method: req.method, path: req.path });
-  return csrfProtect()(req, res, next);
-});
+if (csrfProtectionEnabled) {
+  logger.debug('csrf_apply', { scope: '/api' });
+  app.use('/api', (req, res, next) => {
+    logger.debug('csrf_middleware', { method: req.method, path: req.path });
+    return csrfProtect()(req, res, next);
+  });
+} else {
+  logger.warn('csrf_disabled', {
+    reason: 'CSRF_PROTECTION_ENABLED=false',
+  });
+}
 
 app.use('/api/auth', authRoutes);
 app.use('/api/clients', clientRoutes);
