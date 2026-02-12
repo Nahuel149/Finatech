@@ -12,6 +12,7 @@ const { requireAuth } = require('../middleware/requireAuth');
 const { requirePermission } = require('../middleware/requirePermission');
 
 const router = Router();
+// Mock change for git workflow validation.
 const READ_LOGISTICS_PERMISSIONS = ['access-logistics', 'manage-logistics'];
 
 router.use(requireAuth);
