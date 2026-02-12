@@ -15,17 +15,55 @@ const DEFAULT_EXCLUDED_PATHS = [
   '/api/auth/logout', // logout should not require CSRF as it simply clears the session cookie
 ];
 
+const normalizeSameSite = (value, fallback = 'lax') => {
+  const normalized = String(value || fallback).trim().toLowerCase();
+  if (normalized === 'none') {
+    return 'None';
+  }
+  if (normalized === 'strict') {
+    return 'Strict';
+  }
+  return 'Lax';
+};
+
+const parseBooleanEnv = (value) => {
+  if (value === undefined) {
+    return undefined;
+  }
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) {
+    return true;
+  }
+  if (['0', 'false', 'no', 'off'].includes(normalized)) {
+    return false;
+  }
+  return undefined;
+};
+
 function generateCsrfToken() {
   return crypto.randomBytes(32).toString('hex');
 }
 
 function ensureCsrfCookie(options = {}) {
+  const isProduction = process.env.NODE_ENV === 'production';
+  const defaultSameSite = normalizeSameSite(
+    process.env.CSRF_COOKIE_SAME_SITE || process.env.SESSION_COOKIE_SAME_SITE,
+    isProduction ? 'lax' : 'lax',
+  );
+  const secureOverride = parseBooleanEnv(process.env.CSRF_COOKIE_SECURE);
+  const defaultSecure =
+    secureOverride !== undefined
+      ? secureOverride
+      : defaultSameSite === 'None'
+      ? true
+      : isProduction;
+
   const { 
     cookieName = CSRF_COOKIE_NAME,
     maxAge = CSRF_COOKIE_EXPIRY,
     path = '/',
-    sameSite = process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    secure = process.env.NODE_ENV === 'production',
+    sameSite = defaultSameSite,
+    secure = defaultSecure,
     httpOnly = false,
   } = options;
 

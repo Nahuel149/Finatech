@@ -27,6 +27,7 @@ const app = express();
 const clientBuildPath = path.join(process.cwd(), 'client', 'build');
 const clientIndexPath = path.join(clientBuildPath, 'index.html');
 const csrfProtectionEnabled = process.env.CSRF_PROTECTION_ENABLED !== 'false';
+const ONE_YEAR_IN_SECONDS = 31536000;
 
 app.set('trust proxy', 1);
 
@@ -38,6 +39,10 @@ if (csrfProtectionEnabled) {
   app.use(ensureCsrfCookie());
 }
 app.use(requestLogger);
+app.use('/api', (_req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, max-age=0');
+  next();
+});
 
 // Test endpoint (no middleware)
 app.get('/api/test', (_req, res) => {
@@ -104,9 +109,31 @@ app.use('/api', (_req, res) => {
 
 // Serve React build for non-API routes
 if (fs.existsSync(clientIndexPath)) {
-  app.use(express.static(clientBuildPath));
+  app.use(
+    express.static(clientBuildPath, {
+      index: false,
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.html')) {
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+          return;
+        }
+
+        if (filePath.includes(`${path.sep}static${path.sep}`)) {
+          res.setHeader('Cache-Control', `public, max-age=${ONE_YEAR_IN_SECONDS}, immutable`);
+          return;
+        }
+
+        res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+      },
+    }),
+  );
   // Serve the React SPA for any non-API route
   app.get(/^\/(?!api).*/, (_req, res) => {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
     res.sendFile(clientIndexPath);
   });
 } else {
