@@ -49,6 +49,11 @@ app.get('/api/test', (_req, res) => {
   res.json({ status: 'ok', message: 'Test endpoint working' });
 });
 
+// Simple health-check endpoint for Render (must be defined before /api routers mounted at '/api')
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', message: 'API running' });
+});
+
 // Public API routes (no CSRF protection needed)
 app.get('/api/config', (_req, res) => {
   res.json({
@@ -96,11 +101,6 @@ app.use('/api/treasury', treasuryRoutes);
 app.use('/api/rates', ratesRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/live-ops', liveOperationsRoutes);
-
-// Simple health-check endpoint for Render
-app.get('/api/health', (_req, res) => {
-  res.json({ status: 'ok', message: 'API running' });
-});
 
 // Return JSON 404 for unknown API routes
 app.use('/api', (_req, res) => {
