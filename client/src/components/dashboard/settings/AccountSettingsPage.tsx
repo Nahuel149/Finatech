@@ -153,8 +153,12 @@ export const AccountSettingsPage: React.FC = () => {
       .catch((err) => {
         const apiError = handleApiError(err);
         setBanner({
-          type: 'error',
-          message: apiError.message || 'No pudimos actualizar la autenticación en dos pasos.',
+          type: apiError.code === 'TWO_FACTOR_EMAIL_TESTING_ONLY' ? 'info' : 'error',
+          message:
+            apiError.message ||
+            (apiError.code === 'TWO_FACTOR_EMAIL_TESTING_ONLY'
+              ? 'La autenticacion en dos pasos (2FA) esta deshabilitada temporalmente mientras probamos la app.'
+              : 'No pudimos actualizar la autenticacion en dos pasos.'),
         });
       })
       .finally(() => {

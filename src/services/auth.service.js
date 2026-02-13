@@ -176,6 +176,34 @@ Este codigo caduca en ${TWO_FACTOR_CHALLENGE_DURATION_MINUTES} minutos. Si no fu
   });
 };
 
+const isResendTestingRestrictionError = (error) => {
+  const message = String(error?.message || '').toLowerCase();
+  return (
+    message.includes('testing emails') &&
+    (message.includes('verify a domain') || message.includes('resend.com/domains'))
+  );
+};
+
+const mapTwoFactorToggleEmailError = (error) => {
+  if (isResendTestingRestrictionError(error)) {
+    return new AppError(
+      'La autenticacion en dos pasos (2FA) por correo esta deshabilitada temporalmente mientras probamos la app.',
+      400,
+      {
+        code: 'TWO_FACTOR_EMAIL_TESTING_ONLY',
+      },
+    );
+  }
+
+  return new AppError(
+    'No pudimos enviar el codigo de verificacion para confirmar el cambio de 2FA. Intenta nuevamente mas tarde.',
+    502,
+    {
+      code: 'TWO_FACTOR_EMAIL_FAILED',
+      details: { providerCode: error?.code, providerMessage: error?.message },
+    },
+  );
+};
 const sendAccountLockedEmail = async (user) => {
   const subject = 'Intentos de inicio de sesión bloqueados';
   const text = `Hola ${user.fullName},
@@ -311,7 +339,12 @@ const createTwoFactorToggleChallenge = async ({ user, enabled, context }) => {
     metadata: buildRequestMetadata(context),
   });
 
-  await sendTwoFactorToggleCodeEmail(user, code, Boolean(enabled));
+  try {
+    await sendTwoFactorToggleCodeEmail(user, code, Boolean(enabled));
+  } catch (error) {
+    logger.error('send_2fa_toggle_email_failed', { message: error?.message, code: error?.code });
+    throw mapTwoFactorToggleEmailError(error);
+  }
 
   return { challengeToken: plainToken, expiresAt };
 };
@@ -1097,7 +1130,12 @@ const resendTwoFactorToggleCode = async ({ user, challengeToken }, context = {})
   challenge.metadata = buildRequestMetadata(context);
   await challenge.save();
 
-  await sendTwoFactorToggleCodeEmail(user, code, Boolean(challenge.toggleEnabledTarget));
+  try {
+    await sendTwoFactorToggleCodeEmail(user, code, Boolean(challenge.toggleEnabledTarget));
+  } catch (error) {
+    logger.error('resend_2fa_toggle_email_failed', { message: error?.message, code: error?.code });
+    throw mapTwoFactorToggleEmailError(error);
+  }
 
   return {
     message: 'Código reenviado.',
