@@ -12,6 +12,7 @@ const NotificationState = require('../models/NotificationState');
 const { rateLimit, ipKeyGenerator } = require('express-rate-limit');
 
 const router = Router();
+const VIEW_BALANCES_PERMISSIONS = ['view-balances', 'access-treasury'];
 
 const PLACEHOLDER_NOTIFICATION_SIGNATURES = new Set([
   'Operación completada|La operación #OP-2041 se registró exitosamente.',
@@ -54,7 +55,7 @@ const formatNotification = (notification, readSet = new Set()) => {
 router.get(
   '/balances',
   requireAuth,
-  requirePermission('view-balances'),
+  requirePermission(VIEW_BALANCES_PERMISSIONS),
   async (_req, res, next) => {
     try {
       const balances = await getTreasuryBalances();
@@ -68,7 +69,7 @@ router.get(
 router.get(
   '/balances/events',
   requireAuth,
-  requirePermission('view-balances'),
+  requirePermission(VIEW_BALANCES_PERMISSIONS),
   (req, res) => {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');

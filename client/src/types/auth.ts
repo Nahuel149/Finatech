@@ -118,6 +118,9 @@ export interface GoogleAuthResponse {
   user?: User;
   profile?: UserProfile;
   requiresTwoFactor?: boolean;
+  challengeId?: string;
+  challengeToken?: string;
+  challengeExpiresAt?: string;
   redirectUrl?: string;
 }
 

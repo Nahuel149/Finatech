@@ -39,6 +39,7 @@ const securityLogSchema = new mongoose.Schema(
         'login_failure',
         'account_locked',
         'two_factor_required',
+        'two_factor_bypassed',
         'two_factor_verified',
         'two_factor_failed',
         'verification_resent',

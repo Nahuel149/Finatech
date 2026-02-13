@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useDashboardBalances } from '../../../../hooks/dashboard/useDashboardBalances';
 import { useLiveOperations } from '../../../../hooks/useLiveOperations';
+import { useUserPermissions } from '../../../../hooks/useUserPermissions';
 import { CompoundComputed, CompoundLine } from './CompoundSettlementForm';
 import { TransactionType } from '../../../../types/transaction';
 
@@ -64,7 +65,13 @@ export const ArsPositionAside: React.FC<Props> = ({
   operationType,
   includeLiveTotals = true,
 }) => {
-  const { balances, loading, error } = useDashboardBalances({ pollInterval: 60000 });
+  const { permissions, loading: permissionsLoading } = useUserPermissions();
+  const canViewBalances =
+    permissions.includes('view-balances') || permissions.includes('access-treasury');
+  const { balances, loading, error } = useDashboardBalances({
+    enabled: canViewBalances,
+    pollInterval: 60000,
+  });
   const { items: liveItems, totals: liveTotals, status: liveStatus, error: liveError } =
     useLiveOperations();
   const isLive = liveStatus === 'live' || liveStatus === 'idle';
@@ -315,7 +322,7 @@ export const ArsPositionAside: React.FC<Props> = ({
             </div>
           </div>
 
-          {(loading || liveStatus === 'polling') && (
+          {(permissionsLoading || loading || liveStatus === 'polling') && (
             <div className="text-xs text-gray-500">Actualizando saldos en tiempo real…</div>
           )}
           {(error || liveError) && (
@@ -329,3 +336,4 @@ export const ArsPositionAside: React.FC<Props> = ({
     </aside>
   );
 };
+

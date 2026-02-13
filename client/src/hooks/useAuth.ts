@@ -116,7 +116,8 @@ const updateCachedProfile = useCallback((payload: any) => {
   }, [setLoadingState, updateCachedProfile]);
 
   const verifyTwoFactor = useCallback(async (formData: TwoFactorFormData): Promise<TwoFactorResponse> => {
-    if (!challengeId) {
+    const resolvedChallengeId = formData.challengeId || challengeId;
+    if (!resolvedChallengeId) {
       throw new Error('No challenge ID available');
     }
     
@@ -124,7 +125,7 @@ const updateCachedProfile = useCallback((payload: any) => {
     setError(null);
     
     try {
-      const response = await api.twoFactorAuth(challengeId, formData.code);
+      const response = await api.twoFactorAuth(resolvedChallengeId, formData.code);
       updateCachedProfile(response);
       setChallengeId(null);
       return response;
@@ -143,6 +144,9 @@ const updateCachedProfile = useCallback((payload: any) => {
     
     try {
       const response = await api.googleAuth(credential, isLogin);
+      if (response.requiresTwoFactor && response.challengeId) {
+        setChallengeId(response.challengeId);
+      }
       updateCachedProfile(response);
       return response;
     } catch (err) {
@@ -223,6 +227,9 @@ const updateCachedProfile = useCallback((payload: any) => {
   const logout = useCallback(async (): Promise<void> => {
     try {
       await api.logout();
+      if (typeof window !== 'undefined' && window.google?.accounts?.id) {
+        window.google.accounts.id.disableAutoSelect();
+      }
       primeCurrentUser(null);
       setChallengeId(null);
     } catch (err) {

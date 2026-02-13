@@ -126,12 +126,28 @@ const googleAuth = async (req, res, next) => {
     const token = idToken || credential;
     const context = { ip: req.ip, userAgent: req.get('user-agent') };
     const result = await registerWithGoogle({ idToken: token }, context);
+
+    if (result.type === 'two_factor_required') {
+      const challengeToken = result.challengeToken;
+      res.json({
+        success: true,
+        requiresTwoFactor: true,
+        challengeId: challengeToken,
+        challengeToken,
+        challengeExpiresAt: result.expiresAt,
+        message: 'Se requiere la autenticación en dos pasos.',
+      });
+      return;
+    }
+
     const { user, session, ...rest } = result;
     setSessionCookie(res, session);
 
     res.json({
       success: true,
+      requiresTwoFactor: false,
       ...rest,
+      sessionExpiresAt: session?.expiresAt,
       profile: buildProfile(user),
     });
   } catch (error) {

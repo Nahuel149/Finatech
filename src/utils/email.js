@@ -50,6 +50,24 @@ const buildSmtpTransport = () => {
   return cachedTransport;
 };
 
+const getResendConfig = () => {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return null;
+  }
+
+  const apiBase = process.env.RESEND_API_BASE_URL || 'https://api.resend.com';
+  const resolvedFromEmail =
+    process.env.RESEND_FROM_EMAIL ||
+    process.env.SMTP_FROM_EMAIL ||
+    process.env.SMTP_USER;
+  const fromName = process.env.RESEND_FROM_NAME || process.env.SMTP_FROM_NAME;
+  const defaultFrom =
+    fromName && resolvedFromEmail ? `${fromName} <${resolvedFromEmail}>` : resolvedFromEmail;
+
+  return { apiKey, apiBase, defaultFrom };
+};
+
 const normalizeRecipients = (value) => {
   if (!value) {
     return [];
@@ -64,6 +82,56 @@ const sendEmail = async ({ to, subject, html, text, from: explicitFrom }) => {
   const recipients = normalizeRecipients(to);
 
   if (recipients.length === 0) {
+    return;
+  }
+
+  const resendConfig = getResendConfig();
+  if (resendConfig) {
+    const fromAddress = explicitFrom || resendConfig.defaultFrom;
+
+    if (!fromAddress) {
+      const configError = new Error('No from address configured (RESEND_FROM_EMAIL missing).');
+      configError.code = 'RESEND_FROM_MISSING';
+      throw configError;
+    }
+
+    try {
+      const response = await fetch(`${resendConfig.apiBase}/emails`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${resendConfig.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          from: fromAddress,
+          to: recipients,
+          subject,
+          html,
+          text,
+        }),
+      });
+
+      const raw = await response.text();
+      let payload = null;
+      try {
+        payload = raw ? JSON.parse(raw) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok) {
+        const apiError = new Error(payload?.message || raw || 'Resend send failed');
+        apiError.code = 'RESEND_SEND_ERROR';
+        apiError.status = response.status;
+        apiError.resend = payload;
+        throw apiError;
+      }
+    } catch (error) {
+      const appError = new Error(error?.message || 'Resend request failed');
+      appError.code = error?.code || 'RESEND_SEND_ERROR';
+      appError.resend = error?.resend;
+      throw appError;
+    }
     return;
   }
 
@@ -104,6 +172,19 @@ const sendEmail = async ({ to, subject, html, text, from: explicitFrom }) => {
 };
 
 const verifySmtpConnection = async () => {
+  const resendConfig = getResendConfig();
+  if (resendConfig) {
+    if (!resendConfig.defaultFrom) {
+      return {
+        ok: false,
+        provider: 'resend',
+        message: 'RESEND_FROM_EMAIL is missing',
+      };
+    }
+
+    return { ok: true, provider: 'resend' };
+  }
+
   const smtpTransport = buildSmtpTransport();
   if (smtpTransport) {
     try {

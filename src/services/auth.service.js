@@ -33,6 +33,10 @@ const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '')
   .filter(Boolean);
 
 const isTwoFactorEnabled = (user) => Boolean(user?.twoFactor?.enabled);
+const shouldBypassTwoFactor = () => process.env.AUTH_BYPASS_2FA === 'true';
+// For testing on hosts without SMTP, we reuse AUTH_BYPASS_2FA to disable email-dependent auth flows
+// (email verification + password reset).
+const shouldBypassAuthEmails = () => process.env.AUTH_BYPASS_2FA === 'true';
 
 const ensureBaselinePermissions = (user) => {
   if (!user) {
@@ -267,7 +271,7 @@ const registerLocal = async ({ fullName, email, password }, context = {}) => {
   const normalizedEmail = email.trim().toLowerCase();
   let user = await User.findOne({ email: normalizedEmail });
   const requestMetadata = buildRequestMetadata(context);
-  const skipVerification = SKIP_EMAIL_VERIFICATION;
+  const skipVerification = SKIP_EMAIL_VERIFICATION || shouldBypassAuthEmails();
 
   if (user && user.isVerified) {
     await logSecurityEvent({
@@ -575,8 +579,10 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
         createdByAgent: requestMetadata.userAgent || null,
       },
     });
-    ensureBaselinePermissions(user);
-    const session = await issueSession({ user, context, rememberMe: false });
+    const permissionsChanged = ensureBaselinePermissions(user);
+    if (permissionsChanged) {
+      await user.save();
+    }
     await logSecurityEvent({
       user: user._id,
       email: normalizedEmail,
@@ -585,6 +591,7 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
       status: 'verified',
       ...requestMetadata,
     });
+    const session = await issueSession({ user, context, rememberMe: false });
     await logSecurityEvent({
       user: user._id,
       email: normalizedEmail,
@@ -618,15 +625,27 @@ const registerWithGoogle = async ({ idToken }, context = {}) => {
     };
   }
   await user.save();
-  const session = await issueSession({ user, context, rememberMe: false });
-  await logSecurityEvent({
-    user: user._id,
-    email: normalizedEmail,
-    eventType: hadLocalProvider ? 'registration' : 'login',
-    provider: 'google',
-    status: hadLocalProvider ? 'merged' : 'login_success',
-    ...requestMetadata,
-  });
+  if (hadLocalProvider) {
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'registration',
+      provider: 'google',
+      status: 'merged',
+      ...requestMetadata,
+    });
+  }
+    const session = await issueSession({ user, context, rememberMe: false });
+  if (!hadLocalProvider) {
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'login',
+      provider: 'google',
+      status: 'login_success',
+      ...requestMetadata,
+    });
+  }
 
   return {
     type: 'google_linked',
@@ -640,6 +659,7 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
   const normalizedEmail = email.trim().toLowerCase();
   const user = await User.findOne({ email: normalizedEmail });
   const requestMetadata = buildRequestMetadata(context);
+  const bypassEmails = shouldBypassAuthEmails();
 
   if (!user || !user.passwordHash) {
     await logSecurityEvent({
@@ -715,7 +735,7 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
     throw new AppError('Correo o contraseña incorrectos.', 401, { code: 'INVALID_CREDENTIALS' });
   }
 
-  if (!user.isVerified) {
+  if (!user.isVerified && !bypassEmails) {
     await logSecurityEvent({
       user: user._id,
       email: normalizedEmail,
@@ -732,7 +752,19 @@ const loginWithEmail = async ({ email, password, rememberMe }, context = {}) => 
   user.lastFailedLoginAt = undefined;
   user.lastLoginAt = new Date();
 
-  if (isTwoFactorEnabled(user)) {
+  const bypassTwoFactor = shouldBypassTwoFactor();
+  if (bypassTwoFactor && isTwoFactorEnabled(user)) {
+    await logSecurityEvent({
+      user: user._id,
+      email: normalizedEmail,
+      eventType: 'two_factor',
+      provider: 'local',
+      status: 'two_factor_bypassed',
+      ...requestMetadata,
+    });
+  }
+
+  if (!bypassTwoFactor && isTwoFactorEnabled(user)) {
     const { challengeToken, expiresAt } = await createTwoFactorChallenge({
       user,
       rememberMe,
@@ -907,6 +939,7 @@ const resendVerificationEmail = async ({ email }, context = {}) => {
   const normalizedEmail = email.trim().toLowerCase();
   const user = await User.findOne({ email: normalizedEmail });
   const requestMetadata = buildRequestMetadata(context);
+  const bypassEmails = shouldBypassAuthEmails();
 
   if (!user) {
     return {
@@ -917,6 +950,13 @@ const resendVerificationEmail = async ({ email }, context = {}) => {
   if (user.isVerified) {
     return {
       message: 'Esta cuenta ya está verificada.',
+    };
+  }
+
+  if (bypassEmails) {
+    logger.warn('email_verification_bypassed', { email: normalizedEmail });
+    return {
+      message: 'La verificacion por email esta deshabilitada por configuracion.',
     };
   }
 
@@ -950,6 +990,14 @@ const requestPasswordReset = async ({ email }, context = {}) => {
   const normalizedEmail = (email || '').trim().toLowerCase();
   const requestMetadata = buildRequestMetadata(context);
   const user = await User.findOne({ email: normalizedEmail });
+  const bypassEmails = shouldBypassAuthEmails();
+
+  if (bypassEmails) {
+    logger.warn('password_reset_bypassed', { email: normalizedEmail });
+    return {
+      message: 'Si existe una cuenta con este email, reenviamos el enlace de recuperaciÃ³n.',
+    };
+  }
 
   if (user) {
     const { plainToken, resetPayload } = buildPasswordResetDetails();
@@ -1089,3 +1137,4 @@ module.exports = {
   validatePasswordResetToken,
   resetPassword,
 };
+

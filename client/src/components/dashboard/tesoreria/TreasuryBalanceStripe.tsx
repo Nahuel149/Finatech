@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDashboardBalances } from '../../../hooks/dashboard/useDashboardBalances';
+import { useUserPermissions } from '../../../hooks/useUserPermissions';
 import { TreasuryBalance } from '../../../types/dashboard';
 import { BalanceCard, BalanceCardData } from '../../shared/design-system/BalanceCard';
 import { BalanceCardSkeleton } from '../../shared/design-system/LoadingSkeleton';
@@ -32,11 +33,18 @@ const mapBalanceToCardData = (balance: TreasuryBalance): BalanceCardData => {
 
 export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
   const navigate = useNavigate();
-  const { balances, loading, error, refresh } = useDashboardBalances({ pollInterval: 60000 });
+  const { permissions, loading: permissionsLoading } = useUserPermissions();
+  const canViewBalances =
+    permissions.includes('view-balances') || permissions.includes('access-treasury');
+  const { balances, loading, error, refresh } = useDashboardBalances({
+    enabled: canViewBalances,
+    pollInterval: 60000,
+  });
   const visibleBalances = useMemo(
     () => balances.filter((balance) => balance.id !== 'courier_in_transit'),
     [balances]
   );
+  const isLoading = permissionsLoading || loading;
   const [showTooltip, setShowTooltip] = useState(false);
 
   const handleBalanceClick = () => {
@@ -82,6 +90,10 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
     setShowTooltip(false);
   };
 
+  if (!canViewBalances && !permissionsLoading) {
+    return null;
+  }
+
   return (
     <div
       id="treasury-balance-stripe"
@@ -98,14 +110,14 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
             className="inline-flex items-center justify-center w-8 h-8 rounded-full border border-gray-200 text-gray-500 hover:text-primary hover:border-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 bg-white"
             onFocus={handleShowTooltip}
             onBlur={handleHideTooltip}
-            aria-label="Ver última actualización de saldos de Tesorería"
+            aria-label="Ver ultima actualizacion de saldos de Tesoreria"
           >
             <i className="fa-solid fa-clock-rotate-left text-sm" />
           </button>
           {showTooltip && (
             <div className="mt-2 w-56 rounded-lg border border-gray-200 bg-white shadow-lg p-3 text-xs text-gray-600 z-50">
               <div className="flex items-center justify-between">
-                <span className="font-medium text-text-primary">Última actualización</span>
+                <span className="font-medium text-text-primary">Ultima actualizacion</span>
                 <i className="fa-solid fa-clock text-gray-400" />
               </div>
               <p className="mt-2 text-gray-700">{lastUpdatedLabel}</p>
@@ -115,15 +127,15 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
                   <span>{error.message || 'No pudimos cargar los saldos.'}</span>
                 </p>
               )}
-              {!loading && !error && (
-                <p className="mt-2 text-gray-500">Seleccioná un balance para ver movimientos vinculados.</p>
+              {!isLoading && !error && (
+                <p className="mt-2 text-gray-500">Selecciona un balance para ver movimientos vinculados.</p>
               )}
             </div>
           )}
         </div>
         {/* Desktop Layout */}
         <div className="hidden lg:grid lg:grid-cols-3 gap-3 lg:gap-4 xl:gap-6">
-          {loading && (
+          {isLoading && (
             <>
               {[0, 1, 2].map((i) => (
                 <BalanceCardSkeleton key={i} />
@@ -131,7 +143,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
             </>
           )}
 
-          {!loading && !error &&
+          {!isLoading && !error &&
             visibleBalances.map((balance: TreasuryBalance) => (
               <BalanceCard
                 key={balance.id}
@@ -143,7 +155,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
               />
             ))}
 
-          {!loading && error && (
+          {!isLoading && error && (
             <>
               {[0, 1, 2].map((i) => (
                 <BalanceCard
@@ -166,7 +178,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
         {/* Mobile Layout */}
         <div className="lg:hidden">
           <div className="flex flex-col gap-2 md:gap-3">
-            {loading && (
+            {isLoading && (
               <>
                 {[0, 1, 2].map((i) => (
                   <BalanceCardSkeleton key={i} />
@@ -174,7 +186,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
               </>
             )}
 
-            {!loading && !error &&
+            {!isLoading && !error &&
               visibleBalances.map((balance: TreasuryBalance) => (
                 <BalanceCard
                   key={balance.id}
@@ -186,7 +198,7 @@ export const TreasuryBalanceStripe: React.FC<Props> = ({ onSelectBalance }) => {
                 />
               ))}
 
-            {!loading && error && (
+            {!isLoading && error && (
               <>
                 {[0, 1, 2].map((i) => (
                   <BalanceCard

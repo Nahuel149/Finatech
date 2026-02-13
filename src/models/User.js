@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { MANAGED_PERMISSIONS } = require('../utils/permissions');
 
 const providerSchema = new mongoose.Schema(
   {
@@ -70,17 +71,10 @@ const userSchema = new mongoose.Schema(
     },
     permissions: {
       type: [String],
-      // TEMPORARY TESTING CONFIGURATION: Full administrative permissions for all new users
-      // TODO: Implement proper RBAC before production deployment
-      default: [
-        'view-balances',
-        'access-treasury',
-        'access-transfers',
-        'manage-treasury',
-        'manage-market-rates',
-        'manage-notifications',
-        'access-logistics'
-      ],
+      // TEMPORARY TESTING CONFIGURATION: grant all assignable permissions to new users.
+      // Note: This intentionally does NOT include ADMIN_PERMISSION.
+      // TODO: Implement proper RBAC before production deployment.
+      default: () => [...MANAGED_PERMISSIONS],
     },
     isMessenger: {
       type: Boolean,
