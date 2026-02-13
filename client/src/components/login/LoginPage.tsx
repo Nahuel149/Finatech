@@ -196,7 +196,6 @@ export const LoginPage: React.FC = () => {
             <GoogleLoginButton
               clientId={config?.googleClientId}
               onCredential={handleGoogleCredential}
-              onUnavailable={setLoginError}
               isLoading={isGoogleLoading}
             />
 

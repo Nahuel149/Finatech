@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface GoogleLoginButtonProps {
   clientId?: string | null;
@@ -16,10 +16,18 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
   text = 'continue_with',
 }) => {
   const buttonContainerRef = useRef<HTMLDivElement | null>(null);
+  const [unavailableMessage, setUnavailableMessage] = useState('');
 
   useEffect(() => {
+    // While config is still loading, avoid a false-positive "not configured" message.
+    if (clientId === undefined) {
+      return;
+    }
+
     if (!clientId) {
-      onUnavailable?.('Google Sign-In no está configurado. Contactá al administrador.');
+      const message = 'Google Sign-In no está configurado. Contactá al administrador.';
+      setUnavailableMessage(message);
+      onUnavailable?.(message);
       return;
     }
 
@@ -37,7 +45,10 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       if (!googleIdentity) {
         attempts += 1;
         if (attempts >= maxAttempts) {
-          onUnavailable?.('Google Sign-In no está disponible. Verificá tu conexión e intentá de nuevo.');
+          const message =
+            'Google Sign-In no está disponible (posible bloqueador de anuncios o restricciones del navegador).';
+          setUnavailableMessage(message);
+          onUnavailable?.(message);
           return;
         }
         timeoutId = window.setTimeout(initialize, 100);
@@ -45,11 +56,14 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
       }
 
       try {
+        setUnavailableMessage('');
         googleIdentity.initialize({
           client_id: clientId,
           callback: (response: { credential?: string }) => {
             if (!response?.credential) {
-              onUnavailable?.('No recibimos credenciales de Google. Intentá de nuevo.');
+              const message = 'No recibimos credenciales de Google. Intentá de nuevo.';
+              setUnavailableMessage(message);
+              onUnavailable?.(message);
               return;
             }
             onCredential(response.credential);
@@ -72,7 +86,9 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
           });
         }
       } catch (_error) {
-        onUnavailable?.('Error al inicializar Google Sign-In. Intentá de nuevo.');
+        const message = 'Error al inicializar Google Sign-In. Intentá de nuevo.';
+        setUnavailableMessage(message);
+        onUnavailable?.(message);
       }
     };
 
@@ -102,6 +118,11 @@ export const GoogleLoginButton: React.FC<GoogleLoginButtonProps> = ({
         <div className={`${isLoading ? 'opacity-60 pointer-events-none' : ''}`}>
           <div ref={buttonContainerRef} />
         </div>
+        {unavailableMessage && (
+          <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs sm:text-sm text-red-700">
+            {unavailableMessage}
+          </div>
+        )}
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center bg-white/70 rounded-lg">
             <span className="inline-flex items-center text-xs sm:text-sm text-gray-700">
