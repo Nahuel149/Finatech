@@ -1889,6 +1889,18 @@ const parseThresholdValue = (value) => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+const parsePositiveThresholdValue = (value, fallback = null) => {
+  if (value === undefined || value === null || value === '') {
+    return fallback;
+  }
+  const numeric = Number(value);
+  // A max threshold of 0 (or negative) is effectively always-on noise for "saldo alto".
+  if (!Number.isFinite(numeric) || numeric <= 0) {
+    return fallback;
+  }
+  return numeric;
+};
+
 const BALANCE_ALERT_THRESHOLDS = {
   transfers: {
     min: parseThresholdValue(process.env.TREASURY_THRESHOLD_TRANSFERS_MIN),
@@ -1896,11 +1908,11 @@ const BALANCE_ALERT_THRESHOLDS = {
   },
   cash: {
     min: parseThresholdValue(process.env.TREASURY_THRESHOLD_CASH_MIN),
-    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_CASH_MAX),
+    max: parsePositiveThresholdValue(process.env.TREASURY_THRESHOLD_CASH_MAX, 5000000),
   },
   usd: {
     min: parseThresholdValue(process.env.TREASURY_THRESHOLD_USD_MIN),
-    max: parseThresholdValue(process.env.TREASURY_THRESHOLD_USD_MAX),
+    max: parsePositiveThresholdValue(process.env.TREASURY_THRESHOLD_USD_MAX, 5000),
   },
   courier_in_transit: {
     min: parseThresholdValue(process.env.TREASURY_THRESHOLD_COURIER_MIN),
