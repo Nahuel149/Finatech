@@ -14,6 +14,11 @@ interface IncidentRegistrationModalProps {
 
 const buildDraftStorageKey = (movementId: string) => `logisticsIncidentDraft:${movementId}`;
 
+const buildLocalDatetimeInputValue = (date = new Date()) => {
+  const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+};
+
 const mapSeverityToApi = (severity: IncidentFormData['severity']) => {
   switch (severity) {
     case 'low':
@@ -24,6 +29,22 @@ const mapSeverityToApi = (severity: IncidentFormData['severity']) => {
     default:
       return 'media';
   }
+};
+
+const mapAttachmentsToApi = (attachments: IncidentFormData['attachments'], uploadedBy?: string) => {
+  if (!Array.isArray(attachments)) {
+    return [];
+  }
+
+  return attachments
+    .filter((file) => file && typeof file.name === 'string' && file.name.trim())
+    .map((file) => ({
+      name: file.name.trim(),
+      type: file.type || 'documento',
+      size: typeof file.size === 'number' ? String(file.size) : null,
+      url: null,
+      uploadedBy: uploadedBy ? uploadedBy.trim() : null,
+    }));
 };
 
 const buildIncidentPayload = (formData: IncidentFormData) => {
@@ -44,6 +65,8 @@ const buildIncidentPayload = (formData: IncidentFormData) => {
     operationalImpacts,
     // Keep the boolean flags only.
     operationalImpact: impactFlags,
+    // Attachments must be serializable and match the backend schema (name is required).
+    attachments: mapAttachmentsToApi(formData.attachments, formData.responsible),
   };
 };
 
@@ -56,7 +79,7 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
   const [formData, setFormData] = useState<IncidentFormData>({
     type: '',
     severity: '',
-    dateTime: new Date().toISOString().slice(0, 16),
+    dateTime: buildLocalDatetimeInputValue(),
     responsible: '',
     description: '',
     operationalImpact: {
@@ -88,7 +111,9 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
     try {
       const parsed = JSON.parse(raw);
       if (parsed?.data) {
-        setFormData(parsed.data as IncidentFormData);
+        const restored = parsed.data as IncidentFormData;
+        // Files can't be restored reliably from localStorage; avoid corrupting the upload widget.
+        setFormData({ ...restored, attachments: [] });
         setDraftMessage('Borrador recuperado.');
         setSubmitError(null);
       }
@@ -112,7 +137,8 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
       const payload = {
         movementId,
         savedAt: new Date().toISOString(),
-        data: formData,
+        // Files can't be serialized into localStorage; persist the rest of the draft only.
+        data: { ...formData, attachments: [] },
       };
       localStorage.setItem(key, JSON.stringify(payload));
       setDraftMessage('Borrador guardado localmente.');

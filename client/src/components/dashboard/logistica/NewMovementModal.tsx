@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { XMarkIcon } from '../../icons/HeroiconsOutline';
-import MovementDataForm from './MovementDataForm';
+import MovementDataForm, { type LogisticsMovementDraft } from './MovementDataForm';
 import AssociationsDocumentsForm from './AssociationsDocumentsForm';
 import ItemsBulkForm from './ItemsBulkForm';
 import AttachmentsForm from './AttachmentsForm';
@@ -14,21 +14,42 @@ interface NewMovementModalProps {
   onClose: () => void;
 }
 
-const buildInitialMovementData = () => ({
+const buildLocalDatetimeInputValue = (date = new Date()) => {
+  const tzOffsetMs = date.getTimezoneOffset() * 60 * 1000;
+  return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16);
+};
+
+const buildInitialMovementData = (): LogisticsMovementDraft => ({
   // UI defaults to "Entrega" visually, so keep the payload aligned to avoid 400s
   // when the user submits without re-selecting the type.
   type: 'entrega',
+  state: 'pendiente',
+  origin: '',
+  destination: '',
+  responsible: '',
+  datetime: buildLocalDatetimeInputValue(),
   reference: '',
 });
 
 const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [movementData, setMovementData] = useState(buildInitialMovementData);
+  const [movementData, setMovementData] = useState<LogisticsMovementDraft>(buildInitialMovementData);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  const isMovementValid = () => {
+    return (
+      Boolean(movementData.type) &&
+      Boolean(movementData.state) &&
+      Boolean(movementData.origin?.trim()) &&
+      Boolean(movementData.destination?.trim()) &&
+      Boolean(movementData.responsible?.trim()) &&
+      Boolean(movementData.datetime)
+    );
+  };
 
   // Mantener el orden de Hooks y evitar llamadas condicionales
   useEffect(() => {
@@ -39,12 +60,29 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
     setShowConfirmation(false);
 
     if (isOpen) {
-      // UI defaults to "Entrega" visually; ensure payload has a type even if the user doesn't click it.
-      setMovementData((prev) => (prev.type ? prev : buildInitialMovementData()));
       setSaveMessage(null);
       setSaveError(null);
       setSubmitError(null);
       setSubmitting(false);
+
+      // Restore draft if present (useful after a refresh).
+      try {
+        const rawDraft = localStorage.getItem('logisticsMovementDraft');
+        if (rawDraft) {
+          const parsed = JSON.parse(rawDraft);
+          const restored = parsed?.data || parsed;
+          if (restored && typeof restored === 'object') {
+            setMovementData({ ...buildInitialMovementData(), ...(restored as LogisticsMovementDraft) });
+            setSaveMessage('Borrador recuperado.');
+          }
+        } else {
+          // UI defaults to "Entrega" visually; ensure payload has a type even if the user doesn't click it.
+          setMovementData((prev) => (prev.type ? prev : buildInitialMovementData()));
+        }
+      } catch (err) {
+        devLog('Restore draft failed', err);
+        setMovementData((prev) => (prev.type ? prev : buildInitialMovementData()));
+      }
     }
 
     return () => setMounted(false);
@@ -60,10 +98,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
 
   const handleSaveDraft = () => {
     try {
-      const payload = {
-        ...movementData,
-        savedAt: new Date().toISOString()
-      };
+      const payload = { savedAt: new Date().toISOString(), data: movementData };
       localStorage.setItem('logisticsMovementDraft', JSON.stringify(payload));
       setSaveError(null);
       setSaveMessage('Borrador guardado localmente');
@@ -90,6 +125,8 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
         method: 'POST',
         body: movementData,
       });
+      localStorage.removeItem('logisticsMovementDraft');
+      setMovementData(buildInitialMovementData());
       setSubmitError(null);
       setShowConfirmation(false);
       onClose();
@@ -184,7 +221,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
                 <button
                   onClick={handleRegisterMovement}
                   className="px-6 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-60"
-                  disabled={submitting}
+                  disabled={submitting || !isMovementValid()}
                 >
                   {submitting ? 'Registrando...' : 'Registrar movimiento'}
                 </button>

@@ -1,7 +1,19 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { ChevronDownIcon } from '../../icons/HeroiconsOutline';
 
-type MovementTypeValue = 'entrega' | 'transferencia' | 'retiro' | 'custodia';
+export type MovementTypeValue = 'entrega' | 'transferencia' | 'retiro' | 'custodia';
+
+export type MovementInitialStateValue = 'pendiente' | 'en-curso' | 'completado' | 'anulado';
+
+export interface LogisticsMovementDraft {
+  type: MovementTypeValue | string;
+  state: MovementInitialStateValue | string;
+  origin: string;
+  destination: string;
+  responsible: string;
+  datetime: string;
+  reference: string;
+}
 
 const MOVEMENT_OPTIONS: Array<{
   value: MovementTypeValue;
@@ -15,39 +27,36 @@ const MOVEMENT_OPTIONS: Array<{
 ];
 
 const RESPONSIBLE_OPTIONS = [
-  { value: 'juan-perez', label: 'Juan Pérez' },
-  { value: 'ana-lopez', label: 'Ana López' },
-  { value: 'luis-garcia', label: 'Luis García' },
-  { value: 'maria-torres', label: 'María Torres' },
-  { value: 'carlos-mendoza', label: 'Carlos Mendoza' },
+  { value: 'Juan Pérez', label: 'Juan Pérez' },
+  { value: 'Ana López', label: 'Ana López' },
+  { value: 'Luis García', label: 'Luis García' },
+  { value: 'María Torres', label: 'María Torres' },
+  { value: 'Carlos Mendoza', label: 'Carlos Mendoza' },
 ];
 
 const LOCATION_OPTIONS = [
-  { value: 'sede-central', label: 'Sede Central' },
-  { value: 'sucursal-norte', label: 'Sucursal Norte' },
-  { value: 'sucursal-sur', label: 'Sucursal Sur' },
-  { value: 'boveda-a', label: 'Bóveda A' },
-  { value: 'boveda-b', label: 'Bóveda B' },
-  { value: 'boveda-principal', label: 'Bóveda Principal' },
-  { value: 'oficina-principal', label: 'Oficina Principal' },
+  { value: 'Sede Central', label: 'Sede Central' },
+  { value: 'Sucursal Norte', label: 'Sucursal Norte' },
+  { value: 'Sucursal Sur', label: 'Sucursal Sur' },
+  { value: 'Bóveda A', label: 'Bóveda A' },
+  { value: 'Bóveda B', label: 'Bóveda B' },
+  { value: 'Bóveda Principal', label: 'Bóveda Principal' },
+  { value: 'Oficina Principal', label: 'Oficina Principal' },
 ];
 
 interface MovementDataFormProps {
-  value: {
-    type: string;
-    reference: string;
-  };
-  onChange: React.Dispatch<React.SetStateAction<{ type: string; reference: string }>>;
+  value: LogisticsMovementDraft;
+  onChange: React.Dispatch<React.SetStateAction<LogisticsMovementDraft>>;
 }
 
 const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) => {
-  const [movementType, setMovementType] = useState<MovementTypeValue>((value.type as MovementTypeValue) || 'entrega');
-  const [initialState, setInitialState] = useState('pendiente');
-  const [origin, setOrigin] = useState('');
-  const [destination, setDestination] = useState('');
-  const [internalResponsible, setInternalResponsible] = useState('');
-  const [dateTime, setDateTime] = useState('');
-  const [reference, setReference] = useState(value.reference || '');
+  const movementType = (value.type as MovementTypeValue) || 'entrega';
+  const initialState = (value.state as MovementInitialStateValue) || 'pendiente';
+  const origin = value.origin || '';
+  const destination = value.destination || '';
+  const internalResponsible = value.responsible || '';
+  const dateTime = value.datetime || '';
+  const reference = value.reference || '';
 
   const movementHint = useMemo(() => {
     if (movementType === 'transferencia') {
@@ -78,7 +87,6 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
                   key={option.value}
                   type="button"
                   onClick={() => {
-                    setMovementType(option.value);
                     onChange((prev) => ({ ...prev, type: option.value }));
                   }}
                   className={`flex flex-col items-center justify-center rounded-lg border-2 p-4 text-center transition-all ${
@@ -108,7 +116,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
           <div className="relative">
             <select
               value={initialState}
-              onChange={(e) => setInitialState(e.target.value)}
+              onChange={(e) => onChange((prev) => ({ ...prev, state: e.target.value as MovementInitialStateValue }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
               <option value="pendiente">Pendiente</option>
@@ -127,7 +135,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
           <div className="relative">
             <select
               value={origin}
-              onChange={(e) => setOrigin(e.target.value)}
+              onChange={(e) => onChange((prev) => ({ ...prev, origin: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
               <option value="">Seleccionar origen…</option>
@@ -148,7 +156,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
           <div className="relative">
             <select
               value={destination}
-              onChange={(e) => setDestination(e.target.value)}
+              onChange={(e) => onChange((prev) => ({ ...prev, destination: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
               <option value="">Seleccionar destino…</option>
@@ -169,7 +177,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
           <input
             type="datetime-local"
             value={dateTime}
-            onChange={(e) => setDateTime(e.target.value)}
+            onChange={(e) => onChange((prev) => ({ ...prev, datetime: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
           />
         </div>
@@ -181,7 +189,7 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
           <div className="relative">
             <select
               value={internalResponsible}
-              onChange={(e) => setInternalResponsible(e.target.value)}
+              onChange={(e) => onChange((prev) => ({ ...prev, responsible: e.target.value }))}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent appearance-none bg-white"
             >
               <option value="">Seleccionar responsable…</option>
@@ -204,7 +212,6 @@ const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) 
             value={reference}
             onChange={(e) => {
               const next = e.target.value.slice(0, referenceCharacterLimit);
-              setReference(next);
               onChange((prev) => ({ ...prev, reference: next }));
             }}
             rows={3}
