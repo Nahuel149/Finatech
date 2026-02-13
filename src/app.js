@@ -98,7 +98,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/live-ops', liveOperationsRoutes);
 
 // Simple health-check endpoint for Render
-app.get('/', (_req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'API running' });
 });
 
