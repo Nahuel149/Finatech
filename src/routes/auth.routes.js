@@ -14,6 +14,8 @@ const {
   profile,
   updateProfile,
   updateTwoFactor,
+  confirmTwoFactorToggle,
+  resendTwoFactorToggle,
   changePassword,
   logout,
   keepAlive,
@@ -189,6 +191,8 @@ router.get('/me', requireAuth, profile);
 router.patch('/profile', requireAuth, ...updateProfileValidators, validateRequest, updateProfile);
 router.post('/profile/password', requireAuth, ...changePasswordValidators, validateRequest, changePassword);
 router.post('/profile/2fa', requireAuth, ...twoFactorToggleValidators, validateRequest, updateTwoFactor);
+router.post('/profile/2fa/confirm', requireAuth, ...twoFactorValidators, validateRequest, confirmTwoFactorToggle);
+router.post('/profile/2fa/resend', requireAuth, ...twoFactorResendValidators, validateRequest, resendTwoFactorToggle);
 
 router.get('/keep-alive', requireAuth, keepAlive);
 

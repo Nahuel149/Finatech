@@ -8,6 +8,9 @@ const {
   loginWithEmail,
   verifyTwoFactorChallenge,
   resendTwoFactorCode,
+  createTwoFactorToggleChallenge,
+  verifyTwoFactorToggleChallenge,
+  resendTwoFactorToggleCode,
   resendVerificationEmail,
   requestPasswordReset,
   validatePasswordResetToken,
@@ -260,10 +263,57 @@ const updateTwoFactor = async (req, res, next) => {
     if (typeof enabled !== 'boolean') {
       throw new AppError('Debés indicar si activás o desactivás 2FA.', 400, { code: 'INVALID_2FA_STATE' });
     }
-    req.user.twoFactor = req.user.twoFactor || {};
-    req.user.twoFactor.enabled = enabled;
-    await req.user.save();
-    res.json({ profile: buildProfile(req.user) });
+    const context = { ip: req.ip, userAgent: req.get('user-agent') };
+    const { challengeToken, expiresAt } = await createTwoFactorToggleChallenge({
+      user: req.user,
+      enabled,
+      context,
+    });
+
+    res.json({
+      success: true,
+      requiresConfirmation: true,
+      nextEnabled: Boolean(enabled),
+      challengeId: challengeToken,
+      challengeToken,
+      challengeExpiresAt: expiresAt,
+      message: 'Te enviamos un cÃ³digo al correo registrado para confirmar el cambio.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const confirmTwoFactorToggle = async (req, res, next) => {
+  try {
+    const { challengeToken, challengeId, code } = req.body;
+    const context = { ip: req.ip, userAgent: req.get('user-agent') };
+    const normalizedChallenge = challengeToken || challengeId;
+
+    const result = await verifyTwoFactorToggleChallenge(
+      { user: req.user, challengeToken: normalizedChallenge, code },
+      context
+    );
+
+    res.json({
+      success: true,
+      profile: buildProfile(result.user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const resendTwoFactorToggle = async (req, res, next) => {
+  try {
+    const { challengeToken, challengeId } = req.body;
+    const normalizedChallenge = challengeToken || challengeId;
+    const context = { ip: req.ip, userAgent: req.get('user-agent') };
+    const result = await resendTwoFactorToggleCode(
+      { user: req.user, challengeToken: normalizedChallenge },
+      context
+    );
+    res.json({ success: true, ...result });
   } catch (error) {
     next(error);
   }
@@ -367,6 +417,8 @@ module.exports = {
   profile,
   updateProfile,
   updateTwoFactor,
+  confirmTwoFactorToggle,
+  resendTwoFactorToggle,
   changePassword,
   keepAlive,
   logout,

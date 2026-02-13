@@ -449,6 +449,18 @@ export const api = {
       method: 'POST',
       body: payload,
     }),
+
+  confirmTwoFactorToggle: (payload: { challengeId: string; code: string }) =>
+    apiRequest('/api/auth/profile/2fa/confirm', {
+      method: 'POST',
+      body: payload,
+    }),
+
+  resendTwoFactorToggle: (payload: { challengeId: string }) =>
+    apiRequest('/api/auth/profile/2fa/resend', {
+      method: 'POST',
+      body: payload,
+    }),
     
   // Configuration
   getConfig: () =>

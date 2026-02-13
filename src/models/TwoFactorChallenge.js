@@ -16,6 +16,14 @@ const twoFactorChallengeSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    purpose: {
+      type: String,
+      default: 'login',
+    },
+    toggleEnabledTarget: {
+      type: Boolean,
+      default: null,
+    },
     expiresAt: {
       type: Date,
       required: true,

@@ -4,6 +4,7 @@ import { Footer } from '../operaciones/Footer';
 import { Alert } from '../../ui/Alert';
 import { useCurrentUser, primeCurrentUser } from '../../../hooks/useCurrentUser';
 import { api, handleApiError } from '../../../utils/api';
+import { TwoFactorToggleModal } from './TwoFactorToggleModal';
 
 type BannerType = 'success' | 'info' | 'warning' | 'error';
 
@@ -27,6 +28,12 @@ export const AccountSettingsPage: React.FC = () => {
 
   const [twoFactorEnabled, setTwoFactorEnabled] = useState<boolean>(false);
   const [twoFactorUpdating, setTwoFactorUpdating] = useState(false);
+  const [twoFactorChallengeId, setTwoFactorChallengeId] = useState<string | null>(null);
+  const [twoFactorPendingEnabled, setTwoFactorPendingEnabled] = useState<boolean | null>(null);
+  const [twoFactorModalOpen, setTwoFactorModalOpen] = useState(false);
+  const [twoFactorModalError, setTwoFactorModalError] = useState<string>('');
+  const [twoFactorConfirming, setTwoFactorConfirming] = useState(false);
+  const [twoFactorResending, setTwoFactorResending] = useState(false);
 
   const [banner, setBanner] = useState<BannerState | null>(null);
 
@@ -115,10 +122,24 @@ export const AccountSettingsPage: React.FC = () => {
 
   const handleToggle2FA = () => {
     setTwoFactorUpdating(true);
+    setTwoFactorModalError('');
     const nextState = !twoFactorEnabled;
     api
       .updateTwoFactor({ enabled: nextState })
       .then((response) => {
+        if (response?.requiresConfirmation && response?.challengeId) {
+          setTwoFactorChallengeId(response.challengeId);
+          setTwoFactorPendingEnabled(nextState);
+          setTwoFactorModalOpen(true);
+          setBanner({
+            type: 'info',
+            message:
+              response?.message ||
+              'Te enviamos un codigo al correo registrado para confirmar el cambio.',
+          });
+          return;
+        }
+
         const enabled = response?.profile?.twoFactor?.isEnabled ?? nextState;
         setTwoFactorEnabled(enabled);
         if (response?.profile) {
@@ -139,6 +160,72 @@ export const AccountSettingsPage: React.FC = () => {
       .finally(() => {
         setTwoFactorUpdating(false);
       });
+  };
+
+  const closeTwoFactorModal = () => {
+    if (twoFactorConfirming) return;
+    setTwoFactorModalOpen(false);
+    setTwoFactorModalError('');
+    setTwoFactorChallengeId(null);
+    setTwoFactorPendingEnabled(null);
+  };
+
+  const handleConfirmTwoFactorToggle = async (code: string) => {
+    const challengeId = twoFactorChallengeId;
+    if (!challengeId) {
+      setTwoFactorModalError('No encontramos el desafio de verificacion. Volve a intentar.');
+      return;
+    }
+
+    setTwoFactorConfirming(true);
+    setTwoFactorModalError('');
+
+    try {
+      const response = await api.confirmTwoFactorToggle({ challengeId, code });
+      const enabled =
+        response?.profile?.twoFactor?.isEnabled ??
+        (twoFactorPendingEnabled !== null ? twoFactorPendingEnabled : twoFactorEnabled);
+
+      setTwoFactorEnabled(enabled);
+      if (response?.profile) {
+        primeCurrentUser(response.profile);
+      }
+
+      setTwoFactorModalOpen(false);
+      setTwoFactorChallengeId(null);
+      setTwoFactorPendingEnabled(null);
+
+      setBanner({
+        type: 'success',
+        message: `AutenticaciÃ³n en dos pasos ${enabled ? 'activada' : 'desactivada'}.`,
+      });
+    } catch (err: any) {
+      const apiError = handleApiError(err);
+      setTwoFactorModalError(apiError.message || 'No pudimos validar el codigo.');
+    } finally {
+      setTwoFactorConfirming(false);
+    }
+  };
+
+  const handleResendTwoFactorToggle = async () => {
+    const challengeId = twoFactorChallengeId;
+    if (!challengeId) return;
+
+    setTwoFactorResending(true);
+    setTwoFactorModalError('');
+
+    try {
+      const response = await api.resendTwoFactorToggle({ challengeId });
+      setBanner({
+        type: 'info',
+        message: response?.message || 'Codigo reenviado.',
+      });
+    } catch (err: any) {
+      const apiError = handleApiError(err);
+      setTwoFactorModalError(apiError.message || 'No pudimos reenviar el codigo.');
+    } finally {
+      setTwoFactorResending(false);
+    }
   };
 
   return (
@@ -240,7 +327,7 @@ export const AccountSettingsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={handleToggle2FA}
-                disabled={twoFactorUpdating}
+                disabled={twoFactorUpdating || twoFactorModalOpen}
                 className={`inline-flex items-center px-4 py-2 rounded-lg border ${
                   twoFactorEnabled
                     ? 'bg-green-50 text-green-700 border-green-200 hover:bg-green-100'
@@ -349,6 +436,17 @@ export const AccountSettingsPage: React.FC = () => {
       </main>
 
       <Footer />
+
+      <TwoFactorToggleModal
+        isOpen={twoFactorModalOpen}
+        actionLabel={twoFactorPendingEnabled ? 'activar' : 'desactivar'}
+        onClose={closeTwoFactorModal}
+        onSubmit={handleConfirmTwoFactorToggle}
+        onResend={handleResendTwoFactorToggle}
+        isSubmitting={twoFactorConfirming}
+        isResending={twoFactorResending}
+        error={twoFactorModalError}
+      />
     </div>
   );
 };

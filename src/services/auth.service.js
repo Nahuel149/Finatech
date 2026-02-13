@@ -150,6 +150,32 @@ Este código caduca en ${TWO_FACTOR_CHALLENGE_DURATION_MINUTES} minutos. Si no s
   });
 };
 
+const sendTwoFactorToggleCodeEmail = async (user, code, enabled) => {
+  const actionLabel = enabled ? 'activar' : 'desactivar';
+  const subject = `Confirma para ${actionLabel} 2FA en FinaTech`;
+  const text = `Hola ${user.fullName},
+
+Solicitaste ${actionLabel} la autenticacion en dos pasos (2FA) por correo en tu cuenta de FinaTech.
+Ingresa el siguiente codigo de verificacion de 6 digitos para confirmar el cambio:
+
+${code}
+
+Este codigo caduca en ${TWO_FACTOR_CHALLENGE_DURATION_MINUTES} minutos. Si no fuiste vos, ignora este correo.`;
+
+  const html = `<p>Hola ${user.fullName},</p>
+<p>Solicitaste <strong>${actionLabel}</strong> la autenticacion en dos pasos (2FA) por correo en tu cuenta de <strong>FinaTech</strong>.</p>
+<p>Ingresa el siguiente codigo de verificacion de 6 digitos para confirmar el cambio:</p>
+<p style="font-size:24px; font-weight:bold; letter-spacing:4px;">${code}</p>
+<p>Este codigo caduca en ${TWO_FACTOR_CHALLENGE_DURATION_MINUTES} minutos. Si no fuiste vos, ignora este correo.</p>`;
+
+  await sendEmail({
+    to: user.email,
+    subject,
+    text,
+    html,
+  });
+};
+
 const sendAccountLockedEmail = async (user) => {
   const subject = 'Intentos de inicio de sesión bloqueados';
   const text = `Hola ${user.fullName},
@@ -237,11 +263,16 @@ const createTwoFactorChallenge = async ({ user, rememberMe, context }) => {
   const codeHash = hashToken(code);
   const expiresAt = new Date(Date.now() + TWO_FACTOR_CHALLENGE_DURATION_MINUTES * 60 * 1000);
 
-  await TwoFactorChallenge.deleteMany({ user: user._id });
+  // Delete login challenges (and legacy docs without purpose) only.
+  await TwoFactorChallenge.deleteMany({
+    user: user._id,
+    $or: [{ purpose: 'login' }, { purpose: { $exists: false } }],
+  });
   await TwoFactorChallenge.create({
     user: user._id,
     token: hashedToken,
     codeHash,
+    purpose: 'login',
     expiresAt,
     rememberMe: Boolean(rememberMe),
     metadata: buildRequestMetadata(context),
@@ -251,6 +282,36 @@ const createTwoFactorChallenge = async ({ user, rememberMe, context }) => {
     // eslint-disable-next-line no-console
     logger.error('send_2fa_email_failed', { message: err.message });
   });
+
+  return { challengeToken: plainToken, expiresAt };
+};
+
+const createTwoFactorToggleChallenge = async ({ user, enabled, context }) => {
+  if (shouldBypassAuthEmails()) {
+    throw new AppError('La verificacion por email esta deshabilitada por configuracion.', 400, {
+      code: 'EMAIL_VERIFICATION_DISABLED',
+    });
+  }
+
+  const plainToken = generateRandomToken(32);
+  const hashedToken = hashToken(plainToken);
+  const code = generateTwoFactorCode();
+  const codeHash = hashToken(code);
+  const expiresAt = new Date(Date.now() + TWO_FACTOR_CHALLENGE_DURATION_MINUTES * 60 * 1000);
+
+  await TwoFactorChallenge.deleteMany({ user: user._id, purpose: 'toggle_2fa' });
+  await TwoFactorChallenge.create({
+    user: user._id,
+    token: hashedToken,
+    codeHash,
+    purpose: 'toggle_2fa',
+    toggleEnabledTarget: Boolean(enabled),
+    expiresAt,
+    rememberMe: false,
+    metadata: buildRequestMetadata(context),
+  });
+
+  await sendTwoFactorToggleCodeEmail(user, code, Boolean(enabled));
 
   return { challengeToken: plainToken, expiresAt };
 };
@@ -815,7 +876,10 @@ const verifyTwoFactorChallenge = async ({ challengeToken, code }, context = {}) 
   }
 
   const hashedToken = hashToken(challengeToken);
-  const challenge = await TwoFactorChallenge.findOne({ token: hashedToken });
+  const challenge = await TwoFactorChallenge.findOne({
+    token: hashedToken,
+    $or: [{ purpose: 'login' }, { purpose: { $exists: false } }],
+  });
 
   if (!challenge || challenge.expiresAt < new Date()) {
     if (challenge) {
@@ -885,6 +949,66 @@ const verifyTwoFactorChallenge = async ({ challengeToken, code }, context = {}) 
   };
 };
 
+const verifyTwoFactorToggleChallenge = async ({ user, challengeToken, code }, context = {}) => {
+  if (!user || !challengeToken || !code) {
+    throw new AppError('Se requieren el desafío de dos pasos y el código.', 400, {
+      code: 'TWO_FACTOR_CODE_REQUIRED',
+    });
+  }
+
+  const hashedToken = hashToken(challengeToken);
+  const challenge = await TwoFactorChallenge.findOne({
+    token: hashedToken,
+    user: user._id,
+    purpose: 'toggle_2fa',
+  });
+
+  if (!challenge || challenge.expiresAt < new Date()) {
+    if (challenge) {
+      await TwoFactorChallenge.deleteOne({ _id: challenge._id });
+    }
+    throw new AppError('Código inválido o vencido.', 400, {
+      code: 'INVALID_TWO_FACTOR',
+    });
+  }
+
+  const codeHash = hashToken(code);
+  if (challenge.codeHash !== codeHash) {
+    await logSecurityEvent({
+      user: user._id,
+      email: user.email,
+      eventType: 'two_factor_toggle',
+      provider: user.primaryProvider() || 'local',
+      status: 'two_factor_failed',
+      ...challenge.metadata,
+    });
+    throw new AppError('Código inválido o vencido. Intentá nuevamente.', 400, {
+      code: 'INVALID_TWO_FACTOR',
+    });
+  }
+
+  user.twoFactor = user.twoFactor || {};
+  user.twoFactor.enabled = Boolean(challenge.toggleEnabledTarget);
+  await user.save();
+
+  await TwoFactorChallenge.deleteOne({ _id: challenge._id });
+  const metadata = challenge.metadata || buildRequestMetadata(context);
+
+  await logSecurityEvent({
+    user: user._id,
+    email: user.email,
+    eventType: 'two_factor_toggle',
+    provider: user.primaryProvider() || 'local',
+    status: user.twoFactor.enabled ? 'two_factor_enabled' : 'two_factor_disabled',
+    ...metadata,
+  });
+
+  return {
+    user,
+    enabled: Boolean(user.twoFactor.enabled),
+  };
+};
+
 const resendTwoFactorCode = async ({ challengeToken }, context = {}) => {
   if (!challengeToken) {
     throw new AppError('Se requiere el token del desafío de dos pasos.', 400, {
@@ -893,7 +1017,10 @@ const resendTwoFactorCode = async ({ challengeToken }, context = {}) => {
   }
 
   const hashedToken = hashToken(challengeToken);
-  const challenge = await TwoFactorChallenge.findOne({ token: hashedToken });
+  const challenge = await TwoFactorChallenge.findOne({
+    token: hashedToken,
+    $or: [{ purpose: 'login' }, { purpose: { $exists: false } }],
+  });
 
   if (!challenge || challenge.expiresAt < new Date()) {
     if (challenge) {
@@ -929,6 +1056,48 @@ const resendTwoFactorCode = async ({ challengeToken }, context = {}) => {
     status: 'two_factor_required',
     ...metadata,
   });
+
+  return {
+    message: 'Código reenviado.',
+  };
+};
+
+const resendTwoFactorToggleCode = async ({ user, challengeToken }, context = {}) => {
+  if (!user || !challengeToken) {
+    throw new AppError('Se requiere el token del desafío de dos pasos.', 400, {
+      code: 'TWO_FACTOR_CHALLENGE_REQUIRED',
+    });
+  }
+
+  if (shouldBypassAuthEmails()) {
+    throw new AppError('La verificacion por email esta deshabilitada por configuracion.', 400, {
+      code: 'EMAIL_VERIFICATION_DISABLED',
+    });
+  }
+
+  const hashedToken = hashToken(challengeToken);
+  const challenge = await TwoFactorChallenge.findOne({
+    token: hashedToken,
+    user: user._id,
+    purpose: 'toggle_2fa',
+  });
+
+  if (!challenge || challenge.expiresAt < new Date()) {
+    if (challenge) {
+      await TwoFactorChallenge.deleteOne({ _id: challenge._id });
+    }
+    throw new AppError('La ventana de verificacion expiro. Inicia nuevamente.', 400, {
+      code: 'TWO_FACTOR_EXPIRED',
+    });
+  }
+
+  const code = generateTwoFactorCode();
+  challenge.codeHash = hashToken(code);
+  challenge.expiresAt = new Date(Date.now() + TWO_FACTOR_CHALLENGE_DURATION_MINUTES * 60 * 1000);
+  challenge.metadata = buildRequestMetadata(context);
+  await challenge.save();
+
+  await sendTwoFactorToggleCodeEmail(user, code, Boolean(challenge.toggleEnabledTarget));
 
   return {
     message: 'Código reenviado.',
@@ -1132,6 +1301,9 @@ module.exports = {
   loginWithEmail,
   verifyTwoFactorChallenge,
   resendTwoFactorCode,
+  createTwoFactorToggleChallenge,
+  verifyTwoFactorToggleChallenge,
+  resendTwoFactorToggleCode,
   resendVerificationEmail,
   requestPasswordReset,
   validatePasswordResetToken,
