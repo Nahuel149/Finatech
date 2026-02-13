@@ -1,28 +1,33 @@
-import React, { useMemo, useState } from 'react';
+import React from 'react';
 
-const AssociationsDocumentsForm: React.FC = () => {
-  const [associatedContact, setAssociatedContact] = useState('');
-  const [relatedOperation, setRelatedOperation] = useState('');
+export interface LogisticsMovementAssociationsDraft {
+  contact: string;
+  linkedOperation: string;
+}
 
-  const operationChip = useMemo(() => {
-    if (!relatedOperation.trim()) {
-      return null;
-    }
-    return (
-      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-        <i className="fa-solid fa-exchange-alt mr-1" />
-        {relatedOperation.trim()}
-        <button
-          type="button"
-          onClick={() => setRelatedOperation('')}
-          className="ml-2 text-blue-600 hover:text-blue-800"
-          aria-label="Quitar operación relacionada"
-        >
-          <i className="fa-solid fa-times text-xs" />
-        </button>
-      </span>
-    );
-  }, [relatedOperation]);
+interface AssociationsDocumentsFormProps {
+  value: LogisticsMovementAssociationsDraft;
+  onChange: (updates: Partial<LogisticsMovementAssociationsDraft>) => void;
+}
+
+const AssociationsDocumentsForm: React.FC<AssociationsDocumentsFormProps> = ({ value, onChange }) => {
+  const associatedContact = value.contact || '';
+  const relatedOperation = value.linkedOperation || '';
+
+  const operationChip = relatedOperation.trim() ? (
+    <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+      <i className="fa-solid fa-exchange-alt mr-1" />
+      {relatedOperation.trim()}
+      <button
+        type="button"
+        onClick={() => onChange({ linkedOperation: '' })}
+        className="ml-2 text-blue-600 hover:text-blue-800"
+        aria-label="Quitar operación relacionada"
+      >
+        <i className="fa-solid fa-times text-xs" />
+      </button>
+    </span>
+  ) : null;
 
   return (
     <section>
@@ -35,7 +40,7 @@ const AssociationsDocumentsForm: React.FC = () => {
             <input
               type="text"
               value={associatedContact}
-              onChange={(e) => setAssociatedContact(e.target.value)}
+              onChange={(e) => onChange({ contact: e.target.value })}
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               placeholder="Buscar cliente o proveedor…"
             />
@@ -61,7 +66,7 @@ const AssociationsDocumentsForm: React.FC = () => {
           <input
             type="text"
             value={relatedOperation}
-            onChange={(e) => setRelatedOperation(e.target.value)}
+            onChange={(e) => onChange({ linkedOperation: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
             placeholder="Buscar por ID (#FT-000123)…"
           />

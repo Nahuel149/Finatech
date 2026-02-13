@@ -31,23 +31,8 @@ const mapSeverityToApi = (severity: IncidentFormData['severity']) => {
   }
 };
 
-const mapAttachmentsToApi = (attachments: IncidentFormData['attachments'], uploadedBy?: string) => {
-  if (!Array.isArray(attachments)) {
-    return [];
-  }
-
-  return attachments
-    .filter((file) => file && typeof file.name === 'string' && file.name.trim())
-    .map((file) => ({
-      name: file.name.trim(),
-      type: file.type || 'documento',
-      size: typeof file.size === 'number' ? String(file.size) : null,
-      url: null,
-      uploadedBy: uploadedBy ? uploadedBy.trim() : null,
-    }));
-};
-
 const buildIncidentPayload = (formData: IncidentFormData) => {
+  const { attachments: _attachments, ...rest } = formData;
   const { otherDescription, ...impactFlags } = formData.operationalImpact || ({} as IncidentFormData['operationalImpact']);
 
   const operationalImpacts = Object.entries(impactFlags)
@@ -58,15 +43,14 @@ const buildIncidentPayload = (formData: IncidentFormData) => {
   const extraOther = impactFlags.other && normalizedOtherDescription ? `\n\nOtro impacto: ${normalizedOtherDescription}` : '';
 
   return {
-    ...formData,
+    ...rest,
     severity: mapSeverityToApi(formData.severity),
     description: `${formData.description || ''}`.trim() + extraOther,
     // Backend reads this first; send a clean list (avoid otherDescription leaking via operationalImpact object).
     operationalImpacts,
     // Keep the boolean flags only.
     operationalImpact: impactFlags,
-    // Attachments must be serializable and match the backend schema (name is required).
-    attachments: mapAttachmentsToApi(formData.attachments, formData.responsible),
+    attachments: [],
   };
 };
 
@@ -152,10 +136,23 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
   const handleRegisterIncident = async () => {
     setIsSubmitting(true);
     try {
-      await apiRequest('/api/logistics/incidents', {
-        method: 'POST',
-        body: { movementId, data: buildIncidentPayload(formData), status: 'en-proceso' },
-      });
+      const dataPayload = buildIncidentPayload(formData);
+      if (formData.attachments.length > 0) {
+        const body = new FormData();
+        body.append('movementId', movementId);
+        body.append('status', 'en-proceso');
+        body.append('data', JSON.stringify(dataPayload));
+        formData.attachments.forEach((file) => body.append('files', file));
+        await apiRequest('/api/logistics/incidents', {
+          method: 'POST',
+          body,
+        });
+      } else {
+        await apiRequest('/api/logistics/incidents', {
+          method: 'POST',
+          body: { movementId, data: dataPayload, status: 'en-proceso' },
+        });
+      }
       localStorage.removeItem(buildDraftStorageKey(movementId));
       setSubmitError(null);
       setDraftMessage(null);

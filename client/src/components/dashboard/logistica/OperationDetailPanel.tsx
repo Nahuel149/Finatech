@@ -1,5 +1,6 @@
 import React from 'react';
 import { LogisticsOperation } from '../../../types/logistics';
+import { buildApiUrl } from '../../../utils/api';
 
 interface OperationDetailPanelProps {
   isOpen: boolean;
@@ -197,14 +198,32 @@ export const OperationDetailPanel: React.FC<OperationDetailPanelProps> = ({
                   >
                     <div className="flex items-center">
                       <i
-                        className={`fa-solid ${attachment.type === 'pdf' ? 'fa-file-pdf text-red-500' : 'fa-image text-blue-500'} mr-3`}
+                        className={`fa-solid ${
+                          attachment.type === 'pdf'
+                            ? 'fa-file-pdf text-red-500'
+                            : attachment.type === 'image'
+                            ? 'fa-image text-blue-500'
+                            : 'fa-file-lines text-gray-500'
+                        } mr-3`}
                       />
                       <div>
                         <div className="text-sm font-medium text-text-primary">{attachment.name}</div>
                         <div className="text-xs text-gray-500">{attachment.size}</div>
                       </div>
                     </div>
-                    <button type="button" className="text-primary hover:text-blue-700 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (attachment.url) {
+                          const resolvedUrl = attachment.url.startsWith('http')
+                            ? attachment.url
+                            : buildApiUrl(attachment.url);
+                          window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
+                      disabled={!attachment.url}
+                      className="text-primary hover:text-blue-700 text-sm disabled:text-gray-400 disabled:hover:text-gray-400 disabled:cursor-not-allowed"
+                    >
                       Ver archivo
                     </button>
                   </div>

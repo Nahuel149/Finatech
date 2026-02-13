@@ -4,6 +4,7 @@ const {
   updateIncidentStatus,
   createIncident,
 } = require('../services/logisticsIncident.service');
+const { storeLogisticsIncidentAttachments } = require('../utils/logisticsIncidentAttachmentStorage');
 
 const listLogisticsIncidents = async (req, res, next) => {
   try {
@@ -38,10 +39,29 @@ const patchLogisticsIncidentStatus = async (req, res, next) => {
 
 const postLogisticsIncident = async (req, res, next) => {
   try {
+    const movementId = req.body?.movementId;
+    const status = req.body?.status || 'abierta';
+
+    let data = req.body?.data || {};
+    if (typeof data === 'string') {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        data = {};
+      }
+    }
+
+    const files = Array.isArray(req.files) ? req.files : [];
+    if (files.length) {
+      const stored = await storeLogisticsIncidentAttachments(movementId, files, data?.responsible || null);
+      const existing = Array.isArray(data.attachments) ? data.attachments : [];
+      data = { ...data, attachments: [...existing, ...stored] };
+    }
+
     const incident = await createIncident({
-      movementId: req.body?.movementId,
-      data: req.body?.data || {},
-      status: req.body?.status || 'abierta',
+      movementId,
+      data,
+      status,
     });
     res.status(201).json(incident);
   } catch (error) {

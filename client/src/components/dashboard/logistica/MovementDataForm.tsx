@@ -44,12 +44,12 @@ const LOCATION_OPTIONS = [
   { value: 'Oficina Principal', label: 'Oficina Principal' },
 ];
 
-interface MovementDataFormProps {
-  value: LogisticsMovementDraft;
-  onChange: React.Dispatch<React.SetStateAction<LogisticsMovementDraft>>;
-}
+type MovementDataFormProps<T extends LogisticsMovementDraft> = {
+  value: T;
+  onChange: React.Dispatch<React.SetStateAction<T>>;
+};
 
-const MovementDataForm: React.FC<MovementDataFormProps> = ({ value, onChange }) => {
+const MovementDataForm = <T extends LogisticsMovementDraft,>({ value, onChange }: MovementDataFormProps<T>) => {
   const movementType = (value.type as MovementTypeValue) || 'entrega';
   const initialState = (value.state as MovementInitialStateValue) || 'pendiente';
   const origin = value.origin || '';

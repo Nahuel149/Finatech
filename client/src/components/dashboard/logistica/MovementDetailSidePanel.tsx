@@ -6,6 +6,7 @@ import {
   EyeIcon,
   PlusIcon,
 } from '../../icons/HeroiconsOutline';
+import { buildApiUrl } from '../../../utils/api';
 
 interface MovementDetailSidePanelProps {
   isOpen: boolean;
@@ -454,7 +455,15 @@ export const MovementDetailSidePanel: React.FC<MovementDetailSidePanelProps> = (
                     </div>
                     <button
                       type="button"
-                      className="text-sm font-medium text-primary hover:text-blue-700"
+                      onClick={() => {
+                        const url = attachment.url;
+                        if (url) {
+                          const resolvedUrl = url.startsWith('http') ? url : buildApiUrl(url);
+                          window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+                        }
+                      }}
+                      disabled={!attachment.url}
+                      className="text-sm font-medium text-primary hover:text-blue-700 disabled:text-gray-400 disabled:hover:text-gray-400 disabled:cursor-not-allowed"
                     >
                       Ver
                     </button>

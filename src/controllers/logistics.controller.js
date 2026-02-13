@@ -49,7 +49,17 @@ const getLogisticsOperationById = async (req, res, next) => {
 
 const createLogisticsOperation = async (req, res, next) => {
   try {
-    const operation = await createOperation(req.body || {});
+    let payload = req.body || {};
+    if (typeof req.body?.payload === 'string') {
+      try {
+        payload = JSON.parse(req.body.payload);
+      } catch {
+        payload = req.body || {};
+      }
+    }
+
+    const files = Array.isArray(req.files) ? req.files : [];
+    const operation = await createOperation(payload || {}, files);
     res.status(201).json(operation);
   } catch (error) {
     next(error);

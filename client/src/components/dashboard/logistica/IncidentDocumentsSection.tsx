@@ -6,6 +6,7 @@ import {
 } from '../../icons/HeroiconsOutline';
 import { LogisticsIncidentDocument } from '../../../types/logistics';
 import { devLog } from '../../../utils/devLogger';
+import { buildApiUrl } from '../../../utils/api';
 
 interface IncidentDocumentsSectionProps {
   documents: LogisticsIncidentDocument[];
@@ -37,8 +38,19 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
     if (onDownload) {
       onDownload(document);
     } else {
-      // Default download behavior
-      devLog('Downloading document:', document.name);
+      const url = document.url;
+      if (url) {
+        const resolvedUrl = url.startsWith('http') ? url : buildApiUrl(url);
+        const link = window.document.createElement('a');
+        link.href = resolvedUrl;
+        link.download = document.name || 'documento';
+        link.rel = 'noopener noreferrer';
+        window.document.body.appendChild(link);
+        link.click();
+        link.remove();
+        return;
+      }
+      devLog('No document url available to download:', document.name);
     }
   };
 
@@ -46,8 +58,13 @@ export const IncidentDocumentsSection: React.FC<IncidentDocumentsSectionProps> =
     if (onView) {
       onView(document);
     } else {
-      // Default view behavior
-      devLog('Viewing document:', document.name);
+      const url = document.url;
+      if (url) {
+        const resolvedUrl = url.startsWith('http') ? url : buildApiUrl(url);
+        window.open(resolvedUrl, '_blank', 'noopener,noreferrer');
+        return;
+      }
+      devLog('No document url available to view:', document.name);
     }
   };
 

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PlusIcon, TrashIcon } from '../../icons/HeroiconsOutline';
 
-interface Item {
+export interface LogisticsMovementItemDraft {
   id: string;
   description: string;
   quantity: number;
@@ -11,11 +11,18 @@ interface Item {
   notes?: string;
 }
 
-const ItemsBulkForm: React.FC = () => {
-  const [items, setItems] = useState<Item[]>([]);
+interface ItemsBulkFormProps {
+  items: LogisticsMovementItemDraft[];
+  onItemsChange: (items: LogisticsMovementItemDraft[]) => void;
+}
+
+const ItemsBulkForm: React.FC<ItemsBulkFormProps> = ({ items, onItemsChange }) => {
+  const updateItem = (id: string, updates: Partial<LogisticsMovementItemDraft>) => {
+    onItemsChange(items.map((item) => (item.id === id ? { ...item, ...updates } : item)));
+  };
 
   const addItem = () => {
-    const newItem: Item = {
+    const newItem: LogisticsMovementItemDraft = {
       id: Date.now().toString(),
       description: '',
       quantity: 1,
@@ -24,17 +31,11 @@ const ItemsBulkForm: React.FC = () => {
       dimensions: '',
       notes: ''
     };
-    setItems([...items, newItem]);
+    onItemsChange([...items, newItem]);
   };
 
   const removeItem = (id: string) => {
-    setItems(items.filter(item => item.id !== id));
-  };
-
-  const updateItem = (id: string, field: keyof Item, value: any) => {
-    setItems(items.map(item => 
-      item.id === id ? { ...item, [field]: value } : item
-    ));
+    onItemsChange(items.filter((item) => item.id !== id));
   };
 
   return (
@@ -87,7 +88,7 @@ const ItemsBulkForm: React.FC = () => {
                   <input
                     type="text"
                     value={item.description}
-                    onChange={(e) => updateItem(item.id, 'description', e.target.value)}
+                    onChange={(e) => updateItem(item.id, { description: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                     placeholder="Descripción del ítem o bulto…"
                   />
@@ -102,7 +103,7 @@ const ItemsBulkForm: React.FC = () => {
                     min="1"
                     value={item.quantity}
                     onChange={(e) =>
-                      updateItem(item.id, 'quantity', Number.parseInt(e.target.value, 10) || 1)
+                      updateItem(item.id, { quantity: Number.parseInt(e.target.value, 10) || 1 })
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                   />
@@ -112,7 +113,7 @@ const ItemsBulkForm: React.FC = () => {
                   <label className="block text-sm font-medium text-text-primary mb-2">Unidad</label>
                   <select
                     value={item.unit}
-                    onChange={(e) => updateItem(item.id, 'unit', e.target.value)}
+                    onChange={(e) => updateItem(item.id, { unit: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                   >
                     <option value="unidad">Unidad</option>
@@ -132,7 +133,7 @@ const ItemsBulkForm: React.FC = () => {
                     step="0.1"
                     value={item.weight ?? ''}
                     onChange={(e) =>
-                      updateItem(item.id, 'weight', Number.parseFloat(e.target.value) || undefined)
+                      updateItem(item.id, { weight: Number.parseFloat(e.target.value) || undefined })
                     }
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                     placeholder="Peso opcional…"
@@ -144,7 +145,7 @@ const ItemsBulkForm: React.FC = () => {
                   <input
                     type="text"
                     value={item.dimensions ?? ''}
-                    onChange={(e) => updateItem(item.id, 'dimensions', e.target.value)}
+                    onChange={(e) => updateItem(item.id, { dimensions: e.target.value })}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                     placeholder="Ej: 50x30x20 cm"
                   />
@@ -156,7 +157,7 @@ const ItemsBulkForm: React.FC = () => {
                   </label>
                   <textarea
                     value={item.notes ?? ''}
-                    onChange={(e) => updateItem(item.id, 'notes', e.target.value)}
+                    onChange={(e) => updateItem(item.id, { notes: e.target.value })}
                     rows={2}
                     className="w-full resize-none rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-primary"
                     placeholder="Información adicional sobre este ítem…"

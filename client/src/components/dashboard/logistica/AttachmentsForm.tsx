@@ -1,39 +1,69 @@
 import React, { useState, useRef } from 'react';
 import { CloudArrowUpIcon, DocumentIcon, XMarkIcon } from '../../icons/HeroiconsOutline';
 
-interface AttachedFile {
-  id: string;
-  name: string;
-  size: number;
-  type: string;
-  file: File;
+interface AttachmentsFormProps {
+  files: File[];
+  onFilesChange: (files: File[]) => void;
 }
 
-const AttachmentsForm: React.FC = () => {
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
+const allowedTypes = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+];
+
+const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+const formatFileSize = (bytes: number): string => {
+  if (!Number.isFinite(bytes) || bytes <= 0) {
+    return '0 Bytes';
+  }
+  const k = 1024;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+};
+
+const validateFile = (file: File): string | null => {
+  if (!allowedTypes.includes(file.type)) {
+    return 'Tipo de archivo no permitido';
+  }
+  if (file.size > maxFileSize) {
+    return 'El archivo excede el tamaño máximo de 10MB';
+  }
+  return null;
+};
+
+const AttachmentsForm: React.FC<AttachmentsFormProps> = ({ files, onFilesChange }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const formatFileSize = (bytes: number): string => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
+  const handleFileSelect = (fileList: FileList | null) => {
+    if (!fileList) return;
 
-  const handleFileSelect = (files: FileList | null) => {
-    if (!files) return;
+    const validFiles: File[] = [];
+    const errors: string[] = [];
 
-    const newFiles: AttachedFile[] = Array.from(files).map(file => ({
-      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      name: file.name,
-      size: file.size,
-      type: file.type,
-      file
-    }));
+    Array.from(fileList).forEach((file) => {
+      const error = validateFile(file);
+      if (error) {
+        errors.push(`${file.name}: ${error}`);
+      } else {
+        validFiles.push(file);
+      }
+    });
 
-    setAttachedFiles(prev => [...prev, ...newFiles]);
+    if (errors.length > 0) {
+      alert('Errores en los archivos:\n' + errors.join('\n'));
+    }
+
+    if (validFiles.length > 0) {
+      onFilesChange([...files, ...validFiles]);
+    }
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -54,10 +84,13 @@ const AttachmentsForm: React.FC = () => {
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleFileSelect(e.target.files);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
   };
 
-  const removeFile = (id: string) => {
-    setAttachedFiles(prev => prev.filter(file => file.id !== id));
+  const removeFile = (index: number) => {
+    onFilesChange(files.filter((_, i) => i !== index));
   };
 
   const openFileDialog = () => {
@@ -100,14 +133,14 @@ const AttachmentsForm: React.FC = () => {
         />
       </div>
 
-      {attachedFiles.length > 0 && (
+      {files.length > 0 && (
         <div className="mt-6 space-y-2">
           <h4 className="text-sm font-medium text-text-primary">
-            Archivos adjuntos ({attachedFiles.length})
+            Archivos adjuntos ({files.length})
           </h4>
-          {attachedFiles.map((file) => (
+          {files.map((file, index) => (
             <div
-              key={file.id}
+              key={`${file.name}-${file.size}-${file.lastModified}-${index}`}
               className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 p-3"
             >
               <div className="flex items-center space-x-3">
@@ -119,7 +152,7 @@ const AttachmentsForm: React.FC = () => {
               </div>
               <button
                 type="button"
-                onClick={() => removeFile(file.id)}
+                onClick={() => removeFile(index)}
                 className="text-danger hover:text-red-700 transition-colors"
                 aria-label={`Eliminar ${file.name}`}
               >

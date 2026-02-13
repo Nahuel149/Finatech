@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { XMarkIcon } from '../../icons/HeroiconsOutline';
 import MovementDataForm, { type LogisticsMovementDraft } from './MovementDataForm';
 import AssociationsDocumentsForm from './AssociationsDocumentsForm';
-import ItemsBulkForm from './ItemsBulkForm';
+import ItemsBulkForm, { type LogisticsMovementItemDraft } from './ItemsBulkForm';
 import AttachmentsForm from './AttachmentsForm';
 import CompletionConfirmationModal from './CompletionConfirmationModal';
 import { devLog } from '../../../utils/devLogger';
@@ -19,7 +19,13 @@ const buildLocalDatetimeInputValue = (date = new Date()) => {
   return new Date(date.getTime() - tzOffsetMs).toISOString().slice(0, 16);
 };
 
-const buildInitialMovementData = (): LogisticsMovementDraft => ({
+type NewMovementDraft = LogisticsMovementDraft & {
+  contact: string;
+  linkedOperation: string;
+  items: LogisticsMovementItemDraft[];
+};
+
+const buildInitialMovementData = (): NewMovementDraft => ({
   // UI defaults to "Entrega" visually, so keep the payload aligned to avoid 400s
   // when the user submits without re-selecting the type.
   type: 'entrega',
@@ -29,11 +35,15 @@ const buildInitialMovementData = (): LogisticsMovementDraft => ({
   responsible: '',
   datetime: buildLocalDatetimeInputValue(),
   reference: '',
+  contact: '',
+  linkedOperation: '',
+  items: [],
 });
 
 const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [movementData, setMovementData] = useState<LogisticsMovementDraft>(buildInitialMovementData);
+  const [movementData, setMovementData] = useState<NewMovementDraft>(buildInitialMovementData);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -64,6 +74,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
       setSaveError(null);
       setSubmitError(null);
       setSubmitting(false);
+      setAttachmentFiles([]);
 
       // Restore draft if present (useful after a refresh).
       try {
@@ -72,7 +83,7 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
           const parsed = JSON.parse(rawDraft);
           const restored = parsed?.data || parsed;
           if (restored && typeof restored === 'object') {
-            setMovementData({ ...buildInitialMovementData(), ...(restored as LogisticsMovementDraft) });
+            setMovementData({ ...buildInitialMovementData(), ...(restored as NewMovementDraft) });
             setSaveMessage('Borrador recuperado.');
           }
         } else {
@@ -121,12 +132,44 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
   const handleConfirmRegistration = async () => {
     setSubmitting(true);
     try {
-      await apiRequest('/api/logistics/operations', {
-        method: 'POST',
-        body: movementData,
-      });
+      const metadata: Record<string, string> = {};
+      if (movementData.linkedOperation.trim()) {
+        metadata.linkedOperation = movementData.linkedOperation.trim();
+      }
+      if (movementData.items.length > 0) {
+        metadata.items = JSON.stringify(movementData.items);
+      }
+
+      const createPayload = {
+        type: movementData.type,
+        state: movementData.state,
+        origin: movementData.origin,
+        destination: movementData.destination,
+        responsible: movementData.responsible,
+        datetime: movementData.datetime,
+        contact: movementData.contact,
+        notes: movementData.reference,
+        metadata: Object.keys(metadata).length ? metadata : undefined,
+      };
+
+      if (attachmentFiles.length > 0) {
+        const body = new FormData();
+        body.append('payload', JSON.stringify(createPayload));
+        attachmentFiles.forEach((file) => body.append('files', file));
+        await apiRequest('/api/logistics/operations', {
+          method: 'POST',
+          body,
+        });
+      } else {
+        await apiRequest('/api/logistics/operations', {
+          method: 'POST',
+          body: createPayload,
+        });
+      }
+
       localStorage.removeItem('logisticsMovementDraft');
       setMovementData(buildInitialMovementData());
+      setAttachmentFiles([]);
       setSubmitError(null);
       setShowConfirmation(false);
       onClose();
@@ -191,9 +234,21 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
                     onChange={setMovementData}
                   />
                   <div className="space-y-8">
-                    <AssociationsDocumentsForm />
-                    <ItemsBulkForm />
-                    <AttachmentsForm />
+                    <AssociationsDocumentsForm
+                      value={{ contact: movementData.contact, linkedOperation: movementData.linkedOperation }}
+                      onChange={(updates) =>
+                        setMovementData((prev) => ({
+                          ...prev,
+                          contact: updates.contact ?? prev.contact,
+                          linkedOperation: updates.linkedOperation ?? prev.linkedOperation,
+                        }))
+                      }
+                    />
+                    <ItemsBulkForm
+                      items={movementData.items}
+                      onItemsChange={(items) => setMovementData((prev) => ({ ...prev, items }))}
+                    />
+                    <AttachmentsForm files={attachmentFiles} onFilesChange={setAttachmentFiles} />
                   </div>
                 </div>
               </div>

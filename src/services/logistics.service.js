@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const LogisticsOperation = require('../models/LogisticsOperation');
+const { storeLogisticsOperationAttachments } = require('../utils/logisticsOperationAttachmentStorage');
 
 const OPERATION_TYPE_MAP = {
   entrega: 'Entrega',
@@ -280,7 +281,7 @@ const getOperationById = async (idOrCode) => {
   return operation ? mapOperationToDto(operation) : null;
 };
 
-const createOperation = async (payload = {}) => {
+const createOperation = async (payload = {}, files = []) => {
   const normalizedType = normalizeOperationType(payload.type);
   if (!normalizedType) {
     const error = new Error('Tipo de operación inválido');
@@ -307,11 +308,28 @@ const createOperation = async (payload = {}) => {
     .map((value) => (typeof value === 'string' ? value.trim() : ''))
     .find(Boolean);
 
-  const metadata = note
-    ? new Map([['note', note]])
-    : payload.metadata instanceof Map
-    ? payload.metadata
-    : payload.metadata || undefined;
+  const buildMetadata = () => {
+    const metadataMap = new Map();
+    if (payload.metadata instanceof Map) {
+      payload.metadata.forEach((value, key) => {
+        if (value !== undefined && value !== null) {
+          metadataMap.set(String(key), String(value));
+        }
+      });
+    } else if (payload.metadata && typeof payload.metadata === 'object') {
+      Object.entries(payload.metadata).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          metadataMap.set(String(key), String(value));
+        }
+      });
+    }
+    if (note) {
+      metadataMap.set('note', note);
+    }
+    return metadataMap.size ? metadataMap : undefined;
+  };
+
+  const metadata = buildMetadata();
 
   let amount;
   if (payload.amount) {
@@ -354,6 +372,14 @@ const createOperation = async (payload = {}) => {
     timeline: Array.isArray(payload.timeline) ? payload.timeline : undefined,
     metadata,
   });
+
+  if (Array.isArray(files) && files.length) {
+    const storedAttachments = await storeLogisticsOperationAttachments(operation._id.toString(), files);
+    if (storedAttachments.length) {
+      operation.attachments = [...(operation.attachments || []), ...storedAttachments];
+      await operation.save();
+    }
+  }
 
   return mapOperationToDto(operation);
 };

@@ -16,42 +16,96 @@ interface MovementDetailPageProps {
   movementId?: string;
 }
 
-const mapOperationToMovement = (operation: LogisticsOperationRecord) => ({
-  id: operation.operationCode || operation.id,
-  type: operation.type,
-  date: operation.datetime,
-  responsible: operation.responsible || 'Sin responsable',
-  contact: operation.contact,
-  reference: operation.route,
-  status: operation.state,
-  origin: operation.origin,
-  destination: operation.destination,
-  currency: operation.amount?.currency,
-  totalAmount: operation.amount?.value ?? null,
-  timeline: (operation.timeline || []).map((step, index) => ({
-    id: `${operation.id}-timeline-${index}`,
-    title: step.label,
-    description: step.status === 'pending' ? 'Pendiente de ejecución' : null,
-    date: step.timestamp ? new Date(step.timestamp).toISOString() : null,
-    user: step.author || null,
-    type: step.status,
-  })),
-  associatedItems: [],
-  attachments: (operation.attachments || []).map((attachment, index) => ({
-    id: `${operation.id}-attachment-${index}`,
-    name: attachment.name || 'Adjunto',
-    type: attachment.type || attachment.icon || 'documento',
-    size: attachment.size ?? null,
-    url: attachment.url || null,
-  })),
-  audit: {
-    createdBy: operation.responsible || null,
-    createdAt: operation.createdAt || null,
-    lastModifiedBy: operation.responsible || null,
-    lastModifiedAt: operation.updatedAt || null,
-    ipAddress: null,
-  },
-});
+const mapOperationToMovement = (operation: LogisticsOperationRecord) => {
+  const metadata = operation.metadata || {};
+  const linkedOperation =
+    typeof metadata?.linkedOperation === 'string'
+      ? metadata.linkedOperation
+      : typeof metadata?.relatedOperation === 'string'
+      ? metadata.relatedOperation
+      : null;
+
+  let associatedItems: Array<{
+    id: string;
+    description: string;
+    identifier: string;
+    quantity: number;
+    unit: string;
+  }> = [];
+
+  const rawItems = typeof metadata?.items === 'string' ? metadata.items : null;
+  if (rawItems) {
+    try {
+      const parsed = JSON.parse(rawItems);
+      if (Array.isArray(parsed)) {
+        associatedItems = parsed
+          .filter((item: any) => item && typeof item.description === 'string')
+          .map((item: any, index: number) => ({
+            id: String(item.id || `item-${index}`),
+            description: item.description,
+            identifier: String(item.id || ''),
+            quantity: typeof item.quantity === 'number' ? item.quantity : Number(item.quantity) || 0,
+            unit: String(item.unit || 'unidad'),
+          }));
+      }
+    } catch {
+      // Ignore malformed items metadata.
+    }
+  }
+
+  return {
+    id: operation.operationCode || operation.id,
+    type: operation.type,
+    date: operation.datetime,
+    responsible: operation.responsible || 'Sin responsable',
+    contact: operation.contact,
+    reference: operation.route,
+    status: operation.state,
+    origin: operation.origin,
+    destination: operation.destination,
+    currency: operation.amount?.currency,
+    totalAmount: operation.amount?.value ?? null,
+    linkedOperation: linkedOperation || undefined,
+    timeline: (operation.timeline || []).map((step, index) => ({
+      id: `${operation.id}-timeline-${index}`,
+      title: step.label,
+      description: step.status === 'pending' ? 'Pendiente de ejecución' : null,
+      date: step.timestamp ? new Date(step.timestamp).toISOString() : null,
+      user: step.author || null,
+      type: step.status,
+    })),
+    associatedItems,
+    attachments: (operation.attachments || []).map((attachment, index) => {
+      const iconOrType = String(attachment.type || attachment.icon || '').toLowerCase();
+      const derivedType = iconOrType.includes('pdf')
+        ? 'PDF'
+        : iconOrType.includes('image')
+        ? 'IMG'
+        : iconOrType.includes('excel')
+        ? 'XLS'
+        : iconOrType.includes('word')
+        ? 'DOC'
+        : iconOrType
+        ? iconOrType
+        : 'DOC';
+
+      return {
+        id: `${operation.id}-attachment-${index}`,
+        name: attachment.name || 'Adjunto',
+        type: derivedType,
+        size: attachment.size ?? null,
+        url: attachment.url || null,
+      };
+    }),
+    audit: {
+      createdBy: operation.responsible || null,
+      createdAt: operation.createdAt || null,
+      lastModifiedBy: operation.responsible || null,
+      lastModifiedAt: operation.updatedAt || null,
+      ipAddress: null,
+    },
+  };
+};
 
 export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movementId: propMovementId }) => {
   const { movementId: paramMovementId } = useParams<{ movementId: string }>();
