@@ -62,7 +62,8 @@ export const LogisticaPanel: React.FC = () => {
   const searchDebounceRef = useRef<number | null>(null);
 
   const [isNewMovementModalOpen, setIsNewMovementModalOpen] = useState(false);
-  const [activeView, setActiveView] = useState<'overview' | 'my-orders'>('my-orders');
+  // Default to the operational panel when entering Logistica.
+  const [activeView, setActiveView] = useState<'overview' | 'my-orders'>('overview');
 
   const selectedOperationIdSet = useMemo(
     () => new Set(selectedOperations),
@@ -404,21 +405,21 @@ export const LogisticaPanel: React.FC = () => {
               <div className="inline-flex rounded-full border border-gray-200 bg-white p-1">
                 <button
                   type="button"
-                  onClick={() => setActiveView('my-orders')}
-                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
-                    activeView === 'my-orders' ? 'bg-primary text-white shadow' : 'text-gray-600'
-                  }`}
-                >
-                  Mis órdenes
-                </button>
-                <button
-                  type="button"
                   onClick={() => setActiveView('overview')}
                   className={`px-3 py-1 text-xs font-semibold rounded-full ${
                     activeView === 'overview' ? 'bg-primary text-white shadow' : 'text-gray-600'
                   }`}
                 >
                   Panel operativo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setActiveView('my-orders')}
+                  className={`px-3 py-1 text-xs font-semibold rounded-full ${
+                    activeView === 'my-orders' ? 'bg-primary text-white shadow' : 'text-gray-600'
+                  }`}
+                >
+                  Mis órdenes
                 </button>
               </div>
               {activeView === 'overview' && (
