@@ -97,20 +97,6 @@ export const TwoFactorModal: React.FC<TwoFactorModalProps> = ({
               </button>
             </div>
           </form>
-
-          {/* Help Text */}
-          <div className="mt-4 text-center">
-            <p className="text-xs text-gray-500">
-              ¿No tenés acceso a tu aplicación de autenticación?{' '}
-              <button 
-                type="button"
-                className="text-primary hover:underline"
-                onClick={() => {/* Handle recovery */}}
-              >
-                Usar código de recuperación
-              </button>
-            </p>
-          </div>
         </div>
       </div>
     </div>
