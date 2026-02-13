@@ -27,6 +27,11 @@ const STATUS_CONFIG: Record<
     badgeClass: 'bg-yellow-100 text-yellow-800',
     iconClass: 'fa-regular fa-clock',
   },
+  'en-curso': {
+    label: 'En curso',
+    badgeClass: 'bg-blue-100 text-blue-800',
+    iconClass: 'fa-solid fa-clock',
+  },
   'en-progreso': {
     label: 'En curso',
     badgeClass: 'bg-blue-100 text-blue-800',

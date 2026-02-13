@@ -14,12 +14,16 @@ interface NewMovementModalProps {
   onClose: () => void;
 }
 
+const buildInitialMovementData = () => ({
+  // UI defaults to "Entrega" visually, so keep the payload aligned to avoid 400s
+  // when the user submits without re-selecting the type.
+  type: 'entrega',
+  reference: '',
+});
+
 const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) => {
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [movementData, setMovementData] = useState({
-    type: '',
-    reference: ''
-  });
+  const [movementData, setMovementData] = useState(buildInitialMovementData);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
@@ -30,6 +34,19 @@ const NewMovementModal: React.FC<NewMovementModalProps> = ({ isOpen, onClose }) 
   useEffect(() => {
     // Habilitar animación de entrada solo cuando el modal está abierto
     setMounted(isOpen);
+
+    // Prevent nested confirmation modal state from leaking across openings.
+    setShowConfirmation(false);
+
+    if (isOpen) {
+      // UI defaults to "Entrega" visually; ensure payload has a type even if the user doesn't click it.
+      setMovementData((prev) => (prev.type ? prev : buildInitialMovementData()));
+      setSaveMessage(null);
+      setSaveError(null);
+      setSubmitError(null);
+      setSubmitting(false);
+    }
+
     return () => setMounted(false);
   }, [isOpen]);
 

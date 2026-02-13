@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { IncidentGeneralInfoForm } from './IncidentGeneralInfoForm';
 import { IncidentAssociationsForm } from './IncidentAssociationsForm';
@@ -11,6 +11,41 @@ interface IncidentRegistrationModalProps {
   onClose: () => void;
   movementId: string;
 }
+
+const buildDraftStorageKey = (movementId: string) => `logisticsIncidentDraft:${movementId}`;
+
+const mapSeverityToApi = (severity: IncidentFormData['severity']) => {
+  switch (severity) {
+    case 'low':
+      return 'baja';
+    case 'high':
+      return 'alta';
+    case 'medium':
+    default:
+      return 'media';
+  }
+};
+
+const buildIncidentPayload = (formData: IncidentFormData) => {
+  const { otherDescription, ...impactFlags } = formData.operationalImpact || ({} as IncidentFormData['operationalImpact']);
+
+  const operationalImpacts = Object.entries(impactFlags)
+    .filter(([, value]) => Boolean(value))
+    .map(([key]) => key);
+
+  const normalizedOtherDescription = typeof otherDescription === 'string' ? otherDescription.trim() : '';
+  const extraOther = impactFlags.other && normalizedOtherDescription ? `\n\nOtro impacto: ${normalizedOtherDescription}` : '';
+
+  return {
+    ...formData,
+    severity: mapSeverityToApi(formData.severity),
+    description: `${formData.description || ''}`.trim() + extraOther,
+    // Backend reads this first; send a clean list (avoid otherDescription leaking via operationalImpact object).
+    operationalImpacts,
+    // Keep the boolean flags only.
+    operationalImpact: impactFlags,
+  };
+};
 
 export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps> = ({
   isOpen,
@@ -39,6 +74,29 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [draftMessage, setDraftMessage] = useState<string | null>(null);
 
+  useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
+    const key = buildDraftStorageKey(movementId);
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed?.data) {
+        setFormData(parsed.data as IncidentFormData);
+        setDraftMessage('Borrador recuperado.');
+        setSubmitError(null);
+      }
+    } catch {
+      // Ignore draft parse errors.
+    }
+  }, [isOpen, movementId]);
+
   const handleFormDataChange = (updates: Partial<IncidentFormData>) => {
     setFormData(prev => ({ ...prev, ...updates }));
   };
@@ -48,13 +106,16 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
     navigate(`/dashboard/logistica/movimiento/${movementId}`);
   };
 
-  const handleSaveDraft = async () => {
+  const handleSaveDraft = () => {
     try {
-      await apiRequest('/api/logistics/incidents', {
-        method: 'POST',
-        body: { movementId, data: formData, status: 'draft' },
-      });
-      setDraftMessage('Borrador guardado.');
+      const key = buildDraftStorageKey(movementId);
+      const payload = {
+        movementId,
+        savedAt: new Date().toISOString(),
+        data: formData,
+      };
+      localStorage.setItem(key, JSON.stringify(payload));
+      setDraftMessage('Borrador guardado localmente.');
       setSubmitError(null);
     } catch (error) {
       console.error('Error saving draft:', error);
@@ -67,9 +128,11 @@ export const IncidentRegistrationModal: React.FC<IncidentRegistrationModalProps>
     try {
       await apiRequest('/api/logistics/incidents', {
         method: 'POST',
-        body: { movementId, data: formData, status: 'open' },
+        body: { movementId, data: buildIncidentPayload(formData), status: 'en-proceso' },
       });
+      localStorage.removeItem(buildDraftStorageKey(movementId));
       setSubmitError(null);
+      setDraftMessage(null);
       handleClose();
     } catch (error) {
       console.error('Error registering incident:', error);
