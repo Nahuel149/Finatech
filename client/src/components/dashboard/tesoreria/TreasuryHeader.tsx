@@ -6,13 +6,11 @@ import { useUserPermissions } from '../../../hooks/useUserPermissions';
 interface Props {
   onRegisterMovement: () => void;
   onOpenConciliation: () => void;
-  onOpenSettings: () => void;
 }
 
 export const TreasuryHeader: React.FC<Props> = ({
   onRegisterMovement,
   onOpenConciliation,
-  onOpenSettings,
 }) => {
   const { permissions, loading, refresh } = useUserPermissions();
   useEffect(() => {
@@ -55,15 +53,6 @@ export const TreasuryHeader: React.FC<Props> = ({
               Recepciones pendientes
             </Button>
           </Link>
-          <Button
-            variant="outline"
-            size="md"
-            onClick={onOpenSettings}
-            icon="fa-solid fa-cog"
-            className="hidden md:inline-flex font-medium"
-          >
-            Configuración
-          </Button>
           <Button
             variant="outline"
             size="md"

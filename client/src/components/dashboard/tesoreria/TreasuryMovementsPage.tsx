@@ -205,13 +205,6 @@ export const TreasuryMovementsPage: React.FC = () => {
     navigate(`/dashboard/tesoreria/saldos?account=${balanceId}`);
   }, [navigate]);
 
-  const handleOpenSettings = useCallback(() => {
-    showToast({
-      type: 'info',
-      message: 'Configuración de Tesorería disponible próximamente.',
-    });
-  }, [showToast]);
-
   const handleOpenMovementDetail = useCallback((movement: TreasuryMovement) => {
     if (!movement.id) return;
     navigate(`/dashboard/tesoreria/movimientos/${movement.id}`);
@@ -335,7 +328,6 @@ export const TreasuryMovementsPage: React.FC = () => {
         <TreasuryHeader
           onRegisterMovement={handleRegisterMovement}
           onOpenConciliation={handleOpenConciliation}
-          onOpenSettings={handleOpenSettings}
         />
 
         <TreasuryFilters

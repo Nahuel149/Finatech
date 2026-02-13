@@ -13,14 +13,18 @@ export const validatePasswordRequirements = (password: string): PasswordRequirem
     hasUppercase: /[A-Z]/.test(password),
     hasLowercase: /[a-z]/.test(password),
     hasNumber: /\d/.test(password),
-    hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
   };
 };
 
 // Check if password meets all requirements
 export const isPasswordValid = (password: string): boolean => {
   const requirements = validatePasswordRequirements(password);
-  return Object.values(requirements).every(Boolean);
+  return (
+    requirements.minLength &&
+    requirements.hasUppercase &&
+    requirements.hasLowercase &&
+    requirements.hasNumber
+  );
 };
 
 // Full name validation

@@ -56,6 +56,10 @@ app.get('/api/health', (_req, res) => {
 
 // Public API routes (no CSRF protection needed)
 app.get('/api/config', (_req, res) => {
+  const defaultLocationIqTilesUrl = process.env.LOCATIONIQ_TILE_API_KEY
+    ? 'https://{s}-tiles.locationiq.com/v3/streets/r/{z}/{x}/{y}.png'
+    : null;
+
   res.json({
     googleClientId: process.env.GOOGLE_CLIENT_ID || null,
     googleMapsEnabled: Boolean(process.env.GOOGLE_MAPS_API_KEY),
@@ -64,7 +68,7 @@ app.get('/api/config', (_req, res) => {
     locationIqCountryCodes: process.env.LOCATIONIQ_COUNTRY_CODES || 'ar',
     locationIqBaseTilesUrl:
       process.env.LOCATIONIQ_BASE_TILES_URL ||
-      'https://{s}.locationiq.com/v3/streets/r/{z}/{x}/{y}.png',
+      defaultLocationIqTilesUrl,
   });
 });
 

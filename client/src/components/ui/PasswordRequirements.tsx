@@ -15,7 +15,6 @@ export const PasswordRequirements: React.FC<PasswordRequirementsProps> = ({
     { key: 'hasUppercase', label: 'Al menos una mayúscula', met: requirements.hasUppercase },
     { key: 'hasLowercase', label: 'Al menos una minúscula', met: requirements.hasLowercase },
     { key: 'hasNumber', label: 'Al menos un número', met: requirements.hasNumber },
-    { key: 'hasSpecialChar', label: 'Al menos un carácter especial', met: requirements.hasSpecialChar },
   ];
 
   return (
