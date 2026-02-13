@@ -12,6 +12,7 @@ import { TreasuryBalanceState, TreasuryGlobalBalanceRow, TreasuryGlobalBalancesO
 import { useGlobalBalancesOverview } from '../../../../hooks/dashboard/useGlobalBalancesOverview';
 import { Footer } from '../../operaciones/Footer';
 import { RecentOperationsTable } from '../../operaciones/RecentOperationsTable';
+import { formatTreasuryAccountLabel } from '../../../../utils/treasuryAccountLabels';
 
 type ToastType = 'success' | 'info' | 'warning' | 'error';
 
@@ -88,14 +89,8 @@ const contactTypeLabel = (type: string) => {
   return type;
 };
 
-const accountLabel = (key?: string, optionLabel?: string) => {
-  if (optionLabel) return optionLabel;
-  const normalized = (key || '').toLowerCase();
-  if (normalized === 'cash') return 'Efectivo';
-  if (normalized === 'transfers') return 'Transferencias';
-  if (normalized === 'usd' || normalized === 'cash_usd') return 'Caja (USD)';
-  return key || '';
-};
+const accountLabel = (key?: string, optionLabel?: string) =>
+  formatTreasuryAccountLabel({ key, optionLabel });
 
 const formatDate = (iso?: string | null) => {
   if (!iso) return '';

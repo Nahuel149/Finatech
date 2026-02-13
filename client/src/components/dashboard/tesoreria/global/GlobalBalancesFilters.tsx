@@ -1,5 +1,6 @@
 import React from 'react';
 import { TreasuryGlobalBalancesFilters, TreasuryBalanceState } from '../../../../types/treasury';
+import { formatTreasuryAccountLabel } from '../../../../utils/treasuryAccountLabels';
 
 export interface FilterValues {
   currency: string;
@@ -92,7 +93,7 @@ export const GlobalBalancesFilters: React.FC<Props> = ({
           <option value="">Todos los tipos</option>
           {options.accountKeys.map((option) => (
             <option key={option.value} value={option.value}>
-              {option.label}
+              {formatTreasuryAccountLabel({ key: option.value, optionLabel: option.label })}
             </option>
           ))}
         </select>
