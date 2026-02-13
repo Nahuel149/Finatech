@@ -74,11 +74,12 @@ export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movement
   };
 
   const handleConfirmCompletion = async () => {
-    if (!movementId) return;
+    const operationId = operation?.id || movementId;
+    if (!operationId) return;
     try {
       setUpdating(true);
       setActionError(null);
-      await api.updateLogisticsOperationState(movementId, { state: 'completado' });
+      await api.updateLogisticsOperationState(operationId, { state: 'completado' });
       await refresh();
     } catch (err) {
       setActionError(handleApiError(err));
@@ -98,11 +99,12 @@ export const MovementDetailPage: React.FC<MovementDetailPageProps> = ({ movement
   };
 
   const handleCancelMovement = async () => {
-    if (!movementId) return;
+    const operationId = operation?.id || movementId;
+    if (!operationId) return;
     try {
       setUpdating(true);
       setActionError(null);
-      await api.updateLogisticsOperationState(movementId, { state: 'anulado' });
+      await api.updateLogisticsOperationState(operationId, { state: 'anulado' });
       await refresh();
     } catch (err) {
       setActionError(handleApiError(err));

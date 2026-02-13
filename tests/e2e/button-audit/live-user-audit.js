@@ -6,6 +6,11 @@ const { chromium } = require('@playwright/test');
 const BASE_URL = process.env.LIVE_AUDIT_BASE_URL || 'http://localhost:3000';
 const EMAIL = process.env.LIVE_AUDIT_EMAIL;
 const PASSWORD = process.env.LIVE_AUDIT_PASSWORD;
+const CREATE_OPERATION = /^(1|true|yes)$/i.test(process.env.LIVE_AUDIT_CREATE_OPERATION || '');
+const CREATE_LOGISTICS_OPERATION = /^(1|true|yes)$/i.test(
+  process.env.LIVE_AUDIT_CREATE_LOGISTICS_OPERATION || process.env.LIVE_AUDIT_CREATE_LOGISTICS || ''
+);
+const CREATE_LOGISTICS_INCIDENT = /^(1|true|yes)$/i.test(process.env.LIVE_AUDIT_CREATE_LOGISTICS_INCIDENT || '');
 
 const ROUTES = [
   '/dashboard',
@@ -157,6 +162,41 @@ const setupPageInstrumentation = (page) => {
   return { result, dispose };
 };
 
+const computeEntryStatus = (entry, { failOnApi4xx = false } = {}) => {
+  const hasAuthError =
+    entry.findings?.includes('authentication_required') || entry.findings?.includes('redirected_to_login');
+  const hasApi401 = entry.apiHttpErrors?.some((err) => err.status === 401);
+  const hasApi4xx = failOnApi4xx
+    ? entry.apiHttpErrors?.some((err) => err.status >= 400 && err.status < 500)
+    : false;
+  const hasApi500 = entry.apiHttpErrors?.some((err) => err.status >= 500);
+  const hasPageError = (entry.pageErrors || []).length > 0;
+  const hasRequestFailures = (entry.requestFailures || []).some(
+    (req) =>
+      req.tag === 'internal' &&
+      req.errorText &&
+      !req.errorText.includes('net::ERR_ABORTED'),
+  );
+  const hasAppConsoleErrors = (entry.consoleErrors || []).some((err) => err.tag === 'app');
+
+  const status = hasAuthError || hasApi401 || hasApi4xx || hasApi500 || hasPageError || hasRequestFailures || hasAppConsoleErrors
+    ? 'failed'
+    : 'passed';
+
+  return {
+    status,
+    checks: {
+      hasAuthError,
+      hasApi401,
+      hasApi4xx,
+      hasApi500,
+      hasPageError,
+      hasRequestFailures,
+      hasAppConsoleErrors,
+    },
+  };
+};
+
 const login = async (page) => {
   await page.goto(`${BASE_URL}/login`, { waitUntil: 'domcontentloaded', timeout: ROUTE_TIMEOUT_MS });
   await page.locator('input#email').fill(EMAIL);
@@ -168,6 +208,342 @@ const login = async (page) => {
   if (page.url().includes('/login')) {
     const err = normalizeText(await page.locator('body').innerText().catch(() => ''));
     throw new Error(`Login failed (still on /login). Visible text: ${err.slice(0, 240)}`);
+  }
+};
+
+const runCreateOperationFlow = async (page) => {
+  const { result: instrumentation, dispose } = setupPageInstrumentation(page);
+  const flowEntry = {
+    flow: 'create_operation',
+    status: 'unknown',
+    finalUrl: null,
+    draftId: null,
+    findings: [],
+    apiHttpErrors: [],
+    requestFailures: [],
+    pageErrors: [],
+    consoleErrors: [],
+    error: null,
+  };
+
+  const parseDraftIdFromUrl = (url) => {
+    try {
+      const parsed = new URL(url);
+      return parsed.searchParams.get('draftId');
+    } catch {
+      return null;
+    }
+  };
+
+  try {
+    // STEP 1
+    await page.goto(`${BASE_URL}/dashboard/operaciones/nueva`, { waitUntil: 'domcontentloaded', timeout: ROUTE_TIMEOUT_MS });
+    await page.waitForLoadState('networkidle', { timeout: ROUTE_TIMEOUT_MS }).catch(() => undefined);
+
+    const clientInput = page.locator('#client-selection input[placeholder="Buscar por nombre o CUIT"]').first();
+    await clientInput.waitFor({ state: 'visible', timeout: 20000 });
+    await clientInput.click({ timeout: 8000 });
+
+    const firstClientOption = page.locator('#client-selection button[data-index="0"]').first();
+    await firstClientOption.waitFor({ state: 'visible', timeout: 20000 });
+    await firstClientOption.click({ timeout: 8000 }).catch(async () => {
+      await firstClientOption.click({ timeout: 8000, force: true });
+    });
+
+    const step1Continue = page.locator('#step-1-actions').getByRole('button', { name: /Continuar/i }).first();
+    await step1Continue.waitFor({ state: 'visible', timeout: 30000 });
+    await step1Continue.click({ timeout: 8000 }).catch(async () => {
+      await step1Continue.click({ timeout: 8000, force: true });
+    });
+
+    // React Router navigation can be "same-document" and never fire a full load event.
+    // Rely on step-specific DOM instead of waitForURL(load).
+    await page.locator('#step-2-settlement').waitFor({ state: 'visible', timeout: ROUTE_TIMEOUT_MS });
+
+    // STEP 2
+    const step2Continue = page.locator('#step-1-actions').getByRole('button', { name: /Continuar/i }).first();
+    await step2Continue.waitFor({ state: 'visible', timeout: 30000 });
+    await step2Continue.click({ timeout: 8000 }).catch(async () => {
+      await step2Continue.click({ timeout: 8000, force: true });
+    });
+
+    await page.locator('#final-validation').waitFor({ state: 'visible', timeout: ROUTE_TIMEOUT_MS });
+
+    const draftId = parseDraftIdFromUrl(page.url());
+    flowEntry.draftId = draftId;
+
+    // STEP 3
+    const confirmButton = page.getByRole('button', { name: /Confirmar operaciÃ³n|Confirmar operación/i }).first();
+    await confirmButton.waitFor({ state: 'visible', timeout: 20000 });
+    await confirmButton.click({ timeout: 8000 }).catch(async () => {
+      await confirmButton.click({ timeout: 8000, force: true });
+    });
+
+    const successCard = page.locator('#success-card');
+    await successCard.waitFor({ state: 'visible', timeout: ROUTE_TIMEOUT_MS });
+
+    // From success state, verify we can route to Tesoreria prefill modal and close it.
+    const treasuryCta = page.getByRole('button', { name: /Ir a carga de tesoreria|Ir a carga de tesorerÃ­a/i }).first();
+    if (await isVisible(treasuryCta)) {
+      await treasuryCta.click({ timeout: 8000 }).catch(async () => {
+        await treasuryCta.click({ timeout: 8000, force: true });
+      });
+      await page.waitForURL(/\/dashboard\/tesoreria/, { timeout: 20000 }).catch(() => undefined);
+      const modal = page.locator('.modal-overlay').first();
+      await modal.waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
+      await clickIfVisible(modal.getByRole('button', { name: /Cancelar|Cerrar/i }).first());
+      await modal.waitFor({ state: 'hidden', timeout: 20000 }).catch(() => undefined);
+    }
+
+    // Go to detail page (without voiding), to validate the detail route loads.
+    if (draftId) {
+      await page.goto(`${BASE_URL}/dashboard/operaciones/detalle/${draftId}`, {
+        waitUntil: 'domcontentloaded',
+        timeout: ROUTE_TIMEOUT_MS,
+      });
+      await page.waitForLoadState('networkidle', { timeout: ROUTE_TIMEOUT_MS }).catch(() => undefined);
+    }
+
+    const findings = await collectAuthOrLoadErrors(page);
+
+    Object.assign(flowEntry, instrumentation, {
+      finalUrl: page.url(),
+      findings,
+    });
+
+    const { status } = computeEntryStatus(flowEntry, { failOnApi4xx: true });
+    flowEntry.status = status;
+    return flowEntry;
+  } catch (error) {
+    Object.assign(flowEntry, instrumentation, {
+      finalUrl: page.url(),
+      findings: await collectAuthOrLoadErrors(page).catch(() => []),
+      error: normalizeText(error?.message || String(error)),
+    });
+    flowEntry.status = 'failed';
+    return flowEntry;
+  } finally {
+    dispose();
+  }
+};
+
+const runCreateLogisticsOperationFlow = async (page) => {
+  const { result: instrumentation, dispose } = setupPageInstrumentation(page);
+  const flowEntry = {
+    flow: 'create_logistics_operation',
+    status: 'unknown',
+    finalUrl: null,
+    operationId: null,
+    operationCode: null,
+    incidentId: null,
+    findings: [],
+    apiHttpErrors: [],
+    requestFailures: [],
+    pageErrors: [],
+    consoleErrors: [],
+    error: null,
+  };
+
+  const safeJson = async (response) => {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  };
+
+  const waitForApiResponse = async ({ urlPart, method, timeout = ROUTE_TIMEOUT_MS }) => {
+    return page.waitForResponse(
+      (resp) => resp.url().includes(urlPart) && resp.request().method() === method,
+      { timeout }
+    );
+  };
+
+  try {
+    await page.goto(`${BASE_URL}/dashboard/logistica`, { waitUntil: 'domcontentloaded', timeout: ROUTE_TIMEOUT_MS });
+    await page.waitForLoadState('networkidle', { timeout: ROUTE_TIMEOUT_MS }).catch(() => undefined);
+
+    const openModal = page.getByRole('button', { name: /Registrar nuevo movimiento/i }).first();
+    await openModal.waitFor({ state: 'visible', timeout: 20000 });
+    await openModal.click({ timeout: 8000 }).catch(async () => {
+      await openModal.click({ timeout: 8000, force: true });
+    });
+
+    const newMovementModal = page.getByRole('dialog').filter({ hasText: /Registrar nuevo movimiento/i }).first();
+    await newMovementModal.waitFor({ state: 'visible', timeout: 20000 });
+
+    // Ensure parent state gets a valid type (default selection is visual-only).
+    const typeButton = newMovementModal.locator('button').filter({ hasText: /Entrega/i }).first();
+    await typeButton.waitFor({ state: 'visible', timeout: 20000 });
+    await typeButton.click({ timeout: 8000 }).catch(async () => {
+      await typeButton.click({ timeout: 8000, force: true });
+    });
+
+    const reference = `audit-log-${Date.now()}`;
+    const referenceTextarea = newMovementModal.locator('textarea').first();
+    await referenceTextarea.fill(reference);
+
+    const registerButton = newMovementModal.getByRole('button', { name: /^Registrar movimiento$/i }).first();
+    await registerButton.waitFor({ state: 'visible', timeout: 15000 });
+    await registerButton.click({ timeout: 8000 }).catch(async () => {
+      await registerButton.click({ timeout: 8000, force: true });
+    });
+
+    const confirmationModal = page.locator('div').filter({ hasText: /Confirmar finalizaci/i }).first();
+    await confirmationModal.waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
+
+    const createResponsePromise = waitForApiResponse({ urlPart: '/api/logistics/operations', method: 'POST' });
+    const confirmCreate = page.getByRole('button', { name: /Confirmar registro/i }).first();
+    await confirmCreate.waitFor({ state: 'visible', timeout: 15000 });
+    await confirmCreate.click({ timeout: 8000 }).catch(async () => {
+      await confirmCreate.click({ timeout: 8000, force: true });
+    });
+
+    const createResponse = await createResponsePromise;
+    const createStatus = createResponse.status();
+    const createdOperation = await safeJson(createResponse);
+
+    if (createStatus === 403) {
+      flowEntry.findings.push('create_logistics_forbidden');
+      // Close any remaining modals.
+      await clickIfVisible(page.getByRole('button', { name: /^Cancelar$/i }).first());
+      Object.assign(flowEntry, instrumentation, {
+        finalUrl: page.url(),
+        findings: Array.from(new Set([...flowEntry.findings, ...(await collectAuthOrLoadErrors(page))])),
+      });
+      flowEntry.status = 'passed';
+      return flowEntry;
+    }
+
+    if (createStatus >= 400) {
+      throw new Error(`Logistics create failed with status ${createStatus}`);
+    }
+
+    flowEntry.operationId = createdOperation?.id || null;
+    flowEntry.operationCode = createdOperation?.operationCode || null;
+
+    // Ensure the modal closes so we don't keep stale overlays around.
+    await newMovementModal.waitFor({ state: 'hidden', timeout: 20000 }).catch(() => undefined);
+
+    const movementIdentifier = flowEntry.operationCode || flowEntry.operationId;
+    if (!movementIdentifier) {
+      throw new Error('Logistics create returned no operation id/code');
+    }
+
+    // Validate movement detail page + completion action.
+    await page.goto(`${BASE_URL}/dashboard/logistica/movimiento/${movementIdentifier}`, {
+      waitUntil: 'domcontentloaded',
+      timeout: ROUTE_TIMEOUT_MS,
+    });
+    await page.waitForLoadState('networkidle', { timeout: ROUTE_TIMEOUT_MS }).catch(() => undefined);
+
+    const markCompleted = page.getByRole('button', { name: /Marcar como completado/i }).first();
+    await markCompleted.waitFor({ state: 'visible', timeout: 20000 });
+    await markCompleted.click({ timeout: 8000 }).catch(async () => {
+      await markCompleted.click({ timeout: 8000, force: true });
+    });
+
+    const updateResponsePromise = waitForApiResponse({ urlPart: '/api/logistics/operations/', method: 'PATCH' });
+    const confirmComplete = page.getByRole('button', { name: /Confirmar registro/i }).first();
+    await confirmComplete.waitFor({ state: 'visible', timeout: 15000 });
+    await confirmComplete.click({ timeout: 8000 }).catch(async () => {
+      await confirmComplete.click({ timeout: 8000, force: true });
+    });
+
+    const updateResponse = await updateResponsePromise;
+    const updateStatus = updateResponse.status();
+    if (updateStatus >= 400) {
+      throw new Error(`Logistics completion failed with status ${updateStatus}`);
+    }
+
+    // Wait until the side panel finishes refreshing (updating=true hides action buttons).
+    await page
+      .getByRole('heading', { name: /Ãtems asociados|Ítems asociados/i })
+      .first()
+      .waitFor({ state: 'visible', timeout: 20000 })
+      .catch(() => undefined);
+
+    if (CREATE_LOGISTICS_INCIDENT) {
+      const incidentButton = page.locator('button').filter({ hasText: /Registrar incidencia/i }).first();
+      const incidentButtonCount = await incidentButton.count().catch(() => 0);
+      if (incidentButtonCount > 0) {
+        await incidentButton.scrollIntoViewIfNeeded().catch(() => undefined);
+        await incidentButton.click({ timeout: 8000 }).catch(async () => {
+          await incidentButton.click({ timeout: 8000, force: true });
+        });
+
+        const incidentModal = page.locator('.z-60').first();
+        await incidentModal.waitFor({ state: 'visible', timeout: 15000 }).catch(() => undefined);
+
+        try {
+          const selects = incidentModal.locator('select');
+          await selects.first().selectOption('system_error');
+          await incidentModal.getByText(/^Media$/i).first().click({ timeout: 8000 }).catch(() => undefined);
+          await selects.nth(1).selectOption('juan_perez');
+          await incidentModal.locator('textarea').first().fill(`Incidencia audit ${Date.now()}`);
+
+          const registerIncidentBtn = incidentModal.getByRole('button', { name: /^Registrar incidencia$/i }).first();
+          const saveDraftBtn = incidentModal.getByRole('button', { name: /Guardar borrador/i }).first();
+          const canRegister = await registerIncidentBtn.isEnabled().catch(() => false);
+
+          const incidentCreateResponsePromise = waitForApiResponse({
+            urlPart: '/api/logistics/incidents',
+            method: 'POST',
+            timeout: 30000,
+          });
+
+          if (canRegister) {
+            await registerIncidentBtn.click({ timeout: 8000 }).catch(async () => {
+              await registerIncidentBtn.click({ timeout: 8000, force: true });
+            });
+          } else {
+            flowEntry.findings.push('incident_register_disabled');
+            await saveDraftBtn.click({ timeout: 8000 }).catch(async () => {
+              await saveDraftBtn.click({ timeout: 8000, force: true });
+            });
+          }
+
+          const incidentResp = await incidentCreateResponsePromise;
+          if (incidentResp.status() >= 400) {
+            throw new Error(`Incident create failed with status ${incidentResp.status()}`);
+          }
+
+          const incidentPayload = await safeJson(incidentResp);
+          flowEntry.incidentId =
+            incidentPayload?.id ||
+            incidentPayload?.incidentCode ||
+            incidentPayload?.data?.id ||
+            incidentPayload?.data?.incidentCode ||
+            null;
+        } catch (error) {
+          flowEntry.findings.push(`incident_create_failed:${normalizeText(error?.message || String(error))}`);
+        } finally {
+          const cancelIncident = incidentModal.getByRole('button', { name: /^Cancelar$/i }).first();
+          await clickIfVisible(cancelIncident);
+          await incidentModal.waitFor({ state: 'hidden', timeout: 15000 }).catch(() => undefined);
+        }
+      }
+    }
+
+    const findings = await collectAuthOrLoadErrors(page);
+    Object.assign(flowEntry, instrumentation, {
+      finalUrl: page.url(),
+      findings,
+    });
+
+    const { status } = computeEntryStatus(flowEntry, { failOnApi4xx: true });
+    flowEntry.status = status;
+    return flowEntry;
+  } catch (error) {
+    Object.assign(flowEntry, instrumentation, {
+      finalUrl: page.url(),
+      findings: await collectAuthOrLoadErrors(page).catch(() => []),
+      error: normalizeText(error?.message || String(error)),
+    });
+    flowEntry.status = 'failed';
+    return flowEntry;
+  } finally {
+    dispose();
   }
 };
 
@@ -404,6 +780,15 @@ const runTreasuryInteractions = async (page) => {
       await clickIfVisible(detailPanel.getByRole('button', { name: /Cerrar/i }).first());
     }
   }
+
+  // Best-effort: open edit modal for an editable (registered) movement and close it without saving.
+  const firstEditableEditButton = page.locator('button[aria-label="Editar movimiento"]:not([disabled])').first();
+  if (await clickIfVisible(firstEditableEditButton)) {
+    const modal = page.locator('.modal-overlay').first();
+    await modal.waitFor({ state: 'visible', timeout: 20000 }).catch(() => undefined);
+    await clickIfVisible(modal.getByRole('button', { name: /Cancelar/i }).first());
+    await modal.waitFor({ state: 'hidden', timeout: 20000 }).catch(() => undefined);
+  }
 };
 
 const runLogisticsInteractions = async (page) => {
@@ -476,21 +861,7 @@ const main = async () => {
       const entry = await runRoute(page, route);
       testedRoutes.add(route);
 
-      const hasAuthError = entry.findings.includes('authentication_required') || entry.findings.includes('redirected_to_login');
-      const hasApi401 = entry.apiHttpErrors.some((err) => err.status === 401);
-      const hasApi500 = entry.apiHttpErrors.some((err) => err.status >= 500);
-      const hasPageError = entry.pageErrors.length > 0;
-      const hasRequestFailures = entry.requestFailures.some(
-        (req) =>
-          req.tag === 'internal' &&
-          req.errorText &&
-          !req.errorText.includes('net::ERR_ABORTED'),
-      );
-      const hasAppConsoleErrors = entry.consoleErrors.some((err) => err.tag === 'app');
-
-      const status = hasAuthError || hasApi401 || hasApi500 || hasPageError || hasRequestFailures || hasAppConsoleErrors
-        ? 'failed'
-        : 'passed';
+      const { status } = computeEntryStatus(entry);
 
       if (status === 'failed') {
         report.failedRoutes += 1;
@@ -517,21 +888,7 @@ const main = async () => {
     for (const route of extraRoutes) {
       const entry = await runRoute(page, route);
 
-      const hasAuthError = entry.findings.includes('authentication_required') || entry.findings.includes('redirected_to_login');
-      const hasApi401 = entry.apiHttpErrors.some((err) => err.status === 401);
-      const hasApi500 = entry.apiHttpErrors.some((err) => err.status >= 500);
-      const hasPageError = entry.pageErrors.length > 0;
-      const hasRequestFailures = entry.requestFailures.some(
-        (req) =>
-          req.tag === 'internal' &&
-          req.errorText &&
-          !req.errorText.includes('net::ERR_ABORTED'),
-      );
-      const hasAppConsoleErrors = entry.consoleErrors.some((err) => err.tag === 'app');
-
-      const status = hasAuthError || hasApi401 || hasApi500 || hasPageError || hasRequestFailures || hasAppConsoleErrors
-        ? 'failed'
-        : 'passed';
+      const { status } = computeEntryStatus(entry);
 
       if (status === 'failed') {
         report.failedRoutes += 1;
@@ -547,6 +904,69 @@ const main = async () => {
         pageErrors: entry.pageErrors,
         consoleErrors: entry.consoleErrors,
       });
+    }
+
+    if (CREATE_OPERATION) {
+      const flowResult = await runCreateOperationFlow(page);
+      report.routes.push({
+        route: `FLOW:${flowResult.flow}`,
+        finalUrl: flowResult.finalUrl,
+        status: flowResult.status,
+        findings: flowResult.findings,
+        error: flowResult.error || undefined,
+        draftId: flowResult.draftId || undefined,
+        apiHttpErrors: flowResult.apiHttpErrors,
+        requestFailures: flowResult.requestFailures,
+        pageErrors: flowResult.pageErrors,
+        consoleErrors: flowResult.consoleErrors,
+      });
+
+      if (flowResult.status === 'failed') {
+        report.failedRoutes += 1;
+      }
+
+      if (flowResult.draftId) {
+        report.discoveredRoutes.push({
+          label: 'operations_detail_from_flow',
+          route: `/dashboard/operaciones/detalle/${flowResult.draftId}`,
+        });
+      }
+    }
+
+    if (CREATE_LOGISTICS_OPERATION) {
+      const logisticsFlow = await runCreateLogisticsOperationFlow(page);
+      report.routes.push({
+        route: `FLOW:${logisticsFlow.flow}`,
+        finalUrl: logisticsFlow.finalUrl,
+        status: logisticsFlow.status,
+        findings: logisticsFlow.findings,
+        error: logisticsFlow.error || undefined,
+        operationId: logisticsFlow.operationId || undefined,
+        operationCode: logisticsFlow.operationCode || undefined,
+        incidentId: logisticsFlow.incidentId || undefined,
+        apiHttpErrors: logisticsFlow.apiHttpErrors,
+        requestFailures: logisticsFlow.requestFailures,
+        pageErrors: logisticsFlow.pageErrors,
+        consoleErrors: logisticsFlow.consoleErrors,
+      });
+
+      if (logisticsFlow.status === 'failed') {
+        report.failedRoutes += 1;
+      }
+
+      if (logisticsFlow.operationCode || logisticsFlow.operationId) {
+        report.discoveredRoutes.push({
+          label: 'logistics_movement_from_flow',
+          route: `/dashboard/logistica/movimiento/${logisticsFlow.operationCode || logisticsFlow.operationId}`,
+        });
+      }
+
+      if (logisticsFlow.incidentId) {
+        report.discoveredRoutes.push({
+          label: 'logistics_incident_from_flow',
+          route: `/dashboard/logistica/incidencia/${logisticsFlow.incidentId}`,
+        });
+      }
     }
   } finally {
     await context.close().catch(() => undefined);
