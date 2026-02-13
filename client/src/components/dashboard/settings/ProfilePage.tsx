@@ -11,13 +11,27 @@ const PERMISSION_DESCRIPTIONS: Record<string, string> = {
   'manage-treasury': 'Gestionar movimientos y conciliaciones de tesorería.',
   'manage-market-rates': 'Actualizar y administrar tipos de cambio.',
   'manage-notifications': 'Configurar y marcar notificaciones.',
+  'access-operations': 'Acceder a la seccion de Operaciones.',
   'access-logistics': 'Acceder a la sección de Logística.',
   'manage-logistics': 'Editar órdenes, incidentes y movimientos logísticos.',
   'treasury:receptions': 'Gestionar recepciones de tesorería.',
   'treasury:receptions:revert': 'Revertir recepciones de tesorería.',
   'admin:manage-permissions': 'Administrar permisos de usuarios.',
 };
-
+const PERMISSION_LABELS: Record<string, string> = {
+  'view-balances': 'Ver balances',
+  'access-treasury': 'Acceso a Tesoreria',
+  'access-transfers': 'Acceso a transferencias',
+  'manage-treasury': 'Gestionar tesoreria',
+  'manage-market-rates': 'Gestionar tipo de cambio',
+  'manage-notifications': 'Gestionar notificaciones',
+  'access-operations': 'Acceso a Operaciones',
+  'access-logistics': 'Acceso a Logistica',
+  'manage-logistics': 'Gestionar Logistica',
+  'treasury:receptions': 'Recepciones de tesoreria',
+  'treasury:receptions:revert': 'Revertir recepciones',
+  'admin:manage-permissions': 'Administrar permisos',
+};
 export const ProfilePage: React.FC = () => {
   const { user, loading, error, refresh } = useCurrentUser();
   const [search, setSearch] = useState('');
@@ -96,7 +110,7 @@ export const ProfilePage: React.FC = () => {
                     title={PERMISSION_DESCRIPTIONS[permission] || 'Permiso asignado a tu usuario.'}
                   >
                     <i className="fa-solid fa-shield-halved mr-2 text-primary" />
-                    {permission}
+                    {PERMISSION_LABELS[permission] || 'Permiso adicional'}
                   </span>
                 ))}
               </div>
